@@ -4,6 +4,7 @@
 	import { invalidate } from '$app/navigation';
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
+	import { DTOOLS_FERRAMENTAS } from '$lib/dtools';
 
 	let { children, data } = $props();
 	let { supabase, session } = $derived(data);
@@ -18,7 +19,7 @@
 	});
 
 	type Area = { href: string; label: string; icon: string };
-	type Departamento = { id: string; label: string; href?: string; areas: Area[] };
+	type Departamento = { id: string; label: string; href?: string; base?: string; areas: Area[] };
 
 	const departamentos: Departamento[] = [
 		{ id: 'home', label: 'Home', href: '/', areas: [] },
@@ -48,6 +49,13 @@
 				{ href: '/conteudo', label: 'Conteúdo', icon: '✎' },
 				{ href: '/campanhas', label: 'Campanhas', icon: '◎' }
 			]
+		},
+		{
+			id: 'dtools',
+			label: 'DTools',
+			href: '/dtools',
+			base: '/dtools',
+			areas: DTOOLS_FERRAMENTAS.map((f) => ({ href: f.href, label: f.label, icon: f.icon }))
 		}
 	];
 
@@ -58,9 +66,16 @@
 
 	// Departamento ativo a partir da rota atual.
 	const deptAtivo = $derived.by(() => {
-		if (page.url.pathname === '/') return 'home';
-		const d = departamentos.find((dep) => dep.areas.some((a) => areaAtiva(a.href)));
-		return d?.id ?? 'home';
+		const p = page.url.pathname;
+		// 1) departamentos com áreas correspondentes
+		const byArea = departamentos.find((dep) => dep.areas.some((a) => areaAtiva(a.href)));
+		if (byArea) return byArea.id;
+		// 2) departamentos com base própria (ex.: DTools, mesmo sem ferramentas)
+		const byBase = departamentos.find(
+			(dep) => dep.base && (p === dep.base || p.startsWith(dep.base + '/'))
+		);
+		if (byBase) return byBase.id;
+		return 'home';
 	});
 
 	const areas = $derived(departamentos.find((d) => d.id === deptAtivo)?.areas ?? []);
@@ -105,7 +120,7 @@
 		</header>
 
 		<div class="app-body">
-			{#if areas.length}
+			{#if deptAtivo !== 'home'}
 				<aside class="app-sidebar">
 					<div class="sidebar-title">
 						{departamentos.find((d) => d.id === deptAtivo)?.label}
@@ -118,9 +133,12 @@
 							</a>
 						{/each}
 					</nav>
+					{#if !areas.length}
+						<p class="sidebar-empty">Nenhuma ferramenta ainda. Em breve.</p>
+					{/if}
 				</aside>
 			{/if}
-			<main class="app-content" class:is-full={!areas.length}>
+			<main class="app-content" class:is-full={deptAtivo === 'home'}>
 				{@render children()}
 			</main>
 		</div>
