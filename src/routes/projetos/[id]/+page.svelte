@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import ProjetoForm from '$lib/components/ProjetoForm.svelte';
+	import Comentarios from '$lib/components/Comentarios.svelte';
 
 	let { data, form } = $props();
 	let projeto = $derived(form?.values ?? data.projeto);
@@ -32,6 +33,8 @@
 		action="?/update"
 	/>
 </div>
+
+<Comentarios entidadeTipo="projeto" entidadeId={data.projeto.id} />
 
 <div class="box">
 	<h2 class="title is-6 has-text-danger">Zona de perigo</h2>

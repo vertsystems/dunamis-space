@@ -25,10 +25,15 @@
 		{ href: '/projetos', label: 'Projetos', icon: '▣' },
 		{ href: '/tarefas', label: 'Tarefas', icon: '☑' },
 		{ href: '/conteudo', label: 'Conteúdo', icon: '✎' },
+		{ href: '/campanhas', label: 'Campanhas', icon: '◎' },
+		{ href: '/base-conhecimento', label: 'Base de Conhecimento', icon: '❏' },
 		{ href: '/equipe', label: 'Equipe', icon: '◍' }
 	];
 
-	const isLogin = $derived(page.url.pathname === '/login');
+	// Rotas "nuas" (sem o app shell): login e o portal público de aprovação.
+	const isBare = $derived(
+		page.url.pathname === '/login' || page.url.pathname.startsWith('/aprovar')
+	);
 
 	async function signOut() {
 		await supabase.auth.signOut();
@@ -43,7 +48,7 @@
 	/>
 </svelte:head>
 
-{#if isLogin}
+{#if isBare}
 	{@render children()}
 {:else}
 	<div class="app-shell">

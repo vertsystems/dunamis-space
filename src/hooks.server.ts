@@ -47,9 +47,11 @@ const authGuard: Handle = async ({ event, resolve }) => {
 	event.locals.session = session;
 	event.locals.user = user;
 
-	const protectedRoute = !event.url.pathname.startsWith('/login');
+	// Rotas públicas: login e o portal externo de aprovação (/aprovar/[token]).
+	const publicRoute =
+		event.url.pathname.startsWith('/login') || event.url.pathname.startsWith('/aprovar');
 
-	if (!session && protectedRoute) {
+	if (!session && !publicRoute) {
 		throw redirect(303, '/login');
 	}
 
