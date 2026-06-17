@@ -84,11 +84,19 @@ body {
 		flex: 1;
 
 		a {
+			display: flex;
+			align-items: center;
+			gap: 0.45rem;
 			color: #d6d6d6;
 			padding: 0.45rem 0.95rem;
 			border-radius: 9px;
 			font-weight: 500;
 			font-size: 0.95rem;
+
+			.dept-ico {
+				font-size: 1.05rem;
+				line-height: 1;
+			}
 
 			&:hover {
 				background-color: rgba(255, 255, 255, 0.1);
@@ -184,6 +192,74 @@ body {
 
 	&.is-full {
 		padding-left: 2rem;
+	}
+}
+
+// Mobile: topo e sidebar mostram apenas ícones
+@media (max-width: 768px) {
+	.app-topbar {
+		gap: 0.5rem;
+		padding: 0 0.6rem;
+
+		.brand {
+			font-size: 0.95rem;
+		}
+
+		.departments {
+			gap: 0.1rem;
+
+			a {
+				padding: 0.45rem 0.55rem;
+			}
+
+			.dept-label {
+				display: none;
+			}
+
+			.dept-ico {
+				font-size: 1.2rem;
+			}
+		}
+
+		.user .user-email {
+			display: none;
+		}
+	}
+
+	.app-sidebar {
+		width: 56px;
+		padding: 0.5rem 0.4rem;
+
+		.sidebar-title,
+		.area-label,
+		.sidebar-empty {
+			display: none;
+		}
+
+		a {
+			justify-content: center;
+			padding: 0.6rem 0;
+
+			.ico {
+				font-size: 1.15rem;
+				opacity: 0.9;
+			}
+		}
+	}
+
+	.app-content {
+		padding: 0.75rem 0.9rem 2.5rem;
+
+		&.is-full {
+			padding-left: 0.9rem;
+		}
+	}
+}
+
+// Telas muito estreitas: esconde a marca para sobrar espaço aos ícones
+@media (max-width: 480px) {
+	.app-topbar .brand {
+		display: none;
 	}
 }
 

@@ -19,13 +19,21 @@
 	});
 
 	type Area = { href: string; label: string; icon: string };
-	type Departamento = { id: string; label: string; href?: string; base?: string; areas: Area[] };
+	type Departamento = {
+		id: string;
+		label: string;
+		icon: string;
+		href?: string;
+		base?: string;
+		areas: Area[];
+	};
 
 	const departamentos: Departamento[] = [
-		{ id: 'home', label: 'Home', href: '/', areas: [] },
+		{ id: 'home', label: 'Home', icon: '🏠', href: '/', areas: [] },
 		{
 			id: 'administrativo',
 			label: 'Administrativo',
+			icon: '📋',
 			areas: [
 				{ href: '/financeiro', label: 'Financeiro', icon: '$' },
 				{ href: '/equipe', label: 'Equipe', icon: '◍' },
@@ -35,6 +43,7 @@
 		{
 			id: 'comercial',
 			label: 'Comercial',
+			icon: '💼',
 			areas: [
 				{ href: '/clientes', label: 'Clientes (CRM)', icon: '◔' },
 				{ href: '/contratos', label: 'Contratos & Planos', icon: '▤' }
@@ -43,6 +52,7 @@
 		{
 			id: 'marketing',
 			label: 'Marketing',
+			icon: '📣',
 			areas: [
 				{ href: '/projetos', label: 'Projetos', icon: '▣' },
 				{ href: '/tarefas', label: 'Tarefas', icon: '☑' },
@@ -53,6 +63,7 @@
 		{
 			id: 'dtools',
 			label: 'DTools',
+			icon: '🧰',
 			href: '/dtools',
 			base: '/dtools',
 			areas: DTOOLS_FERRAMENTAS.map((f) => ({ href: f.href, label: f.label, icon: f.icon }))
@@ -108,7 +119,10 @@
 			<a class="brand" href="/">Dunamis<span>.</span>Space</a>
 			<nav class="departments">
 				{#each departamentos as d (d.id)}
-					<a href={deptHref(d)} class:is-active={deptAtivo === d.id}>{d.label}</a>
+					<a href={deptHref(d)} class:is-active={deptAtivo === d.id} title={d.label}>
+						<span class="dept-ico">{d.icon}</span>
+						<span class="dept-label">{d.label}</span>
+					</a>
 				{/each}
 			</nav>
 			<div class="user">
@@ -127,9 +141,9 @@
 					</div>
 					<nav>
 						{#each areas as a (a.href)}
-							<a href={a.href} class:is-active={areaAtiva(a.href)}>
+							<a href={a.href} class:is-active={areaAtiva(a.href)} title={a.label}>
 								<span class="ico">{a.icon}</span>
-								{a.label}
+								<span class="area-label">{a.label}</span>
 							</a>
 						{/each}
 					</nav>
