@@ -21,6 +21,7 @@
 		<div class="buttons has-addons mr-4 mb-0">
 			<span class="button is-primary is-selected">Lista</span>
 			<a class="button" href="/conteudo/calendario">Calendário</a>
+			<a class="button" href="/conteudo/aprovacoes">Aprovações</a>
 		</div>
 		<form class="level-item" method="GET" style="gap:.5rem; display:flex;">
 			<div class="control">

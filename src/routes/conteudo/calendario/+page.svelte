@@ -52,6 +52,7 @@
 		<div class="buttons has-addons mb-0">
 			<a class="button" href="/conteudo">Lista</a>
 			<span class="button is-primary is-selected">Calendário</span>
+			<a class="button" href="/conteudo/aprovacoes">Aprovações</a>
 		</div>
 	</div>
 	<div class="level-right">

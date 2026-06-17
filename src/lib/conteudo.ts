@@ -38,6 +38,29 @@ export function conteudoTipoLabel(tipo: string): string {
 	return CONTEUDO_TIPO.find((t) => t.value === tipo)?.label ?? tipo;
 }
 
+export const APROVACAO_STATUS = [
+	{ value: 'pendente', label: 'Aguardando cliente' },
+	{ value: 'aprovado', label: 'Aprovado' },
+	{ value: 'alteracao_solicitada', label: 'Alteração solicitada' }
+] as const;
+
+export function aprovacaoStatusStyle(status: string): { bg: string; fg: string } {
+	switch (status) {
+		case 'pendente':
+			return { bg: '#fff4d6', fg: '#8a6500' };
+		case 'aprovado':
+			return { bg: '#e6f4ea', fg: '#1e7e34' };
+		case 'alteracao_solicitada':
+			return { bg: '#fde8e8', fg: '#b3261e' };
+		default:
+			return { bg: '#eeeeee', fg: '#333333' };
+	}
+}
+
+export function aprovacaoStatusLabel(status: string): string {
+	return APROVACAO_STATUS.find((s) => s.value === status)?.label ?? status;
+}
+
 function str(fd: FormData, k: string): string | null {
 	const v = fd.get(k);
 	const s = typeof v === 'string' ? v.trim() : '';
