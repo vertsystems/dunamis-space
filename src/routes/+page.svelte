@@ -1,10 +1,14 @@
 <script lang="ts">
-	const stats = [
-		{ label: 'Faturamento do mês', value: 'R$ 0' },
+	import { formatBRL } from '$lib/clientes';
+
+	let { data } = $props();
+
+	const stats = $derived([
+		{ label: 'Receita recorrente (MRR)', value: formatBRL(data.recorrente) },
 		{ label: 'Lucro estimado', value: 'R$ 0' },
-		{ label: 'Clientes ativos', value: '0' },
+		{ label: 'Clientes ativos', value: String(data.ativos) },
 		{ label: 'Tarefas atrasadas', value: '0' }
-	];
+	]);
 </script>
 
 <div class="columns is-multiline">
