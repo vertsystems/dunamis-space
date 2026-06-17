@@ -37,9 +37,9 @@
 			label: 'Administrativo',
 			icon: 'admin',
 			areas: [
-				{ href: '/financeiro', label: 'Financeiro', icon: '$' },
-				{ href: '/equipe', label: 'Equipe', icon: '◍' },
-				{ href: '/base-conhecimento', label: 'Base de Conhecimento', icon: '❏' }
+				{ href: '/financeiro', label: 'Financeiro', icon: 'dollar' },
+				{ href: '/equipe', label: 'Equipe', icon: 'users' },
+				{ href: '/base-conhecimento', label: 'Base de Conhecimento', icon: 'book' }
 			]
 		},
 		{
@@ -47,8 +47,8 @@
 			label: 'Comercial',
 			icon: 'comercial',
 			areas: [
-				{ href: '/clientes', label: 'Clientes (CRM)', icon: '◔' },
-				{ href: '/contratos', label: 'Contratos & Planos', icon: '▤' }
+				{ href: '/clientes', label: 'Clientes (CRM)', icon: 'contact' },
+				{ href: '/contratos', label: 'Contratos & Planos', icon: 'file' }
 			]
 		},
 		{
@@ -56,10 +56,10 @@
 			label: 'Marketing',
 			icon: 'marketing',
 			areas: [
-				{ href: '/projetos', label: 'Projetos', icon: '▣' },
-				{ href: '/tarefas', label: 'Tarefas', icon: '☑' },
-				{ href: '/conteudo', label: 'Conteúdo', icon: '✎' },
-				{ href: '/campanhas', label: 'Campanhas', icon: '◎' }
+				{ href: '/projetos', label: 'Projetos', icon: 'folder' },
+				{ href: '/tarefas', label: 'Tarefas', icon: 'check' },
+				{ href: '/conteudo', label: 'Conteúdo', icon: 'edit' },
+				{ href: '/campanhas', label: 'Campanhas', icon: 'tag' }
 			]
 		},
 		{
@@ -176,7 +176,7 @@
 					<nav>
 						{#each areas as a (a.href)}
 							<a href={a.href} class:is-active={areaAtiva(a.href)} title={a.label}>
-								<span class="ico">{a.icon}</span>
+								<Icon name={a.icon} size={17} />
 								<span class="area-label">{a.label}</span>
 							</a>
 						{/each}
