@@ -7,7 +7,7 @@
 		{ label: 'Receita recorrente (MRR)', value: formatBRL(data.recorrente) },
 		{ label: 'Lucro (receitas − despesas)', value: formatBRL(data.lucro) },
 		{ label: 'Clientes ativos', value: String(data.ativos) },
-		{ label: 'Tarefas atrasadas', value: '0' }
+		{ label: 'Tarefas atrasadas', value: String(data.atrasadas) }
 	]);
 </script>
 
