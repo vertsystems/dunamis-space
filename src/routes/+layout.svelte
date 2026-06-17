@@ -17,18 +17,55 @@
 		return () => sub.subscription.unsubscribe();
 	});
 
-	const nav = [
-		{ href: '/', label: 'Dashboard', icon: '▦' },
-		{ href: '/clientes', label: 'Clientes', icon: '◔' },
-		{ href: '/contratos', label: 'Contratos & Planos', icon: '▤' },
-		{ href: '/financeiro', label: 'Financeiro', icon: '$' },
-		{ href: '/projetos', label: 'Projetos', icon: '▣' },
-		{ href: '/tarefas', label: 'Tarefas', icon: '☑' },
-		{ href: '/conteudo', label: 'Conteúdo', icon: '✎' },
-		{ href: '/campanhas', label: 'Campanhas', icon: '◎' },
-		{ href: '/base-conhecimento', label: 'Base de Conhecimento', icon: '❏' },
-		{ href: '/equipe', label: 'Equipe', icon: '◍' }
+	type Area = { href: string; label: string; icon: string };
+	type Departamento = { id: string; label: string; href?: string; areas: Area[] };
+
+	const departamentos: Departamento[] = [
+		{ id: 'home', label: 'Home', href: '/', areas: [] },
+		{
+			id: 'administrativo',
+			label: 'Administrativo',
+			areas: [
+				{ href: '/financeiro', label: 'Financeiro', icon: '$' },
+				{ href: '/equipe', label: 'Equipe', icon: '◍' },
+				{ href: '/base-conhecimento', label: 'Base de Conhecimento', icon: '❏' }
+			]
+		},
+		{
+			id: 'comercial',
+			label: 'Comercial',
+			areas: [
+				{ href: '/clientes', label: 'Clientes (CRM)', icon: '◔' },
+				{ href: '/contratos', label: 'Contratos & Planos', icon: '▤' }
+			]
+		},
+		{
+			id: 'marketing',
+			label: 'Marketing',
+			areas: [
+				{ href: '/projetos', label: 'Projetos', icon: '▣' },
+				{ href: '/tarefas', label: 'Tarefas', icon: '☑' },
+				{ href: '/conteudo', label: 'Conteúdo', icon: '✎' },
+				{ href: '/campanhas', label: 'Campanhas', icon: '◎' }
+			]
+		}
 	];
+
+	function areaAtiva(href: string): boolean {
+		const p = page.url.pathname;
+		return p === href || p.startsWith(href + '/');
+	}
+
+	// Departamento ativo a partir da rota atual.
+	const deptAtivo = $derived.by(() => {
+		if (page.url.pathname === '/') return 'home';
+		const d = departamentos.find((dep) => dep.areas.some((a) => areaAtiva(a.href)));
+		return d?.id ?? 'home';
+	});
+
+	const areas = $derived(departamentos.find((d) => d.id === deptAtivo)?.areas ?? []);
+
+	const deptHref = (d: Departamento) => d.href ?? d.areas[0]?.href ?? '/';
 
 	// Rotas "nuas" (sem o app shell): login e o portal público de aprovação.
 	const isBare = $derived(
@@ -51,29 +88,39 @@
 {#if isBare}
 	{@render children()}
 {:else}
-	<div class="app-shell">
-		<aside class="app-sidebar">
-			<div class="brand">Dunamis<span>.</span>Space</div>
-			<nav>
-				{#each nav as item (item.href)}
-					<a href={item.href} class:is-active={page.url.pathname === item.href}>
-						<span>{item.icon}</span>
-						{item.label}
-					</a>
+	<div class="app">
+		<header class="app-topbar">
+			<a class="brand" href="/">Dunamis<span>.</span>Space</a>
+			<nav class="departments">
+				{#each departamentos as d (d.id)}
+					<a href={deptHref(d)} class:is-active={deptAtivo === d.id}>{d.label}</a>
 				{/each}
 			</nav>
-		</aside>
-		<div class="app-main">
-			<header class="app-topbar">
-				<strong>{nav.find((n) => n.href === page.url.pathname)?.label ?? 'Dunamis Space'}</strong>
-				<div>
-					{#if session}
-						<span class="mr-3 has-text-grey">{session.user.email}</span>
-						<button class="button is-small is-light" onclick={signOut}>Sair</button>
-					{/if}
-				</div>
-			</header>
-			<main class="app-content">
+			<div class="user">
+				{#if session}
+					<span class="user-email">{session.user.email}</span>
+					<button class="button is-small is-light" onclick={signOut}>Sair</button>
+				{/if}
+			</div>
+		</header>
+
+		<div class="app-body">
+			{#if areas.length}
+				<aside class="app-sidebar">
+					<div class="sidebar-title">
+						{departamentos.find((d) => d.id === deptAtivo)?.label}
+					</div>
+					<nav>
+						{#each areas as a (a.href)}
+							<a href={a.href} class:is-active={areaAtiva(a.href)}>
+								<span class="ico">{a.icon}</span>
+								{a.label}
+							</a>
+						{/each}
+					</nav>
+				</aside>
+			{/if}
+			<main class="app-content" class:is-full={!areas.length}>
 				{@render children()}
 			</main>
 		</div>
