@@ -224,11 +224,16 @@ body {
 	min-height: 100vh;
 }
 
-// Sidebar contextual (áreas do departamento ativo)
+// Sidebar contextual (áreas do departamento ativo) — painel definido
 .app-sidebar {
-	width: 232px;
+	width: 240px;
 	flex-shrink: 0;
-	padding: 0.5rem 0.85rem;
+	margin: 0.25rem 0 1rem 0.85rem;
+	padding: 0.6rem;
+	background: #fff;
+	border: 1px solid var(--ds-grey);
+	border-radius: 14px;
+	box-shadow: 0 4px 14px rgba(5, 20, 27, 0.05);
 	position: sticky;
 	top: var(--ds-topbar-space);
 	align-self: flex-start;
@@ -237,9 +242,11 @@ body {
 		font-size: 0.72rem;
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
-		color: #999;
-		font-weight: 600;
-		padding: 0.25rem 0.7rem 0.65rem;
+		color: var(--ds-slate);
+		font-weight: 700;
+		padding: 0.35rem 0.7rem 0.6rem;
+		margin-bottom: 0.4rem;
+		border-bottom: 1px solid var(--ds-grey);
 	}
 
 	a {
