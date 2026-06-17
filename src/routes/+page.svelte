@@ -45,7 +45,7 @@
 			<!-- Contratos vencendo -->
 			<div class="column">
 				<h3 class="alert-head">
-					<span class="alert-dot" style="background:#f20009"></span>
+					<span class="alert-dot" style="background:#a8350a"></span>
 					Contratos vencendo <span class="has-text-grey">({contratos.length})</span>
 				</h3>
 				{#if contratos.length}
@@ -68,7 +68,7 @@
 			<!-- Tarefas atrasadas -->
 			<div class="column">
 				<h3 class="alert-head">
-					<span class="alert-dot" style="background:#ff6f00"></span>
+					<span class="alert-dot" style="background:#de4908"></span>
 					Tarefas atrasadas <span class="has-text-grey">({data.atrasadas})</span>
 				</h3>
 				{#if tarefas.length}
@@ -94,7 +94,7 @@
 			<!-- Clientes sem contato -->
 			<div class="column">
 				<h3 class="alert-head">
-					<span class="alert-dot" style="background:#ffc527"></span>
+					<span class="alert-dot" style="background:#f6aa19"></span>
 					Clientes sem contato <span class="has-text-grey">({semInteracao.length})</span>
 				</h3>
 				{#if semInteracao.length}
@@ -149,6 +149,6 @@
 		color: #888;
 	}
 	.alert-meta.is-overdue {
-		color: #f20009;
+		color: #a8350a;
 	}
 </style>
