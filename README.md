@@ -1,42 +1,71 @@
-# sv
+# Dunamis Space
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Sistema online interno da **Dunamis Company Marketing Digital** — gestão completa da agência: clientes, contratos, financeiro, projetos, tarefas, planejamento de conteúdo, aprovação de cliente e base de conhecimento.
 
-## Creating a project
+🔗 **Produção:** [dspace.verts.me](https://dspace.verts.me)
 
-If you're seeing this, you've probably already done this step. Congrats!
+## Stack
+
+- **[SvelteKit 2](https://svelte.dev/)** (Svelte 5 / runes) + TypeScript
+- **[Bulma](https://bulma.io/)** (Sass) com a paleta da marca
+- **[Supabase](https://supabase.com/)** — Postgres, Auth e Storage
+- **[Vercel](https://vercel.com/)** — hospedagem (`adapter-vercel`)
+
+## Módulos
+
+| Módulo | Rota | Descrição |
+| --- | --- | --- |
+| Dashboard | `/` | Indicadores reais: clientes ativos, MRR, lucro, tarefas atrasadas |
+| Clientes (CRM) | `/clientes` | Cadastro, status, interações |
+| Contratos & Planos | `/contratos` | Contratos + catálogo de planos |
+| Financeiro | `/financeiro` | Receitas/despesas + lucro por cliente |
+| Projetos | `/projetos` | Jobs por cliente |
+| Tarefas | `/tarefas` | Kanban com drag-and-drop |
+| Conteúdo | `/conteudo` | Planejamento editorial |
+| Aprovação de Cliente | `/aprovar/[token]` | Portal público (sem login) para o cliente aprovar conteúdo |
+| Campanhas | `/campanhas` | Campanhas + produtos + materiais |
+| Base de Conhecimento | `/base-conhecimento` | Wiki interna |
+| Equipe | `/equipe` | Colaboradores |
+
+## Desenvolvimento
 
 ```sh
-# create a new project
-npx sv create my-app
-```
-
-To recreate this project with the same configuration:
-
-```sh
-# recreate this project
-npx sv@0.16.1 create --template minimal --types ts --no-install .
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
+npm install
+cp .env.example .env   # preencha com as chaves do Supabase
 npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
 ```
 
-## Building
+| Comando | Ação |
+| --- | --- |
+| `npm run dev` | Servidor de desenvolvimento |
+| `npm run build` | Build de produção |
+| `npm run preview` | Preview do build |
+| `npm run check` | Verificação de tipos (svelte-check) |
 
-To create a production version of your app:
+## Banco de dados
 
-```sh
-npm run build
-```
+As migrations ficam em [`supabase/migrations/`](supabase/migrations/) e são aplicadas no SQL Editor do Supabase:
 
-You can preview the production build with `npm run preview`.
+- `0001_init.sql` — schema completo (tabelas, enums, triggers, RLS, view `v_lucro_cliente`)
+- `0002_aprovacao_publica.sql` — RPCs `security definer` do portal público de aprovação
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+## Variáveis de ambiente
+
+Definidas em `.env` (local) e no painel da Vercel (Production):
+
+| Variável | Descrição |
+| --- | --- |
+| `PUBLIC_SUPABASE_URL` | URL do projeto Supabase |
+| `PUBLIC_SUPABASE_ANON_KEY` | Chave pública (publishable) do Supabase |
+
+> ⚠️ A connection string com a senha do Postgres **nunca** entra no repositório. O `.env` é ignorado pelo Git.
+
+## Documentação
+
+- [`docs/Sistema-Online-Dunamis-Estrutura.md`](docs/Sistema-Online-Dunamis-Estrutura.md) — visão dos módulos
+- [`docs/Sistema-Online-Dunamis-Blueprint.md`](docs/Sistema-Online-Dunamis-Blueprint.md) — modelo de dados e roadmap
+- [`docs/DEPLOY.md`](docs/DEPLOY.md) — guia de deploy (Supabase + Vercel)
+
+---
+
+Projeto interno — Vert Systems · Dunamis Company
