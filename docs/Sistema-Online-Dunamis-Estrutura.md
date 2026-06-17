@@ -84,7 +84,6 @@ Visão geral: faturamento mensal, lucro, clientes ativos, tarefas atrasadas, con
 - Plano do cliente: Starter, Gold, Premium
 - Entregas mensais, limites (ex: 16 posts)
 - Vigência, renovação
-- 🔥 **Diferencial:** Comparação prometido vs. entregue
 
 ### 10. Gestão de Campanhas (Jornal / Promoções)
 - Cadastro de campanhas

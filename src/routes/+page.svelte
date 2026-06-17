@@ -5,7 +5,7 @@
 
 	const stats = $derived([
 		{ label: 'Receita recorrente (MRR)', value: formatBRL(data.recorrente) },
-		{ label: 'Lucro estimado', value: 'R$ 0' },
+		{ label: 'Lucro (receitas − despesas)', value: formatBRL(data.lucro) },
 		{ label: 'Clientes ativos', value: String(data.ativos) },
 		{ label: 'Tarefas atrasadas', value: '0' }
 	]);

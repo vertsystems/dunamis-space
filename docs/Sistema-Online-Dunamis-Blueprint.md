@@ -41,7 +41,6 @@ Convenção: toda tabela tem `id` (uuid, pk), `created_at`, `updated_at`. FK = `
 - `valor_mensal`, `data_inicio`, `data_fim`
 - `status` enum: `ativo | suspenso | encerrado`
 - `renovacao_automatica` (bool)
-- *Prometido vs entregue* = limites do plano × contagem de conteúdos no mês
 
 ### Projetos / Jobs
 **`projetos`**
@@ -150,7 +149,7 @@ Clientes (CRM) · Contratos/Planos · Financeiro (receitas, despesas, lucro por 
 > Entrega o ciclo completo: Cliente → Plano → Trabalho → Financeiro → Dashboard.
 
 ### Fase 2 — Colaboração & especialização
-Aprovação de cliente (portal externo) · Campanhas · Base de conhecimento · Comentários · Tempo/custo por tarefa · Score de cliente · "Prometido vs entregue".
+Aprovação de cliente (portal externo) · Campanhas · Base de conhecimento · Comentários · Tempo/custo por tarefa · Score de cliente.
 
 ### Fase 3 — Inteligência & diferencial
 IA (gerar legenda, sugerir ideias, revisar texto) · Alertas inteligentes (cliente sem post, tarefa atrasada, baixa lucratividade) · Previsão de faturamento.
