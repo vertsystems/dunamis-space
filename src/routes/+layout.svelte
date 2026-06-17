@@ -141,7 +141,7 @@
 				{#each departamentos as d (d.id)}
 					{@const badge = badgeDe(d.id)}
 					<a href={deptHref(d)} class:is-active={deptAtivo === d.id} title={d.label}>
-						<Icon name={d.icon} size={13} />
+						<Icon name={d.icon} size={14} />
 						<span class="dept-label">{d.label}</span>
 						{#if badge}<span class="badge">{badge}</span>{/if}
 					</a>
@@ -156,12 +156,12 @@
 					title="Atualizar"
 					aria-label="Atualizar"
 				>
-					<Icon name="refresh" size={13} />
+					<Icon name="refresh" size={14} />
 				</button>
 				{#if session}
 					<span class="avatar" title={session.user.email}>{initials}</span>
 					<button class="icon-btn" onclick={signOut} title="Sair" aria-label="Sair">
-						<Icon name="logout" size={13} />
+						<Icon name="logout" size={14} />
 					</button>
 				{/if}
 			</div>
