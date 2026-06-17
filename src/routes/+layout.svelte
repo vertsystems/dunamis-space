@@ -133,7 +133,7 @@
 	<div class="app">
 		<header class="app-topbar">
 			<a class="brand" href="/">
-				<span class="brand-mark"><Icon name="leaf" size={20} /></span>
+				<span class="brand-mark"><Icon name="leaf" size={14} /></span>
 				<span class="brand-name">Dunamis<span>.</span>Space</span>
 			</a>
 
@@ -141,7 +141,7 @@
 				{#each departamentos as d (d.id)}
 					{@const badge = badgeDe(d.id)}
 					<a href={deptHref(d)} class:is-active={deptAtivo === d.id} title={d.label}>
-						<Icon name={d.icon} />
+						<Icon name={d.icon} size={13} />
 						<span class="dept-label">{d.label}</span>
 						{#if badge}<span class="badge">{badge}</span>{/if}
 					</a>
@@ -156,12 +156,12 @@
 					title="Atualizar"
 					aria-label="Atualizar"
 				>
-					<Icon name="refresh" />
+					<Icon name="refresh" size={13} />
 				</button>
 				{#if session}
 					<span class="avatar" title={session.user.email}>{initials}</span>
 					<button class="icon-btn" onclick={signOut} title="Sair" aria-label="Sair">
-						<Icon name="logout" />
+						<Icon name="logout" size={13} />
 					</button>
 				{/if}
 			</div>
