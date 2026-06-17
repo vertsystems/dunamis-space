@@ -1,40 +1,69 @@
-// Dunamis Space — paleta da marca
-// #F2F2F2 (fundo claro) · #CCCCCC (bordas/muted) · #333333 (texto/escuro)
-// #F20009 (primary/vermelho) · #FF6F00 (link/laranja) · #FFC527 (accent/amarelo)
+// Dunamis Space — framework Bootstrap 5 + paleta nova
+// Neutros: #05141B #182E3F #495B69 #939EA2 #CCD0CF
+// Acentos: #DE4908 (primary) · #F6AA19 (warning) · #FDDCA2 (cream) · #28A65F (success) · #4F311F (brown)
 
-$brand-light: #f2f2f2;
-$brand-grey: #cccccc;
-$brand-dark: #333333;
-$brand-red: #f20009;
-$brand-orange: #ff6f00;
-$brand-yellow: #ffc527;
+// 1) Funções do Bootstrap
+@import 'bootstrap/scss/functions';
 
-@use 'bulma/sass' with (
-	$primary: $brand-red,
-	$link: $brand-orange,
-	$info: $brand-orange,
-	$warning: $brand-yellow,
-	$dark: $brand-dark,
-	$text: $brand-dark,
-	$grey: $brand-grey,
-	$border: $brand-grey,
-	$body-background-color: $brand-light,
-	$family-primary: '"Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
-);
+// 2) Paleta + overrides de tema do Bootstrap
+$ds-navy-900: #05141b;
+$ds-navy: #182e3f;
+$ds-slate: #495b69;
+$ds-grey: #939ea2;
+$ds-grey-200: #ccd0cf;
+$ds-orange: #de4908;
+$ds-amber: #f6aa19;
+$ds-cream: #fddca2;
+$ds-green: #28a65f;
+$ds-brown: #4f311f;
+$ds-danger: #a8350a; // laranja escuro p/ perigo
+$ds-bg: #eef1f1; // fundo claro (tom frio da paleta)
 
-// Variáveis CSS expostas para uso direto nos componentes
+$primary: $ds-orange;
+$secondary: $ds-slate;
+$success: $ds-green;
+$warning: $ds-amber;
+$danger: $ds-danger;
+$info: $ds-navy;
+$light: $ds-bg;
+$dark: $ds-navy;
+
+$body-bg: $ds-bg;
+$body-color: $ds-navy-900;
+$border-color: $ds-grey-200;
+$link-color: $ds-orange;
+$border-radius: 0.5rem;
+$border-radius-sm: 0.375rem;
+$border-radius-lg: 0.75rem;
+$min-contrast-ratio: 2.4;
+$font-family-sans-serif: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+// 3) Bootstrap completo
+@import 'bootstrap/scss/bootstrap';
+
+// 4) Variáveis CSS expostas (paleta nova) + aliases para o código existente
 :root {
-	--ds-light: #{$brand-light};
-	--ds-grey: #{$brand-grey};
-	--ds-dark: #{$brand-dark};
-	--ds-red: #{$brand-red};
-	--ds-orange: #{$brand-orange};
-	--ds-yellow: #{$brand-yellow};
+	--ds-navy-900: #{$ds-navy-900};
+	--ds-navy: #{$ds-navy};
+	--ds-slate: #{$ds-slate};
+	--ds-cream: #{$ds-cream};
+	--ds-green: #{$ds-green};
+	--ds-amber: #{$ds-amber};
+	--ds-brown: #{$ds-brown};
+	--ds-danger: #{$ds-danger};
+	// Aliases — mantêm o layout existente funcionando, agora na paleta nova
+	--ds-red: #{$ds-orange}; // "primary" (antes vermelho, agora laranja)
+	--ds-dark: #{$ds-navy}; // topo / sidebar / avatar
+	--ds-grey: #{$ds-grey-200};
+	--ds-light: #{$ds-bg};
+	--ds-orange: #{$ds-orange};
+	--ds-yellow: #{$ds-amber};
 }
 
 html,
 body {
 	background-color: var(--ds-light);
+	color: var(--ds-navy-900);
 	min-height: 100vh;
 }
 
@@ -328,4 +357,518 @@ body {
 		font-weight: 700;
 		color: var(--ds-dark);
 	}
+}
+
+/* ================================================================
+   Compatibilidade Bulma → Bootstrap (paleta Dunamis)
+   Mantém a marcação atual funcionando sobre o Bootstrap, recolorida.
+   ================================================================ */
+
+// Caixa
+.box {
+	background: #fff;
+	border: 1px solid var(--ds-grey);
+	border-radius: 0.75rem;
+	padding: 1.25rem;
+	margin-bottom: 1.5rem;
+	box-shadow: 0 1px 2px rgba(5, 20, 27, 0.04);
+
+	&.p-0 {
+		padding: 0;
+	}
+}
+
+// Botões
+.button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.4rem;
+	padding: 0.5rem 1rem;
+	border: 1px solid var(--ds-grey);
+	border-radius: 0.5rem;
+	font-weight: 600;
+	font-size: 0.95rem;
+	line-height: 1.2;
+	cursor: pointer;
+	background: #fff;
+	color: var(--ds-navy);
+	text-decoration: none;
+	transition:
+		filter 0.15s ease,
+		background 0.15s ease;
+
+	&:hover {
+		filter: brightness(0.96);
+	}
+	&:disabled,
+	&[disabled] {
+		opacity: 0.55;
+		cursor: not-allowed;
+	}
+
+	&.is-primary,
+	&.is-link {
+		background: $ds-orange;
+		border-color: $ds-orange;
+		color: #fff;
+	}
+	&.is-success {
+		background: $ds-green;
+		border-color: $ds-green;
+		color: #fff;
+	}
+	&.is-warning {
+		background: $ds-amber;
+		border-color: $ds-amber;
+		color: #3a2a00;
+	}
+	&.is-danger {
+		background: $ds-danger;
+		border-color: $ds-danger;
+		color: #fff;
+	}
+	&.is-light {
+		background: #e6e9e9;
+		border-color: #e6e9e9;
+		color: var(--ds-navy);
+	}
+	&.is-dark {
+		background: var(--ds-navy);
+		border-color: var(--ds-navy);
+		color: #fff;
+	}
+
+	&.is-outlined {
+		background: transparent;
+		&.is-danger {
+			color: $ds-danger;
+			border-color: $ds-danger;
+		}
+		&.is-primary {
+			color: $ds-orange;
+			border-color: $ds-orange;
+		}
+	}
+
+	&.is-small {
+		padding: 0.3rem 0.6rem;
+		font-size: 0.8rem;
+		border-radius: 0.4rem;
+	}
+	&.is-medium {
+		padding: 0.65rem 1.25rem;
+		font-size: 1.05rem;
+	}
+	&.is-fullwidth {
+		width: 100%;
+	}
+
+	&.is-loading {
+		color: transparent !important;
+		pointer-events: none;
+		position: relative;
+		&::after {
+			content: '';
+			position: absolute;
+			width: 1em;
+			height: 1em;
+			border: 2px solid rgba(255, 255, 255, 0.85);
+			border-right-color: transparent;
+			border-radius: 50%;
+			animation: ds-spin 0.6s linear infinite;
+		}
+	}
+}
+
+.buttons {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+
+	&.has-addons {
+		gap: 0;
+		.button {
+			border-radius: 0;
+			&:first-child {
+				border-radius: 0.5rem 0 0 0.5rem;
+			}
+			&:last-child {
+				border-radius: 0 0.5rem 0.5rem 0;
+			}
+			&:not(:first-child) {
+				margin-left: -1px;
+			}
+		}
+	}
+}
+
+// Formulários
+.field {
+	margin-bottom: 1rem;
+
+	&.is-grouped {
+		display: flex;
+		gap: 0.5rem;
+	}
+	&.has-addons {
+		display: flex;
+		.control:first-child {
+			flex: 1;
+		}
+		.input {
+			border-radius: 0.5rem 0 0 0.5rem;
+		}
+		.button {
+			border-radius: 0 0.5rem 0.5rem 0;
+			margin-left: -1px;
+		}
+	}
+}
+.label {
+	display: block;
+	font-weight: 600;
+	font-size: 0.9rem;
+	margin-bottom: 0.35rem;
+	color: var(--ds-navy);
+}
+.control {
+	position: relative;
+	&.is-expanded {
+		flex: 1;
+	}
+}
+.input,
+.textarea,
+.select select {
+	display: block;
+	width: 100%;
+	padding: 0.5rem 0.75rem;
+	border: 1px solid var(--ds-grey);
+	border-radius: 0.5rem;
+	font-size: 0.95rem;
+	font-family: inherit;
+	color: var(--ds-navy-900);
+	background: #fff;
+	line-height: 1.4;
+
+	&:focus {
+		outline: none;
+		border-color: $ds-orange;
+		box-shadow: 0 0 0 0.2rem rgba(222, 73, 8, 0.15);
+	}
+	&::placeholder {
+		color: #9aa1ab;
+	}
+}
+.textarea {
+	min-height: 6rem;
+	resize: vertical;
+}
+.select {
+	position: relative;
+	display: inline-block;
+
+	&.is-fullwidth {
+		display: block;
+	}
+	select {
+		appearance: none;
+		-webkit-appearance: none;
+		padding-right: 2.1rem;
+		cursor: pointer;
+	}
+	&::after {
+		content: '';
+		position: absolute;
+		right: 0.95rem;
+		top: 50%;
+		width: 0.5rem;
+		height: 0.5rem;
+		border: 2px solid $ds-orange;
+		border-top: 0;
+		border-left: 0;
+		transform: translateY(-70%) rotate(45deg);
+		pointer-events: none;
+	}
+}
+.help {
+	font-size: 0.8rem;
+	color: var(--ds-slate);
+	margin-top: 0.25rem;
+}
+
+// Grid (columns)
+.columns {
+	display: flex;
+	flex-wrap: wrap;
+	margin: -0.75rem;
+
+	&.is-vcentered {
+		align-items: center;
+	}
+	&.is-centered {
+		justify-content: center;
+	}
+}
+.column {
+	flex: 1;
+	padding: 0.75rem;
+	min-width: 0;
+
+	&.is-1 {
+		flex: none;
+		width: 8.3333%;
+	}
+	&.is-2 {
+		flex: none;
+		width: 16.6666%;
+	}
+	&.is-3 {
+		flex: none;
+		width: 25%;
+	}
+	&.is-4 {
+		flex: none;
+		width: 33.3333%;
+	}
+	&.is-5 {
+		flex: none;
+		width: 41.6666%;
+	}
+	&.is-6 {
+		flex: none;
+		width: 50%;
+	}
+	&.is-7 {
+		flex: none;
+		width: 58.3333%;
+	}
+	&.is-8 {
+		flex: none;
+		width: 66.6666%;
+	}
+	&.is-12 {
+		flex: none;
+		width: 100%;
+	}
+}
+@media (max-width: 768px) {
+	.columns > .column {
+		flex: none;
+		width: 100%;
+	}
+}
+
+// Level
+.level {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+.level-left,
+.level-right {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+.level-item {
+	display: flex;
+	align-items: center;
+}
+
+// Tabela (sobre o .table do Bootstrap)
+.table {
+	background: #fff;
+	&.is-hoverable tbody tr:hover {
+		background: rgba(73, 91, 105, 0.06);
+	}
+	&.is-narrow th,
+	&.is-narrow td {
+		padding: 0.4rem 0.6rem;
+	}
+	th {
+		color: var(--ds-navy);
+		font-weight: 700;
+	}
+}
+
+// Notificações / alertas
+.notification {
+	padding: 0.9rem 1.1rem;
+	border-radius: 0.5rem;
+	margin-bottom: 1rem;
+	background: #e6e9e9;
+	color: var(--ds-navy);
+
+	&.is-success,
+	&.is-success.is-light {
+		background: rgba(40, 166, 95, 0.15);
+		color: #14502e;
+	}
+	&.is-danger,
+	&.is-danger.is-light {
+		background: rgba(168, 53, 10, 0.12);
+		color: #7a2606;
+	}
+	&.is-warning,
+	&.is-warning.is-light {
+		background: rgba(246, 170, 25, 0.2);
+		color: #6b4a00;
+	}
+	&.is-primary,
+	&.is-primary.is-light {
+		background: rgba(222, 73, 8, 0.12);
+		color: #8f2f06;
+	}
+}
+
+// Tags
+.tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35rem;
+}
+.tag {
+	display: inline-flex;
+	align-items: center;
+	padding: 0.2rem 0.55rem;
+	border-radius: 0.4rem;
+	font-size: 0.8rem;
+	font-weight: 600;
+	line-height: 1.5;
+	background: #e6e9e9;
+	color: var(--ds-navy);
+
+	&.is-success {
+		background: rgba(40, 166, 95, 0.18);
+		color: #14502e;
+	}
+	&.is-warning {
+		background: rgba(246, 170, 25, 0.22);
+		color: #6b4a00;
+	}
+	&.is-danger {
+		background: rgba(168, 53, 10, 0.15);
+		color: #7a2606;
+	}
+}
+
+// Breadcrumb
+.breadcrumb {
+	margin-bottom: 1rem;
+	font-size: 0.95rem;
+
+	ul {
+		display: flex;
+		flex-wrap: wrap;
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+	li {
+		display: flex;
+		align-items: center;
+		&:not(:first-child)::before {
+			content: '/';
+			color: var(--ds-grey);
+			margin: 0 0.5rem;
+		}
+		a {
+			color: $ds-orange;
+			text-decoration: none;
+		}
+		&.is-active a {
+			color: var(--ds-slate);
+			pointer-events: none;
+		}
+	}
+}
+
+// Títulos
+.title {
+	color: var(--ds-navy-900);
+	font-weight: 700;
+	line-height: 1.2;
+	margin-bottom: 0.5rem;
+
+	&.is-4 {
+		font-size: 1.5rem;
+	}
+	&.is-5 {
+		font-size: 1.25rem;
+	}
+	&.is-6 {
+		font-size: 1.05rem;
+	}
+	&.mb-0 {
+		margin-bottom: 0;
+	}
+	&.has-text-danger {
+		color: $ds-danger;
+	}
+}
+.subtitle {
+	color: var(--ds-slate);
+	font-weight: 400;
+	line-height: 1.35;
+	margin-bottom: 0.75rem;
+
+	&.is-6 {
+		font-size: 1rem;
+	}
+}
+
+// Hero (login)
+.hero {
+	display: flex;
+	align-items: center;
+	&.is-fullheight {
+		min-height: 100vh;
+	}
+}
+.hero-body {
+	padding: 2rem;
+	width: 100%;
+}
+
+// Helpers de texto / flex (nomes do Bulma)
+.has-text-centered {
+	text-align: center;
+}
+.has-text-right {
+	text-align: right;
+}
+.has-text-left {
+	text-align: left;
+}
+.has-text-grey {
+	color: var(--ds-slate) !important;
+}
+.has-text-danger {
+	color: $ds-danger !important;
+}
+.is-size-7 {
+	font-size: 0.8rem;
+}
+.is-flex {
+	display: flex;
+}
+.is-justify-content-center {
+	justify-content: center;
+}
+.is-justify-content-space-between {
+	justify-content: space-between;
+}
+
+// Espaçamentos que o Bootstrap não cobre (mr-*/ml-* na escala do Bulma)
+.mr-1 {
+	margin-right: 0.25rem !important;
+}
+.mr-4 {
+	margin-right: 1rem !important;
+}
+.ml-2 {
+	margin-left: 0.5rem !important;
 }
