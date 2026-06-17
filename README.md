@@ -3,7 +3,7 @@
 Sistema online interno da **Dunamis Company Marketing Digital** — gestão completa da agência: clientes, contratos, financeiro, projetos, tarefas, planejamento de conteúdo, aprovação de cliente e base de conhecimento.
 
 🔗 **Produção:** [dspace.verts.me](https://dspace.verts.me)
-📦 **Repositório:** [github.com/vertsystems/dunamis-space](https://github.com/vertsystems/dunamis-space) (privado)
+📦 **Repositório:** [github.com/vertsystems/dunamis-space](https://github.com/vertsystems/dunamis-space)
 
 > Deploy automático: cada `push` na branch `main` dispara um deploy de produção na Vercel.
 
