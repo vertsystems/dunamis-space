@@ -110,9 +110,6 @@
 		refreshing = false;
 	}
 
-	// Abrir/fechar a barra lateral no mobile
-	let navOpen = $state(false);
-
 	// Rotas "nuas" (sem o app shell): login e o portal público de aprovação.
 	const isBare = $derived(
 		page.url.pathname === '/login' || page.url.pathname.startsWith('/aprovar')
@@ -134,61 +131,24 @@
 {#if isBare}
 	{@render children()}
 {:else}
-	<div class="app" class:nav-open={navOpen}>
-		<!-- Botão de menu (mobile) -->
-		<button class="nav-toggle" onclick={() => (navOpen = !navOpen)} aria-label="Menu">
-			<Icon name={navOpen ? 'close' : 'menu'} size={20} />
-		</button>
-		<div
-			class="nav-overlay"
-			onclick={() => (navOpen = false)}
-			role="presentation"
-		></div>
-
-		<!-- Menu vertical à esquerda (departamentos) -->
-		<aside class="app-nav">
-			<a class="nav-brand" href="/" onclick={() => (navOpen = false)}>
+	<div class="app">
+		<header class="app-topbar">
+			<a class="brand" href="/">
 				<img class="brand-logo" src={logo} alt="Dunamis Space" />
 			</a>
 
-			<nav class="nav-depts">
+			<nav class="departments">
 				{#each departamentos as d (d.id)}
 					{@const badge = badgeDe(d.id)}
-					{@const ativo = deptAtivo === d.id}
-					<a
-						class="dept"
-						class:is-active={ativo}
-						href={deptHref(d)}
-						onclick={() => (navOpen = false)}
-					>
-						<Icon name={d.icon} size={17} />
+					<a href={deptHref(d)} class:is-active={deptAtivo === d.id} title={d.label}>
+						<Icon name={d.icon} size={14} />
 						<span class="dept-label">{d.label}</span>
 						{#if badge}<span class="badge">{badge}</span>{/if}
 					</a>
-
-					{#if ativo && areas.length}
-						<div class="dept-areas">
-							{#each areas as a (a.href)}
-								<a
-									class="area"
-									class:is-active={areaAtiva(a.href)}
-									href={a.href}
-									onclick={() => (navOpen = false)}
-								>
-									<span class="ico">{a.icon}</span>
-									<span class="area-label">{a.label}</span>
-								</a>
-							{/each}
-						</div>
-					{:else if ativo && d.id === 'dtools'}
-						<div class="dept-areas">
-							<span class="areas-empty">Nenhuma ferramenta ainda.</span>
-						</div>
-					{/if}
 				{/each}
 			</nav>
 
-			<div class="nav-footer">
+			<div class="actions">
 				<button
 					class="icon-btn"
 					class:is-spinning={refreshing}
@@ -196,19 +156,39 @@
 					title="Atualizar"
 					aria-label="Atualizar"
 				>
-					<Icon name="refresh" size={16} />
+					<Icon name="refresh" size={14} />
 				</button>
 				{#if session}
 					<span class="avatar" title={session.user.email}>{initials}</span>
 					<button class="icon-btn" onclick={signOut} title="Sair" aria-label="Sair">
-						<Icon name="logout" size={16} />
+						<Icon name="logout" size={14} />
 					</button>
 				{/if}
 			</div>
-		</aside>
+		</header>
 
-		<main class="app-content">
-			{@render children()}
-		</main>
+		<div class="app-body">
+			{#if deptAtivo !== 'home'}
+				<aside class="app-sidebar">
+					<div class="sidebar-title">
+						{departamentos.find((d) => d.id === deptAtivo)?.label}
+					</div>
+					<nav>
+						{#each areas as a (a.href)}
+							<a href={a.href} class:is-active={areaAtiva(a.href)} title={a.label}>
+								<span class="ico">{a.icon}</span>
+								<span class="area-label">{a.label}</span>
+							</a>
+						{/each}
+					</nav>
+					{#if !areas.length}
+						<p class="sidebar-empty">Nenhuma ferramenta ainda. Em breve.</p>
+					{/if}
+				</aside>
+			{/if}
+			<main class="app-content" class:is-full={deptAtivo === 'home'}>
+				{@render children()}
+			</main>
+		</div>
 	</div>
 {/if}
