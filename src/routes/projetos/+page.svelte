@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { PROJETO_STATUS, projetoStatusStyle, projetoStatusLabel, projetoTipoLabel } from '$lib/projetos';
 
 	let { data } = $props();
@@ -38,7 +39,7 @@
 		<tbody>
 			{#each data.projetos as p (p.id)}
 				{@const st = projetoStatusStyle(p.status)}
-				<tr style="cursor:pointer" onclick={() => (window.location.href = `/projetos/${p.id}`)}>
+				<tr style="cursor:pointer" onclick={() => goto(`/projetos/${p.id}`)}>
 					<td><a href={`/projetos/${p.id}`}>{p.nome}</a></td>
 					<td>{p.cliente?.nome ?? '—'}</td>
 					<td>{projetoTipoLabel(p.tipo)}</td>

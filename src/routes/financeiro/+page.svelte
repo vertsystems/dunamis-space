@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import {
 		TRANSACAO_TIPO,
 		TRANSACAO_STATUS,
@@ -93,7 +94,7 @@
 			{#each data.transacoes as t (t.id)}
 				{@const st = statusStyle(t.status)}
 				{@const receita = t.tipo === 'receita'}
-				<tr style="cursor:pointer" onclick={() => (window.location.href = `/financeiro/${t.id}`)}>
+				<tr style="cursor:pointer" onclick={() => goto(`/financeiro/${t.id}`)}>
 					<td>{fmtData(t.data_competencia)}</td>
 					<td><a href={`/financeiro/${t.id}`}>{t.descricao ?? '—'}</a></td>
 					<td>{t.categoria ?? '—'}</td>

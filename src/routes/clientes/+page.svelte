@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { CLIENTE_STATUS, statusStyle, statusLabel, formatBRL } from '$lib/clientes';
 
 	let { data } = $props();
@@ -51,7 +52,7 @@
 		<tbody>
 			{#each data.clientes as c (c.id)}
 				{@const st = statusStyle(c.status)}
-				<tr style="cursor:pointer" onclick={() => (window.location.href = `/clientes/${c.id}`)}>
+				<tr style="cursor:pointer" onclick={() => goto(`/clientes/${c.id}`)}>
 					<td>
 						<a href={`/clientes/${c.id}`}>{c.nome}</a>
 						{#if c.contato_email}<br /><small class="has-text-grey">{c.contato_email}</small>{/if}

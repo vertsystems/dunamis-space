@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { funcaoLabel } from '$lib/equipe';
 	import { formatBRL } from '$lib/clientes';
 
@@ -19,7 +20,7 @@
 		</thead>
 		<tbody>
 			{#each data.colaboradores as c (c.id)}
-				<tr style="cursor:pointer" onclick={() => (window.location.href = `/equipe/${c.id}`)}>
+				<tr style="cursor:pointer" onclick={() => goto(`/equipe/${c.id}`)}>
 					<td><a href={`/equipe/${c.id}`}>{c.nome}</a></td>
 					<td>{c.email}</td>
 					<td>{funcaoLabel(c.funcao)}</td>

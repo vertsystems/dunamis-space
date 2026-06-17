@@ -6,6 +6,7 @@
 		conteudoStatusLabel,
 		conteudoTipoLabel
 	} from '$lib/conteudo';
+	import { goto } from '$app/navigation';
 
 	let { data } = $props();
 	let status = $state(data.status);
@@ -58,7 +59,7 @@
 		<tbody>
 			{#each data.conteudos as c (c.id)}
 				{@const st = conteudoStatusStyle(c.status)}
-				<tr style="cursor:pointer" onclick={() => (window.location.href = `/conteudo/${c.id}`)}>
+				<tr style="cursor:pointer" onclick={() => goto(`/conteudo/${c.id}`)}>
 					<td>{fmt(c.data_publicacao)}</td>
 					<td><a href={`/conteudo/${c.id}`}>{c.titulo ?? '(sem título)'}</a></td>
 					<td>{c.cliente?.nome ?? '—'}</td>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	let { data } = $props();
 	function fmt(d: string | null) {
 		return d ? new Date(d + 'T00:00:00').toLocaleDateString('pt-BR') : '—';
@@ -17,7 +18,7 @@
 		<thead><tr><th>Campanha</th><th>Cliente</th><th>Período</th></tr></thead>
 		<tbody>
 			{#each data.campanhas as c (c.id)}
-				<tr style="cursor:pointer" onclick={() => (window.location.href = `/campanhas/${c.id}`)}>
+				<tr style="cursor:pointer" onclick={() => goto(`/campanhas/${c.id}`)}>
 					<td><a href={`/campanhas/${c.id}`}>{c.nome}</a></td>
 					<td>{c.cliente?.nome ?? '—'}</td>
 					<td>{fmt(c.data_inicio)} → {fmt(c.data_fim)}</td>

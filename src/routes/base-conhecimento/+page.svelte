@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	let { data } = $props();
 	let q = $state(data.q);
 </script>
@@ -22,7 +23,7 @@
 		</thead>
 		<tbody>
 			{#each data.artigos as a (a.id)}
-				<tr style="cursor:pointer" onclick={() => (window.location.href = `/base-conhecimento/${a.id}`)}>
+				<tr style="cursor:pointer" onclick={() => goto(`/base-conhecimento/${a.id}`)}>
 					<td><a href={`/base-conhecimento/${a.id}`}>{a.titulo}</a></td>
 					<td>{a.categoria ?? '—'}</td>
 					<td>{a.cliente?.nome ?? 'Geral'}</td>

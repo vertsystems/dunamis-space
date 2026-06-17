@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { formatBRL } from '$lib/contratos';
 
 	let { data } = $props();
@@ -37,7 +38,7 @@
 		</thead>
 		<tbody>
 			{#each data.planos as p (p.id)}
-				<tr style="cursor:pointer" onclick={() => (window.location.href = `/contratos/planos/${p.id}`)}>
+				<tr style="cursor:pointer" onclick={() => goto(`/contratos/planos/${p.id}`)}>
 					<td><a href={`/contratos/planos/${p.id}`}>{p.nome}</a></td>
 					<td class="has-text-right">{formatBRL(p.valor_mensal)}</td>
 					<td class="has-text-centered">{lim(p.limite_posts)}</td>

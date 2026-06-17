@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { CONTRATO_STATUS, contratoStatusStyle, contratoStatusLabel, formatBRL } from '$lib/contratos';
 
 	let { data } = $props();
@@ -52,7 +53,7 @@
 		<tbody>
 			{#each data.contratos as c (c.id)}
 				{@const st = contratoStatusStyle(c.status)}
-				<tr style="cursor:pointer" onclick={() => (window.location.href = `/contratos/${c.id}`)}>
+				<tr style="cursor:pointer" onclick={() => goto(`/contratos/${c.id}`)}>
 					<td><a href={`/contratos/${c.id}`}>{c.cliente?.nome ?? '—'}</a></td>
 					<td>{c.plano?.nome ?? '—'}</td>
 					<td class="has-text-right">{formatBRL(c.valor_mensal)}</td>
