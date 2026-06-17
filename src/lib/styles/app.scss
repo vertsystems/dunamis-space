@@ -1,0 +1,128 @@
+// Dunamis Space — paleta da marca
+// #F2F2F2 (fundo claro) · #CCCCCC (bordas/muted) · #333333 (texto/escuro)
+// #F20009 (primary/vermelho) · #FF6F00 (link/laranja) · #FFC527 (accent/amarelo)
+
+$brand-light: #f2f2f2;
+$brand-grey: #cccccc;
+$brand-dark: #333333;
+$brand-red: #f20009;
+$brand-orange: #ff6f00;
+$brand-yellow: #ffc527;
+
+@use 'bulma/sass' with (
+	$primary: $brand-red,
+	$link: $brand-orange,
+	$info: $brand-orange,
+	$warning: $brand-yellow,
+	$dark: $brand-dark,
+	$text: $brand-dark,
+	$grey: $brand-grey,
+	$border: $brand-grey,
+	$body-background-color: $brand-light,
+	$family-primary: '"Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
+);
+
+// Variáveis CSS expostas para uso direto nos componentes
+:root {
+	--ds-light: #{$brand-light};
+	--ds-grey: #{$brand-grey};
+	--ds-dark: #{$brand-dark};
+	--ds-red: #{$brand-red};
+	--ds-orange: #{$brand-orange};
+	--ds-yellow: #{$brand-yellow};
+}
+
+html,
+body {
+	background-color: var(--ds-light);
+	min-height: 100vh;
+}
+
+// Layout app shell
+.app-shell {
+	display: flex;
+	min-height: 100vh;
+}
+
+.app-sidebar {
+	width: 240px;
+	flex-shrink: 0;
+	background-color: var(--ds-dark);
+	color: #fff;
+	display: flex;
+	flex-direction: column;
+	padding: 1.25rem 1rem;
+
+	.brand {
+		font-weight: 700;
+		font-size: 1.25rem;
+		letter-spacing: -0.01em;
+		margin-bottom: 1.5rem;
+		color: #fff;
+
+		span {
+			color: var(--ds-red);
+		}
+	}
+
+	a {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		color: #e6e6e6;
+		padding: 0.55rem 0.7rem;
+		border-radius: 8px;
+		font-size: 0.95rem;
+
+		&:hover {
+			background-color: rgba(255, 255, 255, 0.08);
+			color: #fff;
+		}
+
+		&.is-active {
+			background-color: var(--ds-red);
+			color: #fff;
+		}
+	}
+}
+
+.app-main {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.app-topbar {
+	background-color: #fff;
+	border-bottom: 1px solid var(--ds-grey);
+	padding: 0.9rem 1.5rem;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.app-content {
+	padding: 1.75rem;
+	flex: 1;
+}
+
+.stat-card {
+	background-color: #fff;
+	border: 1px solid var(--ds-grey);
+	border-radius: 12px;
+	padding: 1.25rem;
+
+	.stat-label {
+		color: #777;
+		font-size: 0.85rem;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+	}
+
+	.stat-value {
+		font-size: 1.9rem;
+		font-weight: 700;
+		color: var(--ds-dark);
+	}
+}
