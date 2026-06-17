@@ -69,144 +69,173 @@ body {
 	min-height: 100vh;
 }
 
-// Layout: barra de departamentos flutuante + sidebar contextual
+// Layout: menu vertical (departamentos) à esquerda
 :root {
-	--ds-topbar-h: 48px;
-	--ds-topbar-gap: 7px; // margem lateral (max-width)
-	--ds-topbar-top: 3vh; // margem do topo
-	--ds-topbar-space: calc(var(--ds-topbar-top) + var(--ds-topbar-h) + 14px);
+	--ds-nav-w: 248px;
 }
 
 .app {
 	min-height: 100vh;
 }
 
-// Links de navegação nunca sublinham (nem no hover)
-.app-topbar a,
-.app-topbar a:hover,
-.app-sidebar a,
-.app-sidebar a:hover {
+.app-nav a {
 	text-decoration: none;
 }
 
-// Barra de departamentos flutuante (topo) — estilo claro
-.app-topbar {
+// Menu lateral esquerdo (departamentos + áreas do ativo)
+.app-nav {
 	position: fixed;
-	top: var(--ds-topbar-top);
-	left: 50%;
-	transform: translateX(-50%);
-	width: max-content;
-	max-width: calc(100% - 2 * var(--ds-topbar-gap));
-	z-index: 30;
-	height: var(--ds-topbar-h);
-	background-color: #fff;
-	border: 1px solid #ececec;
-	border-radius: 12px;
-	box-shadow: 0 5px 16px rgba(0, 0, 0, 0.08);
+	top: 0;
+	left: 0;
+	width: var(--ds-nav-w);
+	height: 100vh;
+	z-index: 40;
+	background: var(--ds-navy);
+	color: #d7dee3;
 	display: flex;
-	align-items: center;
-	gap: 0.77rem;
-	padding: 0 0.62rem;
+	flex-direction: column;
+	padding: 0.9rem 0.7rem;
+	overflow-y: auto;
 
-	.brand {
+	.nav-brand {
 		display: flex;
 		align-items: center;
-		flex-shrink: 0;
+		padding: 0.4rem 0.5rem 1rem;
 
 		.brand-logo {
-			height: 21px;
+			height: 26px;
 			width: auto;
 			display: block;
 		}
 	}
 
-	// Departamentos (ao lado da marca, sem caixa de fundo)
-	.departments {
+	.nav-depts {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 0.1rem;
+	}
+
+	.dept {
+		position: relative;
 		display: flex;
 		align-items: center;
-		gap: 0.15rem;
+		gap: 0.65rem;
+		color: #c2ccd3;
+		padding: 0.6rem 0.7rem;
+		border-radius: 9px;
+		font-weight: 600;
+		font-size: 0.92rem;
 
-		a {
-			position: relative;
+		&:hover {
+			background: rgba(255, 255, 255, 0.06);
+			color: #fff;
+		}
+		&.is-active {
+			background: var(--ds-orange);
+			color: #fff;
+		}
+
+		.badge {
+			margin-left: auto;
+			min-width: 18px;
+			height: 18px;
+			padding: 0 5px;
+			background: var(--ds-orange);
+			color: #fff;
+			border-radius: 9px;
+			font-size: 0.65rem;
+			font-weight: 700;
 			display: flex;
 			align-items: center;
-			gap: 0.33rem;
-			color: #6b7280;
-			padding: 0.39rem 0.69rem;
-			border-radius: 7px;
-			font-weight: 600;
-			font-size: 0.7rem;
-
-			&:hover {
-				color: var(--ds-dark);
-			}
-
-			&.is-active {
-				background: var(--ds-dark);
-				color: #fff;
-				box-shadow: 0 2px 7px rgba(0, 0, 0, 0.2);
-			}
-
-			.badge {
-				position: absolute;
-				top: -4px;
-				right: -2px;
-				min-width: 13px;
-				height: 13px;
-				padding: 0 3px;
-				background: var(--ds-red);
-				color: #fff;
-				border-radius: 7px;
-				font-size: 0.5rem;
-				font-weight: 700;
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				border: 1.5px solid #fff;
-			}
+			justify-content: center;
+		}
+		&.is-active .badge {
+			background: rgba(255, 255, 255, 0.25);
 		}
 	}
 
-	.actions {
+	// Áreas do departamento ativo (recuadas)
+	.dept-areas {
+		display: flex;
+		flex-direction: column;
+		gap: 1px;
+		margin: 0.15rem 0 0.45rem 1.15rem;
+		padding-left: 0.6rem;
+		border-left: 2px solid rgba(255, 255, 255, 0.1);
+
+		.area {
+			display: flex;
+			align-items: center;
+			gap: 0.55rem;
+			color: #9fb0bb;
+			padding: 0.42rem 0.6rem;
+			border-radius: 7px;
+			font-size: 0.86rem;
+
+			.ico {
+				width: 1rem;
+				text-align: center;
+				opacity: 0.85;
+			}
+			&:hover {
+				background: rgba(255, 255, 255, 0.06);
+				color: #fff;
+			}
+			&.is-active {
+				color: #fff;
+				background: rgba(255, 255, 255, 0.1);
+				font-weight: 600;
+			}
+		}
+
+		.areas-empty {
+			padding: 0.4rem 0.6rem;
+			font-size: 0.8rem;
+			color: #7c8b95;
+		}
+	}
+
+	.nav-footer {
 		display: flex;
 		align-items: center;
-		gap: 0.31rem;
-		flex-shrink: 0;
+		gap: 0.4rem;
+		padding: 0.7rem 0.4rem 0.2rem;
+		margin-top: 0.5rem;
+		border-top: 1px solid rgba(255, 255, 255, 0.08);
 
 		.icon-btn {
-			width: 28px;
-			height: 28px;
+			width: 32px;
+			height: 32px;
 			border-radius: 8px;
 			border: none;
 			background: transparent;
-			color: #9aa1ab;
+			color: #aebcc5;
 			cursor: pointer;
 			display: flex;
 			align-items: center;
 			justify-content: center;
 
 			&:hover {
-				background: #f1f1f2;
-				color: var(--ds-dark);
+				background: rgba(255, 255, 255, 0.08);
+				color: #fff;
 			}
-
 			&.is-spinning svg {
 				animation: ds-spin 0.7s linear infinite;
 			}
 		}
-
 		.avatar {
-			width: 28px;
-			height: 28px;
+			width: 32px;
+			height: 32px;
 			border-radius: 50%;
-			background: var(--ds-dark);
+			background: var(--ds-orange);
 			color: #fff;
 			font-weight: 700;
-			font-size: 0.6rem;
+			font-size: 0.72rem;
 			display: flex;
 			align-items: center;
 			justify-content: center;
-			flex-shrink: 0;
+			margin-right: auto;
 		}
 	}
 }
@@ -217,135 +246,56 @@ body {
 	}
 }
 
-.app-body {
-	display: flex;
-	align-items: flex-start;
-	padding-top: var(--ds-topbar-space);
-	min-height: 100vh;
-}
-
-// Sidebar contextual (áreas do departamento ativo)
-.app-sidebar {
-	width: 232px;
-	flex-shrink: 0;
-	padding: 0.5rem 0.85rem;
-	position: sticky;
-	top: var(--ds-topbar-space);
-	align-self: flex-start;
-
-	.sidebar-title {
-		font-size: 0.72rem;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		color: #999;
-		font-weight: 600;
-		padding: 0.25rem 0.7rem 0.65rem;
-	}
-
-	a {
-		display: flex;
-		align-items: center;
-		gap: 0.6rem;
-		color: var(--ds-dark);
-		padding: 0.55rem 0.7rem;
-		border-radius: 8px;
-		font-size: 0.93rem;
-		margin-bottom: 2px;
-
-		.ico {
-			width: 1.1rem;
-			text-align: center;
-			opacity: 0.8;
-		}
-
-		&:hover {
-			background-color: rgba(0, 0, 0, 0.05);
-		}
-
-		&.is-active {
-			background-color: var(--ds-red);
-			color: #fff;
-
-			.ico {
-				opacity: 1;
-			}
-		}
-	}
-
-	.sidebar-empty {
-		padding: 0.5rem 0.7rem;
-		font-size: 0.82rem;
-		color: #999;
-	}
-}
-
+// Conteúdo (à direita do menu)
 .app-content {
-	flex: 1;
-	min-width: 0;
-	padding: 0.75rem 80px 2.5rem;
+	margin-left: var(--ds-nav-w);
+	min-height: 100vh;
+	padding: 1.75rem 2.25rem 3rem;
 }
 
-// Mobile: topo e sidebar mostram apenas ícones
+// Botão de menu (mobile) + overlay
+.nav-toggle {
+	display: none;
+	position: fixed;
+	top: 12px;
+	left: 12px;
+	z-index: 50;
+	width: 40px;
+	height: 40px;
+	border-radius: 10px;
+	border: none;
+	background: var(--ds-navy);
+	color: #fff;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+}
+.nav-overlay {
+	display: none;
+	position: fixed;
+	inset: 0;
+	background: rgba(5, 20, 27, 0.5);
+	z-index: 35;
+}
+
 @media (max-width: 768px) {
-	.app-topbar {
-		gap: 0.5rem;
-		padding: 0 0.5rem;
-
-		.brand-name {
-			display: none;
-		}
-
-		.departments {
-			gap: 0.1rem;
-
-			a {
-				padding: 0.5rem 0.6rem;
-			}
-
-			.dept-label {
-				display: none;
-			}
-		}
-
-		.actions {
-			gap: 0.2rem;
-		}
+	.app-nav {
+		transform: translateX(-100%);
+		transition: transform 0.2s ease;
+		box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
 	}
-
-	.app-sidebar {
-		width: 56px;
-		padding: 0.5rem 0.4rem;
-
-		.sidebar-title,
-		.area-label,
-		.sidebar-empty {
-			display: none;
-		}
-
-		a {
-			justify-content: center;
-			padding: 0.6rem 0;
-
-			.ico {
-				font-size: 1.15rem;
-				opacity: 0.9;
-			}
-		}
+	.app.nav-open .app-nav {
+		transform: translateX(0);
 	}
-
+	.app.nav-open .nav-overlay {
+		display: block;
+	}
+	.nav-toggle {
+		display: flex;
+	}
 	.app-content {
-		padding: 0.75rem 0.9rem 2.5rem;
-
-		&.is-full {
-			padding-left: 0.9rem;
-		}
-	}
-}
-
-// Telas muito estreitas: esconde a marca para sobrar espaço aos ícones
-@media (max-width: 480px) {
-	.app-topbar .brand {
-		display: none;
+		margin-left: 0;
+		padding: 4rem 1rem 2.5rem;
 	}
 }
 
