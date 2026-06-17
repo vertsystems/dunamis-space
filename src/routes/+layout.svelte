@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '$lib/styles/app.scss';
 	import favicon from '$lib/assets/favicon.svg';
+	import logo from '$lib/assets/dspace-logo.svg';
 	import { invalidate, invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
@@ -133,8 +134,7 @@
 	<div class="app">
 		<header class="app-topbar">
 			<a class="brand" href="/">
-				<span class="brand-mark"><Icon name="leaf" size={14} /></span>
-				<span class="brand-name">Dunamis<span>.</span>Space</span>
+				<img class="brand-logo" src={logo} alt="Dunamis Space" />
 			</a>
 
 			<nav class="departments">
