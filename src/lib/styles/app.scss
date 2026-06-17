@@ -53,8 +53,10 @@ body {
 .app-topbar {
 	position: fixed;
 	top: var(--ds-topbar-gap);
-	left: var(--ds-topbar-gap);
-	right: var(--ds-topbar-gap);
+	left: 50%;
+	transform: translateX(-50%);
+	width: max-content;
+	max-width: calc(100% - 2 * var(--ds-topbar-gap));
 	z-index: 30;
 	height: var(--ds-topbar-h);
 	background-color: #fff;
@@ -149,7 +151,6 @@ body {
 		align-items: center;
 		gap: 0.4rem;
 		flex-shrink: 0;
-		margin-left: auto;
 
 		.icon-btn {
 			width: 36px;
