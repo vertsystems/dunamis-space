@@ -1,10 +1,11 @@
 <script lang="ts">
 	import '$lib/styles/app.scss';
 	import favicon from '$lib/assets/favicon.svg';
-	import { invalidate } from '$app/navigation';
+	import { invalidate, invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { DTOOLS_FERRAMENTAS } from '$lib/dtools';
+	import Icon from '$lib/components/Icon.svelte';
 
 	let { children, data } = $props();
 	let { supabase, session } = $derived(data);
@@ -22,18 +23,18 @@
 	type Departamento = {
 		id: string;
 		label: string;
-		icon: string;
+		icon: string; // nome do ícone (Icon.svelte)
 		href?: string;
 		base?: string;
 		areas: Area[];
 	};
 
 	const departamentos: Departamento[] = [
-		{ id: 'home', label: 'Home', icon: '🏠', href: '/', areas: [] },
+		{ id: 'home', label: 'Home', icon: 'home', href: '/', areas: [] },
 		{
 			id: 'administrativo',
 			label: 'Administrativo',
-			icon: '📋',
+			icon: 'admin',
 			areas: [
 				{ href: '/financeiro', label: 'Financeiro', icon: '$' },
 				{ href: '/equipe', label: 'Equipe', icon: '◍' },
@@ -43,7 +44,7 @@
 		{
 			id: 'comercial',
 			label: 'Comercial',
-			icon: '💼',
+			icon: 'comercial',
 			areas: [
 				{ href: '/clientes', label: 'Clientes (CRM)', icon: '◔' },
 				{ href: '/contratos', label: 'Contratos & Planos', icon: '▤' }
@@ -52,7 +53,7 @@
 		{
 			id: 'marketing',
 			label: 'Marketing',
-			icon: '📣',
+			icon: 'marketing',
 			areas: [
 				{ href: '/projetos', label: 'Projetos', icon: '▣' },
 				{ href: '/tarefas', label: 'Tarefas', icon: '☑' },
@@ -63,7 +64,7 @@
 		{
 			id: 'dtools',
 			label: 'DTools',
-			icon: '🧰',
+			icon: 'dtools',
 			href: '/dtools',
 			base: '/dtools',
 			areas: DTOOLS_FERRAMENTAS.map((f) => ({ href: f.href, label: f.label, icon: f.icon }))
@@ -78,10 +79,8 @@
 	// Departamento ativo a partir da rota atual.
 	const deptAtivo = $derived.by(() => {
 		const p = page.url.pathname;
-		// 1) departamentos com áreas correspondentes
 		const byArea = departamentos.find((dep) => dep.areas.some((a) => areaAtiva(a.href)));
 		if (byArea) return byArea.id;
-		// 2) departamentos com base própria (ex.: DTools, mesmo sem ferramentas)
 		const byBase = departamentos.find(
 			(dep) => dep.base && (p === dep.base || p.startsWith(dep.base + '/'))
 		);
@@ -92,6 +91,23 @@
 	const areas = $derived(departamentos.find((d) => d.id === deptAtivo)?.areas ?? []);
 
 	const deptHref = (d: Departamento) => d.href ?? d.areas[0]?.href ?? '/';
+
+	// Badge de notificação por departamento (aprovações pendentes → Marketing).
+	const badgeDe = (id: string) => (id === 'marketing' ? (data.aprovacoesPendentes ?? 0) : 0);
+
+	// Iniciais do usuário para o avatar.
+	const initials = $derived.by(() => {
+		const email = session?.user?.email ?? '';
+		const local = email.split('@')[0].replace(/[^a-zA-Z]/g, '');
+		return (local.slice(0, 2) || '?').toUpperCase();
+	});
+
+	let refreshing = $state(false);
+	async function refresh() {
+		refreshing = true;
+		await invalidateAll();
+		refreshing = false;
+	}
 
 	// Rotas "nuas" (sem o app shell): login e o portal público de aprovação.
 	const isBare = $derived(
@@ -116,19 +132,37 @@
 {:else}
 	<div class="app">
 		<header class="app-topbar">
-			<a class="brand" href="/">Dunamis<span>.</span>Space</a>
+			<a class="brand" href="/">
+				<span class="brand-mark"><Icon name="leaf" size={20} /></span>
+				<span class="brand-name">Dunamis<span>.</span>Space</span>
+			</a>
+
 			<nav class="departments">
 				{#each departamentos as d (d.id)}
+					{@const badge = badgeDe(d.id)}
 					<a href={deptHref(d)} class:is-active={deptAtivo === d.id} title={d.label}>
-						<span class="dept-ico">{d.icon}</span>
+						<Icon name={d.icon} />
 						<span class="dept-label">{d.label}</span>
+						{#if badge}<span class="badge">{badge}</span>{/if}
 					</a>
 				{/each}
 			</nav>
-			<div class="user">
+
+			<div class="actions">
+				<button
+					class="icon-btn"
+					class:is-spinning={refreshing}
+					onclick={refresh}
+					title="Atualizar"
+					aria-label="Atualizar"
+				>
+					<Icon name="refresh" />
+				</button>
 				{#if session}
-					<span class="user-email">{session.user.email}</span>
-					<button class="button is-small is-light" onclick={signOut}>Sair</button>
+					<span class="avatar" title={session.user.email}>{initials}</span>
+					<button class="icon-btn" onclick={signOut} title="Sair" aria-label="Sair">
+						<Icon name="logout" />
+					</button>
 				{/if}
 			</div>
 		</header>

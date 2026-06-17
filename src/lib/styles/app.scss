@@ -40,16 +40,16 @@ body {
 
 // Layout: barra de departamentos flutuante + sidebar contextual
 :root {
-	--ds-topbar-h: 54px;
+	--ds-topbar-h: 62px;
 	--ds-topbar-gap: 7px;
-	--ds-topbar-space: 74px; // altura + margem topo + respiro
+	--ds-topbar-space: 82px; // altura + margem topo + respiro
 }
 
 .app {
 	min-height: 100vh;
 }
 
-// Barra de departamentos flutuante (topo)
+// Barra de departamentos flutuante (topo) — estilo claro
 .app-topbar {
 	position: fixed;
 	top: var(--ds-topbar-gap);
@@ -57,69 +57,144 @@ body {
 	right: var(--ds-topbar-gap);
 	z-index: 30;
 	height: var(--ds-topbar-h);
-	background-color: var(--ds-dark);
-	color: #fff;
-	border-radius: 14px;
-	box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+	background-color: #fff;
+	border: 1px solid #ececec;
+	border-radius: 16px;
+	box-shadow: 0 6px 22px rgba(0, 0, 0, 0.08);
 	display: flex;
 	align-items: center;
-	gap: 1.25rem;
-	padding: 0 1.1rem;
+	gap: 1rem;
+	padding: 0 0.8rem;
 
 	.brand {
-		font-weight: 700;
-		font-size: 1.1rem;
-		letter-spacing: -0.01em;
-		color: #fff;
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		color: var(--ds-dark);
 		white-space: nowrap;
+		flex-shrink: 0;
 
-		span {
-			color: var(--ds-red);
+		.brand-mark {
+			width: 40px;
+			height: 40px;
+			border-radius: 12px;
+			background: var(--ds-dark);
+			color: #fff;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			flex-shrink: 0;
+		}
+
+		.brand-name {
+			font-weight: 700;
+			font-size: 1.05rem;
+			letter-spacing: -0.01em;
+
+			span {
+				color: var(--ds-red);
+			}
 		}
 	}
 
+	// Grupo "pílula" central
 	.departments {
 		display: flex;
-		gap: 0.3rem;
-		flex: 1;
+		align-items: center;
+		gap: 0.2rem;
+		margin: 0 auto;
+		background: #f3f4f6;
+		border-radius: 13px;
+		padding: 5px;
 
 		a {
+			position: relative;
 			display: flex;
 			align-items: center;
 			gap: 0.45rem;
-			color: #d6d6d6;
-			padding: 0.45rem 0.95rem;
+			color: #6b7280;
+			padding: 0.5rem 0.9rem;
 			border-radius: 9px;
-			font-weight: 500;
-			font-size: 0.95rem;
-
-			.dept-ico {
-				font-size: 1.05rem;
-				line-height: 1;
-			}
+			font-weight: 600;
+			font-size: 0.92rem;
 
 			&:hover {
-				background-color: rgba(255, 255, 255, 0.1);
-				color: #fff;
+				color: var(--ds-dark);
 			}
 
 			&.is-active {
-				background-color: var(--ds-red);
+				background: var(--ds-dark);
 				color: #fff;
+				box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+			}
+
+			.badge {
+				position: absolute;
+				top: -5px;
+				right: -3px;
+				min-width: 17px;
+				height: 17px;
+				padding: 0 4px;
+				background: var(--ds-red);
+				color: #fff;
+				border-radius: 9px;
+				font-size: 0.65rem;
+				font-weight: 700;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				border: 2px solid #fff;
 			}
 		}
 	}
 
-	.user {
+	.actions {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
-		white-space: nowrap;
+		gap: 0.4rem;
+		flex-shrink: 0;
 
-		.user-email {
-			color: #b9b9b9;
-			font-size: 0.82rem;
+		.icon-btn {
+			width: 36px;
+			height: 36px;
+			border-radius: 10px;
+			border: none;
+			background: transparent;
+			color: #9aa1ab;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+
+			&:hover {
+				background: #f1f1f2;
+				color: var(--ds-dark);
+			}
+
+			&.is-spinning svg {
+				animation: ds-spin 0.7s linear infinite;
+			}
 		}
+
+		.avatar {
+			width: 36px;
+			height: 36px;
+			border-radius: 50%;
+			background: var(--ds-dark);
+			color: #fff;
+			font-weight: 700;
+			font-size: 0.78rem;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			flex-shrink: 0;
+		}
+	}
+}
+
+@keyframes ds-spin {
+	to {
+		transform: rotate(360deg);
 	}
 }
 
@@ -199,30 +274,26 @@ body {
 @media (max-width: 768px) {
 	.app-topbar {
 		gap: 0.5rem;
-		padding: 0 0.6rem;
+		padding: 0 0.5rem;
 
-		.brand {
-			font-size: 0.95rem;
+		.brand-name {
+			display: none;
 		}
 
 		.departments {
 			gap: 0.1rem;
 
 			a {
-				padding: 0.45rem 0.55rem;
+				padding: 0.5rem 0.6rem;
 			}
 
 			.dept-label {
 				display: none;
 			}
-
-			.dept-ico {
-				font-size: 1.2rem;
-			}
 		}
 
-		.user .user-email {
-			display: none;
+		.actions {
+			gap: 0.2rem;
 		}
 	}
 
