@@ -114,7 +114,7 @@ body {
 		flex-shrink: 0;
 
 		.brand-logo {
-			height: 21px;
+			height: 18px;
 			width: auto;
 			display: block;
 		}
@@ -230,10 +230,10 @@ body {
 	flex-shrink: 0;
 	margin: 0.75rem 0 0 50px; // topo alinhado com o conteúdo da direita
 	padding: 0.6rem 0.55rem;
-	background: var(--ds-navy-900);
-	border: 1px solid rgba(255, 255, 255, 0.06);
+	background: #939ea2;
+	border: 1px solid rgba(5, 20, 27, 0.1);
 	border-radius: 16px;
-	box-shadow: 0 10px 30px rgba(5, 20, 27, 0.22);
+	box-shadow: 0 6px 20px rgba(5, 20, 27, 0.14);
 	position: sticky;
 	top: var(--ds-topbar-space);
 	align-self: flex-start;
@@ -242,7 +242,7 @@ body {
 		font-size: 0.66rem;
 		text-transform: uppercase;
 		letter-spacing: 0.09em;
-		color: #5f6e78;
+		color: #45525a;
 		font-weight: 600;
 		padding: 0.5rem 0.85rem 0.7rem;
 	}
@@ -251,7 +251,7 @@ body {
 		display: flex;
 		align-items: center;
 		gap: 0.7rem;
-		color: #8a98a3;
+		color: #1f2c34;
 		padding: 0.6rem 0.85rem;
 		border-radius: 10px;
 		font-size: 0.9rem;
@@ -263,13 +263,13 @@ body {
 		}
 
 		&:hover {
-			background-color: rgba(255, 255, 255, 0.05);
-			color: #d7dee3;
+			background-color: rgba(255, 255, 255, 0.4);
+			color: #05141b;
 		}
 
 		&.is-active {
-			background-color: rgba(222, 73, 8, 0.16);
-			color: #ff8a4d;
+			background-color: var(--ds-orange);
+			color: #fff;
 
 			svg {
 				opacity: 1;
@@ -280,7 +280,7 @@ body {
 	.sidebar-empty {
 		padding: 0.5rem 0.85rem;
 		font-size: 0.82rem;
-		color: #5f6e78;
+		color: #45525a;
 	}
 }
 
