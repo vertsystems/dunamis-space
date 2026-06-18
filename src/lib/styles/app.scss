@@ -230,10 +230,10 @@ body {
 	flex-shrink: 0;
 	margin: 0.75rem 0 0 50px; // topo alinhado com o conteúdo da direita
 	padding: 0.6rem 0.55rem;
-	background: #939ea2;
+	background: #ccd0cf;
 	border: 1px solid rgba(5, 20, 27, 0.1);
 	border-radius: 16px;
-	box-shadow: 0 6px 20px rgba(5, 20, 27, 0.14);
+	box-shadow: 0 6px 20px rgba(5, 20, 27, 0.12);
 	position: sticky;
 	top: var(--ds-topbar-space);
 	align-self: flex-start;
@@ -242,7 +242,7 @@ body {
 		font-size: 0.66rem;
 		text-transform: uppercase;
 		letter-spacing: 0.09em;
-		color: #45525a;
+		color: #333333;
 		font-weight: 600;
 		padding: 0.5rem 0.85rem 0.7rem;
 	}
@@ -251,7 +251,7 @@ body {
 		display: flex;
 		align-items: center;
 		gap: 0.7rem;
-		color: #1f2c34;
+		color: #333333;
 		padding: 0.6rem 0.85rem;
 		border-radius: 10px;
 		font-size: 0.9rem;
@@ -263,13 +263,13 @@ body {
 		}
 
 		&:hover {
-			background-color: rgba(255, 255, 255, 0.4);
-			color: #05141b;
+			background-color: rgba(0, 0, 0, 0.05);
+			color: #333333;
 		}
 
 		&.is-active {
-			background-color: var(--ds-orange);
-			color: #fff;
+			background-color: #b8bbba;
+			color: #333333;
 
 			svg {
 				opacity: 1;
@@ -280,7 +280,7 @@ body {
 	.sidebar-empty {
 		padding: 0.5rem 0.85rem;
 		font-size: 0.82rem;
-		color: #45525a;
+		color: #333333;
 	}
 }
 
