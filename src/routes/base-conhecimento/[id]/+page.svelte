@@ -7,31 +7,31 @@
 	let confirmDelete = $state(false);
 </script>
 
-<nav class="breadcrumb mb-4" aria-label="breadcrumbs">
-	<ul>
-		<li><a href="/base-conhecimento">Base de Conhecimento</a></li>
-		<li class="is-active"><a href="#" aria-current="page">{data.artigo.titulo}</a></li>
-	</ul>
+<nav aria-label="breadcrumb" class="mb-4">
+	<ol class="breadcrumb">
+		<li class="breadcrumb-item"><a href="/base-conhecimento">Base de Conhecimento</a></li>
+		<li class="breadcrumb-item active" aria-current="page">{data.artigo.titulo}</li>
+	</ol>
 </nav>
 
-{#if form?.saved}<div class="notification is-success is-light">Artigo salvo com sucesso.</div>{/if}
+{#if form?.saved}<div class="alert alert-success">Artigo salvo com sucesso.</div>{/if}
 
-<div class="box">
-	<h1 class="title is-5">{data.artigo.titulo}</h1>
+<div class="card card-body">
+	<h1 class="h5">{data.artigo.titulo}</h1>
 	<KbForm {artigo} clientes={data.clientes} error={form?.error ?? null} submitLabel="Salvar alterações" action="?/update" />
 </div>
 
-<div class="box">
-	<h2 class="title is-6 has-text-danger">Zona de perigo</h2>
+<div class="card card-body">
+	<h2 class="h6 text-danger">Zona de perigo</h2>
 	{#if confirmDelete}
 		<form method="POST" action="?/delete" use:enhance>
 			<p class="mb-3">Excluir este artigo?</p>
-			<div class="field is-grouped">
-				<div class="control"><button class="button is-danger" type="submit">Sim, excluir</button></div>
-				<div class="control"><button class="button is-light" type="button" onclick={() => (confirmDelete = false)}>Cancelar</button></div>
+			<div class="d-flex gap-2">
+				<button class="btn btn-danger" type="submit">Sim, excluir</button>
+				<button class="btn btn-light" type="button" onclick={() => (confirmDelete = false)}>Cancelar</button>
 			</div>
 		</form>
 	{:else}
-		<button class="button is-danger is-outlined" onclick={() => (confirmDelete = true)}>Excluir artigo</button>
+		<button class="btn btn-outline-danger" onclick={() => (confirmDelete = true)}>Excluir artigo</button>
 	{/if}
 </div>

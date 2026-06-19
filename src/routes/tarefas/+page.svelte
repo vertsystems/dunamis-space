@@ -35,23 +35,19 @@
 	}
 </script>
 
-<div class="level mb-4">
-	<div class="level-left">
-		<div class="level-item">
-			{#if data.projetoNome}
-				<span class="tag is-light">Projeto: {data.projetoNome}</span>
-				<a class="ml-2" href="/tarefas">limpar</a>
-			{:else}
-				<span class="has-text-grey">Arraste os cartões entre as colunas para mudar o status.</span>
-			{/if}
-		</div>
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+	<div class="d-flex align-items-center gap-2">
+		{#if data.projetoNome}
+			<span class="badge text-bg-light">Projeto: {data.projetoNome}</span>
+			<a href="/tarefas">limpar</a>
+		{:else}
+			<span class="text-muted">Arraste os cartões entre as colunas para mudar o status.</span>
+		{/if}
 	</div>
-	<div class="level-right">
-		<a class="button is-primary" href="/tarefas/novo">+ Nova tarefa</a>
-	</div>
+	<a class="btn btn-primary" href="/tarefas/novo">+ Nova tarefa</a>
 </div>
 
-{#if data.loadError}<div class="notification is-danger is-light">Erro ao carregar: {data.loadError}</div>{/if}
+{#if data.loadError}<div class="alert alert-danger">Erro ao carregar: {data.loadError}</div>{/if}
 
 <div class="kanban">
 	{#each TAREFA_STATUS as col (col.value)}
@@ -83,7 +79,7 @@
 					<a class="card-title" href={`/tarefas/${t.id}`}>{t.titulo}</a>
 					{#if t.projeto?.nome}<div class="card-meta">{t.projeto.nome}</div>{/if}
 					<div class="card-tags">
-						<span class="tag is-small" style={`background:${pr.bg};color:${pr.fg};font-weight:500;`}>
+						<span class="badge" style={`background:${pr.bg};color:${pr.fg};font-weight:500;`}>
 							{prioridadeLabel(t.prioridade)}
 						</span>
 						{#if t.responsavel?.nome}<span class="card-meta">{t.responsavel.nome}</span>{/if}
@@ -109,7 +105,7 @@
 		min-height: 200px;
 	}
 	.kanban-col.is-over {
-		outline: 2px dashed var(--ds-orange, #ff6f00);
+		outline: 2px dashed var(--ds-orange, #de4908);
 		background: #e3e3e3;
 	}
 	.kanban-col-head {
@@ -153,5 +149,10 @@
 		gap: 0.4rem;
 		margin-top: 0.4rem;
 		flex-wrap: wrap;
+	}
+	@media (max-width: 768px) {
+		.kanban {
+			grid-template-columns: 1fr 1fr;
+		}
 	}
 </style>

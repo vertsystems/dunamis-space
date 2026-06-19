@@ -13,7 +13,6 @@
 		return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 	}
 
-	// Agrupa os conteúdos por dia (data local).
 	const porDia = $derived.by(() => {
 		const map = new Map<string, typeof data.conteudos>();
 		for (const c of data.conteudos) {
@@ -26,10 +25,9 @@
 		return map;
 	});
 
-	// Monta a grade: começa no domingo da semana do dia 1º.
 	const celulas = $derived.by(() => {
 		const primeiro = new Date(data.ano, data.mes, 1);
-		const inicioSemana = primeiro.getDay(); // 0=Dom
+		const inicioSemana = primeiro.getDay();
 		const diasNoMes = new Date(data.ano, data.mes + 1, 0).getDate();
 		const total = Math.ceil((inicioSemana + diasNoMes) / 7) * 7;
 		const inicio = new Date(data.ano, data.mes, 1 - inicioSemana);
@@ -47,32 +45,24 @@
 	}
 </script>
 
-<div class="level mb-4">
-	<div class="level-left">
-		<div class="buttons has-addons mb-0">
-			<a class="button" href="/conteudo">Lista</a>
-			<span class="button is-primary is-selected">Calendário</span>
-			<a class="button" href="/conteudo/aprovacoes">Aprovações</a>
-		</div>
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+	<div class="btn-group">
+		<a class="btn btn-outline-secondary" href="/conteudo">Lista</a>
+		<span class="btn btn-primary">Calendário</span>
+		<a class="btn btn-outline-secondary" href="/conteudo/aprovacoes">Aprovações</a>
 	</div>
-	<div class="level-right">
-		<a class="button is-primary" href="/conteudo/novo">+ Novo conteúdo</a>
-	</div>
+	<a class="btn btn-primary" href="/conteudo/novo">+ Novo conteúdo</a>
 </div>
 
-{#if data.loadError}<div class="notification is-danger is-light">Erro ao carregar: {data.loadError}</div>{/if}
+{#if data.loadError}<div class="alert alert-danger">Erro ao carregar: {data.loadError}</div>{/if}
 
-<div class="box">
-	<div class="level mb-4">
-		<div class="level-left">
-			<h1 class="title is-5 mb-0">{MESES[data.mes]} {data.ano}</h1>
-		</div>
-		<div class="level-right">
-			<div class="buttons mb-0">
-				<a class="button is-small" href={`/conteudo/calendario?mes=${data.prev}`} aria-label="Mês anterior">‹</a>
-				<a class="button is-small" href="/conteudo/calendario">Hoje</a>
-				<a class="button is-small" href={`/conteudo/calendario?mes=${data.next}`} aria-label="Próximo mês">›</a>
-			</div>
+<div class="card card-body">
+	<div class="d-flex justify-content-between align-items-center mb-4">
+		<h1 class="h5 mb-0">{MESES[data.mes]} {data.ano}</h1>
+		<div class="btn-group">
+			<a class="btn btn-sm btn-outline-secondary" href={`/conteudo/calendario?mes=${data.prev}`} aria-label="Mês anterior">‹</a>
+			<a class="btn btn-sm btn-outline-secondary" href="/conteudo/calendario">Hoje</a>
+			<a class="btn btn-sm btn-outline-secondary" href={`/conteudo/calendario?mes=${data.next}`} aria-label="Próximo mês">›</a>
 		</div>
 	</div>
 
@@ -104,12 +94,12 @@
 </div>
 
 {#if data.semData.length}
-	<div class="box">
-		<h2 class="title is-6">Sem data agendada ({data.semData.length})</h2>
-		<div class="tags">
+	<div class="card card-body">
+		<h2 class="h6">Sem data agendada ({data.semData.length})</h2>
+		<div class="d-flex flex-wrap gap-1">
 			{#each data.semData as c (c.id)}
 				{@const st = conteudoStatusStyle(c.status)}
-				<a class="tag" href={`/conteudo/${c.id}`} style={`background:${st.bg};color:${st.fg};`}>
+				<a class="badge text-decoration-none" href={`/conteudo/${c.id}`} style={`background:${st.bg};color:${st.fg};`}>
 					{c.titulo ?? conteudoTipoLabel(c.tipo)}{c.cliente_nome ? ' · ' + c.cliente_nome : ''}
 				</a>
 			{/each}
@@ -152,8 +142,8 @@
 		color: #c4c4c4;
 	}
 	.cal-cell.is-today {
-		border-color: var(--ds-red, #f20009);
-		box-shadow: inset 0 0 0 1px var(--ds-red, #f20009);
+		border-color: var(--ds-red, #de4908);
+		box-shadow: inset 0 0 0 1px var(--ds-red, #de4908);
 	}
 	.cal-day {
 		font-size: 0.8rem;
@@ -171,6 +161,7 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		font-weight: 500;
+		text-decoration: none;
 	}
 	.cal-chip-time {
 		opacity: 0.7;

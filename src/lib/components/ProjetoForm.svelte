@@ -33,102 +33,70 @@
 		};
 	}}
 >
-	{#if error}<div class="notification is-danger is-light">{error}</div>{/if}
+	{#if error}<div class="alert alert-danger">{error}</div>{/if}
 
-	<div class="columns is-multiline">
-		<div class="column is-6">
-			<div class="field">
-				<label class="label" for="nome">Nome do projeto *</label>
-				<div class="control"><input id="nome" class="input" name="nome" required value={v('nome')} /></div>
-			</div>
+	<div class="row g-3">
+		<div class="col-md-6">
+			<label class="form-label" for="nome">Nome do projeto *</label>
+			<input id="nome" class="form-control" name="nome" required value={v('nome')} />
 		</div>
-		<div class="column is-6">
-			<div class="field">
-				<label class="label" for="cliente_id">Cliente *</label>
-				<div class="control">
-					<div class="select is-fullwidth">
-						<select id="cliente_id" name="cliente_id" required value={projeto?.cliente_id ?? ''}>
-							<option value="" disabled>Selecione um cliente</option>
-							{#each clientes as c (c.id)}<option value={c.id}>{c.nome}</option>{/each}
-						</select>
-					</div>
-				</div>
-			</div>
+		<div class="col-md-6">
+			<label class="form-label" for="cliente_id">Cliente *</label>
+			<select class="form-select" id="cliente_id" name="cliente_id" required value={projeto?.cliente_id ?? ''}>
+				<option value="" disabled>Selecione um cliente</option>
+				{#each clientes as c (c.id)}<option value={c.id}>{c.nome}</option>{/each}
+			</select>
 		</div>
 
-		<div class="column is-4">
-			<div class="field">
-				<label class="label" for="tipo">Tipo</label>
-				<div class="control">
-					<div class="select is-fullwidth">
-						<select id="tipo" name="tipo" value={projeto?.tipo ?? 'social_media'}>
-							{#each PROJETO_TIPO as t (t.value)}<option value={t.value}>{t.label}</option>{/each}
-						</select>
-					</div>
-				</div>
-			</div>
+		<div class="col-md-4">
+			<label class="form-label" for="tipo">Tipo</label>
+			<select class="form-select" id="tipo" name="tipo" value={projeto?.tipo ?? 'social_media'}>
+				{#each PROJETO_TIPO as t (t.value)}<option value={t.value}>{t.label}</option>{/each}
+			</select>
 		</div>
-		<div class="column is-4">
-			<div class="field">
-				<label class="label" for="status">Status</label>
-				<div class="control">
-					<div class="select is-fullwidth">
-						<select id="status" name="status" value={projeto?.status ?? 'em_andamento'}>
-							{#each PROJETO_STATUS as s (s.value)}<option value={s.value}>{s.label}</option>{/each}
-						</select>
-					</div>
-				</div>
-			</div>
+		<div class="col-md-4">
+			<label class="form-label" for="status">Status</label>
+			<select class="form-select" id="status" name="status" value={projeto?.status ?? 'em_andamento'}>
+				{#each PROJETO_STATUS as s (s.value)}<option value={s.value}>{s.label}</option>{/each}
+			</select>
 		</div>
-		<div class="column is-4">
-			<div class="field">
-				<label class="label" for="responsavel_id">Responsável</label>
-				<div class="control">
-					<div class="select is-fullwidth">
-						<select id="responsavel_id" name="responsavel_id" value={projeto?.responsavel_id ?? ''}>
-							<option value="">—</option>
-							{#each colaboradores as col (col.id)}<option value={col.id}>{col.nome}</option>{/each}
-						</select>
-					</div>
-				</div>
+		<div class="col-md-4">
+			<label class="form-label" for="responsavel_id">Responsável</label>
+			<select class="form-select" id="responsavel_id" name="responsavel_id" value={projeto?.responsavel_id ?? ''}>
+				<option value="">—</option>
+				{#each colaboradores as col (col.id)}<option value={col.id}>{col.nome}</option>{/each}
+			</select>
+		</div>
+
+		<div class="col-md-3">
+			<label class="form-label" for="data_inicio">Início</label>
+			<input id="data_inicio" class="form-control" type="date" name="data_inicio" value={v('data_inicio')} />
+		</div>
+		<div class="col-md-3">
+			<label class="form-label" for="prazo">Prazo</label>
+			<input id="prazo" class="form-control" type="date" name="prazo" value={v('prazo')} />
+		</div>
+		<div class="col-md-3">
+			<label class="form-label" for="valor">Valor (R$, se pontual)</label>
+			<input id="valor" class="form-control" type="number" step="0.01" name="valor" value={v('valor')} />
+		</div>
+		<div class="col-md-3 d-flex align-items-end">
+			<div class="form-check">
+				<input class="form-check-input" type="checkbox" id="recorrente" name="recorrente" checked={!!projeto?.recorrente} />
+				<label class="form-check-label" for="recorrente">Recorrente</label>
 			</div>
 		</div>
 
-		<div class="column is-3">
-			<div class="field">
-				<label class="label" for="data_inicio">Início</label>
-				<div class="control"><input id="data_inicio" class="input" type="date" name="data_inicio" value={v('data_inicio')} /></div>
-			</div>
-		</div>
-		<div class="column is-3">
-			<div class="field">
-				<label class="label" for="prazo">Prazo</label>
-				<div class="control"><input id="prazo" class="input" type="date" name="prazo" value={v('prazo')} /></div>
-			</div>
-		</div>
-		<div class="column is-3">
-			<div class="field">
-				<label class="label" for="valor">Valor (R$, se pontual)</label>
-				<div class="control"><input id="valor" class="input" type="number" step="0.01" name="valor" value={v('valor')} /></div>
-			</div>
-		</div>
-		<div class="column is-3">
-			<label class="label">&nbsp;</label>
-			<label class="checkbox">
-				<input type="checkbox" name="recorrente" checked={!!projeto?.recorrente} /> Recorrente
-			</label>
-		</div>
-
-		<div class="column is-12">
-			<div class="field">
-				<label class="label" for="descricao">Descrição</label>
-				<div class="control"><textarea id="descricao" class="textarea" name="descricao" rows="3">{v('descricao')}</textarea></div>
-			</div>
+		<div class="col-12">
+			<label class="form-label" for="descricao">Descrição</label>
+			<textarea id="descricao" class="form-control" name="descricao" rows="3">{v('descricao')}</textarea>
 		</div>
 	</div>
 
-	<div class="field is-grouped mt-2">
-		<div class="control"><button class="button is-primary" class:is-loading={saving} type="submit">{submitLabel}</button></div>
-		<div class="control"><a class="button is-light" href="/projetos">Cancelar</a></div>
+	<div class="d-flex gap-2 mt-3">
+		<button class="btn btn-primary" type="submit" disabled={saving}>
+			{#if saving}<span class="spinner-border spinner-border-sm me-2"></span>{/if}{submitLabel}
+		</button>
+		<a class="btn btn-light" href="/projetos">Cancelar</a>
 	</div>
 </form>

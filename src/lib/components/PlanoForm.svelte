@@ -28,72 +28,48 @@
 		};
 	}}
 >
-	{#if error}<div class="notification is-danger is-light">{error}</div>{/if}
+	{#if error}<div class="alert alert-danger">{error}</div>{/if}
 
-	<div class="columns is-multiline">
-		<div class="column is-8">
-			<div class="field">
-				<label class="label" for="nome">Nome do plano *</label>
-				<div class="control">
-					<input id="nome" class="input" name="nome" required value={v('nome')} placeholder="Starter, Gold, Premium…" />
-				</div>
-			</div>
+	<div class="row g-3">
+		<div class="col-md-8">
+			<label class="form-label" for="nome">Nome do plano *</label>
+			<input id="nome" class="form-control" name="nome" required value={v('nome')} placeholder="Starter, Gold, Premium…" />
 		</div>
-		<div class="column is-4">
-			<div class="field">
-				<label class="label" for="valor_mensal">Valor mensal (R$)</label>
-				<div class="control">
-					<input id="valor_mensal" class="input" type="number" step="0.01" name="valor_mensal" value={v('valor_mensal')} />
-				</div>
-			</div>
+		<div class="col-md-4">
+			<label class="form-label" for="valor_mensal">Valor mensal (R$)</label>
+			<input id="valor_mensal" class="form-control" type="number" step="0.01" name="valor_mensal" value={v('valor_mensal')} />
 		</div>
 
-		<div class="column is-4">
-			<div class="field">
-				<label class="label" for="limite_posts">Limite de posts</label>
-				<div class="control">
-					<input id="limite_posts" class="input" type="number" name="limite_posts" value={v('limite_posts')} />
-				</div>
-			</div>
+		<div class="col-md-4">
+			<label class="form-label" for="limite_posts">Limite de posts</label>
+			<input id="limite_posts" class="form-control" type="number" name="limite_posts" value={v('limite_posts')} />
 		</div>
-		<div class="column is-4">
-			<div class="field">
-				<label class="label" for="limite_stories">Limite de stories</label>
-				<div class="control">
-					<input id="limite_stories" class="input" type="number" name="limite_stories" value={v('limite_stories')} />
-				</div>
-			</div>
+		<div class="col-md-4">
+			<label class="form-label" for="limite_stories">Limite de stories</label>
+			<input id="limite_stories" class="form-control" type="number" name="limite_stories" value={v('limite_stories')} />
 		</div>
-		<div class="column is-4">
-			<div class="field">
-				<label class="label" for="limite_reels">Limite de reels</label>
-				<div class="control">
-					<input id="limite_reels" class="input" type="number" name="limite_reels" value={v('limite_reels')} />
-				</div>
-			</div>
+		<div class="col-md-4">
+			<label class="form-label" for="limite_reels">Limite de reels</label>
+			<input id="limite_reels" class="form-control" type="number" name="limite_reels" value={v('limite_reels')} />
 		</div>
 
-		<div class="column is-12">
-			<div class="field">
-				<label class="label" for="descricao">Descrição</label>
-				<div class="control">
-					<textarea id="descricao" class="textarea" name="descricao" rows="2">{v('descricao')}</textarea>
-				</div>
-			</div>
+		<div class="col-12">
+			<label class="form-label" for="descricao">Descrição</label>
+			<textarea id="descricao" class="form-control" name="descricao" rows="2">{v('descricao')}</textarea>
 		</div>
 
-		<div class="column is-12">
-			<label class="checkbox">
-				<input type="checkbox" name="ativo" checked={plano ? !!plano.ativo : true} />
-				Plano ativo (disponível para novos contratos)
-			</label>
+		<div class="col-12">
+			<div class="form-check">
+				<input class="form-check-input" type="checkbox" id="ativo" name="ativo" checked={plano ? !!plano.ativo : true} />
+				<label class="form-check-label" for="ativo">Plano ativo (disponível para novos contratos)</label>
+			</div>
 		</div>
 	</div>
 
-	<div class="field is-grouped mt-2">
-		<div class="control">
-			<button class="button is-primary" class:is-loading={saving} type="submit">{submitLabel}</button>
-		</div>
-		<div class="control"><a class="button is-light" href="/contratos/planos">Cancelar</a></div>
+	<div class="d-flex gap-2 mt-3">
+		<button class="btn btn-primary" type="submit" disabled={saving}>
+			{#if saving}<span class="spinner-border spinner-border-sm me-2"></span>{/if}{submitLabel}
+		</button>
+		<a class="btn btn-light" href="/contratos/planos">Cancelar</a>
 	</div>
 </form>

@@ -17,58 +17,50 @@
 	}
 </script>
 
-<div class="level mb-4">
-	<div class="level-left">
-		<div class="buttons has-addons mr-4 mb-0">
-			<span class="button is-primary is-selected">Lista</span>
-			<a class="button" href="/conteudo/calendario">Calendário</a>
-			<a class="button" href="/conteudo/aprovacoes">Aprovações</a>
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+	<div class="d-flex align-items-center flex-wrap gap-2">
+		<div class="btn-group">
+			<span class="btn btn-primary">Lista</span>
+			<a class="btn btn-outline-secondary" href="/conteudo/calendario">Calendário</a>
+			<a class="btn btn-outline-secondary" href="/conteudo/aprovacoes">Aprovações</a>
 		</div>
-		<form class="level-item" method="GET" style="gap:.5rem; display:flex;">
-			<div class="control">
-				<div class="select">
-					<select name="status" bind:value={status}>
-						<option value="">Todos os status</option>
-						{#each CONTEUDO_STATUS as s (s.value)}<option value={s.value}>{s.label}</option>{/each}
-					</select>
-				</div>
-			</div>
-			<div class="control">
-				<div class="select">
-					<select name="tipo" bind:value={tipo}>
-						<option value="">Todos os tipos</option>
-						{#each CONTEUDO_TIPO as t (t.value)}<option value={t.value}>{t.label}</option>{/each}
-					</select>
-				</div>
-			</div>
-			<div class="control"><button class="button" type="submit">Filtrar</button></div>
+		<form class="d-flex gap-2 flex-wrap" method="GET">
+			<select class="form-select" style="max-width:170px" name="status" bind:value={status}>
+				<option value="">Todos os status</option>
+				{#each CONTEUDO_STATUS as s (s.value)}<option value={s.value}>{s.label}</option>{/each}
+			</select>
+			<select class="form-select" style="max-width:160px" name="tipo" bind:value={tipo}>
+				<option value="">Todos os tipos</option>
+				{#each CONTEUDO_TIPO as t (t.value)}<option value={t.value}>{t.label}</option>{/each}
+			</select>
+			<button class="btn btn-light" type="submit">Filtrar</button>
 		</form>
 	</div>
-	<div class="level-right">
-		<a class="button is-primary" href="/conteudo/novo">+ Novo conteúdo</a>
-	</div>
+	<a class="btn btn-primary" href="/conteudo/novo">+ Novo conteúdo</a>
 </div>
 
-{#if data.loadError}<div class="notification is-danger is-light">Erro ao carregar: {data.loadError}</div>{/if}
+{#if data.loadError}<div class="alert alert-danger">Erro ao carregar: {data.loadError}</div>{/if}
 
-<div class="box p-0">
-	<table class="table is-fullwidth is-hoverable mb-0">
-		<thead>
-			<tr><th>Publicação</th><th>Título</th><th>Cliente</th><th>Tipo</th><th>Status</th></tr>
-		</thead>
-		<tbody>
-			{#each data.conteudos as c (c.id)}
-				{@const st = conteudoStatusStyle(c.status)}
-				<tr style="cursor:pointer" onclick={() => goto(`/conteudo/${c.id}`)}>
-					<td>{fmt(c.data_publicacao)}</td>
-					<td><a href={`/conteudo/${c.id}`}>{c.titulo ?? '(sem título)'}</a></td>
-					<td>{c.cliente?.nome ?? '—'}</td>
-					<td>{conteudoTipoLabel(c.tipo)}</td>
-					<td><span class="tag" style={`background:${st.bg};color:${st.fg};font-weight:500;`}>{conteudoStatusLabel(c.status)}</span></td>
-				</tr>
-			{:else}
-				<tr><td colspan="5" class="has-text-centered has-text-grey p-5">Nenhum conteúdo ainda. Clique em “Novo conteúdo”.</td></tr>
-			{/each}
-		</tbody>
-	</table>
+<div class="card">
+	<div class="table-responsive">
+		<table class="table table-hover align-middle mb-0">
+			<thead>
+				<tr><th>Publicação</th><th>Título</th><th>Cliente</th><th>Tipo</th><th>Status</th></tr>
+			</thead>
+			<tbody>
+				{#each data.conteudos as c (c.id)}
+					{@const st = conteudoStatusStyle(c.status)}
+					<tr style="cursor:pointer" onclick={() => goto(`/conteudo/${c.id}`)}>
+						<td>{fmt(c.data_publicacao)}</td>
+						<td><a href={`/conteudo/${c.id}`}>{c.titulo ?? '(sem título)'}</a></td>
+						<td>{c.cliente?.nome ?? '—'}</td>
+						<td>{conteudoTipoLabel(c.tipo)}</td>
+						<td><span class="badge" style={`background:${st.bg};color:${st.fg};font-weight:500;`}>{conteudoStatusLabel(c.status)}</span></td>
+					</tr>
+				{:else}
+					<tr><td colspan="5" class="text-center text-muted p-5">Nenhum conteúdo ainda. Clique em “Novo conteúdo”.</td></tr>
+				{/each}
+			</tbody>
+		</table>
+	</div>
 </div>

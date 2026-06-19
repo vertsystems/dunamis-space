@@ -15,9 +15,9 @@
 	const totalAlertas = $derived(contratos.length + tarefas.length + semInteracao.length);
 </script>
 
-<div class="columns is-multiline">
+<div class="row g-3">
 	{#each stats as s (s.label)}
-		<div class="column is-3">
+		<div class="col-6 col-lg-3">
 			<div class="stat-card">
 				<div class="stat-label">{s.label}</div>
 				<div class="stat-value">{s.value}</div>
@@ -26,27 +26,23 @@
 	{/each}
 </div>
 
-<div class="box mt-4">
-	<div class="level mb-4">
-		<div class="level-left">
-			<h2 class="title is-5 mb-0">Alertas inteligentes</h2>
-		</div>
-		<div class="level-right">
-			<span class="tag {totalAlertas ? 'is-danger' : 'is-success'} is-light">
-				{totalAlertas ? `${totalAlertas} ${totalAlertas === 1 ? 'alerta' : 'alertas'}` : 'Tudo em dia'}
-			</span>
-		</div>
+<div class="card card-body mt-4">
+	<div class="d-flex justify-content-between align-items-center mb-4">
+		<h2 class="h5 mb-0">Alertas inteligentes</h2>
+		<span class="badge {totalAlertas ? 'text-bg-danger' : 'text-bg-success'}">
+			{totalAlertas ? `${totalAlertas} ${totalAlertas === 1 ? 'alerta' : 'alertas'}` : 'Tudo em dia'}
+		</span>
 	</div>
 
 	{#if totalAlertas === 0}
-		<p class="has-text-grey">✅ Nenhum alerta no momento. Contratos, tarefas e contatos com clientes estão em dia.</p>
+		<p class="text-muted mb-0">✅ Nenhum alerta no momento. Contratos, tarefas e contatos com clientes estão em dia.</p>
 	{:else}
-		<div class="columns">
+		<div class="row g-4">
 			<!-- Contratos vencendo -->
-			<div class="column">
+			<div class="col-md-4">
 				<h3 class="alert-head">
 					<span class="alert-dot" style="background:#a8350a"></span>
-					Contratos vencendo <span class="has-text-grey">({contratos.length})</span>
+					Contratos vencendo <span class="text-muted">({contratos.length})</span>
 				</h3>
 				{#if contratos.length}
 					<ul class="alert-list">
@@ -61,15 +57,15 @@
 						{/each}
 					</ul>
 				{:else}
-					<p class="has-text-grey is-size-7">Nenhum contrato vencendo.</p>
+					<p class="text-muted small">Nenhum contrato vencendo.</p>
 				{/if}
 			</div>
 
 			<!-- Tarefas atrasadas -->
-			<div class="column">
+			<div class="col-md-4">
 				<h3 class="alert-head">
 					<span class="alert-dot" style="background:#de4908"></span>
-					Tarefas atrasadas <span class="has-text-grey">({data.atrasadas})</span>
+					Tarefas atrasadas <span class="text-muted">({data.atrasadas})</span>
 				</h3>
 				{#if tarefas.length}
 					<ul class="alert-list">
@@ -84,18 +80,18 @@
 						{/each}
 					</ul>
 					{#if data.atrasadas > tarefas.length}
-						<p class="is-size-7"><a href="/tarefas">+ ver todas no Kanban</a></p>
+						<p class="small"><a href="/tarefas">+ ver todas no Kanban</a></p>
 					{/if}
 				{:else}
-					<p class="has-text-grey is-size-7">Nenhuma tarefa atrasada.</p>
+					<p class="text-muted small">Nenhuma tarefa atrasada.</p>
 				{/if}
 			</div>
 
 			<!-- Clientes sem contato -->
-			<div class="column">
+			<div class="col-md-4">
 				<h3 class="alert-head">
 					<span class="alert-dot" style="background:#f6aa19"></span>
-					Clientes sem contato <span class="has-text-grey">({semInteracao.length})</span>
+					Clientes sem contato <span class="text-muted">({semInteracao.length})</span>
 				</h3>
 				{#if semInteracao.length}
 					<ul class="alert-list">
@@ -109,7 +105,7 @@
 						{/each}
 					</ul>
 				{:else}
-					<p class="has-text-grey is-size-7">Todos os clientes ativos tiveram contato recente.</p>
+					<p class="text-muted small">Todos os clientes ativos tiveram contato recente.</p>
 				{/if}
 			</div>
 		</div>
@@ -134,10 +130,11 @@
 	.alert-list {
 		list-style: none;
 		margin: 0;
+		padding: 0;
 	}
 	.alert-list li {
 		padding: 0.4rem 0;
-		border-bottom: 1px solid #eee;
+		border-bottom: 1px solid #e3e6e6;
 		font-size: 0.9rem;
 	}
 	.alert-list li:last-child {

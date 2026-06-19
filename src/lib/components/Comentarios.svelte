@@ -56,27 +56,27 @@
 	}
 </script>
 
-<div class="box">
-	<h2 class="title is-6">Comentários</h2>
+<div class="card card-body mb-4">
+	<h2 class="h6">Comentários</h2>
 
 	{#each comentarios as c (c.id)}
-		<div class="mb-3" style="border-left:3px solid var(--ds-grey); padding-left:.75rem;">
-			<div class="is-flex is-justify-content-space-between">
+		<div class="mb-3 ps-3 border-start border-2">
+			<div class="d-flex justify-content-between">
 				<strong>{c.colaborador?.nome ?? 'Equipe'}</strong>
-				<small class="has-text-grey">{fmt(c.created_at)}</small>
+				<small class="text-muted">{fmt(c.created_at)}</small>
 			</div>
-			<p style="white-space:pre-wrap;">{c.texto}</p>
+			<p class="mb-0" style="white-space:pre-wrap;">{c.texto}</p>
 		</div>
 	{:else}
-		<p class="has-text-grey mb-3">Nenhum comentário ainda.</p>
+		<p class="text-muted mb-3">Nenhum comentário ainda.</p>
 	{/each}
 
 	<form onsubmit={enviar}>
-		<div class="field">
-			<div class="control">
-				<textarea class="textarea" rows="2" placeholder="Escreva um comentário…" bind:value={texto}></textarea>
-			</div>
+		<div class="mb-2">
+			<textarea class="form-control" rows="2" placeholder="Escreva um comentário…" bind:value={texto}></textarea>
 		</div>
-		<button class="button is-primary is-small" class:is-loading={saving} type="submit">Comentar</button>
+		<button class="btn btn-primary btn-sm" type="submit" disabled={saving}>
+			{#if saving}<span class="spinner-border spinner-border-sm me-2"></span>{/if}Comentar
+		</button>
 	</form>
 </div>

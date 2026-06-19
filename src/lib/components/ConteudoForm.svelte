@@ -36,110 +36,74 @@
 		};
 	}}
 >
-	{#if error}<div class="notification is-danger is-light">{error}</div>{/if}
+	{#if error}<div class="alert alert-danger">{error}</div>{/if}
 
-	<div class="columns is-multiline">
-		<div class="column is-6">
-			<div class="field">
-				<label class="label" for="cliente_id">Cliente *</label>
-				<div class="control">
-					<div class="select is-fullwidth">
-						<select id="cliente_id" name="cliente_id" required value={conteudo?.cliente_id ?? ''}>
-							<option value="" disabled>Selecione um cliente</option>
-							{#each clientes as c (c.id)}<option value={c.id}>{c.nome}</option>{/each}
-						</select>
-					</div>
-				</div>
-			</div>
+	<div class="row g-3">
+		<div class="col-md-6">
+			<label class="form-label" for="cliente_id">Cliente *</label>
+			<select class="form-select" id="cliente_id" name="cliente_id" required value={conteudo?.cliente_id ?? ''}>
+				<option value="" disabled>Selecione um cliente</option>
+				{#each clientes as c (c.id)}<option value={c.id}>{c.nome}</option>{/each}
+			</select>
 		</div>
-		<div class="column is-3">
-			<div class="field">
-				<label class="label" for="tipo">Tipo</label>
-				<div class="control">
-					<div class="select is-fullwidth">
-						<select id="tipo" name="tipo" value={conteudo?.tipo ?? 'feed'}>
-							{#each CONTEUDO_TIPO as t (t.value)}<option value={t.value}>{t.label}</option>{/each}
-						</select>
-					</div>
-				</div>
-			</div>
+		<div class="col-md-3">
+			<label class="form-label" for="tipo">Tipo</label>
+			<select class="form-select" id="tipo" name="tipo" value={conteudo?.tipo ?? 'feed'}>
+				{#each CONTEUDO_TIPO as t (t.value)}<option value={t.value}>{t.label}</option>{/each}
+			</select>
 		</div>
-		<div class="column is-3">
-			<div class="field">
-				<label class="label" for="status">Status</label>
-				<div class="control">
-					<div class="select is-fullwidth">
-						<select id="status" name="status" value={conteudo?.status ?? 'rascunho'}>
-							{#each CONTEUDO_STATUS as s (s.value)}<option value={s.value}>{s.label}</option>{/each}
-						</select>
-					</div>
-				</div>
-			</div>
+		<div class="col-md-3">
+			<label class="form-label" for="status">Status</label>
+			<select class="form-select" id="status" name="status" value={conteudo?.status ?? 'rascunho'}>
+				{#each CONTEUDO_STATUS as s (s.value)}<option value={s.value}>{s.label}</option>{/each}
+			</select>
 		</div>
 
-		<div class="column is-6">
-			<div class="field">
-				<label class="label" for="titulo">Título</label>
-				<div class="control"><input id="titulo" class="input" name="titulo" value={v('titulo')} /></div>
-			</div>
+		<div class="col-md-6">
+			<label class="form-label" for="titulo">Título</label>
+			<input id="titulo" class="form-control" name="titulo" value={v('titulo')} />
 		</div>
-		<div class="column is-6">
-			<div class="field">
-				<label class="label" for="data_publicacao">Data de publicação</label>
-				<div class="control"><input id="data_publicacao" class="input" type="datetime-local" name="data_publicacao" value={dataPub} /></div>
-			</div>
+		<div class="col-md-6">
+			<label class="form-label" for="data_publicacao">Data de publicação</label>
+			<input id="data_publicacao" class="form-control" type="datetime-local" name="data_publicacao" value={dataPub} />
 		</div>
 
-		<div class="column is-4">
-			<div class="field">
-				<label class="label" for="projeto_id">Projeto</label>
-				<div class="control">
-					<div class="select is-fullwidth">
-						<select id="projeto_id" name="projeto_id" value={conteudo?.projeto_id ?? ''}>
-							<option value="">—</option>
-							{#each projetos as p (p.id)}<option value={p.id}>{p.nome}</option>{/each}
-						</select>
-					</div>
-				</div>
-			</div>
+		<div class="col-md-4">
+			<label class="form-label" for="projeto_id">Projeto</label>
+			<select class="form-select" id="projeto_id" name="projeto_id" value={conteudo?.projeto_id ?? ''}>
+				<option value="">—</option>
+				{#each projetos as p (p.id)}<option value={p.id}>{p.nome}</option>{/each}
+			</select>
 		</div>
-		<div class="column is-4">
-			<div class="field">
-				<label class="label" for="responsavel_id">Responsável</label>
-				<div class="control">
-					<div class="select is-fullwidth">
-						<select id="responsavel_id" name="responsavel_id" value={conteudo?.responsavel_id ?? ''}>
-							<option value="">—</option>
-							{#each colaboradores as c (c.id)}<option value={c.id}>{c.nome}</option>{/each}
-						</select>
-					</div>
-				</div>
-			</div>
+		<div class="col-md-4">
+			<label class="form-label" for="responsavel_id">Responsável</label>
+			<select class="form-select" id="responsavel_id" name="responsavel_id" value={conteudo?.responsavel_id ?? ''}>
+				<option value="">—</option>
+				{#each colaboradores as c (c.id)}<option value={c.id}>{c.nome}</option>{/each}
+			</select>
 		</div>
-		<div class="column is-4">
-			<div class="field">
-				<label class="label" for="arte_url">URL da arte</label>
-				<div class="control"><input id="arte_url" class="input" name="arte_url" value={v('arte_url')} placeholder="link do Drive/imagem" /></div>
-			</div>
+		<div class="col-md-4">
+			<label class="form-label" for="arte_url">URL da arte</label>
+			<input id="arte_url" class="form-control" name="arte_url" value={v('arte_url')} placeholder="link do Drive/imagem" />
 		</div>
 
-		<div class="column is-12">
-			<div class="field">
-				<label class="label" for="legenda">Legenda</label>
-				<div class="control"><textarea id="legenda" class="textarea" name="legenda" rows="4">{v('legenda')}</textarea></div>
-			</div>
+		<div class="col-12">
+			<label class="form-label" for="legenda">Legenda</label>
+			<textarea id="legenda" class="form-control" name="legenda" rows="4">{v('legenda')}</textarea>
 		</div>
 
-		<div class="column is-12">
-			<label class="checkbox">
-				<input type="checkbox" name="publicado_manual" checked={!!conteudo?.publicado_manual} />
-				Postado manualmente
-			</label>
+		<div class="col-12">
+			<div class="form-check">
+				<input class="form-check-input" type="checkbox" id="publicado_manual" name="publicado_manual" checked={!!conteudo?.publicado_manual} />
+				<label class="form-check-label" for="publicado_manual">Postado manualmente</label>
+			</div>
 		</div>
 	</div>
 
-	<div class="field is-grouped mt-2">
-		<div class="control"><button class="button is-primary" class:is-loading={saving} type="submit">{submitLabel}</button></div>
-		<div class="control"><a class="button is-light" href="/conteudo">Cancelar</a></div>
+	<div class="d-flex gap-2 mt-3">
+		<button class="btn btn-primary" type="submit" disabled={saving}>
+			{#if saving}<span class="spinner-border spinner-border-sm me-2"></span>{/if}{submitLabel}
+		</button>
+		<a class="btn btn-light" href="/conteudo">Cancelar</a>
 	</div>
 </form>

@@ -2,30 +2,28 @@
 	import { DTOOLS_FERRAMENTAS } from '$lib/dtools';
 </script>
 
-<div class="box">
-	<h1 class="title is-5">DTools — Ferramentas Dunamis</h1>
-	<p class="subtitle is-6 has-text-grey">
-		Central de ferramentas internas da Dunamis integradas ao sistema.
-	</p>
+<div class="card card-body">
+	<h1 class="h5">DTools — Ferramentas Dunamis</h1>
+	<p class="text-muted">Central de ferramentas internas da Dunamis integradas ao sistema.</p>
 
 	{#if DTOOLS_FERRAMENTAS.length}
-		<div class="columns is-multiline">
+		<div class="row g-3">
 			{#each DTOOLS_FERRAMENTAS as f (f.href)}
-				<div class="column is-4">
+				<div class="col-md-4">
 					<a class="tool-card" href={f.href}>
 						<span class="tool-ico">{f.icon}</span>
 						<div>
 							<strong>{f.label}</strong>
-							{#if f.descricao}<p class="is-size-7 has-text-grey">{f.descricao}</p>{/if}
+							{#if f.descricao}<p class="small text-muted mb-0">{f.descricao}</p>{/if}
 						</div>
 					</a>
 				</div>
 			{/each}
 		</div>
 	{:else}
-		<div class="notification is-light">
+		<div class="alert alert-secondary mb-0">
 			<strong>Nenhuma ferramenta configurada ainda.</strong>
-			<p class="mt-1">
+			<p class="mt-1 mb-0">
 				Este é o espaço reservado para as ferramentas da Dunamis. Conforme forem definidas, elas
 				aparecerão aqui e no menu lateral de DTools.
 			</p>
@@ -44,6 +42,7 @@
 		background: #fff;
 		color: var(--ds-dark);
 		height: 100%;
+		text-decoration: none;
 	}
 	.tool-card:hover {
 		border-color: var(--ds-red);

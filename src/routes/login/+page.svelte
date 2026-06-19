@@ -24,51 +24,31 @@
 	}
 </script>
 
-<section class="hero is-fullheight" style="background-color: var(--ds-light);">
-	<div class="hero-body is-justify-content-center">
-		<div class="box" style="width: 100%; max-width: 400px;">
-			<h1 class="title is-4 has-text-centered">
-				Dunamis<span style="color: var(--ds-red);">.</span>Space
-			</h1>
-			<p class="subtitle is-6 has-text-centered has-text-grey">Entre para continuar</p>
+<section class="min-vh-100 d-flex align-items-center justify-content-center p-3" style="background-color: var(--ds-light);">
+	<div class="card card-body shadow-sm" style="width: 100%; max-width: 400px;">
+		<h1 class="h4 text-center mb-1">
+			Dunamis<span style="color: var(--ds-red);">.</span>Space
+		</h1>
+		<p class="text-center text-muted">Entre para continuar</p>
 
-			<form onsubmit={handleLogin}>
-				<div class="field">
-					<label class="label" for="email">E-mail</label>
-					<div class="control">
-						<input
-							id="email"
-							class="input"
-							type="email"
-							bind:value={email}
-							required
-							autocomplete="email"
-						/>
-					</div>
-				</div>
+		<form onsubmit={handleLogin}>
+			<div class="mb-3">
+				<label class="form-label" for="email">E-mail</label>
+				<input id="email" class="form-control" type="email" bind:value={email} required autocomplete="email" />
+			</div>
 
-				<div class="field">
-					<label class="label" for="password">Senha</label>
-					<div class="control">
-						<input
-							id="password"
-							class="input"
-							type="password"
-							bind:value={password}
-							required
-							autocomplete="current-password"
-						/>
-					</div>
-				</div>
+			<div class="mb-3">
+				<label class="form-label" for="password">Senha</label>
+				<input id="password" class="form-control" type="password" bind:value={password} required autocomplete="current-password" />
+			</div>
 
-				{#if error}
-					<p class="help is-danger">{error}</p>
-				{/if}
+			{#if error}
+				<p class="text-danger small">{error}</p>
+			{/if}
 
-				<button class="button is-primary is-fullwidth mt-3" class:is-loading={loading} type="submit">
-					Entrar
-				</button>
-			</form>
-		</div>
+			<button class="btn btn-primary w-100 mt-2" type="submit" disabled={loading}>
+				{#if loading}<span class="spinner-border spinner-border-sm me-2"></span>{/if}Entrar
+			</button>
+		</form>
 	</div>
 </section>

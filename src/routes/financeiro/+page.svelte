@@ -17,20 +17,20 @@
 	}
 </script>
 
-<div class="columns mb-2">
-	<div class="column is-4">
+<div class="row g-3 mb-2">
+	<div class="col-md-4">
 		<div class="stat-card">
 			<div class="stat-label">Receitas</div>
 			<div class="stat-value" style="color:#1e7e34;">{formatBRL(data.receitas)}</div>
 		</div>
 	</div>
-	<div class="column is-4">
+	<div class="col-md-4">
 		<div class="stat-card">
 			<div class="stat-label">Despesas</div>
 			<div class="stat-value" style="color:#b3000a;">{formatBRL(data.despesas)}</div>
 		</div>
 	</div>
-	<div class="column is-4">
+	<div class="col-md-4">
 		<div class="stat-card">
 			<div class="stat-label">Saldo</div>
 			<div class="stat-value" style={`color:${data.saldo >= 0 ? '#1e7e34' : '#b3000a'};`}>
@@ -40,81 +40,71 @@
 	</div>
 </div>
 
-<div class="level mb-4">
-	<div class="level-left">
-		<form class="level-item" method="GET" style="gap:.5rem; display:flex;">
-			<div class="control">
-				<div class="select">
-					<select name="tipo" bind:value={tipo}>
-						<option value="">Todos os tipos</option>
-						{#each TRANSACAO_TIPO as t (t.value)}
-							<option value={t.value}>{t.label}</option>
-						{/each}
-					</select>
-				</div>
-			</div>
-			<div class="control">
-				<div class="select">
-					<select name="status" bind:value={status}>
-						<option value="">Todos os status</option>
-						{#each TRANSACAO_STATUS as s (s.value)}
-							<option value={s.value}>{s.label}</option>
-						{/each}
-					</select>
-				</div>
-			</div>
-			<div class="control"><button class="button" type="submit">Filtrar</button></div>
-		</form>
-	</div>
-	<div class="level-right">
-		<div class="buttons">
-			<a class="button is-light" href="/financeiro/lucro">Lucro por cliente</a>
-			<a class="button is-primary" href="/financeiro/novo">+ Nova transação</a>
-		</div>
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+	<form class="d-flex gap-2 flex-wrap" method="GET">
+		<select class="form-select" style="max-width:180px" name="tipo" bind:value={tipo}>
+			<option value="">Todos os tipos</option>
+			{#each TRANSACAO_TIPO as t (t.value)}
+				<option value={t.value}>{t.label}</option>
+			{/each}
+		</select>
+		<select class="form-select" style="max-width:180px" name="status" bind:value={status}>
+			<option value="">Todos os status</option>
+			{#each TRANSACAO_STATUS as s (s.value)}
+				<option value={s.value}>{s.label}</option>
+			{/each}
+		</select>
+		<button class="btn btn-light" type="submit">Filtrar</button>
+	</form>
+	<div class="d-flex gap-2">
+		<a class="btn btn-light" href="/financeiro/lucro">Lucro por cliente</a>
+		<a class="btn btn-primary" href="/financeiro/novo">+ Nova transação</a>
 	</div>
 </div>
 
 {#if data.loadError}
-	<div class="notification is-danger is-light">Erro ao carregar: {data.loadError}</div>
+	<div class="alert alert-danger">Erro ao carregar: {data.loadError}</div>
 {/if}
 
-<div class="box p-0">
-	<table class="table is-fullwidth is-hoverable mb-0">
-		<thead>
-			<tr>
-				<th>Competência</th>
-				<th>Descrição</th>
-				<th>Categoria</th>
-				<th>Cliente</th>
-				<th>Status</th>
-				<th class="has-text-right">Valor</th>
-			</tr>
-		</thead>
-		<tbody>
-			{#each data.transacoes as t (t.id)}
-				{@const st = statusStyle(t.status)}
-				{@const receita = t.tipo === 'receita'}
-				<tr style="cursor:pointer" onclick={() => goto(`/financeiro/${t.id}`)}>
-					<td>{fmtData(t.data_competencia)}</td>
-					<td><a href={`/financeiro/${t.id}`}>{t.descricao ?? '—'}</a></td>
-					<td>{t.categoria ?? '—'}</td>
-					<td>{t.cliente?.nome ?? '—'}</td>
-					<td>
-						<span class="tag" style={`background:${st.bg};color:${st.fg};font-weight:500;`}>
-							{statusLabel(t.status)}
-						</span>
-					</td>
-					<td class="has-text-right" style={`color:${receita ? '#1e7e34' : '#b3000a'};font-weight:500;`}>
-						{receita ? '+' : '−'}{formatBRL(t.valor)}
-					</td>
-				</tr>
-			{:else}
+<div class="card">
+	<div class="table-responsive">
+		<table class="table table-hover align-middle mb-0">
+			<thead>
 				<tr>
-					<td colspan="6" class="has-text-centered has-text-grey p-5">
-						Nenhuma transação ainda. Clique em “Nova transação” para começar.
-					</td>
+					<th>Competência</th>
+					<th>Descrição</th>
+					<th>Categoria</th>
+					<th>Cliente</th>
+					<th>Status</th>
+					<th class="text-end">Valor</th>
 				</tr>
-			{/each}
-		</tbody>
-	</table>
+			</thead>
+			<tbody>
+				{#each data.transacoes as t (t.id)}
+					{@const st = statusStyle(t.status)}
+					{@const receita = t.tipo === 'receita'}
+					<tr style="cursor:pointer" onclick={() => goto(`/financeiro/${t.id}`)}>
+						<td>{fmtData(t.data_competencia)}</td>
+						<td><a href={`/financeiro/${t.id}`}>{t.descricao ?? '—'}</a></td>
+						<td>{t.categoria ?? '—'}</td>
+						<td>{t.cliente?.nome ?? '—'}</td>
+						<td>
+							<span class="badge" style={`background:${st.bg};color:${st.fg};font-weight:500;`}>
+								{statusLabel(t.status)}
+							</span>
+						</td>
+						<td class="text-end" style={`color:${receita ? '#1e7e34' : '#b3000a'};font-weight:500;`}>
+							{receita ? '+' : '−'}{formatBRL(t.valor)}
+						</td>
+					</tr>
+				{:else}
+					<tr>
+						<td colspan="6" class="text-center text-muted p-5">
+							Nenhuma transação ainda. Clique em “Nova transação” para começar.
+						</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	</div>
 </div>

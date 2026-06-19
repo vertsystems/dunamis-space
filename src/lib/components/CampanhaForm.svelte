@@ -30,50 +30,38 @@
 		};
 	}}
 >
-	{#if error}<div class="notification is-danger is-light">{error}</div>{/if}
+	{#if error}<div class="alert alert-danger">{error}</div>{/if}
 
-	<div class="columns is-multiline">
-		<div class="column is-6">
-			<div class="field">
-				<label class="label" for="nome">Nome da campanha *</label>
-				<div class="control"><input id="nome" class="input" name="nome" required value={v('nome')} placeholder="Operação Fecha Mês" /></div>
-			</div>
+	<div class="row g-3">
+		<div class="col-md-6">
+			<label class="form-label" for="nome">Nome da campanha *</label>
+			<input id="nome" class="form-control" name="nome" required value={v('nome')} placeholder="Operação Fecha Mês" />
 		</div>
-		<div class="column is-6">
-			<div class="field">
-				<label class="label" for="cliente_id">Cliente *</label>
-				<div class="control">
-					<div class="select is-fullwidth">
-						<select id="cliente_id" name="cliente_id" required value={campanha?.cliente_id ?? ''}>
-							<option value="" disabled>Selecione um cliente</option>
-							{#each clientes as c (c.id)}<option value={c.id}>{c.nome}</option>{/each}
-						</select>
-					</div>
-				</div>
-			</div>
+		<div class="col-md-6">
+			<label class="form-label" for="cliente_id">Cliente *</label>
+			<select class="form-select" id="cliente_id" name="cliente_id" required value={campanha?.cliente_id ?? ''}>
+				<option value="" disabled>Selecione um cliente</option>
+				{#each clientes as c (c.id)}<option value={c.id}>{c.nome}</option>{/each}
+			</select>
 		</div>
-		<div class="column is-3">
-			<div class="field">
-				<label class="label" for="data_inicio">Início</label>
-				<div class="control"><input id="data_inicio" class="input" type="date" name="data_inicio" value={v('data_inicio')} /></div>
-			</div>
+		<div class="col-md-3">
+			<label class="form-label" for="data_inicio">Início</label>
+			<input id="data_inicio" class="form-control" type="date" name="data_inicio" value={v('data_inicio')} />
 		</div>
-		<div class="column is-3">
-			<div class="field">
-				<label class="label" for="data_fim">Fim</label>
-				<div class="control"><input id="data_fim" class="input" type="date" name="data_fim" value={v('data_fim')} /></div>
-			</div>
+		<div class="col-md-3">
+			<label class="form-label" for="data_fim">Fim</label>
+			<input id="data_fim" class="form-control" type="date" name="data_fim" value={v('data_fim')} />
 		</div>
-		<div class="column is-12">
-			<div class="field">
-				<label class="label" for="descricao">Descrição</label>
-				<div class="control"><textarea id="descricao" class="textarea" name="descricao" rows="2">{v('descricao')}</textarea></div>
-			</div>
+		<div class="col-12">
+			<label class="form-label" for="descricao">Descrição</label>
+			<textarea id="descricao" class="form-control" name="descricao" rows="2">{v('descricao')}</textarea>
 		</div>
 	</div>
 
-	<div class="field is-grouped mt-2">
-		<div class="control"><button class="button is-primary" class:is-loading={saving} type="submit">{submitLabel}</button></div>
-		<div class="control"><a class="button is-light" href="/campanhas">Cancelar</a></div>
+	<div class="d-flex gap-2 mt-3">
+		<button class="btn btn-primary" type="submit" disabled={saving}>
+			{#if saving}<span class="spinner-border spinner-border-sm me-2"></span>{/if}{submitLabel}
+		</button>
+		<a class="btn btn-light" href="/campanhas">Cancelar</a>
 	</div>
 </form>

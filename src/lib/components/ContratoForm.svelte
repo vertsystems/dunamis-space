@@ -24,7 +24,6 @@
 
 	function onPlanoChange() {
 		const p = planos.find((x) => x.id === planoId);
-		// Preenche o valor com o do plano (sobrescreve se vazio ou zero).
 		if (p && (valor === '' || Number(valor) === 0)) valor = String(p.valor_mensal);
 	}
 </script>
@@ -40,96 +39,67 @@
 		};
 	}}
 >
-	{#if error}<div class="notification is-danger is-light">{error}</div>{/if}
+	{#if error}<div class="alert alert-danger">{error}</div>{/if}
 
-	<div class="columns is-multiline">
-		<div class="column is-6">
-			<div class="field">
-				<label class="label" for="cliente_id">Cliente *</label>
-				<div class="control">
-					<div class="select is-fullwidth">
-						<select id="cliente_id" name="cliente_id" required value={contrato?.cliente_id ?? ''}>
-							<option value="" disabled>Selecione um cliente</option>
-							{#each clientes as c (c.id)}
-								<option value={c.id}>{c.nome}</option>
-							{/each}
-						</select>
-					</div>
-				</div>
-			</div>
+	<div class="row g-3">
+		<div class="col-md-6">
+			<label class="form-label" for="cliente_id">Cliente *</label>
+			<select class="form-select" id="cliente_id" name="cliente_id" required value={contrato?.cliente_id ?? ''}>
+				<option value="" disabled>Selecione um cliente</option>
+				{#each clientes as c (c.id)}
+					<option value={c.id}>{c.nome}</option>
+				{/each}
+			</select>
 		</div>
-		<div class="column is-6">
-			<div class="field">
-				<label class="label" for="plano_id">Plano</label>
-				<div class="control">
-					<div class="select is-fullwidth">
-						<select id="plano_id" name="plano_id" bind:value={planoId} onchange={onPlanoChange}>
-							<option value="">— sem plano —</option>
-							{#each planos as p (p.id)}
-								<option value={p.id}>{p.nome}</option>
-							{/each}
-						</select>
-					</div>
-				</div>
-			</div>
+		<div class="col-md-6">
+			<label class="form-label" for="plano_id">Plano</label>
+			<select class="form-select" id="plano_id" name="plano_id" bind:value={planoId} onchange={onPlanoChange}>
+				<option value="">— sem plano —</option>
+				{#each planos as p (p.id)}
+					<option value={p.id}>{p.nome}</option>
+				{/each}
+			</select>
 		</div>
 
-		<div class="column is-4">
-			<div class="field">
-				<label class="label" for="valor_mensal">Valor mensal (R$)</label>
-				<div class="control">
-					<input id="valor_mensal" class="input" type="number" step="0.01" name="valor_mensal" bind:value={valor} />
-				</div>
-			</div>
+		<div class="col-md-4">
+			<label class="form-label" for="valor_mensal">Valor mensal (R$)</label>
+			<input id="valor_mensal" class="form-control" type="number" step="0.01" name="valor_mensal" bind:value={valor} />
 		</div>
-		<div class="column is-4">
-			<div class="field">
-				<label class="label" for="data_inicio">Início</label>
-				<div class="control">
-					<input id="data_inicio" class="input" type="date" name="data_inicio" value={contrato?.data_inicio ?? ''} />
-				</div>
-			</div>
+		<div class="col-md-4">
+			<label class="form-label" for="data_inicio">Início</label>
+			<input id="data_inicio" class="form-control" type="date" name="data_inicio" value={contrato?.data_inicio ?? ''} />
 		</div>
-		<div class="column is-4">
-			<div class="field">
-				<label class="label" for="data_fim">Fim</label>
-				<div class="control">
-					<input id="data_fim" class="input" type="date" name="data_fim" value={contrato?.data_fim ?? ''} />
-				</div>
-			</div>
+		<div class="col-md-4">
+			<label class="form-label" for="data_fim">Fim</label>
+			<input id="data_fim" class="form-control" type="date" name="data_fim" value={contrato?.data_fim ?? ''} />
 		</div>
 
-		<div class="column is-4">
-			<div class="field">
-				<label class="label" for="status">Status</label>
-				<div class="control">
-					<div class="select is-fullwidth">
-						<select id="status" name="status" value={contrato?.status ?? 'ativo'}>
-							{#each CONTRATO_STATUS as s (s.value)}
-								<option value={s.value}>{s.label}</option>
-							{/each}
-						</select>
-					</div>
-				</div>
-			</div>
+		<div class="col-md-4">
+			<label class="form-label" for="status">Status</label>
+			<select class="form-select" id="status" name="status" value={contrato?.status ?? 'ativo'}>
+				{#each CONTRATO_STATUS as s (s.value)}
+					<option value={s.value}>{s.label}</option>
+				{/each}
+			</select>
 		</div>
-		<div class="column is-8">
-			<label class="label">&nbsp;</label>
-			<label class="checkbox">
+		<div class="col-md-8 d-flex align-items-end">
+			<div class="form-check">
 				<input
+					class="form-check-input"
 					type="checkbox"
+					id="renovacao_automatica"
 					name="renovacao_automatica"
 					checked={!!contrato?.renovacao_automatica}
 				/>
-				Renovação automática
-			</label>
+				<label class="form-check-label" for="renovacao_automatica">Renovação automática</label>
+			</div>
 		</div>
 	</div>
 
-	<div class="field is-grouped mt-2">
-		<div class="control">
-			<button class="button is-primary" class:is-loading={saving} type="submit">{submitLabel}</button>
-		</div>
-		<div class="control"><a class="button is-light" href="/contratos">Cancelar</a></div>
+	<div class="d-flex gap-2 mt-3">
+		<button class="btn btn-primary" type="submit" disabled={saving}>
+			{#if saving}<span class="spinner-border spinner-border-sm me-2"></span>{/if}{submitLabel}
+		</button>
+		<a class="btn btn-light" href="/contratos">Cancelar</a>
 	</div>
 </form>

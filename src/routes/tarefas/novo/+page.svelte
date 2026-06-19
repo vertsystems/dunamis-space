@@ -3,15 +3,15 @@
 	let { data, form } = $props();
 </script>
 
-<nav class="breadcrumb mb-4" aria-label="breadcrumbs">
-	<ul>
-		<li><a href="/tarefas">Tarefas</a></li>
-		<li class="is-active"><a href="#" aria-current="page">Nova</a></li>
-	</ul>
+<nav aria-label="breadcrumb" class="mb-4">
+	<ol class="breadcrumb">
+		<li class="breadcrumb-item"><a href="/tarefas">Tarefas</a></li>
+		<li class="breadcrumb-item active" aria-current="page">Nova</li>
+	</ol>
 </nav>
 
-<div class="box">
-	<h1 class="title is-5">Nova tarefa</h1>
+<div class="card card-body">
+	<h1 class="h5">Nova tarefa</h1>
 	<TarefaForm
 		tarefa={form?.values ?? null}
 		projetos={data.projetos}
