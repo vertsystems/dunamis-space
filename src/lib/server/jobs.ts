@@ -9,19 +9,69 @@
  * Para adicionar um tipo de job: registre um handler em `handlers` e um rótulo
  * em `$lib/jobs` (JOB_LABELS).
  */
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { env } from '$env/dynamic/private';
 import { getAdmin } from './supabaseAdmin';
 
-export type JobHandler = (payload: Record<string, unknown>) => Promise<unknown>;
+/** Contexto entregue a cada handler (admin = Supabase service role). */
+export type JobContext = { admin: SupabaseClient };
+export type JobHandler = (payload: Record<string, unknown>, ctx: JobContext) => Promise<unknown>;
+
+const num = (v: unknown) => Number(v ?? 0) || 0;
 
 const handlers: Record<string, JobHandler> = {
 	// Handler de exemplo — simula trabalho pesado e devolve um resultado.
 	demo: async (payload) => {
 		await new Promise((r) => setTimeout(r, 1500));
 		return { ok: true, echo: payload ?? null, concluido_em: new Date().toISOString() };
+	},
+
+	// Relatório financeiro consolidado — agrega transações + lucro por cliente.
+	// O resultado fica em jobs.resultado (jsonb) para consumo posterior.
+	relatorio_financeiro: async (_payload, { admin }) => {
+		const [{ data: tx }, { data: lucro }] = await Promise.all([
+			admin.from('transacoes').select('tipo, valor, status'),
+			admin.from('v_lucro_cliente').select('cliente_id, nome, receitas, despesas, lucro')
+		]);
+
+		const linhas = tx ?? [];
+		const receitas = linhas.filter((t) => t.tipo === 'receita').reduce((s, t) => s + num(t.valor), 0);
+		const despesas = linhas.filter((t) => t.tipo === 'despesa').reduce((s, t) => s + num(t.valor), 0);
+
+		return {
+			gerado_em: new Date().toISOString(),
+			transacoes: linhas.length,
+			receitas,
+			despesas,
+			saldo: receitas - despesas,
+			por_cliente: lucro ?? []
+		};
+	},
+
+	// Envio de e-mail via Resend. Env-gated: sem RESEND_API_KEY o job falha
+	// com mensagem clara (aparece no toast de erro), sem quebrar o worker.
+	// payload: { to: string|string[], subject: string, html: string }
+	envio_email: async (payload) => {
+		const key = env.RESEND_API_KEY;
+		if (!key) throw new Error('RESEND_API_KEY não configurada.');
+		const { to, subject, html } = payload as { to?: unknown; subject?: unknown; html?: unknown };
+		if (!to || !subject) throw new Error('payload inválido: "to" e "subject" são obrigatórios.');
+
+		const res = await fetch('https://api.resend.com/emails', {
+			method: 'POST',
+			headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+			body: JSON.stringify({
+				from: env.EMAIL_FROM || 'Dunamis Space <onboarding@resend.dev>',
+				to,
+				subject,
+				html: html ?? ''
+			})
+		});
+		if (!res.ok) throw new Error(`Resend ${res.status}: ${await res.text()}`);
+		return res.json();
 	}
-	// relatorio_financeiro: async (payload) => { ... },
-	// sync_anuncios: async (payload) => { ... },
-	// envio_email: async (payload) => { ... }
+
+	// sync_anuncios: async (payload, { admin }) => { ... } // futura integração c/ APIs de anúncios
 };
 
 type EnqueueOpts = { criadoPor?: string | null; origin?: string; secret?: string };
@@ -82,7 +132,7 @@ export async function processPending(limit = 20) {
 		try {
 			const handler = handlers[job.tipo];
 			if (!handler) throw new Error(`Tipo de job desconhecido: ${job.tipo}`);
-			const resultado = await handler((job.payload as Record<string, unknown>) ?? {});
+			const resultado = await handler((job.payload as Record<string, unknown>) ?? {}, { admin });
 			await admin
 				.from('jobs')
 				.update({
