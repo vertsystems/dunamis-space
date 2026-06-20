@@ -13,16 +13,14 @@ export const PRIORIDADE = [
 	{ value: 'alta', label: 'Alta' }
 ] as const;
 
-export function prioridadeStyle(p: string): { bg: string; fg: string } {
+export function prioridadeTone(p: string): 'danger' | 'warning' | 'neutral' {
 	switch (p) {
 		case 'alta':
-			return { bg: '#fde2e3', fg: '#b3000a' };
+			return 'danger';
 		case 'media':
-			return { bg: '#fff4d6', fg: '#8a6500' };
-		case 'baixa':
-			return { bg: '#eeeeee', fg: '#555555' };
+			return 'warning';
 		default:
-			return { bg: '#eeeeee', fg: '#333333' };
+			return 'neutral';
 	}
 }
 

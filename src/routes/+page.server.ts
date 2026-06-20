@@ -1,5 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { DIAS_CONTRATO_VENCENDO, DIAS_SEM_INTERACAO } from '$lib/alertas';
+import { cached } from '$lib/server/cache';
 
 /** PostgREST tipa relações to-one como array; extrai o objeto único. */
 function um<T>(v: T | T[] | null | undefined): T | null {
@@ -7,7 +8,14 @@ function um<T>(v: T | T[] | null | undefined): T | null {
 	return v ?? null;
 }
 
-export const load: PageServerLoad = async ({ locals: { supabase } }) => {
+type SupabaseClient = Parameters<PageServerLoad>[0]['locals']['supabase'];
+
+/**
+ * Alertas inteligentes (3 queries com embeds — parte mais pesada do dashboard).
+ * Retornado como Promise não-aguardada no `load` para **streaming**: o shell e
+ * os KPIs renderizam na hora e este bloco chega depois, com skeleton na tela.
+ */
+async function carregarAlertas(supabase: SupabaseClient) {
 	const hoje = new Date().toISOString().slice(0, 10);
 
 	const limiteContrato = new Date();
@@ -18,55 +26,32 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 	cutoffInteracao.setDate(cutoffInteracao.getDate() - DIAS_SEM_INTERACAO);
 	const cutoffInteracaoStr = cutoffInteracao.toISOString();
 
-	const [
-		{ count: ativos },
-		{ data: mrrRows },
-		{ data: transacoes },
-		{ count: atrasadas },
-		{ data: contratos },
-		{ data: tarefasAtrasadas },
-		{ data: clientesAtivos }
-	] = await Promise.all([
-		supabase.from('clientes').select('id', { count: 'exact', head: true }).eq('status', 'ativo'),
-		supabase.from('clientes').select('mrr').eq('status', 'ativo'),
-		supabase.from('transacoes').select('tipo, valor'),
-		supabase
-			.from('tarefas')
-			.select('id', { count: 'exact', head: true })
-			.lt('prazo', hoje)
-			.neq('status', 'concluido'),
-		// Contratos ativos vencendo (ou já vencidos): data_fim <= hoje + N dias.
-		supabase
-			.from('contratos')
-			.select('id, data_fim, cliente:clientes(id, nome)')
-			.eq('status', 'ativo')
-			.not('data_fim', 'is', null)
-			.lte('data_fim', limiteContratoStr)
-			.order('data_fim', { ascending: true }),
-		// Tarefas atrasadas (lista).
-		supabase
-			.from('tarefas')
-			.select('id, titulo, prazo, projeto:projetos(id, nome, cliente:clientes(nome))')
-			.lt('prazo', hoje)
-			.neq('status', 'concluido')
-			.order('prazo', { ascending: true })
-			.limit(12),
-		// Clientes ativos + última interação (1 por cliente via embedding).
-		supabase
-			.from('clientes')
-			.select('id, nome, created_at, cliente_interacoes(data)')
-			.eq('status', 'ativo')
-			.order('data', { referencedTable: 'cliente_interacoes', ascending: false })
-			.limit(1, { referencedTable: 'cliente_interacoes' })
-	]);
-
-	const recorrente = (mrrRows ?? []).reduce((sum, r) => sum + Number(r.mrr ?? 0), 0);
-	const receitas = (transacoes ?? [])
-		.filter((t) => t.tipo === 'receita')
-		.reduce((s, t) => s + Number(t.valor ?? 0), 0);
-	const despesas = (transacoes ?? [])
-		.filter((t) => t.tipo === 'despesa')
-		.reduce((s, t) => s + Number(t.valor ?? 0), 0);
+	const [{ data: contratos }, { data: tarefasAtrasadas }, { data: clientesAtivos }] =
+		await Promise.all([
+			// Contratos ativos vencendo (ou já vencidos): data_fim <= hoje + N dias.
+			supabase
+				.from('contratos')
+				.select('id, data_fim, cliente:clientes(id, nome)')
+				.eq('status', 'ativo')
+				.not('data_fim', 'is', null)
+				.lte('data_fim', limiteContratoStr)
+				.order('data_fim', { ascending: true }),
+			// Tarefas atrasadas (lista).
+			supabase
+				.from('tarefas')
+				.select('id, titulo, prazo, projeto:projetos(id, nome, cliente:clientes(nome))')
+				.lt('prazo', hoje)
+				.neq('status', 'concluido')
+				.order('prazo', { ascending: true })
+				.limit(12),
+			// Clientes ativos + última interação (1 por cliente via embedding).
+			supabase
+				.from('clientes')
+				.select('id, nome, created_at, cliente_interacoes(data)')
+				.eq('status', 'ativo')
+				.order('data', { referencedTable: 'cliente_interacoes', ascending: false })
+				.limit(1, { referencedTable: 'cliente_interacoes' })
+		]);
 
 	// Clientes sem interação: nunca tiveram, ou a última é anterior ao cutoff.
 	const semInteracao = (clientesAtivos ?? [])
@@ -95,15 +80,43 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 		};
 	});
 
+	return { contratos: contratosVencendo, tarefas, semInteracao };
+}
+
+/** KPIs do topo — queries rápidas, agregadas num só objeto (cacheável). */
+async function carregarKpis(supabase: SupabaseClient) {
+	const hoje = new Date().toISOString().slice(0, 10);
+
+	const [{ count: ativos }, { data: mrrRows }, { data: transacoes }, { count: atrasadas }] =
+		await Promise.all([
+			supabase.from('clientes').select('id', { count: 'exact', head: true }).eq('status', 'ativo'),
+			supabase.from('clientes').select('mrr').eq('status', 'ativo'),
+			supabase.from('transacoes').select('tipo, valor'),
+			supabase
+				.from('tarefas')
+				.select('id', { count: 'exact', head: true })
+				.lt('prazo', hoje)
+				.neq('status', 'concluido')
+		]);
+
+	const recorrente = (mrrRows ?? []).reduce((sum, r) => sum + Number(r.mrr ?? 0), 0);
+	const receitas = (transacoes ?? [])
+		.filter((t) => t.tipo === 'receita')
+		.reduce((s, t) => s + Number(t.valor ?? 0), 0);
+	const despesas = (transacoes ?? [])
+		.filter((t) => t.tipo === 'despesa')
+		.reduce((s, t) => s + Number(t.valor ?? 0), 0);
+
+	return { ativos: ativos ?? 0, recorrente, lucro: receitas - despesas, atrasadas: atrasadas ?? 0 };
+}
+
+export const load: PageServerLoad = async ({ locals: { supabase } }) => {
+	// KPIs: cacheados 60s (no-op sem Redis), aguardados → SSR imediato.
+	const kpis = await cached('dashboard:kpis', 60, () => carregarKpis(supabase));
+
 	return {
-		ativos: ativos ?? 0,
-		recorrente,
-		lucro: receitas - despesas,
-		atrasadas: atrasadas ?? 0,
-		alertas: {
-			contratos: contratosVencendo,
-			tarefas,
-			semInteracao
-		}
+		...kpis,
+		// Alertas: cacheados 60s + Promise não-aguardada → streaming com skeleton.
+		alertas: cached('dashboard:alertas', 60, () => carregarAlertas(supabase))
 	};
 };

@@ -1,15 +1,18 @@
 import { createBrowserClient, createServerClient, isBrowser } from '@supabase/ssr';
-import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
+// `$env/dynamic/public` (em vez de `static`) não exige a var em tempo de build —
+// build passa em qualquer ambiente (ex.: Preview da Vercel sem as vars setadas);
+// os valores são lidos em runtime. Vars PUBLIC_ continuam expostas ao cliente.
+import { env } from '$env/dynamic/public';
 import type { LayoutLoad } from './$types';
 
 export const load: LayoutLoad = async ({ data, depends, fetch }) => {
 	depends('supabase:auth');
 
 	const supabase = isBrowser()
-		? createBrowserClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
+		? createBrowserClient(env.PUBLIC_SUPABASE_URL, env.PUBLIC_SUPABASE_ANON_KEY, {
 				global: { fetch }
 			})
-		: createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
+		: createServerClient(env.PUBLIC_SUPABASE_URL, env.PUBLIC_SUPABASE_ANON_KEY, {
 				global: { fetch },
 				cookies: {
 					getAll: () => data.cookies

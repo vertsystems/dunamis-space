@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { Card, Button, Textarea } from '$lib/components/ui';
 
 	let { entidadeTipo, entidadeId }: { entidadeTipo: string; entidadeId: string } = $props();
 
@@ -56,27 +57,23 @@
 	}
 </script>
 
-<div class="card card-body mb-4">
-	<h2 class="h6">Comentários</h2>
+<Card class="mt-6">
+	<h2 class="text-base font-semibold text-navy mb-3">Comentários</h2>
 
 	{#each comentarios as c (c.id)}
-		<div class="mb-3 ps-3 border-start border-2">
-			<div class="d-flex justify-content-between">
-				<strong>{c.colaborador?.nome ?? 'Equipe'}</strong>
-				<small class="text-muted">{fmt(c.created_at)}</small>
+		<div class="mb-3 pl-3 border-l-2 border-grey-200">
+			<div class="flex justify-between">
+				<strong class="text-navy">{c.colaborador?.nome ?? 'Equipe'}</strong>
+				<small class="text-grey">{fmt(c.created_at)}</small>
 			</div>
-			<p class="mb-0" style="white-space:pre-wrap;">{c.texto}</p>
+			<p class="mb-0 whitespace-pre-wrap text-slate">{c.texto}</p>
 		</div>
 	{:else}
-		<p class="text-muted mb-3">Nenhum comentário ainda.</p>
+		<p class="text-grey mb-3">Nenhum comentário ainda.</p>
 	{/each}
 
 	<form onsubmit={enviar}>
-		<div class="mb-2">
-			<textarea class="form-control" rows="2" placeholder="Escreva um comentário…" bind:value={texto}></textarea>
-		</div>
-		<button class="btn btn-primary btn-sm" type="submit" disabled={saving}>
-			{#if saving}<span class="spinner-border spinner-border-sm me-2"></span>{/if}Comentar
-		</button>
+		<Textarea rows={2} placeholder="Escreva um comentário…" bind:value={texto} wrapperClass="mb-2" />
+		<Button size="sm" type="submit" loading={saving}>Comentar</Button>
 	</form>
-</div>
+</Card>

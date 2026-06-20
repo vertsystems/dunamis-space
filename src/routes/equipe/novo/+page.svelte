@@ -1,16 +1,12 @@
 <script lang="ts">
 	import ColaboradorForm from '$lib/components/ColaboradorForm.svelte';
+	import { Card, Breadcrumb } from '$lib/components/ui';
 	let { form } = $props();
 </script>
 
-<nav aria-label="breadcrumb" class="mb-4">
-	<ol class="breadcrumb">
-		<li class="breadcrumb-item"><a href="/equipe">Equipe</a></li>
-		<li class="breadcrumb-item active" aria-current="page">Novo</li>
-	</ol>
-</nav>
+<Breadcrumb items={[{ label: 'Equipe', href: '/equipe' }, { label: 'Novo' }]} />
 
-<div class="card card-body">
-	<h1 class="h5">Novo colaborador</h1>
+<Card>
+	<h1 class="text-lg font-semibold text-navy mb-4">Novo colaborador</h1>
 	<ColaboradorForm colaborador={form?.values ?? null} error={form?.error ?? null} submitLabel="Criar colaborador" />
-</div>
+</Card>

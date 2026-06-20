@@ -1,10 +1,10 @@
 import { createServerClient } from '@supabase/ssr';
 import { type Handle, redirect } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
-import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
+import { env } from '$env/dynamic/public';
 
 const supabase: Handle = async ({ event, resolve }) => {
-	event.locals.supabase = createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
+	event.locals.supabase = createServerClient(env.PUBLIC_SUPABASE_URL, env.PUBLIC_SUPABASE_ANON_KEY, {
 		cookies: {
 			getAll: () => event.cookies.getAll(),
 			setAll: (cookiesToSet) => {
@@ -47,9 +47,12 @@ const authGuard: Handle = async ({ event, resolve }) => {
 	event.locals.session = session;
 	event.locals.user = user;
 
-	// Rotas públicas: login e o portal externo de aprovação (/aprovar/[token]).
+	// Rotas públicas: login, portal externo de aprovação (/aprovar/[token]) e
+	// os endpoints de cron (protegidos pelo próprio CRON_SECRET, não pela sessão).
 	const publicRoute =
-		event.url.pathname.startsWith('/login') || event.url.pathname.startsWith('/aprovar');
+		event.url.pathname.startsWith('/login') ||
+		event.url.pathname.startsWith('/aprovar') ||
+		event.url.pathname.startsWith('/api/cron');
 
 	if (!session && !publicRoute) {
 		throw redirect(303, '/login');

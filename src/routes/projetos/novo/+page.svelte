@@ -1,17 +1,13 @@
 <script lang="ts">
 	import ProjetoForm from '$lib/components/ProjetoForm.svelte';
+	import { Card, Breadcrumb } from '$lib/components/ui';
 	let { data, form } = $props();
 </script>
 
-<nav aria-label="breadcrumb" class="mb-4">
-	<ol class="breadcrumb">
-		<li class="breadcrumb-item"><a href="/projetos">Projetos</a></li>
-		<li class="breadcrumb-item active" aria-current="page">Novo</li>
-	</ol>
-</nav>
+<Breadcrumb items={[{ label: 'Projetos', href: '/projetos' }, { label: 'Novo' }]} />
 
-<div class="card card-body">
-	<h1 class="h5">Novo projeto</h1>
+<Card>
+	<h1 class="text-lg font-semibold text-navy mb-4">Novo projeto</h1>
 	<ProjetoForm
 		projeto={form?.values ?? null}
 		clientes={data.clientes}
@@ -19,4 +15,4 @@
 		error={form?.error ?? null}
 		submitLabel="Criar projeto"
 	/>
-</div>
+</Card>

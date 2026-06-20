@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
+	import { Card, Button, Input } from '$lib/components/ui';
 
 	let { data } = $props();
 	let { supabase } = $derived(data);
@@ -24,31 +25,20 @@
 	}
 </script>
 
-<section class="min-vh-100 d-flex align-items-center justify-content-center p-3" style="background-color: var(--ds-light);">
-	<div class="card card-body shadow-sm" style="width: 100%; max-width: 400px;">
-		<h1 class="h4 text-center mb-1">
-			Dunamis<span style="color: var(--ds-red);">.</span>Space
+<section class="min-h-screen flex items-center justify-center p-3 bg-bg">
+	<Card class="w-full max-w-100 shadow-lg">
+		<h1 class="text-2xl font-bold text-center text-navy mb-1">
+			Dunamis<span class="text-brand">.</span>Space
 		</h1>
-		<p class="text-center text-muted">Entre para continuar</p>
+		<p class="text-center text-grey mb-6">Entre para continuar</p>
 
-		<form onsubmit={handleLogin}>
-			<div class="mb-3">
-				<label class="form-label" for="email">E-mail</label>
-				<input id="email" class="form-control" type="email" bind:value={email} required autocomplete="email" />
-			</div>
+		<form onsubmit={handleLogin} class="space-y-4">
+			<Input label="E-mail" type="email" bind:value={email} required autocomplete="email" />
+			<Input label="Senha" type="password" bind:value={password} required autocomplete="current-password" />
 
-			<div class="mb-3">
-				<label class="form-label" for="password">Senha</label>
-				<input id="password" class="form-control" type="password" bind:value={password} required autocomplete="current-password" />
-			</div>
+			{#if error}<p class="text-brand-danger text-sm">{error}</p>{/if}
 
-			{#if error}
-				<p class="text-danger small">{error}</p>
-			{/if}
-
-			<button class="btn btn-primary w-100 mt-2" type="submit" disabled={loading}>
-				{#if loading}<span class="spinner-border spinner-border-sm me-2"></span>{/if}Entrar
-			</button>
+			<Button type="submit" block loading={loading}>Entrar</Button>
 		</form>
-	</div>
+	</Card>
 </section>

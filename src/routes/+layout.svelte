@@ -1,5 +1,11 @@
 <script lang="ts">
+	// Fonte Inter auto-hospedada (sem depender do Google Fonts) — só os pesos usados.
+	import '@fontsource/inter/400.css';
+	import '@fontsource/inter/500.css';
+	import '@fontsource/inter/600.css';
+	import '@fontsource/inter/700.css';
 	import '$lib/styles/app.scss';
+	import '$lib/styles/design-system.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import logo from '$lib/assets/dspace-logo.svg';
 	import { invalidate, invalidateAll } from '$app/navigation';
@@ -7,6 +13,9 @@
 	import { onMount } from 'svelte';
 	import { DTOOLS_FERRAMENTAS } from '$lib/dtools';
 	import Icon from '$lib/components/Icon.svelte';
+	import JobsWatcher from '$lib/components/JobsWatcher.svelte';
+	import { Toaster } from '$lib/components/ui';
+	import { toast } from '$lib/toast.svelte';
 
 	let { children, data } = $props();
 	let { supabase, session } = $derived(data);
@@ -108,6 +117,7 @@
 		refreshing = true;
 		await invalidateAll();
 		refreshing = false;
+		toast.success('Dados atualizados');
 	}
 
 	// Rotas "nuas" (sem o app shell): login e o portal público de aprovação.
@@ -122,11 +132,10 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
-	<link
-		rel="stylesheet"
-		href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-	/>
 </svelte:head>
+
+<Toaster />
+{#if session}<JobsWatcher />{/if}
 
 {#if isBare}
 	{@render children()}

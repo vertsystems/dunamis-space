@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
+	import { Button, Input, Select, Textarea } from '$lib/components/ui';
 
 	let {
 		campanha = null,
@@ -30,38 +32,23 @@
 		};
 	}}
 >
-	{#if error}<div class="alert alert-danger">{error}</div>{/if}
+	{#if error}
+		<div class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">{error}</div>
+	{/if}
 
-	<div class="row g-3">
-		<div class="col-md-6">
-			<label class="form-label" for="nome">Nome da campanha *</label>
-			<input id="nome" class="form-control" name="nome" required value={v('nome')} placeholder="Operação Fecha Mês" />
-		</div>
-		<div class="col-md-6">
-			<label class="form-label" for="cliente_id">Cliente *</label>
-			<select class="form-select" id="cliente_id" name="cliente_id" required value={campanha?.cliente_id ?? ''}>
-				<option value="" disabled>Selecione um cliente</option>
-				{#each clientes as c (c.id)}<option value={c.id}>{c.nome}</option>{/each}
-			</select>
-		</div>
-		<div class="col-md-3">
-			<label class="form-label" for="data_inicio">Início</label>
-			<input id="data_inicio" class="form-control" type="date" name="data_inicio" value={v('data_inicio')} />
-		</div>
-		<div class="col-md-3">
-			<label class="form-label" for="data_fim">Fim</label>
-			<input id="data_fim" class="form-control" type="date" name="data_fim" value={v('data_fim')} />
-		</div>
-		<div class="col-12">
-			<label class="form-label" for="descricao">Descrição</label>
-			<textarea id="descricao" class="form-control" name="descricao" rows="2">{v('descricao')}</textarea>
-		</div>
+	<div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+		<Input label="Nome da campanha *" name="nome" required value={v('nome')} placeholder="Operação Fecha Mês" wrapperClass="md:col-span-6" />
+		<Select label="Cliente *" name="cliente_id" required value={campanha?.cliente_id ?? ''} wrapperClass="md:col-span-6">
+			<option value="" disabled>Selecione um cliente</option>
+			{#each clientes as c (c.id)}<option value={c.id}>{c.nome}</option>{/each}
+		</Select>
+		<Input label="Início" type="date" name="data_inicio" value={v('data_inicio')} wrapperClass="md:col-span-3" />
+		<Input label="Fim" type="date" name="data_fim" value={v('data_fim')} wrapperClass="md:col-span-3" />
+		<Textarea label="Descrição" name="descricao" rows={2} value={v('descricao')} wrapperClass="md:col-span-12" />
 	</div>
 
-	<div class="d-flex gap-2 mt-3">
-		<button class="btn btn-primary" type="submit" disabled={saving}>
-			{#if saving}<span class="spinner-border spinner-border-sm me-2"></span>{/if}{submitLabel}
-		</button>
-		<a class="btn btn-light" href="/campanhas">Cancelar</a>
+	<div class="flex gap-2 mt-4">
+		<Button type="submit" loading={saving}>{submitLabel}</Button>
+		<Button variant="secondary" onclick={() => goto('/campanhas')}>Cancelar</Button>
 	</div>
 </form>

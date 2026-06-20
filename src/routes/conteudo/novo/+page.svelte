@@ -1,17 +1,13 @@
 <script lang="ts">
 	import ConteudoForm from '$lib/components/ConteudoForm.svelte';
+	import { Card, Breadcrumb } from '$lib/components/ui';
 	let { data, form } = $props();
 </script>
 
-<nav aria-label="breadcrumb" class="mb-4">
-	<ol class="breadcrumb">
-		<li class="breadcrumb-item"><a href="/conteudo">Conteúdo</a></li>
-		<li class="breadcrumb-item active" aria-current="page">Novo</li>
-	</ol>
-</nav>
+<Breadcrumb items={[{ label: 'Conteúdo', href: '/conteudo' }, { label: 'Novo' }]} />
 
-<div class="card card-body">
-	<h1 class="h5">Novo conteúdo</h1>
+<Card>
+	<h1 class="text-lg font-semibold text-navy mb-4">Novo conteúdo</h1>
 	<ConteudoForm
 		conteudo={form?.values ?? null}
 		clientes={data.clientes}
@@ -20,4 +16,4 @@
 		error={form?.error ?? null}
 		submitLabel="Criar conteúdo"
 	/>
-</div>
+</Card>

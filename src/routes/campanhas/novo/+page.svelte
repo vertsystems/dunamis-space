@@ -1,16 +1,12 @@
 <script lang="ts">
 	import CampanhaForm from '$lib/components/CampanhaForm.svelte';
+	import { Card, Breadcrumb } from '$lib/components/ui';
 	let { data, form } = $props();
 </script>
 
-<nav aria-label="breadcrumb" class="mb-4">
-	<ol class="breadcrumb">
-		<li class="breadcrumb-item"><a href="/campanhas">Campanhas</a></li>
-		<li class="breadcrumb-item active" aria-current="page">Nova</li>
-	</ol>
-</nav>
+<Breadcrumb items={[{ label: 'Campanhas', href: '/campanhas' }, { label: 'Nova' }]} />
 
-<div class="card card-body">
-	<h1 class="h5">Nova campanha</h1>
+<Card>
+	<h1 class="text-lg font-semibold text-navy mb-4">Nova campanha</h1>
 	<CampanhaForm campanha={form?.values ?? null} clientes={data.clientes} error={form?.error ?? null} submitLabel="Criar campanha" />
-</div>
+</Card>

@@ -3,6 +3,7 @@
 	import { optimistic, tempId } from '$lib/optimistic';
 	import CampanhaForm from '$lib/components/CampanhaForm.svelte';
 	import { MATERIAL_TIPO, materialTipoLabel, formatBRL } from '$lib/campanhas';
+	import { Card, Badge, Button, Input, Select, Breadcrumb } from '$lib/components/ui';
 
 	let { data, form } = $props();
 	let campanha = $derived(form?.values ?? data.campanha);
@@ -95,109 +96,113 @@
 	});
 </script>
 
-<nav aria-label="breadcrumb" class="mb-4">
-	<ol class="breadcrumb">
-		<li class="breadcrumb-item"><a href="/campanhas">Campanhas</a></li>
-		<li class="breadcrumb-item active" aria-current="page">{data.campanha.nome}</li>
-	</ol>
-</nav>
+<Breadcrumb items={[{ label: 'Campanhas', href: '/campanhas' }, { label: data.campanha.nome }]} />
 
-{#if form?.saved}<div class="alert alert-success">Campanha salva com sucesso.</div>{/if}
+{#if form?.saved}
+	<div class="mb-4 rounded-[var(--radius)] bg-brand-green/10 px-4 py-3 text-sm text-brand-green">Campanha salva com sucesso.</div>
+{/if}
 
-<div class="card card-body">
-	<h1 class="h5">{data.campanha.nome}</h1>
+<Card>
+	<h1 class="text-lg font-semibold text-navy mb-4">{data.campanha.nome}</h1>
 	<CampanhaForm {campanha} clientes={data.clientes} error={form?.error ?? null} submitLabel="Salvar alterações" action="?/update" />
-</div>
+</Card>
 
-<div class="card card-body">
-	<h2 class="h6">Produtos</h2>
-	{#if produtoError}<div class="alert alert-danger">{produtoError}</div>{/if}
-	<div class="table-responsive">
-		<table class="table table-sm align-middle">
-			<thead><tr><th>Ref</th><th>Produto</th><th class="text-end">Preço</th><th class="text-end">Promo</th><th class="text-center">Limite</th><th></th></tr></thead>
+<Card class="mt-6">
+	<h2 class="text-base font-semibold text-navy mb-3">Produtos</h2>
+	{#if produtoError}<div class="mb-3 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">{produtoError}</div>{/if}
+	<div class="overflow-x-auto">
+		<table class="w-full text-sm">
+			<thead>
+				<tr class="border-b border-grey-200 text-left text-xs uppercase tracking-wide text-grey">
+					<th class="px-3 py-2 font-semibold">Ref</th>
+					<th class="px-3 py-2 font-semibold">Produto</th>
+					<th class="px-3 py-2 font-semibold text-right">Preço</th>
+					<th class="px-3 py-2 font-semibold text-right">Promo</th>
+					<th class="px-3 py-2 font-semibold text-center">Limite</th>
+					<th></th>
+				</tr>
+			</thead>
 			<tbody>
 				{#each produtos as p (p.id)}
-					<tr class:is-pending={p._pending}>
-						<td>{p.ref ?? '—'}</td>
-						<td>{p.nome}</td>
-						<td class="text-end">{p.preco != null ? formatBRL(p.preco) : '—'}</td>
-						<td class="text-end">{p.preco_promocional != null ? formatBRL(p.preco_promocional) : '—'}</td>
-						<td class="text-center">{p.limite ?? '—'}</td>
-						<td class="text-end">
-							<form method="POST" action="?/delProduto" use:enhance={delProduto} style="display:inline">
+					<tr class="border-b border-grey-200/60 last:border-0 {p._pending ? 'opacity-55' : ''}">
+						<td class="px-3 py-2">{p.ref ?? '—'}</td>
+						<td class="px-3 py-2">{p.nome}</td>
+						<td class="px-3 py-2 text-right tabular-nums">{p.preco != null ? formatBRL(p.preco) : '—'}</td>
+						<td class="px-3 py-2 text-right tabular-nums">{p.preco_promocional != null ? formatBRL(p.preco_promocional) : '—'}</td>
+						<td class="px-3 py-2 text-center">{p.limite ?? '—'}</td>
+						<td class="px-3 py-2 text-right">
+							<form method="POST" action="?/delProduto" use:enhance={delProduto} class="inline">
 								<input type="hidden" name="id" value={p.id} />
-								<button class="btn btn-sm btn-outline-danger" type="submit" disabled={p._pending}>Remover</button>
+								<Button size="sm" variant="danger" type="submit" disabled={p._pending}>Remover</Button>
 							</form>
 						</td>
 					</tr>
 				{:else}
-					<tr><td colspan="6" class="text-muted">Nenhum produto.</td></tr>
+					<tr><td colspan="6" class="px-3 py-4 text-grey">Nenhum produto.</td></tr>
 				{/each}
 			</tbody>
 		</table>
 	</div>
-	<form method="POST" action="?/addProduto" use:enhance={addProduto} class="row g-2 align-items-center mt-2">
-		<div class="col-6 col-md-2"><input class="form-control" name="ref" placeholder="REF" /></div>
-		<div class="col-6 col-md-3"><input class="form-control" name="nome" placeholder="Nome do produto *" required /></div>
-		<div class="col-6 col-md-2"><input class="form-control" type="number" step="0.01" name="preco" placeholder="Preço" /></div>
-		<div class="col-6 col-md-2"><input class="form-control" type="number" step="0.01" name="preco_promocional" placeholder="Promo" /></div>
-		<div class="col-6 col-md-1"><input class="form-control" type="number" name="limite" placeholder="Lim." /></div>
-		<div class="col-6 col-md-2"><button class="btn btn-primary w-100" type="submit">Adicionar</button></div>
+	<form method="POST" action="?/addProduto" use:enhance={addProduto} class="grid grid-cols-2 md:grid-cols-12 gap-2 items-end mt-3">
+		<Input name="ref" placeholder="REF" wrapperClass="md:col-span-2" />
+		<Input name="nome" placeholder="Nome do produto *" required wrapperClass="md:col-span-3" />
+		<Input type="number" step="0.01" name="preco" placeholder="Preço" wrapperClass="md:col-span-2" />
+		<Input type="number" step="0.01" name="preco_promocional" placeholder="Promo" wrapperClass="md:col-span-2" />
+		<Input type="number" name="limite" placeholder="Lim." wrapperClass="md:col-span-1" />
+		<Button type="submit" block class="md:col-span-2">Adicionar</Button>
 	</form>
-</div>
+</Card>
 
-<div class="card card-body">
-	<h2 class="h6">Materiais</h2>
-	{#if materialError}<div class="alert alert-danger">{materialError}</div>{/if}
-	<div class="table-responsive">
-		<table class="table table-sm align-middle">
-			<thead><tr><th>Tipo</th><th>Arquivo</th><th></th></tr></thead>
+<Card class="mt-6">
+	<h2 class="text-base font-semibold text-navy mb-3">Materiais</h2>
+	{#if materialError}<div class="mb-3 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">{materialError}</div>{/if}
+	<div class="overflow-x-auto">
+		<table class="w-full text-sm">
+			<thead>
+				<tr class="border-b border-grey-200 text-left text-xs uppercase tracking-wide text-grey">
+					<th class="px-3 py-2 font-semibold">Tipo</th>
+					<th class="px-3 py-2 font-semibold">Arquivo</th>
+					<th></th>
+				</tr>
+			</thead>
 			<tbody>
 				{#each materiais as m (m.id)}
-					<tr class:is-pending={m._pending}>
-						<td><span class="badge text-bg-light">{materialTipoLabel(m.tipo)}</span></td>
-						<td>{#if m.arquivo_url}<a href={m.arquivo_url} target="_blank" rel="noopener">{m.arquivo_url}</a>{:else}—{/if}</td>
-						<td class="text-end">
-							<form method="POST" action="?/delMaterial" use:enhance={delMaterial} style="display:inline">
+					<tr class="border-b border-grey-200/60 last:border-0 {m._pending ? 'opacity-55' : ''}">
+						<td class="px-3 py-2"><Badge tone="neutral">{materialTipoLabel(m.tipo)}</Badge></td>
+						<td class="px-3 py-2">{#if m.arquivo_url}<a class="text-brand hover:underline" href={m.arquivo_url} target="_blank" rel="noopener">{m.arquivo_url}</a>{:else}—{/if}</td>
+						<td class="px-3 py-2 text-right">
+							<form method="POST" action="?/delMaterial" use:enhance={delMaterial} class="inline">
 								<input type="hidden" name="id" value={m.id} />
-								<button class="btn btn-sm btn-outline-danger" type="submit" disabled={m._pending}>Remover</button>
+								<Button size="sm" variant="danger" type="submit" disabled={m._pending}>Remover</Button>
 							</form>
 						</td>
 					</tr>
 				{:else}
-					<tr><td colspan="3" class="text-muted">Nenhum material.</td></tr>
+					<tr><td colspan="3" class="px-3 py-4 text-grey">Nenhum material.</td></tr>
 				{/each}
 			</tbody>
 		</table>
 	</div>
-	<form method="POST" action="?/addMaterial" use:enhance={addMaterial} class="row g-2 align-items-center mt-2">
-		<div class="col-md-3">
-			<select class="form-select" name="tipo">
-				{#each MATERIAL_TIPO as t (t.value)}<option value={t.value}>{t.label}</option>{/each}
-			</select>
-		</div>
-		<div class="col-md-7"><input class="form-control" name="arquivo_url" placeholder="URL do arquivo (Drive/imagem)" /></div>
-		<div class="col-md-2"><button class="btn btn-primary w-100" type="submit">Adicionar</button></div>
+	<form method="POST" action="?/addMaterial" use:enhance={addMaterial} class="grid grid-cols-1 md:grid-cols-12 gap-2 items-end mt-3">
+		<Select name="tipo" wrapperClass="md:col-span-3">
+			{#each MATERIAL_TIPO as t (t.value)}<option value={t.value}>{t.label}</option>{/each}
+		</Select>
+		<Input name="arquivo_url" placeholder="URL do arquivo (Drive/imagem)" wrapperClass="md:col-span-7" />
+		<Button type="submit" block class="md:col-span-2">Adicionar</Button>
 	</form>
-</div>
+</Card>
 
-<div class="card card-body">
-	<h2 class="h6 text-danger">Zona de perigo</h2>
+<Card class="mt-6">
+	<h2 class="text-base font-semibold text-brand-danger mb-3">Zona de perigo</h2>
 	{#if confirmDelete}
 		<form method="POST" action="?/delete" use:enhance>
-			<p class="mb-3">Excluir esta campanha? Produtos e materiais também serão removidos.</p>
-			<div class="d-flex gap-2">
-				<button class="btn btn-danger" type="submit">Sim, excluir</button>
-				<button class="btn btn-light" type="button" onclick={() => (confirmDelete = false)}>Cancelar</button>
+			<p class="mb-3 text-sm text-slate">Excluir esta campanha? Produtos e materiais também serão removidos.</p>
+			<div class="flex gap-2">
+				<Button variant="danger" type="submit">Sim, excluir</Button>
+				<Button variant="secondary" onclick={() => (confirmDelete = false)}>Cancelar</Button>
 			</div>
 		</form>
 	{:else}
-		<button class="btn btn-outline-danger" onclick={() => (confirmDelete = true)}>Excluir campanha</button>
+		<Button variant="danger" onclick={() => (confirmDelete = true)}>Excluir campanha</Button>
 	{/if}
-</div>
-
-<style>
-	tr.is-pending {
-		opacity: 0.55;
-	}
-</style>
+</Card>

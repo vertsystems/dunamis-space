@@ -6,16 +6,14 @@ export const CONTRATO_STATUS = [
 	{ value: 'encerrado', label: 'Encerrado' }
 ] as const;
 
-export function contratoStatusStyle(status: string): { bg: string; fg: string } {
+export function contratoStatusTone(status: string): 'success' | 'warning' | 'neutral' {
 	switch (status) {
 		case 'ativo':
-			return { bg: '#e6f4ea', fg: '#1e7e34' };
+			return 'success';
 		case 'suspenso':
-			return { bg: '#fff4d6', fg: '#8a6500' };
-		case 'encerrado':
-			return { bg: '#eeeeee', fg: '#555555' };
+			return 'warning';
 		default:
-			return { bg: '#eeeeee', fg: '#333333' };
+			return 'neutral';
 	}
 }
 
