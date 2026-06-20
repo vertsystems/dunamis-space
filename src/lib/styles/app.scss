@@ -374,3 +374,13 @@ body {
 		color: var(--ds-dark);
 	}
 }
+
+// Botões secundários (btn-light) com borda visível no fundo claro
+.btn-light {
+	--bs-btn-bg: #ffffff;
+	--bs-btn-border-color: #ccd0cf;
+	--bs-btn-hover-bg: #f1f3f3;
+	--bs-btn-hover-border-color: #b8bdbd;
+	--bs-btn-active-bg: #e9ecec;
+	--bs-btn-active-border-color: #b8bdbd;
+}

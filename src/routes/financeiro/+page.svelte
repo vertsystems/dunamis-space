@@ -42,13 +42,13 @@
 
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
 	<form class="d-flex gap-2" method="GET">
-		<select class="form-select" style="max-width:180px" name="tipo" bind:value={tipo}>
+		<select class="form-select" style="max-width:195px" name="tipo" bind:value={tipo}>
 			<option value="">Todos os tipos</option>
 			{#each TRANSACAO_TIPO as t (t.value)}
 				<option value={t.value}>{t.label}</option>
 			{/each}
 		</select>
-		<select class="form-select" style="max-width:180px" name="status" bind:value={status}>
+		<select class="form-select" style="max-width:195px" name="status" bind:value={status}>
 			<option value="">Todos os status</option>
 			{#each TRANSACAO_STATUS as s (s.value)}
 				<option value={s.value}>{s.label}</option>
