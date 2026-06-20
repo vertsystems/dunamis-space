@@ -7,19 +7,19 @@ export const CLIENTE_STATUS = [
 
 export type ClienteStatus = (typeof CLIENTE_STATUS)[number]['value'];
 
-/** Cor do selo de status (tom claro de fundo + texto forte). */
-export function statusStyle(status: string): { bg: string; fg: string } {
+/** Tom do selo de status para o componente <Badge>. */
+export function statusTone(
+	status: string
+): 'success' | 'warning' | 'neutral' | 'danger' {
 	switch (status) {
 		case 'ativo':
-			return { bg: '#e6f4ea', fg: '#1e7e34' };
+			return 'success';
 		case 'lead':
-			return { bg: '#fff4d6', fg: '#8a6500' };
-		case 'pausado':
-			return { bg: '#eeeeee', fg: '#555555' };
+			return 'warning';
 		case 'cancelado':
-			return { bg: '#fde2e3', fg: '#b3000a' };
+			return 'danger';
 		default:
-			return { bg: '#eeeeee', fg: '#333333' };
+			return 'neutral';
 	}
 }
 

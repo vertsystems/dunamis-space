@@ -2,25 +2,23 @@
 	import { enhance } from '$app/forms';
 	import ProjetoForm from '$lib/components/ProjetoForm.svelte';
 	import Comentarios from '$lib/components/Comentarios.svelte';
+	import { Card, Button, Breadcrumb } from '$lib/components/ui';
 
 	let { data, form } = $props();
 	let projeto = $derived(form?.values ?? data.projeto);
 	let confirmDelete = $state(false);
 </script>
 
-<nav aria-label="breadcrumb" class="mb-4">
-	<ol class="breadcrumb">
-		<li class="breadcrumb-item"><a href="/projetos">Projetos</a></li>
-		<li class="breadcrumb-item active" aria-current="page">{data.projeto.nome}</li>
-	</ol>
-</nav>
+<Breadcrumb items={[{ label: 'Projetos', href: '/projetos' }, { label: data.projeto.nome }]} />
 
-{#if form?.saved}<div class="alert alert-success">Projeto salvo com sucesso.</div>{/if}
+{#if form?.saved}
+	<div class="mb-4 rounded-[var(--radius)] bg-brand-green/10 px-4 py-3 text-sm text-brand-green">Projeto salvo com sucesso.</div>
+{/if}
 
-<div class="card card-body">
-	<div class="d-flex justify-content-between align-items-center mb-3">
-		<h1 class="h5 mb-0">{data.projeto.nome}</h1>
-		<a class="btn btn-sm btn-light" href={`/tarefas?projeto=${data.projeto.id}`}>Ver tarefas</a>
+<Card>
+	<div class="flex items-center justify-between mb-4">
+		<h1 class="text-lg font-semibold text-navy">{data.projeto.nome}</h1>
+		<Button size="sm" variant="secondary" onclick={() => location.assign(`/tarefas?projeto=${data.projeto.id}`)}>Ver tarefas</Button>
 	</div>
 	<ProjetoForm
 		{projeto}
@@ -30,21 +28,21 @@
 		submitLabel="Salvar alterações"
 		action="?/update"
 	/>
-</div>
+</Card>
 
 <Comentarios entidadeTipo="projeto" entidadeId={data.projeto.id} />
 
-<div class="card card-body">
-	<h2 class="h6 text-danger">Zona de perigo</h2>
+<Card class="mt-6">
+	<h2 class="text-base font-semibold text-brand-danger mb-3">Zona de perigo</h2>
 	{#if confirmDelete}
 		<form method="POST" action="?/delete" use:enhance>
-			<p class="mb-3">Excluir este projeto? As tarefas vinculadas também serão removidas.</p>
-			<div class="d-flex gap-2">
-				<button class="btn btn-danger" type="submit">Sim, excluir</button>
-				<button class="btn btn-light" type="button" onclick={() => (confirmDelete = false)}>Cancelar</button>
+			<p class="mb-3 text-sm text-slate">Excluir este projeto? As tarefas vinculadas também serão removidas.</p>
+			<div class="flex gap-2">
+				<Button variant="danger" type="submit">Sim, excluir</Button>
+				<Button variant="secondary" onclick={() => (confirmDelete = false)}>Cancelar</Button>
 			</div>
 		</form>
 	{:else}
-		<button class="btn btn-outline-danger" onclick={() => (confirmDelete = true)}>Excluir projeto</button>
+		<Button variant="danger" onclick={() => (confirmDelete = true)}>Excluir projeto</Button>
 	{/if}
-</div>
+</Card>

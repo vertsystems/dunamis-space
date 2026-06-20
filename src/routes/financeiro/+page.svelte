@@ -3,10 +3,11 @@
 	import {
 		TRANSACAO_TIPO,
 		TRANSACAO_STATUS,
-		statusStyle,
+		statusTone,
 		statusLabel,
 		formatBRL
 	} from '$lib/financeiro';
+	import { Card, Badge, Button, Select } from '$lib/components/ui';
 
 	let { data } = $props();
 	let tipo = $state(data.tipo);
@@ -17,89 +18,78 @@
 	}
 </script>
 
-<div class="row g-3 mb-2">
-	<div class="col-md-4">
-		<div class="stat-card">
-			<div class="stat-label">Receitas</div>
-			<div class="stat-value" style="color:#1e7e34;">{formatBRL(data.receitas)}</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+	<Card>
+		<div class="text-xs uppercase tracking-wide text-grey font-semibold">Receitas</div>
+		<div class="text-3xl font-bold mt-1 text-brand-green">{formatBRL(data.receitas)}</div>
+	</Card>
+	<Card>
+		<div class="text-xs uppercase tracking-wide text-grey font-semibold">Despesas</div>
+		<div class="text-3xl font-bold mt-1 text-brand-danger">{formatBRL(data.despesas)}</div>
+	</Card>
+	<Card>
+		<div class="text-xs uppercase tracking-wide text-grey font-semibold">Saldo</div>
+		<div class="text-3xl font-bold mt-1 {data.saldo >= 0 ? 'text-brand-green' : 'text-brand-danger'}">
+			{formatBRL(data.saldo)}
 		</div>
-	</div>
-	<div class="col-md-4">
-		<div class="stat-card">
-			<div class="stat-label">Despesas</div>
-			<div class="stat-value" style="color:#b3000a;">{formatBRL(data.despesas)}</div>
-		</div>
-	</div>
-	<div class="col-md-4">
-		<div class="stat-card">
-			<div class="stat-label">Saldo</div>
-			<div class="stat-value" style={`color:${data.saldo >= 0 ? '#1e7e34' : '#b3000a'};`}>
-				{formatBRL(data.saldo)}
-			</div>
-		</div>
-	</div>
+	</Card>
 </div>
 
-<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
-	<form class="d-flex gap-2" method="GET">
-		<select class="form-select" style="max-width:205px" name="tipo" bind:value={tipo}>
+<div class="flex flex-wrap items-end justify-between gap-3 mb-4">
+	<form class="flex flex-wrap items-end gap-2" method="GET">
+		<Select name="tipo" bind:value={tipo} wrapperClass="w-44">
 			<option value="">Todos os tipos</option>
 			{#each TRANSACAO_TIPO as t (t.value)}
 				<option value={t.value}>{t.label}</option>
 			{/each}
-		</select>
-		<select class="form-select" style="max-width:205px" name="status" bind:value={status}>
+		</Select>
+		<Select name="status" bind:value={status} wrapperClass="w-44">
 			<option value="">Todos os status</option>
 			{#each TRANSACAO_STATUS as s (s.value)}
 				<option value={s.value}>{s.label}</option>
 			{/each}
-		</select>
-		<button class="btn btn-light" type="submit">Filtrar</button>
+		</Select>
+		<Button variant="secondary" type="submit">Filtrar</Button>
 	</form>
-	<div class="d-flex gap-2">
-		<a class="btn btn-light" href="/financeiro/lucro">Lucro por cliente</a>
-		<a class="btn btn-primary" href="/financeiro/novo">+ Nova transação</a>
+	<div class="flex gap-2">
+		<Button variant="secondary" onclick={() => goto('/financeiro/lucro')}>Lucro por cliente</Button>
+		<Button onclick={() => goto('/financeiro/novo')}>+ Nova transação</Button>
 	</div>
 </div>
 
 {#if data.loadError}
-	<div class="alert alert-danger">Erro ao carregar: {data.loadError}</div>
+	<div class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">Erro ao carregar: {data.loadError}</div>
 {/if}
 
-<div class="card">
-	<div class="table-responsive">
-		<table class="table table-hover align-middle mb-0">
+<Card padding="none" class="overflow-hidden">
+	<div class="overflow-x-auto">
+		<table class="w-full text-sm">
 			<thead>
-				<tr>
-					<th>Competência</th>
-					<th>Descrição</th>
-					<th>Categoria</th>
-					<th>Cliente</th>
-					<th>Status</th>
-					<th class="text-end">Valor</th>
+				<tr class="border-b border-grey-200 text-left text-xs uppercase tracking-wide text-grey">
+					<th class="px-4 py-3 font-semibold">Competência</th>
+					<th class="px-4 py-3 font-semibold">Descrição</th>
+					<th class="px-4 py-3 font-semibold">Categoria</th>
+					<th class="px-4 py-3 font-semibold">Cliente</th>
+					<th class="px-4 py-3 font-semibold">Status</th>
+					<th class="px-4 py-3 font-semibold text-right">Valor</th>
 				</tr>
 			</thead>
 			<tbody>
 				{#each data.transacoes as t (t.id)}
-					{@const st = statusStyle(t.status)}
 					{@const receita = t.tipo === 'receita'}
-					<tr style="cursor:pointer" onclick={() => goto(`/financeiro/${t.id}`)}>
-						<td>{fmtData(t.data_competencia)}</td>
-						<td><a href={`/financeiro/${t.id}`}>{t.descricao ?? '—'}</a></td>
-						<td>{t.categoria ?? '—'}</td>
-						<td>{t.cliente?.nome ?? '—'}</td>
-						<td>
-							<span class="badge" style={`background:${st.bg};color:${st.fg};font-weight:500;`}>
-								{statusLabel(t.status)}
-							</span>
-						</td>
-						<td class="text-end" style={`color:${receita ? '#1e7e34' : '#b3000a'};font-weight:500;`}>
+					<tr class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg" onclick={() => goto(`/financeiro/${t.id}`)}>
+						<td class="px-4 py-3 whitespace-nowrap">{fmtData(t.data_competencia)}</td>
+						<td class="px-4 py-3"><a class="text-brand hover:underline" href={`/financeiro/${t.id}`}>{t.descricao ?? '—'}</a></td>
+						<td class="px-4 py-3">{t.categoria ?? '—'}</td>
+						<td class="px-4 py-3">{t.cliente?.nome ?? '—'}</td>
+						<td class="px-4 py-3"><Badge tone={statusTone(t.status)}>{statusLabel(t.status)}</Badge></td>
+						<td class="px-4 py-3 text-right tabular-nums font-medium {receita ? 'text-brand-green' : 'text-brand-danger'}">
 							{receita ? '+' : '−'}{formatBRL(t.valor)}
 						</td>
 					</tr>
 				{:else}
 					<tr>
-						<td colspan="6" class="text-center text-muted p-5">
+						<td colspan="6" class="px-4 py-12 text-center text-grey">
 							Nenhuma transação ainda. Clique em “Nova transação” para começar.
 						</td>
 					</tr>
@@ -107,4 +97,4 @@
 			</tbody>
 		</table>
 	</div>
-</div>
+</Card>

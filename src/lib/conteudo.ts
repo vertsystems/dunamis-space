@@ -13,20 +13,20 @@ export const CONTEUDO_STATUS = [
 	{ value: 'publicado', label: 'Publicado' }
 ] as const;
 
-export function conteudoStatusStyle(status: string): { bg: string; fg: string } {
+export function conteudoStatusTone(
+	status: string
+): 'neutral' | 'warning' | 'info' | 'brand' | 'success' {
 	switch (status) {
-		case 'rascunho':
-			return { bg: '#eeeeee', fg: '#555555' };
 		case 'em_aprovacao':
-			return { bg: '#fff4d6', fg: '#8a6500' };
+			return 'warning';
 		case 'aprovado':
-			return { bg: '#e6f1fb', fg: '#185fa5' };
+			return 'info';
 		case 'programado':
-			return { bg: '#f3e8ff', fg: '#6b21a8' };
+			return 'brand';
 		case 'publicado':
-			return { bg: '#e6f4ea', fg: '#1e7e34' };
+			return 'success';
 		default:
-			return { bg: '#eeeeee', fg: '#333333' };
+			return 'neutral';
 	}
 }
 
@@ -44,16 +44,16 @@ export const APROVACAO_STATUS = [
 	{ value: 'alteracao_solicitada', label: 'Alteração solicitada' }
 ] as const;
 
-export function aprovacaoStatusStyle(status: string): { bg: string; fg: string } {
+export function aprovacaoStatusTone(status: string): 'warning' | 'success' | 'danger' | 'neutral' {
 	switch (status) {
 		case 'pendente':
-			return { bg: '#fff4d6', fg: '#8a6500' };
+			return 'warning';
 		case 'aprovado':
-			return { bg: '#e6f4ea', fg: '#1e7e34' };
+			return 'success';
 		case 'alteracao_solicitada':
-			return { bg: '#fde8e8', fg: '#b3261e' };
+			return 'danger';
 		default:
-			return { bg: '#eeeeee', fg: '#333333' };
+			return 'neutral';
 	}
 }
 

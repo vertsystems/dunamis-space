@@ -3,6 +3,8 @@
 	import { page } from '$app/state';
 	import ConteudoForm from '$lib/components/ConteudoForm.svelte';
 	import Comentarios from '$lib/components/Comentarios.svelte';
+	import { aprovacaoStatusTone, aprovacaoStatusLabel } from '$lib/conteudo';
+	import { Card, Badge, Button, Input, Breadcrumb } from '$lib/components/ui';
 
 	let { data, form } = $props();
 	let conteudo = $derived(form?.values ?? data.conteudo);
@@ -14,12 +16,6 @@
 		aprovacao ? `${page.url.origin}/aprovar/${aprovacao.token_publico}` : ''
 	);
 
-	const aprovStatus: Record<string, { label: string; cls: string }> = {
-		pendente: { label: 'Aguardando cliente', cls: 'text-bg-warning' },
-		aprovado: { label: 'Aprovado', cls: 'text-bg-success' },
-		alteracao_solicitada: { label: 'Alteração solicitada', cls: 'text-bg-danger' }
-	};
-
 	async function copiar() {
 		await navigator.clipboard.writeText(linkAprovacao);
 		copiado = true;
@@ -27,17 +23,14 @@
 	}
 </script>
 
-<nav aria-label="breadcrumb" class="mb-4">
-	<ol class="breadcrumb">
-		<li class="breadcrumb-item"><a href="/conteudo">Conteúdo</a></li>
-		<li class="breadcrumb-item active" aria-current="page">{data.conteudo.titulo ?? 'Conteúdo'}</li>
-	</ol>
-</nav>
+<Breadcrumb items={[{ label: 'Conteúdo', href: '/conteudo' }, { label: data.conteudo.titulo ?? 'Conteúdo' }]} />
 
-{#if form?.saved}<div class="alert alert-success">Conteúdo salvo com sucesso.</div>{/if}
+{#if form?.saved}
+	<div class="mb-4 rounded-[var(--radius)] bg-brand-green/10 px-4 py-3 text-sm text-brand-green">Conteúdo salvo com sucesso.</div>
+{/if}
 
-<div class="card card-body">
-	<h1 class="h5">{data.conteudo.titulo ?? 'Conteúdo'}</h1>
+<Card>
+	<h1 class="text-lg font-semibold text-navy mb-4">{data.conteudo.titulo ?? 'Conteúdo'}</h1>
 	<ConteudoForm
 		{conteudo}
 		clientes={data.clientes}
@@ -47,46 +40,44 @@
 		submitLabel="Salvar alterações"
 		action="?/update"
 	/>
-</div>
+</Card>
 
 <Comentarios entidadeTipo="conteudo" entidadeId={data.conteudo.id} />
 
-<div class="card card-body">
-	<h2 class="h6">Aprovação do cliente</h2>
+<Card class="mt-6">
+	<h2 class="text-base font-semibold text-navy mb-3">Aprovação do cliente</h2>
 	{#if aprovacao}
-		<p class="mb-2">
+		<p class="mb-2 flex items-center gap-2 text-sm">
 			Status:
-			<span class="badge {aprovStatus[aprovacao.status]?.cls ?? 'text-bg-light'}">
-				{aprovStatus[aprovacao.status]?.label ?? aprovacao.status}
-			</span>
+			<Badge tone={aprovacaoStatusTone(aprovacao.status)}>{aprovacaoStatusLabel(aprovacao.status)}</Badge>
 		</p>
-		<div class="input-group">
-			<input class="form-control" readonly value={linkAprovacao} />
-			<button class="btn btn-light" onclick={copiar}>{copiado ? 'Copiado!' : 'Copiar link'}</button>
+		<div class="flex gap-2">
+			<Input readonly value={linkAprovacao} wrapperClass="flex-1" />
+			<Button variant="secondary" onclick={copiar}>{copiado ? 'Copiado!' : 'Copiar link'}</Button>
 		</div>
-		<p class="form-text">Envie este link para o cliente aprovar ou pedir alteração (não precisa de login).</p>
+		<p class="text-xs text-grey mt-1">Envie este link para o cliente aprovar ou pedir alteração (não precisa de login).</p>
 		{#if aprovacao.comentario_cliente}
-			<div class="alert alert-secondary mt-2"><strong>Comentário do cliente:</strong> {aprovacao.comentario_cliente}</div>
+			<div class="mt-2 rounded-[var(--radius)] bg-bg px-4 py-3 text-sm text-slate"><strong>Comentário do cliente:</strong> {aprovacao.comentario_cliente}</div>
 		{/if}
 	{:else}
-		<p class="mb-3 text-muted">Gere um link público para o cliente aprovar este conteúdo.</p>
+		<p class="mb-3 text-slate">Gere um link público para o cliente aprovar este conteúdo.</p>
 		<form method="POST" action="?/enviarAprovacao" use:enhance>
-			<button class="btn btn-primary" type="submit">Gerar link de aprovação</button>
+			<Button type="submit">Gerar link de aprovação</Button>
 		</form>
 	{/if}
-</div>
+</Card>
 
-<div class="card card-body">
-	<h2 class="h6 text-danger">Zona de perigo</h2>
+<Card class="mt-6">
+	<h2 class="text-base font-semibold text-brand-danger mb-3">Zona de perigo</h2>
 	{#if confirmDelete}
 		<form method="POST" action="?/delete" use:enhance>
-			<p class="mb-3">Excluir este conteúdo?</p>
-			<div class="d-flex gap-2">
-				<button class="btn btn-danger" type="submit">Sim, excluir</button>
-				<button class="btn btn-light" type="button" onclick={() => (confirmDelete = false)}>Cancelar</button>
+			<p class="mb-3 text-sm text-slate">Excluir este conteúdo?</p>
+			<div class="flex gap-2">
+				<Button variant="danger" type="submit">Sim, excluir</Button>
+				<Button variant="secondary" onclick={() => (confirmDelete = false)}>Cancelar</Button>
 			</div>
 		</form>
 	{:else}
-		<button class="btn btn-outline-danger" onclick={() => (confirmDelete = true)}>Excluir conteúdo</button>
+		<Button variant="danger" onclick={() => (confirmDelete = true)}>Excluir conteúdo</Button>
 	{/if}
-</div>
+</Card>

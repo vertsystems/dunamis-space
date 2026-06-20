@@ -1,17 +1,13 @@
 <script lang="ts">
 	import ContratoForm from '$lib/components/ContratoForm.svelte';
+	import { Card, Breadcrumb } from '$lib/components/ui';
 	let { data, form } = $props();
 </script>
 
-<nav aria-label="breadcrumb" class="mb-4">
-	<ol class="breadcrumb">
-		<li class="breadcrumb-item"><a href="/contratos">Contratos</a></li>
-		<li class="breadcrumb-item active" aria-current="page">Novo</li>
-	</ol>
-</nav>
+<Breadcrumb items={[{ label: 'Contratos', href: '/contratos' }, { label: 'Novo' }]} />
 
-<div class="card card-body">
-	<h1 class="h5">Novo contrato</h1>
+<Card>
+	<h1 class="text-lg font-semibold text-navy mb-4">Novo contrato</h1>
 	<ContratoForm
 		contrato={form?.values ?? null}
 		clientes={data.clientes}
@@ -19,4 +15,4 @@
 		error={form?.error ?? null}
 		submitLabel="Criar contrato"
 	/>
-</div>
+</Card>

@@ -11,16 +11,16 @@ export const TRANSACAO_STATUS = [
 	{ value: 'atrasado', label: 'Atrasado' }
 ] as const;
 
-export function statusStyle(status: string): { bg: string; fg: string } {
+export function statusTone(status: string): 'success' | 'warning' | 'danger' | 'neutral' {
 	switch (status) {
 		case 'pago':
-			return { bg: '#e6f4ea', fg: '#1e7e34' };
+			return 'success';
 		case 'previsto':
-			return { bg: '#fff4d6', fg: '#8a6500' };
+			return 'warning';
 		case 'atrasado':
-			return { bg: '#fde2e3', fg: '#b3000a' };
+			return 'danger';
 		default:
-			return { bg: '#eeeeee', fg: '#333333' };
+			return 'neutral';
 	}
 }
 

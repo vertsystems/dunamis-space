@@ -16,18 +16,20 @@ export const PROJETO_STATUS = [
 	{ value: 'finalizado', label: 'Finalizado' }
 ] as const;
 
-export function projetoStatusStyle(status: string): { bg: string; fg: string } {
+export function projetoStatusTone(
+	status: string
+): 'info' | 'warning' | 'brand' | 'success' | 'neutral' {
 	switch (status) {
 		case 'em_andamento':
-			return { bg: '#e6f1fb', fg: '#185fa5' };
+			return 'info';
 		case 'aguardando_cliente':
-			return { bg: '#fff4d6', fg: '#8a6500' };
+			return 'warning';
 		case 'em_aprovacao':
-			return { bg: '#f3e8ff', fg: '#6b21a8' };
+			return 'brand';
 		case 'finalizado':
-			return { bg: '#e6f4ea', fg: '#1e7e34' };
+			return 'success';
 		default:
-			return { bg: '#eeeeee', fg: '#333333' };
+			return 'neutral';
 	}
 }
 

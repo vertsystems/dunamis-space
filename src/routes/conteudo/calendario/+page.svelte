@@ -1,7 +1,14 @@
 <script lang="ts">
-	import { conteudoStatusStyle, conteudoStatusLabel, conteudoTipoLabel } from '$lib/conteudo';
+	import { conteudoStatusTone, conteudoStatusLabel, conteudoTipoLabel } from '$lib/conteudo';
+	import { Card, Button, SegmentedNav, toneClasses } from '$lib/components/ui';
 
 	let { data } = $props();
+
+	const segs = [
+		{ label: 'Lista', href: '/conteudo' },
+		{ label: 'Calendário', href: '/conteudo/calendario' },
+		{ label: 'Aprovações', href: '/conteudo/aprovacoes' }
+	];
 
 	const SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 	const MESES = [
@@ -45,127 +52,65 @@
 	}
 </script>
 
-<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
-	<div class="btn-group">
-		<a class="btn btn-outline-secondary" href="/conteudo">Lista</a>
-		<span class="btn btn-primary">Calendário</span>
-		<a class="btn btn-outline-secondary" href="/conteudo/aprovacoes">Aprovações</a>
-	</div>
-	<a class="btn btn-primary" href="/conteudo/novo">+ Novo conteúdo</a>
+<div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+	<SegmentedNav items={segs} current="Calendário" />
+	<Button onclick={() => location.assign('/conteudo/novo')}>+ Novo conteúdo</Button>
 </div>
 
-{#if data.loadError}<div class="alert alert-danger">Erro ao carregar: {data.loadError}</div>{/if}
+{#if data.loadError}<div class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">Erro ao carregar: {data.loadError}</div>{/if}
 
-<div class="card card-body">
-	<div class="d-flex justify-content-between align-items-center mb-4">
-		<h1 class="h5 mb-0">{MESES[data.mes]} {data.ano}</h1>
-		<div class="btn-group">
-			<a class="btn btn-sm btn-outline-secondary" href={`/conteudo/calendario?mes=${data.prev}`} aria-label="Mês anterior">‹</a>
-			<a class="btn btn-sm btn-outline-secondary" href="/conteudo/calendario">Hoje</a>
-			<a class="btn btn-sm btn-outline-secondary" href={`/conteudo/calendario?mes=${data.next}`} aria-label="Próximo mês">›</a>
+<Card>
+	<div class="flex items-center justify-between mb-4">
+		<h1 class="text-lg font-semibold text-navy">{MESES[data.mes]} {data.ano}</h1>
+		<div class="flex gap-1">
+			<Button size="sm" variant="secondary" onclick={() => location.assign(`/conteudo/calendario?mes=${data.prev}`)} aria-label="Mês anterior">‹</Button>
+			<Button size="sm" variant="secondary" onclick={() => location.assign('/conteudo/calendario')}>Hoje</Button>
+			<Button size="sm" variant="secondary" onclick={() => location.assign(`/conteudo/calendario?mes=${data.next}`)} aria-label="Próximo mês">›</Button>
 		</div>
 	</div>
 
-	<div class="cal-grid cal-head">
-		{#each SEMANA as dia (dia)}<div class="cal-weekday">{dia}</div>{/each}
+	<div class="grid grid-cols-7 gap-1.5 mb-1.5">
+		{#each SEMANA as dia (dia)}
+			<div class="text-center text-xs font-semibold uppercase tracking-wide text-grey">{dia}</div>
+		{/each}
 	</div>
-	<div class="cal-grid">
+	<div class="grid grid-cols-7 gap-1.5">
 		{#each celulas as d (d.toISOString())}
 			{@const k = chave(d)}
 			{@const itens = porDia.get(k) ?? []}
 			{@const foraDoMes = d.getMonth() !== data.mes}
-			<div class="cal-cell" class:is-muted={foraDoMes} class:is-today={k === hojeKey}>
-				<div class="cal-day">{d.getDate()}</div>
+			<div
+				class="min-h-23 flex flex-col gap-1 overflow-hidden rounded-[var(--radius-sm)] border p-1 {foraDoMes
+					? 'bg-bg border-grey-200/60'
+					: 'bg-surface border-grey-200'} {k === hojeKey ? 'border-brand ring-1 ring-brand' : ''}"
+			>
+				<div class="text-xs font-semibold leading-none {foraDoMes ? 'text-grey-200' : 'text-slate'}">{d.getDate()}</div>
 				{#each itens as c (c.id)}
-					{@const st = conteudoStatusStyle(c.status)}
 					<a
-						class="cal-chip"
+						class="block truncate rounded-[var(--radius-sm)] px-1.5 py-0.5 text-[0.72rem] font-medium {toneClasses[conteudoStatusTone(c.status)]}"
 						href={`/conteudo/${c.id}`}
-						style={`background:${st.bg};color:${st.fg};`}
 						title={`${conteudoTipoLabel(c.tipo)} · ${conteudoStatusLabel(c.status)}${c.cliente_nome ? ' · ' + c.cliente_nome : ''}`}
 					>
-						<span class="cal-chip-time">{horaCurta(c.data_publicacao)}</span>
-						{c.titulo ?? conteudoTipoLabel(c.tipo)}
+						<span class="opacity-70 mr-1 tabular-nums">{horaCurta(c.data_publicacao)}</span>{c.titulo ?? conteudoTipoLabel(c.tipo)}
 					</a>
 				{/each}
 			</div>
 		{/each}
 	</div>
-</div>
+</Card>
 
 {#if data.semData.length}
-	<div class="card card-body">
-		<h2 class="h6">Sem data agendada ({data.semData.length})</h2>
-		<div class="d-flex flex-wrap gap-1">
+	<Card class="mt-6">
+		<h2 class="text-base font-semibold text-navy mb-3">Sem data agendada ({data.semData.length})</h2>
+		<div class="flex flex-wrap gap-1.5">
 			{#each data.semData as c (c.id)}
-				{@const st = conteudoStatusStyle(c.status)}
-				<a class="badge text-decoration-none" href={`/conteudo/${c.id}`} style={`background:${st.bg};color:${st.fg};`}>
+				<a
+					class="rounded-full px-2 py-0.5 text-xs font-semibold no-underline {toneClasses[conteudoStatusTone(c.status)]}"
+					href={`/conteudo/${c.id}`}
+				>
 					{c.titulo ?? conteudoTipoLabel(c.tipo)}{c.cliente_nome ? ' · ' + c.cliente_nome : ''}
 				</a>
 			{/each}
 		</div>
-	</div>
+	</Card>
 {/if}
-
-<style>
-	.cal-grid {
-		display: grid;
-		grid-template-columns: repeat(7, 1fr);
-		gap: 6px;
-	}
-	.cal-head {
-		margin-bottom: 6px;
-	}
-	.cal-weekday {
-		text-align: center;
-		font-size: 0.75rem;
-		font-weight: 600;
-		color: #888;
-		text-transform: uppercase;
-		letter-spacing: 0.03em;
-	}
-	.cal-cell {
-		min-height: 92px;
-		border: 1px solid #e6e6e6;
-		border-radius: 6px;
-		padding: 4px;
-		background: #fff;
-		display: flex;
-		flex-direction: column;
-		gap: 3px;
-		overflow: hidden;
-	}
-	.cal-cell.is-muted {
-		background: #fafafa;
-	}
-	.cal-cell.is-muted .cal-day {
-		color: #c4c4c4;
-	}
-	.cal-cell.is-today {
-		border-color: var(--ds-red, #de4908);
-		box-shadow: inset 0 0 0 1px var(--ds-red, #de4908);
-	}
-	.cal-day {
-		font-size: 0.8rem;
-		font-weight: 600;
-		color: #555;
-		line-height: 1;
-	}
-	.cal-chip {
-		display: block;
-		font-size: 0.72rem;
-		line-height: 1.2;
-		padding: 2px 5px;
-		border-radius: 4px;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		font-weight: 500;
-		text-decoration: none;
-	}
-	.cal-chip-time {
-		opacity: 0.7;
-		margin-right: 3px;
-		font-variant-numeric: tabular-nums;
-	}
-</style>

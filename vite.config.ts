@@ -1,18 +1,11 @@
 import adapter from '@sveltejs/adapter-vercel';
 import { sveltekit } from '@sveltejs/kit/vite';
+import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-	css: {
-		preprocessorOptions: {
-			scss: {
-				// Silencia avisos de deprecação vindos do Sass do Bootstrap (dependência)
-				quietDeps: true,
-				silenceDeprecations: ['import', 'global-builtin', 'color-functions', 'if-function']
-			}
-		}
-	},
 	plugins: [
+		tailwindcss(),
 		sveltekit({
 			compilerOptions: {
 				// Force runes mode for the project, except for libraries. Can be removed in svelte 6.

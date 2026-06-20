@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { TAREFA_STATUS, prioridadeStyle, prioridadeLabel } from '$lib/tarefas';
+	import { TAREFA_STATUS, prioridadeTone, prioridadeLabel } from '$lib/tarefas';
+	import { Badge, Button } from '$lib/components/ui';
 
 	let { data } = $props();
 
@@ -35,25 +36,24 @@
 	}
 </script>
 
-<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
-	<div class="d-flex align-items-center gap-2">
+<div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+	<div class="flex items-center gap-2 text-sm">
 		{#if data.projetoNome}
-			<span class="badge text-bg-light">Projeto: {data.projetoNome}</span>
-			<a href="/tarefas">limpar</a>
+			<Badge tone="neutral">Projeto: {data.projetoNome}</Badge>
+			<a class="text-brand hover:underline" href="/tarefas">limpar</a>
 		{:else}
-			<span class="text-muted">Arraste os cartões entre as colunas para mudar o status.</span>
+			<span class="text-grey">Arraste os cartões entre as colunas para mudar o status.</span>
 		{/if}
 	</div>
-	<a class="btn btn-primary" href="/tarefas/novo">+ Nova tarefa</a>
+	<Button onclick={() => location.assign('/tarefas/novo')}>+ Nova tarefa</Button>
 </div>
 
-{#if data.loadError}<div class="alert alert-danger">Erro ao carregar: {data.loadError}</div>{/if}
+{#if data.loadError}<div class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">Erro ao carregar: {data.loadError}</div>{/if}
 
-<div class="kanban">
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 items-start">
 	{#each TAREFA_STATUS as col (col.value)}
 		<div
-			class="kanban-col"
-			class:is-over={overCol === col.value}
+			class="rounded-[var(--radius-lg)] bg-bg p-3 min-h-50 transition-colors {overCol === col.value ? 'outline-2 outline-dashed outline-brand bg-grey-200/40' : ''}"
 			role="list"
 			ondragover={(e) => {
 				e.preventDefault();
@@ -62,97 +62,28 @@
 			ondragleave={() => (overCol === col.value ? (overCol = null) : null)}
 			ondrop={() => onDrop(col.value)}
 		>
-			<div class="kanban-col-head">
+			<div class="flex items-center justify-between font-semibold text-navy mb-3 px-1">
 				<span>{col.label}</span>
-				<span class="count">{byStatus(col.value).length}</span>
+				<span class="rounded-full bg-surface px-2 text-xs text-grey">{byStatus(col.value).length}</span>
 			</div>
 
 			{#each byStatus(col.value) as t (t.id)}
-				{@const pr = prioridadeStyle(t.prioridade)}
 				{@const prazo = fmtData(t.prazo)}
 				<div
-					class="kanban-card"
+					class="bg-surface border border-grey-200 rounded-[var(--radius)] px-3 py-2.5 mb-2.5 cursor-grab active:cursor-grabbing"
 					draggable="true"
 					role="listitem"
 					ondragstart={() => (dragId = t.id)}
 				>
-					<a class="card-title" href={`/tarefas/${t.id}`}>{t.titulo}</a>
-					{#if t.projeto?.nome}<div class="card-meta">{t.projeto.nome}</div>{/if}
-					<div class="card-tags">
-						<span class="badge" style={`background:${pr.bg};color:${pr.fg};font-weight:500;`}>
-							{prioridadeLabel(t.prioridade)}
-						</span>
-						{#if t.responsavel?.nome}<span class="card-meta">{t.responsavel.nome}</span>{/if}
-						{#if prazo}<span class="card-meta">📅 {prazo}</span>{/if}
+					<a class="block font-medium text-navy hover:text-brand" href={`/tarefas/${t.id}`}>{t.titulo}</a>
+					{#if t.projeto?.nome}<div class="text-xs text-grey">{t.projeto.nome}</div>{/if}
+					<div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
+						<Badge tone={prioridadeTone(t.prioridade)}>{prioridadeLabel(t.prioridade)}</Badge>
+						{#if t.responsavel?.nome}<span class="text-xs text-grey">{t.responsavel.nome}</span>{/if}
+						{#if prazo}<span class="text-xs text-grey">📅 {prazo}</span>{/if}
 					</div>
 				</div>
 			{/each}
 		</div>
 	{/each}
 </div>
-
-<style>
-	.kanban {
-		display: grid;
-		grid-template-columns: repeat(4, 1fr);
-		gap: 1rem;
-		align-items: start;
-	}
-	.kanban-col {
-		background: #ececec;
-		border-radius: 12px;
-		padding: 0.75rem;
-		min-height: 200px;
-	}
-	.kanban-col.is-over {
-		outline: 2px dashed var(--ds-orange, #de4908);
-		background: #e3e3e3;
-	}
-	.kanban-col-head {
-		display: flex;
-		justify-content: space-between;
-		font-weight: 600;
-		color: #333;
-		margin-bottom: 0.6rem;
-		padding: 0 0.25rem;
-	}
-	.kanban-col-head .count {
-		background: #fff;
-		border-radius: 999px;
-		padding: 0 0.5rem;
-		font-size: 0.8rem;
-		color: #777;
-	}
-	.kanban-card {
-		background: #fff;
-		border: 1px solid #d9d9d9;
-		border-radius: 10px;
-		padding: 0.6rem 0.7rem;
-		margin-bottom: 0.6rem;
-		cursor: grab;
-	}
-	.kanban-card:active {
-		cursor: grabbing;
-	}
-	.card-title {
-		font-weight: 500;
-		color: #333;
-		display: block;
-	}
-	.card-meta {
-		color: #888;
-		font-size: 0.8rem;
-	}
-	.card-tags {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		margin-top: 0.4rem;
-		flex-wrap: wrap;
-	}
-	@media (max-width: 768px) {
-		.kanban {
-			grid-template-columns: 1fr 1fr;
-		}
-	}
-</style>

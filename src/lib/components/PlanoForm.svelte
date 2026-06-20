@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
+	import { Button, Input, Textarea, Checkbox } from '$lib/components/ui';
 
 	let {
 		plano = null,
@@ -28,48 +30,27 @@
 		};
 	}}
 >
-	{#if error}<div class="alert alert-danger">{error}</div>{/if}
+	{#if error}
+		<div class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">{error}</div>
+	{/if}
 
-	<div class="row g-3">
-		<div class="col-md-8">
-			<label class="form-label" for="nome">Nome do plano *</label>
-			<input id="nome" class="form-control" name="nome" required value={v('nome')} placeholder="Starter, Gold, Premium…" />
-		</div>
-		<div class="col-md-4">
-			<label class="form-label" for="valor_mensal">Valor mensal (R$)</label>
-			<input id="valor_mensal" class="form-control" type="number" step="0.01" name="valor_mensal" value={v('valor_mensal')} />
-		</div>
+	<div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+		<Input label="Nome do plano *" name="nome" required value={v('nome')} placeholder="Starter, Gold, Premium…" wrapperClass="md:col-span-8" />
+		<Input label="Valor mensal (R$)" type="number" step="0.01" name="valor_mensal" value={v('valor_mensal')} wrapperClass="md:col-span-4" />
 
-		<div class="col-md-4">
-			<label class="form-label" for="limite_posts">Limite de posts</label>
-			<input id="limite_posts" class="form-control" type="number" name="limite_posts" value={v('limite_posts')} />
-		</div>
-		<div class="col-md-4">
-			<label class="form-label" for="limite_stories">Limite de stories</label>
-			<input id="limite_stories" class="form-control" type="number" name="limite_stories" value={v('limite_stories')} />
-		</div>
-		<div class="col-md-4">
-			<label class="form-label" for="limite_reels">Limite de reels</label>
-			<input id="limite_reels" class="form-control" type="number" name="limite_reels" value={v('limite_reels')} />
-		</div>
+		<Input label="Limite de posts" type="number" name="limite_posts" value={v('limite_posts')} wrapperClass="md:col-span-4" />
+		<Input label="Limite de stories" type="number" name="limite_stories" value={v('limite_stories')} wrapperClass="md:col-span-4" />
+		<Input label="Limite de reels" type="number" name="limite_reels" value={v('limite_reels')} wrapperClass="md:col-span-4" />
 
-		<div class="col-12">
-			<label class="form-label" for="descricao">Descrição</label>
-			<textarea id="descricao" class="form-control" name="descricao" rows="2">{v('descricao')}</textarea>
-		</div>
+		<Textarea label="Descrição" name="descricao" rows={2} value={v('descricao')} wrapperClass="md:col-span-12" />
 
-		<div class="col-12">
-			<div class="form-check">
-				<input class="form-check-input" type="checkbox" id="ativo" name="ativo" checked={plano ? !!plano.ativo : true} />
-				<label class="form-check-label" for="ativo">Plano ativo (disponível para novos contratos)</label>
-			</div>
+		<div class="md:col-span-12">
+			<Checkbox label="Plano ativo (disponível para novos contratos)" name="ativo" checked={plano ? !!plano.ativo : true} />
 		</div>
 	</div>
 
-	<div class="d-flex gap-2 mt-3">
-		<button class="btn btn-primary" type="submit" disabled={saving}>
-			{#if saving}<span class="spinner-border spinner-border-sm me-2"></span>{/if}{submitLabel}
-		</button>
-		<a class="btn btn-light" href="/contratos/planos">Cancelar</a>
+	<div class="flex gap-2 mt-4">
+		<Button type="submit" loading={saving}>{submitLabel}</Button>
+		<Button variant="secondary" onclick={() => goto('/contratos/planos')}>Cancelar</Button>
 	</div>
 </form>

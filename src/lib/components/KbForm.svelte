@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
 	import { tagsToText } from '$lib/kb';
+	import { Button, Input, Select, Textarea } from '$lib/components/ui';
 
 	let {
 		artigo = null,
@@ -32,40 +34,25 @@
 		};
 	}}
 >
-	{#if error}<div class="alert alert-danger">{error}</div>{/if}
+	{#if error}
+		<div class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">{error}</div>
+	{/if}
 
-	<div class="row g-3">
-		<div class="col-md-8">
-			<label class="form-label" for="titulo">Título *</label>
-			<input id="titulo" class="form-control" name="titulo" required value={v('titulo')} />
-		</div>
-		<div class="col-md-4">
-			<label class="form-label" for="categoria">Categoria</label>
-			<input id="categoria" class="form-control" name="categoria" value={v('categoria')} placeholder="Processos, Padrões…" />
-		</div>
+	<div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+		<Input label="Título *" name="titulo" required value={v('titulo')} wrapperClass="md:col-span-8" />
+		<Input label="Categoria" name="categoria" value={v('categoria')} placeholder="Processos, Padrões…" wrapperClass="md:col-span-4" />
 
-		<div class="col-md-6">
-			<label class="form-label" for="cliente_id">Cliente (opcional)</label>
-			<select class="form-select" id="cliente_id" name="cliente_id" value={artigo?.cliente_id ?? ''}>
-				<option value="">— geral —</option>
-				{#each clientes as c (c.id)}<option value={c.id}>{c.nome}</option>{/each}
-			</select>
-		</div>
-		<div class="col-md-6">
-			<label class="form-label" for="tags">Tags (separadas por vírgula)</label>
-			<input id="tags" class="form-control" name="tags" value={tags} placeholder="instagram, legenda, bazzar" />
-		</div>
+		<Select label="Cliente (opcional)" name="cliente_id" value={artigo?.cliente_id ?? ''} wrapperClass="md:col-span-6">
+			<option value="">— geral —</option>
+			{#each clientes as c (c.id)}<option value={c.id}>{c.nome}</option>{/each}
+		</Select>
+		<Input label="Tags (separadas por vírgula)" name="tags" value={tags} placeholder="instagram, legenda, bazzar" wrapperClass="md:col-span-6" />
 
-		<div class="col-12">
-			<label class="form-label" for="conteudo">Conteúdo</label>
-			<textarea id="conteudo" class="form-control" name="conteudo" rows="10">{v('conteudo')}</textarea>
-		</div>
+		<Textarea label="Conteúdo" name="conteudo" rows={10} value={v('conteudo')} wrapperClass="md:col-span-12" />
 	</div>
 
-	<div class="d-flex gap-2 mt-3">
-		<button class="btn btn-primary" type="submit" disabled={saving}>
-			{#if saving}<span class="spinner-border spinner-border-sm me-2"></span>{/if}{submitLabel}
-		</button>
-		<a class="btn btn-light" href="/base-conhecimento">Cancelar</a>
+	<div class="flex gap-2 mt-4">
+		<Button type="submit" loading={saving}>{submitLabel}</Button>
+		<Button variant="secondary" onclick={() => goto('/base-conhecimento')}>Cancelar</Button>
 	</div>
 </form>

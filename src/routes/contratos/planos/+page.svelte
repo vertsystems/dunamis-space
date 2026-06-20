@@ -1,59 +1,51 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { formatBRL } from '$lib/contratos';
+	import { Card, Badge, Button, Breadcrumb } from '$lib/components/ui';
 
 	let { data } = $props();
 	const lim = (n: number | null) => (n == null ? '—' : n);
 </script>
 
-<nav aria-label="breadcrumb" class="mb-4">
-	<ol class="breadcrumb">
-		<li class="breadcrumb-item"><a href="/contratos">Contratos</a></li>
-		<li class="breadcrumb-item active" aria-current="page">Planos</li>
-	</ol>
-</nav>
+<Breadcrumb items={[{ label: 'Contratos', href: '/contratos' }, { label: 'Planos' }]} />
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-	<h1 class="h5 mb-0">Planos</h1>
-	<a class="btn btn-primary" href="/contratos/planos/novo">+ Novo plano</a>
+<div class="flex items-center justify-between mb-4">
+	<h1 class="text-lg font-semibold text-navy">Planos</h1>
+	<Button onclick={() => goto('/contratos/planos/novo')}>+ Novo plano</Button>
 </div>
 
 {#if data.loadError}
-	<div class="alert alert-danger">Erro ao carregar: {data.loadError}</div>
+	<div class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">Erro ao carregar: {data.loadError}</div>
 {/if}
 
-<div class="card">
-	<div class="table-responsive">
-		<table class="table table-hover align-middle mb-0">
+<Card padding="none" class="overflow-hidden">
+	<div class="overflow-x-auto">
+		<table class="w-full text-sm">
 			<thead>
-				<tr>
-					<th>Plano</th>
-					<th class="text-end">Valor mensal</th>
-					<th class="text-center">Posts</th>
-					<th class="text-center">Stories</th>
-					<th class="text-center">Reels</th>
-					<th>Status</th>
+				<tr class="border-b border-grey-200 text-left text-xs uppercase tracking-wide text-grey">
+					<th class="px-4 py-3 font-semibold">Plano</th>
+					<th class="px-4 py-3 font-semibold text-right">Valor mensal</th>
+					<th class="px-4 py-3 font-semibold text-center">Posts</th>
+					<th class="px-4 py-3 font-semibold text-center">Stories</th>
+					<th class="px-4 py-3 font-semibold text-center">Reels</th>
+					<th class="px-4 py-3 font-semibold">Status</th>
 				</tr>
 			</thead>
 			<tbody>
 				{#each data.planos as p (p.id)}
-					<tr style="cursor:pointer" onclick={() => goto(`/contratos/planos/${p.id}`)}>
-						<td><a href={`/contratos/planos/${p.id}`}>{p.nome}</a></td>
-						<td class="text-end">{formatBRL(p.valor_mensal)}</td>
-						<td class="text-center">{lim(p.limite_posts)}</td>
-						<td class="text-center">{lim(p.limite_stories)}</td>
-						<td class="text-center">{lim(p.limite_reels)}</td>
-						<td>
-							{#if p.ativo}
-								<span class="badge" style="background:#e6f4ea;color:#1e7e34;font-weight:500;">Ativo</span>
-							{:else}
-								<span class="badge" style="background:#eeeeee;color:#555;font-weight:500;">Inativo</span>
-							{/if}
+					<tr class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg" onclick={() => goto(`/contratos/planos/${p.id}`)}>
+						<td class="px-4 py-3"><a class="text-brand hover:underline" href={`/contratos/planos/${p.id}`}>{p.nome}</a></td>
+						<td class="px-4 py-3 text-right tabular-nums">{formatBRL(p.valor_mensal)}</td>
+						<td class="px-4 py-3 text-center">{lim(p.limite_posts)}</td>
+						<td class="px-4 py-3 text-center">{lim(p.limite_stories)}</td>
+						<td class="px-4 py-3 text-center">{lim(p.limite_reels)}</td>
+						<td class="px-4 py-3">
+							<Badge tone={p.ativo ? 'success' : 'neutral'}>{p.ativo ? 'Ativo' : 'Inativo'}</Badge>
 						</td>
 					</tr>
 				{:else}
 					<tr>
-						<td colspan="6" class="text-center text-muted p-5">
+						<td colspan="6" class="px-4 py-12 text-center text-grey">
 							Nenhum plano cadastrado. Crie Starter, Gold e Premium para usar nos contratos.
 						</td>
 					</tr>
@@ -61,4 +53,4 @@
 			</tbody>
 		</table>
 	</div>
-</div>
+</Card>

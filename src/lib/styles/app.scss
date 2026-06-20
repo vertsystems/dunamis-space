@@ -1,80 +1,36 @@
-// Dunamis Space — framework Bootstrap 5 + paleta nova
+// Dunamis Space — App shell + tokens CSS (Bootstrap removido; design system = Tailwind)
 // Neutros: #05141B #182E3F #495B69 #939EA2 #CCD0CF
 // Acentos: #DE4908 (primary) · #F6AA19 (warning) · #FDDCA2 (cream) · #28A65F (success) · #4F311F (brown)
 
-// 1) Funções do Bootstrap
-@import 'bootstrap/scss/functions';
-
-// 2) Paleta + overrides de tema do Bootstrap
-$ds-navy-900: #05141b;
-$ds-navy: #182e3f;
-$ds-slate: #495b69;
-$ds-grey: #939ea2;
-$ds-grey-200: #ccd0cf;
-$ds-orange: #de4908;
-$ds-amber: #f6aa19;
-$ds-cream: #fddca2;
-$ds-green: #28a65f;
-$ds-brown: #4f311f;
-$ds-danger: #a8350a; // laranja escuro p/ perigo
-$ds-bg: #eef1f1; // fundo claro (tom frio da paleta)
-
-$primary: $ds-orange;
-$secondary: $ds-slate;
-$success: $ds-green;
-$warning: $ds-amber;
-$danger: $ds-danger;
-$info: $ds-navy;
-$light: $ds-bg;
-$dark: $ds-navy;
-
-$body-bg: $ds-bg;
-$body-color: $ds-navy-900;
-$border-color: $ds-grey-200;
-$link-color: $ds-orange;
-$link-decoration: none;
-$link-hover-decoration: underline;
-$border-radius: 0.5rem;
-$border-radius-sm: 0.375rem;
-$border-radius-lg: 0.75rem;
-$min-contrast-ratio: 2.4;
-$font-family-sans-serif: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-
-// 3) Bootstrap completo
-@import 'bootstrap/scss/bootstrap';
-
-// 4) Variáveis CSS expostas (paleta nova) + aliases para o código existente
+// Variáveis CSS expostas (paleta da marca) + aliases usados pelo layout custom.
 :root {
-	--ds-navy-900: #{$ds-navy-900};
-	--ds-navy: #{$ds-navy};
-	--ds-slate: #{$ds-slate};
-	--ds-cream: #{$ds-cream};
-	--ds-green: #{$ds-green};
-	--ds-amber: #{$ds-amber};
-	--ds-brown: #{$ds-brown};
-	--ds-danger: #{$ds-danger};
-	// Aliases — mantêm o layout existente funcionando, agora na paleta nova
-	--ds-red: #{$ds-orange}; // "primary" (antes vermelho, agora laranja)
-	--ds-dark: #{$ds-navy}; // topo / sidebar / avatar
-	--ds-grey: #{$ds-grey-200};
-	--ds-light: #{$ds-bg};
-	--ds-orange: #{$ds-orange};
-	--ds-yellow: #{$ds-amber};
+	--ds-navy-900: #05141b;
+	--ds-navy: #182e3f;
+	--ds-slate: #495b69;
+	--ds-cream: #fddca2;
+	--ds-green: #28a65f;
+	--ds-amber: #f6aa19;
+	--ds-brown: #4f311f;
+	--ds-danger: #a8350a;
+	// Aliases usados pelo app shell
+	--ds-red: #de4908; // primary / laranja
+	--ds-dark: #182e3f; // topo / sidebar / avatar
+	--ds-grey: #ccd0cf;
+	--ds-light: #eef1f1; // fundo claro
+
+	// Layout: barra de departamentos flutuante + sidebar contextual
+	--ds-topbar-h: 48px;
+	--ds-topbar-gap: 7px; // margem lateral (max-width)
+	--ds-topbar-top: 3vh; // margem do topo
+	--ds-topbar-space: calc(var(--ds-topbar-top) + var(--ds-topbar-h) + 14px);
 }
 
 html,
 body {
 	background-color: var(--ds-light);
 	color: var(--ds-navy-900);
+	font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 	min-height: 100vh;
-}
-
-// Layout: barra de departamentos flutuante + sidebar contextual
-:root {
-	--ds-topbar-h: 48px;
-	--ds-topbar-gap: 7px; // margem lateral (max-width)
-	--ds-topbar-top: 3vh; // margem do topo
-	--ds-topbar-space: calc(var(--ds-topbar-top) + var(--ds-topbar-h) + 14px);
 }
 
 .app {
@@ -224,7 +180,7 @@ body {
 	min-height: 100vh;
 }
 
-// Sidebar contextual (áreas do departamento ativo) — escura minimalista
+// Sidebar contextual (áreas do departamento ativo)
 .app-sidebar {
 	width: 240px;
 	flex-shrink: 0;
@@ -353,34 +309,4 @@ body {
 	.app-topbar .brand {
 		display: none;
 	}
-}
-
-.stat-card {
-	background-color: #fff;
-	border: 1px solid var(--ds-grey);
-	border-radius: 12px;
-	padding: 1.25rem;
-
-	.stat-label {
-		color: #777;
-		font-size: 0.85rem;
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
-	}
-
-	.stat-value {
-		font-size: 1.9rem;
-		font-weight: 700;
-		color: var(--ds-dark);
-	}
-}
-
-// Botões secundários (btn-light) com borda visível no fundo claro
-.btn-light {
-	--bs-btn-bg: #ffffff;
-	--bs-btn-border-color: #ccd0cf;
-	--bs-btn-hover-bg: #f1f3f3;
-	--bs-btn-hover-border-color: #b8bdbd;
-	--bs-btn-active-bg: #e9ecec;
-	--bs-btn-active-border-color: #b8bdbd;
 }

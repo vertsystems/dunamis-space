@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
 	import { FUNCAO } from '$lib/equipe';
+	import { Button, Input, Select, Checkbox } from '$lib/components/ui';
 
 	let {
 		colaborador = null,
@@ -29,41 +31,26 @@
 		};
 	}}
 >
-	{#if error}<div class="alert alert-danger">{error}</div>{/if}
+	{#if error}
+		<div class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">{error}</div>
+	{/if}
 
-	<div class="row g-3">
-		<div class="col-md-6">
-			<label class="form-label" for="nome">Nome *</label>
-			<input id="nome" class="form-control" name="nome" required value={v('nome')} />
-		</div>
-		<div class="col-md-6">
-			<label class="form-label" for="email">E-mail *</label>
-			<input id="email" class="form-control" type="email" name="email" required value={v('email')} />
-		</div>
+	<div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+		<Input label="Nome *" name="nome" required value={v('nome')} wrapperClass="md:col-span-6" />
+		<Input label="E-mail *" type="email" name="email" required value={v('email')} wrapperClass="md:col-span-6" />
 
-		<div class="col-md-6">
-			<label class="form-label" for="funcao">Função</label>
-			<select class="form-select" id="funcao" name="funcao" value={colaborador?.funcao ?? 'social_media'}>
-				{#each FUNCAO as f (f.value)}<option value={f.value}>{f.label}</option>{/each}
-			</select>
-		</div>
-		<div class="col-md-6">
-			<label class="form-label" for="custo_hora">Custo por hora (R$)</label>
-			<input id="custo_hora" class="form-control" type="number" step="0.01" name="custo_hora" value={v('custo_hora')} />
-		</div>
+		<Select label="Função" name="funcao" value={colaborador?.funcao ?? 'social_media'} wrapperClass="md:col-span-6">
+			{#each FUNCAO as f (f.value)}<option value={f.value}>{f.label}</option>{/each}
+		</Select>
+		<Input label="Custo por hora (R$)" type="number" step="0.01" name="custo_hora" value={v('custo_hora')} wrapperClass="md:col-span-6" />
 
-		<div class="col-12">
-			<div class="form-check">
-				<input class="form-check-input" type="checkbox" id="ativo" name="ativo" checked={colaborador ? !!colaborador.ativo : true} />
-				<label class="form-check-label" for="ativo">Ativo</label>
-			</div>
+		<div class="md:col-span-12">
+			<Checkbox label="Ativo" name="ativo" checked={colaborador ? !!colaborador.ativo : true} />
 		</div>
 	</div>
 
-	<div class="d-flex gap-2 mt-3">
-		<button class="btn btn-primary" type="submit" disabled={saving}>
-			{#if saving}<span class="spinner-border spinner-border-sm me-2"></span>{/if}{submitLabel}
-		</button>
-		<a class="btn btn-light" href="/equipe">Cancelar</a>
+	<div class="flex gap-2 mt-4">
+		<Button type="submit" loading={saving}>{submitLabel}</Button>
+		<Button variant="secondary" onclick={() => goto('/equipe')}>Cancelar</Button>
 	</div>
 </form>
