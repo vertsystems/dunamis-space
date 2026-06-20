@@ -11,7 +11,7 @@
 </script>
 
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
-	<form class="d-flex gap-2 flex-wrap" method="GET">
+	<form class="d-flex gap-2" method="GET">
 		<select class="form-select" style="max-width:190px" name="status" bind:value={status}>
 			<option value="">Todos os status</option>
 			{#each PROJETO_STATUS as s (s.value)}<option value={s.value}>{s.label}</option>{/each}

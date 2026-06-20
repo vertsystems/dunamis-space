@@ -24,7 +24,7 @@
 			<a class="btn btn-outline-secondary" href="/conteudo/calendario">Calendário</a>
 			<a class="btn btn-outline-secondary" href="/conteudo/aprovacoes">Aprovações</a>
 		</div>
-		<form class="d-flex gap-2 flex-wrap" method="GET">
+		<form class="d-flex gap-2" method="GET">
 			<select class="form-select" style="max-width:170px" name="status" bind:value={status}>
 				<option value="">Todos os status</option>
 				{#each CONTEUDO_STATUS as s (s.value)}<option value={s.value}>{s.label}</option>{/each}

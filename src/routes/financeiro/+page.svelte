@@ -41,7 +41,7 @@
 </div>
 
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
-	<form class="d-flex gap-2 flex-wrap" method="GET">
+	<form class="d-flex gap-2" method="GET">
 		<select class="form-select" style="max-width:180px" name="tipo" bind:value={tipo}>
 			<option value="">Todos os tipos</option>
 			{#each TRANSACAO_TIPO as t (t.value)}
