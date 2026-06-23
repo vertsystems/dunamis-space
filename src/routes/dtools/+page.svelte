@@ -1,10 +1,6 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
 	import { DTOOLS_FERRAMENTAS } from '$lib/dtools';
-	import { Card, Button } from '$lib/components/ui';
-	import { toast } from '$lib/toast.svelte';
-
-	let enfileirando = $state(false);
+	import { Card } from '$lib/components/ui';
 </script>
 
 <Card>
@@ -35,28 +31,4 @@
 			</p>
 		</div>
 	{/if}
-</Card>
-
-<Card class="mt-6">
-	<h2 class="text-base font-semibold text-navy mb-1">Tarefas em segundo plano</h2>
-	<p class="text-sm text-slate mb-3">
-		Dispara um job de teste. Ele roda fora da tela e, ao concluir, aparece um toast
-		(via Supabase Realtime) — sem travar a navegação.
-	</p>
-	<form
-		method="POST"
-		action="?/testJob"
-		use:enhance={() => {
-			enfileirando = true;
-			return async ({ result, update }) => {
-				enfileirando = false;
-				if (result.type === 'success') toast.info('Tarefa enfileirada — você será avisado ao concluir.');
-				else if (result.type === 'failure')
-					toast.error(String(result.data?.error ?? 'Não foi possível enfileirar.'));
-				await update();
-			};
-		}}
-	>
-		<Button type="submit" loading={enfileirando}>Enfileirar tarefa de teste</Button>
-	</form>
 </Card>

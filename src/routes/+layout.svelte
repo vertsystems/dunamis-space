@@ -13,7 +13,6 @@
 	import { onMount } from 'svelte';
 	import { DTOOLS_FERRAMENTAS } from '$lib/dtools';
 	import Icon from '$lib/components/Icon.svelte';
-	import JobsWatcher from '$lib/components/JobsWatcher.svelte';
 	import { Toaster } from '$lib/components/ui';
 	import { toast } from '$lib/toast.svelte';
 
@@ -135,7 +134,6 @@
 </svelte:head>
 
 <Toaster />
-{#if session}<JobsWatcher />{/if}
 
 {#if isBare}
 	{@render children()}
