@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { formatBRL } from '$lib/clientes';
 	import { diasAte, formatDateBR, prazoContratoLabel } from '$lib/alertas';
-	import { Card, Badge, Skeleton } from '$lib/components/ui';
+	import { Card, Badge, Skeleton, Button } from '$lib/components/ui';
+	import ProcessosGrid from '$lib/components/ProcessosGrid.svelte';
+	import { goto } from '$app/navigation';
 
 	let { data } = $props();
 
@@ -22,6 +24,26 @@
 		</Card>
 	{/each}
 </div>
+
+<!-- Cronograma de Processos — acompanhamento por etapas -->
+<Card class="mt-6">
+	<div class="flex items-center justify-between gap-3 mb-4">
+		<div>
+			<h2 class="text-lg font-semibold text-navy">Cronograma de Processos</h2>
+			<p class="text-sm text-grey">Acompanhamento das etapas de cada processo</p>
+		</div>
+		<Button size="sm" variant="secondary" onclick={() => goto('/processos')}>Ver todos</Button>
+	</div>
+
+	{#if data.processosPendente}
+		<div class="rounded-[var(--radius)] bg-brand-amber/15 px-4 py-3 text-sm text-brand-brown">
+			O módulo de processos ainda não foi ativado no banco. Aplique a migration
+			<code class="font-mono">supabase/migrations/0004_processos.sql</code> no SQL Editor do Supabase.
+		</div>
+	{:else}
+		<ProcessosGrid processos={data.processos} />
+	{/if}
+</Card>
 
 <!-- Alertas inteligentes — streamed (skeleton enquanto carrega) -->
 <Card class="mt-6">

@@ -110,12 +110,32 @@ async function carregarKpis(supabase: SupabaseClient) {
 	return { ativos: ativos ?? 0, recorrente, lucro: receitas - despesas, atrasadas: atrasadas ?? 0 };
 }
 
+/** Cronograma de processos (acompanhamento por etapas). Degrada gracioso se a
+ * tabela ainda não existir (migration 0004 não aplicada) → retorna lista vazia. */
+async function carregarProcessos(supabase: SupabaseClient) {
+	const { data, error } = await supabase
+		.from('processos')
+		.select('id, numero, nome, secretaria, responsavel, prazo, situacao, etapas')
+		.order('numero', { ascending: true, nullsFirst: false })
+		.order('created_at', { ascending: true })
+		.limit(20);
+
+	return {
+		processos: data ?? [],
+		// "relation does not exist" = migration pendente; tratamos como vazio + dica.
+		processosPendente: !!error
+	};
+}
+
 export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 	// KPIs: cacheados 60s (no-op sem Redis), aguardados → SSR imediato.
 	const kpis = await cached('dashboard:kpis', 60, () => carregarKpis(supabase));
+	const { processos, processosPendente } = await carregarProcessos(supabase);
 
 	return {
 		...kpis,
+		processos,
+		processosPendente,
 		// Alertas: cacheados 60s + Promise não-aguardada → streaming com skeleton.
 		alertas: cached('dashboard:alertas', 60, () => carregarAlertas(supabase))
 	};
