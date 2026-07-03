@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { CONTRATO_STATUS, contratoStatusTone, contratoStatusLabel, formatBRL } from '$lib/contratos';
-	import { Card, Badge, Button, Select } from '$lib/components/ui';
+	import { Card, Badge, Button, Select, EmptyState } from '$lib/components/ui';
 
 	let { data } = $props();
 	let status = $state(data.status);
@@ -60,11 +60,7 @@
 						<td class="px-4 py-3"><Badge tone={contratoStatusTone(c.status)}>{contratoStatusLabel(c.status)}</Badge></td>
 					</tr>
 				{:else}
-					<tr>
-						<td colspan="6" class="px-4 py-12 text-center text-grey">
-							Nenhum contrato ainda. Cadastre os planos e crie o primeiro contrato.
-						</td>
-					</tr>
+					<tr><td colspan="6" class="px-2"><EmptyState icon="file" title="Nenhum contrato ainda" description="Cadastre os contratos dos clientes." /></td></tr>
 				{/each}
 			</tbody>
 		</table>

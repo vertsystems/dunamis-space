@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Card, Badge, Button, Input } from '$lib/components/ui';
+	import { Card, Badge, Button, Input, EmptyState } from '$lib/components/ui';
 	let { data } = $props();
 	let q = $state(data.q);
 </script>
@@ -39,7 +39,7 @@
 						</td>
 					</tr>
 				{:else}
-					<tr><td colspan="4" class="px-4 py-12 text-center text-grey">Nenhum artigo ainda. Documente processos e padrões aqui.</td></tr>
+					<tr><td colspan="4" class="px-2"><EmptyState icon="book" title="Base de conhecimento vazia" description="Documente processos e padrões da agência aqui." /></td></tr>
 				{/each}
 			</tbody>
 		</table>

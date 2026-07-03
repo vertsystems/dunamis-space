@@ -7,7 +7,7 @@
 		conteudoTipoLabel
 	} from '$lib/conteudo';
 	import { goto } from '$app/navigation';
-	import { Card, Badge, Button, Select, SegmentedNav } from '$lib/components/ui';
+	import { Card, Badge, Button, Select, SegmentedNav, EmptyState } from '$lib/components/ui';
 
 	let { data } = $props();
 	let status = $state(data.status);
@@ -66,7 +66,7 @@
 						<td class="px-4 py-3"><Badge tone={conteudoStatusTone(c.status)}>{conteudoStatusLabel(c.status)}</Badge></td>
 					</tr>
 				{:else}
-					<tr><td colspan="5" class="px-4 py-12 text-center text-grey">Nenhum conteúdo ainda. Clique em “Novo conteúdo”.</td></tr>
+					<tr><td colspan="5" class="px-2"><EmptyState icon="edit" title="Nenhum conteúdo ainda" description="Planeje as publicações dos clientes." /></td></tr>
 				{/each}
 			</tbody>
 		</table>

@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { funcaoLabel } from '$lib/equipe';
 	import { formatBRL } from '$lib/clientes';
-	import { Card, Badge, Button } from '$lib/components/ui';
+	import { Card, Badge, Button, EmptyState } from '$lib/components/ui';
 
 	let { data } = $props();
 </script>
@@ -36,7 +36,7 @@
 						<td class="px-4 py-3"><Badge tone={c.ativo ? 'success' : 'neutral'}>{c.ativo ? 'Ativo' : 'Inativo'}</Badge></td>
 					</tr>
 				{:else}
-					<tr><td colspan="5" class="px-4 py-12 text-center text-grey">Nenhum colaborador ainda. Clique em “Novo colaborador”.</td></tr>
+					<tr><td colspan="5" class="px-2"><EmptyState icon="users" title="Nenhum colaborador ainda" description="Cadastre o time da agência." /></td></tr>
 				{/each}
 			</tbody>
 		</table>

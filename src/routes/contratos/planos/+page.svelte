@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { formatBRL } from '$lib/contratos';
-	import { Card, Badge, Button, Breadcrumb } from '$lib/components/ui';
+	import { Card, Badge, Button, Breadcrumb, EmptyState } from '$lib/components/ui';
 
 	let { data } = $props();
 	const lim = (n: number | null) => (n == null ? '—' : n);
@@ -44,11 +44,7 @@
 						</td>
 					</tr>
 				{:else}
-					<tr>
-						<td colspan="6" class="px-4 py-12 text-center text-grey">
-							Nenhum plano cadastrado. Crie Starter, Gold e Premium para usar nos contratos.
-						</td>
-					</tr>
+					<tr><td colspan="6" class="px-2"><EmptyState icon="tag" title="Nenhum plano ainda" description="Crie os planos oferecidos pela agência." /></td></tr>
 				{/each}
 			</tbody>
 		</table>

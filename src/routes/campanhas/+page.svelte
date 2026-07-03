@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Card, Button } from '$lib/components/ui';
+	import { Card, Button, EmptyState } from '$lib/components/ui';
 	let { data } = $props();
 	function fmt(d: string | null) {
 		return d ? new Date(d + 'T00:00:00').toLocaleDateString('pt-BR') : '—';
@@ -32,7 +32,7 @@
 						<td class="px-4 py-3 whitespace-nowrap">{fmt(c.data_inicio)} → {fmt(c.data_fim)}</td>
 					</tr>
 				{:else}
-					<tr><td colspan="3" class="px-4 py-12 text-center text-grey">Nenhuma campanha ainda. Clique em “Nova campanha”.</td></tr>
+					<tr><td colspan="3" class="px-2"><EmptyState icon="tag" title="Nenhuma campanha ainda" description="Crie campanhas e promoções." /></td></tr>
 				{/each}
 			</tbody>
 		</table>

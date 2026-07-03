@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { Badge, Card, Input, Select, toneClasses } from '$lib/components/ui';
-	import Icon from '$lib/components/Icon.svelte';
+	import { Badge, Card, Input, Select, toneClasses, EmptyState } from '$lib/components/ui';
 	import {
 		formatBRL,
 		formatData,
@@ -145,14 +144,7 @@
 						</td>
 					</tr>
 				{:else}
-					<tr>
-						<td colspan="7" class="px-4 py-12 text-center text-grey">
-							<div class="flex flex-col items-center gap-2">
-								<Icon name="funnel" size={28} />
-								Nenhum negócio encontrado.
-							</div>
-						</td>
-					</tr>
+					<tr><td colspan="7" class="px-2"><EmptyState icon="funnel" title="Nenhum negócio" description="Ajuste os filtros ou crie um novo negócio." /></td></tr>
 				{/each}
 			</tbody>
 		</table>

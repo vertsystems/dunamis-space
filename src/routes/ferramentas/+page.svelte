@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, Card, Badge, Input, Select, Textarea, Checkbox } from '$lib/components/ui';
+	import { Button, Card, Badge, Input, Select, Textarea, Checkbox, EmptyState } from '$lib/components/ui';
 	import type { BadgeTone } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
 	import CrmModal from '$lib/components/crm/CrmModal.svelte';
@@ -129,7 +129,7 @@
 								<td class="px-4 py-3 text-slate">{f.responsavel_nome ?? '—'}</td>
 							</tr>
 						{:else}
-							<tr><td colspan="6" class="px-4 py-12 text-center text-grey">Nenhuma ferramenta cadastrada.</td></tr>
+							<tr><td colspan="6" class="px-2"><EmptyState icon="key" title="Nenhuma ferramenta" description="Cadastre ferramentas e assinaturas da agência." /></td></tr>
 						{/each}
 					</tbody>
 				</table>
@@ -190,7 +190,7 @@
 								<td class="px-4 py-3 text-slate">{a.responsavel_nome ?? '—'}</td>
 							</tr>
 						{:else}
-							<tr><td colspan="5" class="px-4 py-12 text-center text-grey">Nenhum acesso registrado.</td></tr>
+							<tr><td colspan="5" class="px-2"><EmptyState icon="key" title="Nenhum acesso registrado" description="Registre os acessos e contas por cliente." /></td></tr>
 						{/each}
 					</tbody>
 				</table>

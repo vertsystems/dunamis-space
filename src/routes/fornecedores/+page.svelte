@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
-	import { Button, Card, Badge, Input, Select, Textarea, Checkbox } from '$lib/components/ui';
+	import { Button, Card, Badge, Input, Select, Textarea, Checkbox, EmptyState } from '$lib/components/ui';
 	import type { BadgeTone } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
 	import { toast } from '$lib/toast.svelte';
@@ -128,9 +128,7 @@
 							</td>
 						</tr>
 					{:else}
-						<tr>
-							<td colspan="6" class="px-4 py-12 text-center text-grey">Nenhum fornecedor.</td>
-						</tr>
+						<tr><td colspan="6" class="px-2"><EmptyState icon="building" title="Nenhum fornecedor" description="Cadastre freelancers, fornecedores e parceiros." /></td></tr>
 					{/each}
 				</tbody>
 			</table>

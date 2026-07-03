@@ -6,7 +6,7 @@
 		aprovacaoStatusLabel,
 		conteudoTipoLabel
 	} from '$lib/conteudo';
-	import { Card, Badge, Button, Select, SegmentedNav } from '$lib/components/ui';
+	import { Card, Badge, Button, Select, SegmentedNav, EmptyState } from '$lib/components/ui';
 
 	let { data } = $props();
 	let status = $state(data.status);
@@ -91,11 +91,7 @@
 						</td>
 					</tr>
 				{:else}
-					<tr>
-						<td colspan="7" class="px-4 py-12 text-center text-grey">
-							{data.status === 'pendente' ? 'Nenhuma aprovação pendente. 🎉' : 'Nenhuma aprovação para este filtro.'}
-						</td>
-					</tr>
+					<tr><td colspan="7" class="px-2"><EmptyState icon="check" title="Nada para aprovar" description="Conteúdos aguardando aprovação aparecem aqui." /></td></tr>
 				{/each}
 			</tbody>
 		</table>

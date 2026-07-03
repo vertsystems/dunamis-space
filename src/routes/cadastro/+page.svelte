@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { formatBRL } from '$lib/clientes';
-	import { Button, Card, Input } from '$lib/components/ui';
+	import { Button, Card, Input, EmptyState } from '$lib/components/ui';
 
 	let { data } = $props();
 
@@ -66,9 +66,7 @@
 							</td>
 						</tr>
 					{:else}
-						<tr>
-							<td colspan="6" class="px-4 py-12 text-center text-grey">Nenhum cliente.</td>
-						</tr>
+						<tr><td colspan="6" class="px-2"><EmptyState icon="file" title="Nenhum cliente encontrado" description="Os clientes cadastrados aparecem aqui." /></td></tr>
 					{/each}
 				</tbody>
 			</table>

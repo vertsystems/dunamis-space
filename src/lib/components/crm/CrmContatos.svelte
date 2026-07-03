@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { Badge, Card, Input, Select } from '$lib/components/ui';
-	import Icon from '$lib/components/Icon.svelte';
+	import { Badge, Card, Input, Select, EmptyState } from '$lib/components/ui';
 	import { formatBRL, type Contato } from '$lib/crm';
 
 	let {
@@ -80,14 +79,7 @@
 						</td>
 					</tr>
 				{:else}
-					<tr>
-						<td colspan="7" class="px-4 py-12 text-center text-grey">
-							<div class="flex flex-col items-center gap-2">
-								<Icon name="contact" size={28} />
-								Nenhum contato ainda.
-							</div>
-						</td>
-					</tr>
+					<tr><td colspan="7" class="px-2"><EmptyState icon="contact" title="Nenhum contato" description="Cadastre leads e contatos no CRM." /></td></tr>
 				{/each}
 			</tbody>
 		</table>

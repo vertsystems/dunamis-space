@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { PROJETO_STATUS, projetoStatusTone, projetoStatusLabel, projetoTipoLabel } from '$lib/projetos';
-	import { Card, Badge, Button, Select } from '$lib/components/ui';
+	import { Card, Badge, Button, Select, EmptyState } from '$lib/components/ui';
 
 	let { data } = $props();
 	let status = $state(data.status);
@@ -48,7 +48,7 @@
 						<td class="px-4 py-3"><Badge tone={projetoStatusTone(p.status)}>{projetoStatusLabel(p.status)}</Badge></td>
 					</tr>
 				{:else}
-					<tr><td colspan="6" class="px-4 py-12 text-center text-grey">Nenhum projeto ainda. Clique em “Novo projeto”.</td></tr>
+					<tr><td colspan="6" class="px-2"><EmptyState icon="folder" title="Nenhum projeto ainda" description="Crie projetos e jobs para os clientes." /></td></tr>
 				{/each}
 			</tbody>
 		</table>
