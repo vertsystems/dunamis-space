@@ -12,8 +12,7 @@ type SupabaseClient = Parameters<PageServerLoad>[0]['locals']['supabase'];
 
 /**
  * Alertas inteligentes (3 queries com embeds — parte mais pesada do dashboard).
- * Retornado como Promise não-aguardada no `load` para **streaming**: o shell e
- * os KPIs renderizam na hora e este bloco chega depois, com skeleton na tela.
+ * Retornado como Promise não-aguardada no `load` para **streaming**.
  */
 async function carregarAlertas(supabase: SupabaseClient) {
 	const hoje = new Date().toISOString().slice(0, 10);
@@ -28,7 +27,6 @@ async function carregarAlertas(supabase: SupabaseClient) {
 
 	const [{ data: contratos }, { data: tarefasAtrasadas }, { data: clientesAtivos }] =
 		await Promise.all([
-			// Contratos ativos vencendo (ou já vencidos): data_fim <= hoje + N dias.
 			supabase
 				.from('contratos')
 				.select('id, data_fim, cliente:clientes(id, nome)')
@@ -36,7 +34,6 @@ async function carregarAlertas(supabase: SupabaseClient) {
 				.not('data_fim', 'is', null)
 				.lte('data_fim', limiteContratoStr)
 				.order('data_fim', { ascending: true }),
-			// Tarefas atrasadas (lista).
 			supabase
 				.from('tarefas')
 				.select('id, titulo, prazo, projeto:projetos(id, nome, cliente:clientes(nome))')
@@ -44,7 +41,6 @@ async function carregarAlertas(supabase: SupabaseClient) {
 				.neq('status', 'concluido')
 				.order('prazo', { ascending: true })
 				.limit(12),
-			// Clientes ativos + última interação (1 por cliente via embedding).
 			supabase
 				.from('clientes')
 				.select('id, nome, created_at, cliente_interacoes(data)')
@@ -53,7 +49,6 @@ async function carregarAlertas(supabase: SupabaseClient) {
 				.limit(1, { referencedTable: 'cliente_interacoes' })
 		]);
 
-	// Clientes sem interação: nunca tiveram, ou a última é anterior ao cutoff.
 	const semInteracao = (clientesAtivos ?? [])
 		.map((c) => {
 			const ultima = um<{ data: string }>(c.cliente_interacoes)?.data ?? null;
@@ -83,28 +78,135 @@ async function carregarAlertas(supabase: SupabaseClient) {
 	return { contratos: contratosVencendo, tarefas, semInteracao };
 }
 
-/** KPIs do topo — só clientes ativos e tarefas atrasadas (queries rápidas, cacheável). */
+/** Faixa de indicadores do topo — operacional (sem financeiro). */
 async function carregarKpis(supabase: SupabaseClient) {
 	const hoje = new Date().toISOString().slice(0, 10);
+	const now = new Date().toISOString();
+	const em7 = new Date(Date.now() + 7 * 86_400_000).toISOString();
 
-	const [{ count: ativos }, { count: atrasadas }] = await Promise.all([
-		supabase.from('clientes').select('id', { count: 'exact', head: true }).eq('status', 'ativo'),
-		supabase
-			.from('tarefas')
-			.select('id', { count: 'exact', head: true })
-			.lt('prazo', hoje)
-			.neq('status', 'concluido')
+	const [{ count: ativos }, { count: atrasadas }, { count: negociosAbertos }, { count: publicacoesSemana }] =
+		await Promise.all([
+			supabase.from('clientes').select('id', { count: 'exact', head: true }).eq('status', 'ativo'),
+			supabase
+				.from('tarefas')
+				.select('id', { count: 'exact', head: true })
+				.lt('prazo', hoje)
+				.neq('status', 'concluido'),
+			supabase.from('crm_negocios').select('id', { count: 'exact', head: true }).eq('status', 'aberto'),
+			supabase
+				.from('conteudos')
+				.select('id', { count: 'exact', head: true })
+				.gte('data_publicacao', now)
+				.lte('data_publicacao', em7)
+				.neq('status', 'publicado')
+		]);
+
+	return {
+		ativos: ativos ?? 0,
+		atrasadas: atrasadas ?? 0,
+		negociosAbertos: negociosAbertos ?? 0,
+		publicacoesSemana: publicacoesSemana ?? 0
+	};
+}
+
+/** Bloco Pipeline de vendas (CRM). Degrada gracioso se a migration 0005 não existir. */
+async function carregarPipeline(supabase: SupabaseClient) {
+	const agora = new Date();
+	const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1).getTime();
+
+	const [stagesRes, negociosRes] = await Promise.all([
+		supabase.from('crm_stages').select('id, nome, cor, ordem').order('ordem', { ascending: true }),
+		supabase.from('crm_negocios').select('valor, status, stage_id, ganho_em')
 	]);
 
-	return { ativos: ativos ?? 0, atrasadas: atrasadas ?? 0 };
+	if (stagesRes.error || negociosRes.error) {
+		return { crmPendente: true, valorAberto: 0, ganhosMes: 0, valorGanhoMes: 0, taxaConversao: 0, funil: [] as { nome: string; cor: string; count: number }[] };
+	}
+
+	let valorAberto = 0,
+		ganhosMes = 0,
+		valorGanhoMes = 0,
+		ganhosTotal = 0,
+		perdidosTotal = 0;
+	const porStage = new Map<string, number>();
+	for (const n of negociosRes.data ?? []) {
+		const v = Number(n.valor ?? 0);
+		if (n.status === 'aberto') {
+			valorAberto += v;
+			const s = (n.stage_id as string | null) ?? '';
+			porStage.set(s, (porStage.get(s) ?? 0) + 1);
+		} else if (n.status === 'ganho') {
+			ganhosTotal++;
+			if (n.ganho_em && new Date(n.ganho_em as string).getTime() >= inicioMes) {
+				ganhosMes++;
+				valorGanhoMes += v;
+			}
+		} else if (n.status === 'perdido') {
+			perdidosTotal++;
+		}
+	}
+	const fechados = ganhosTotal + perdidosTotal;
+	const funil = (stagesRes.data ?? []).map((s) => ({
+		nome: s.nome as string,
+		cor: s.cor as string,
+		count: porStage.get(s.id as string) ?? 0
+	}));
+
+	return {
+		crmPendente: false,
+		valorAberto,
+		ganhosMes,
+		valorGanhoMes,
+		taxaConversao: fechados ? Math.round((ganhosTotal / fechados) * 100) : 0,
+		funil
+	};
+}
+
+/** Bloco Operação: resumo do Kanban de tarefas + conteúdo (publicações/aprovações). */
+async function carregarOperacao(supabase: SupabaseClient) {
+	const now = new Date().toISOString();
+	const em7 = new Date(Date.now() + 7 * 86_400_000).toISOString();
+
+	const [b, f, a, aprov, pubRes] = await Promise.all([
+		supabase.from('tarefas').select('id', { count: 'exact', head: true }).eq('status', 'backlog'),
+		supabase.from('tarefas').select('id', { count: 'exact', head: true }).eq('status', 'fazendo'),
+		supabase.from('tarefas').select('id', { count: 'exact', head: true }).eq('status', 'em_aprovacao'),
+		supabase.from('conteudos').select('id', { count: 'exact', head: true }).eq('status', 'em_aprovacao'),
+		supabase
+			.from('conteudos')
+			.select('id, titulo, data_publicacao, cliente:clientes(nome)')
+			.gte('data_publicacao', now)
+			.lte('data_publicacao', em7)
+			.neq('status', 'publicado')
+			.order('data_publicacao', { ascending: true })
+			.limit(6)
+	]);
+
+	const publicacoes = (pubRes.data ?? []).map((c) => ({
+		id: c.id as string,
+		titulo: (c.titulo as string | null) || '(sem título)',
+		data_publicacao: c.data_publicacao as string | null,
+		cliente_nome: um<{ nome: string }>(c.cliente)?.nome ?? null
+	}));
+
+	return {
+		tarefas: { backlog: b.count ?? 0, fazendo: f.count ?? 0, em_aprovacao: a.count ?? 0 },
+		conteudoEmAprovacao: aprov.count ?? 0,
+		publicacoes
+	};
 }
 
 export const load: PageServerLoad = async ({ locals: { supabase } }) => {
-	// KPIs: cacheados 60s (no-op sem Redis), aguardados → SSR imediato.
-	const kpis = await cached('dashboard:kpis:v2', 60, () => carregarKpis(supabase));
+	const [kpis, pipeline, operacao] = await Promise.all([
+		cached('dashboard:kpis:v3', 60, () => carregarKpis(supabase)),
+		carregarPipeline(supabase),
+		carregarOperacao(supabase)
+	]);
 
 	return {
 		...kpis,
+		pipeline,
+		operacao,
 		// Alertas: cacheados 60s + Promise não-aguardada → streaming com skeleton.
 		alertas: cached('dashboard:alertas', 60, () => carregarAlertas(supabase))
 	};
