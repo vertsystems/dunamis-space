@@ -194,6 +194,14 @@ body::before {
 	}
 }
 
+// Foco visível acessível no shell (navegação por teclado)
+.app-topbar .departments a:focus-visible,
+.app-topbar .actions .icon-btn:focus-visible,
+.app-sidebar a:focus-visible {
+	outline: 2px solid var(--ds-primary);
+	outline-offset: 2px;
+}
+
 .app-body {
 	display: flex;
 	align-items: flex-start;

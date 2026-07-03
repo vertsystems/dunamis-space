@@ -65,6 +65,11 @@
 	}
 </script>
 
+<div class="mb-4">
+	<h1 class="text-xl font-bold text-navy">Clientes</h1>
+	<p class="text-sm text-grey">Pipeline de clientes por status — arraste os cartões entre as colunas.</p>
+</div>
+
 <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
 	<form class="flex items-end gap-2" method="GET">
 		<Input type="search" name="q" placeholder="Buscar por nome" bind:value={q} wrapperClass="w-56" />

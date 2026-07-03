@@ -1,6 +1,8 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { TAREFA_STATUS, prioridadeTone, prioridadeLabel } from '$lib/tarefas';
 	import { Badge, Button } from '$lib/components/ui';
+	import Icon from '$lib/components/Icon.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import { autoanimate } from '$lib/autoAnimate';
 
@@ -50,16 +52,18 @@
 	}
 </script>
 
-<div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-	<div class="flex items-center gap-2 text-sm">
+<div class="flex flex-wrap items-end justify-between gap-3 mb-4">
+	<div>
+		<h1 class="text-xl font-bold text-navy">Tarefas</h1>
+		<p class="text-sm text-grey">Arraste os cartões entre as colunas para mudar o status.</p>
 		{#if data.projetoNome}
-			<Badge tone="neutral">Projeto: {data.projetoNome}</Badge>
-			<a class="text-brand hover:underline" href="/tarefas">limpar</a>
-		{:else}
-			<span class="text-grey">Arraste os cartões entre as colunas para mudar o status.</span>
+			<div class="mt-2 flex items-center gap-2 text-sm">
+				<Badge tone="neutral">Projeto: {data.projetoNome}</Badge>
+				<a class="text-brand hover:underline" href="/tarefas">limpar</a>
+			</div>
 		{/if}
 	</div>
-	<Button onclick={() => location.assign('/tarefas/novo')}>+ Nova tarefa</Button>
+	<Button onclick={() => goto('/tarefas/novo')}>+ Nova tarefa</Button>
 </div>
 
 {#if data.loadError}<div class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">Erro ao carregar: {data.loadError}</div>{/if}
@@ -95,7 +99,7 @@
 					<div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
 						<Badge tone={prioridadeTone(t.prioridade)}>{prioridadeLabel(t.prioridade)}</Badge>
 						{#if t.responsavel?.nome}<span class="text-xs text-grey">{t.responsavel.nome}</span>{/if}
-						{#if prazo}<span class="text-xs text-grey">📅 {prazo}</span>{/if}
+						{#if prazo}<span class="inline-flex items-center gap-1 text-xs text-grey"><Icon name="calendar" size={12} />{prazo}</span>{/if}
 					</div>
 				</div>
 			{/each}

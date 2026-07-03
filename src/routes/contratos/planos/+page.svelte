@@ -9,8 +9,11 @@
 
 <Breadcrumb items={[{ label: 'Contratos', href: '/contratos' }, { label: 'Planos' }]} />
 
-<div class="flex items-center justify-between mb-4">
-	<h1 class="text-lg font-semibold text-navy">Planos</h1>
+<div class="flex items-end justify-between gap-3 mb-4">
+	<div>
+		<h1 class="text-xl font-bold text-navy">Planos</h1>
+		<p class="text-sm text-grey">Planos de serviço oferecidos aos clientes.</p>
+	</div>
 	<Button onclick={() => goto('/contratos/planos/novo')}>+ Novo plano</Button>
 </div>
 

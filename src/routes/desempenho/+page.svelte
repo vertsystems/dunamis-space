@@ -63,7 +63,7 @@
 		<div class="space-y-2.5">
 			{#each data.funil as f (f.nome)}
 				<div class="flex items-center gap-3">
-					<div class="w-40 shrink-0 flex items-center gap-2 text-sm text-navy truncate">
+					<div class="w-24 sm:w-40 shrink-0 flex items-center gap-2 text-sm text-navy truncate">
 						<span class="size-2.5 rounded-full shrink-0 {stageDot(f.cor)}"></span>
 						<span class="truncate">{f.nome}</span>
 					</div>
@@ -73,7 +73,7 @@
 							style="width: {Math.round((f.count / maxCount) * 100)}%"
 						></div>
 					</div>
-					<div class="w-40 shrink-0 text-right text-sm tabular-nums text-slate whitespace-nowrap">
+					<div class="w-24 sm:w-40 shrink-0 text-right text-sm tabular-nums text-slate">
 						{f.count} · {formatBRL(f.valor)}
 					</div>
 				</div>

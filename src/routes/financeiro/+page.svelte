@@ -7,7 +7,7 @@
 		statusLabel,
 		formatBRL
 	} from '$lib/financeiro';
-	import { Card, Badge, Button, Select } from '$lib/components/ui';
+	import { Card, Badge, Button, Select, EmptyState } from '$lib/components/ui';
 
 	let { data } = $props();
 	let tipo = $state(data.tipo);
@@ -22,6 +22,11 @@
 		return d ? new Date(d + 'T00:00:00').toLocaleDateString('pt-BR') : '—';
 	}
 </script>
+
+<div class="mb-4">
+	<h1 class="text-xl font-bold text-navy">Financeiro</h1>
+	<p class="text-sm text-grey">Receitas, despesas e saldo do período.</p>
+</div>
 
 <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
 	<Card>
@@ -93,11 +98,7 @@
 						</td>
 					</tr>
 				{:else}
-					<tr>
-						<td colspan="6" class="px-4 py-12 text-center text-grey">
-							Nenhuma transação ainda. Clique em “Nova transação” para começar.
-						</td>
-					</tr>
+					<tr><td colspan="6" class="px-2"><EmptyState icon="dollar" title="Nenhuma transação ainda" description="Registre receitas e despesas para acompanhar o caixa." /></td></tr>
 				{/each}
 			</tbody>
 		</table>

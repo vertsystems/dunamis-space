@@ -30,7 +30,7 @@
 	<div class="w-full max-w-[26rem]">
 		<div class="text-center mb-6">
 			<div
-				class="inline-grid size-14 place-items-center rounded-[var(--radius-lg)] bg-gradient-to-br from-[#4c82ff] to-[#2f5fe0] text-white text-2xl font-bold shadow-[0_8px_24px_-6px_rgba(59,110,246,0.55)] mb-4"
+				class="inline-grid size-14 place-items-center rounded-[var(--radius-lg)] bg-brand text-white text-2xl font-bold shadow-lg mb-4"
 			>
 				D
 			</div>

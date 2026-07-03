@@ -29,6 +29,11 @@
 	}
 </script>
 
+<div class="mb-4">
+	<h1 class="text-xl font-bold text-navy">Conteúdo</h1>
+	<p class="text-sm text-grey">Planejamento e aprovação de publicações.</p>
+</div>
+
 <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
 	<div class="flex flex-wrap items-end gap-2">
 		<SegmentedNav items={segs} current="Lista" />

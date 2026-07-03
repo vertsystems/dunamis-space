@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { conteudoStatusTone, conteudoStatusLabel, conteudoTipoLabel } from '$lib/conteudo';
 	import { Card, Button, SegmentedNav, toneClasses } from '$lib/components/ui';
 
@@ -54,7 +55,7 @@
 
 <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
 	<SegmentedNav items={segs} current="Calendário" />
-	<Button onclick={() => location.assign('/conteudo/novo')}>+ Novo conteúdo</Button>
+	<Button onclick={() => goto('/conteudo/novo')}>+ Novo conteúdo</Button>
 </div>
 
 {#if data.loadError}<div class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">Erro ao carregar: {data.loadError}</div>{/if}
@@ -63,9 +64,9 @@
 	<div class="flex items-center justify-between mb-4">
 		<h1 class="text-lg font-semibold text-navy">{MESES[data.mes]} {data.ano}</h1>
 		<div class="flex gap-1">
-			<Button size="sm" variant="secondary" onclick={() => location.assign(`/conteudo/calendario?mes=${data.prev}`)} aria-label="Mês anterior">‹</Button>
-			<Button size="sm" variant="secondary" onclick={() => location.assign('/conteudo/calendario')}>Hoje</Button>
-			<Button size="sm" variant="secondary" onclick={() => location.assign(`/conteudo/calendario?mes=${data.next}`)} aria-label="Próximo mês">›</Button>
+			<Button size="sm" variant="secondary" onclick={() => goto(`/conteudo/calendario?mes=${data.prev}`)} aria-label="Mês anterior">‹</Button>
+			<Button size="sm" variant="secondary" onclick={() => goto('/conteudo/calendario')}>Hoje</Button>
+			<Button size="sm" variant="secondary" onclick={() => goto(`/conteudo/calendario?mes=${data.next}`)} aria-label="Próximo mês">›</Button>
 		</div>
 	</div>
 

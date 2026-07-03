@@ -7,8 +7,11 @@
 	}
 </script>
 
-<div class="flex items-center justify-between mb-4">
-	<h1 class="text-lg font-semibold text-navy">Campanhas</h1>
+<div class="flex items-end justify-between gap-3 mb-4">
+	<div>
+		<h1 class="text-xl font-bold text-navy">Campanhas</h1>
+		<p class="text-sm text-grey">Campanhas e promoções por cliente.</p>
+	</div>
 	<Button onclick={() => goto('/campanhas/novo')}>+ Nova campanha</Button>
 </div>
 

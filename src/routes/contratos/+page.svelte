@@ -34,6 +34,11 @@
 	];
 </script>
 
+<div class="mb-4">
+	<h1 class="text-xl font-bold text-navy">Contratos</h1>
+	<p class="text-sm text-grey">Contratos ativos, suspensos e encerrados dos clientes.</p>
+</div>
+
 <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
 	<form class="flex items-end gap-2" method="GET">
 		<Select name="status" bind:value={status} wrapperClass="w-48">

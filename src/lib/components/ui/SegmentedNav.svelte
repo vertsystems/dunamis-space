@@ -16,7 +16,7 @@
 		{:else}
 			<a
 				href={it.href}
-				class="px-3.5 py-1.5 text-sm font-medium rounded-[var(--radius-sm)] text-slate transition-colors hover:text-navy"
+				class="px-3.5 py-1.5 text-sm font-medium rounded-[var(--radius-sm)] text-slate transition-colors hover:text-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35"
 				>{it.label}</a
 			>
 		{/if}

@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { formatBRL } from '$lib/financeiro';
-	import { Card, Breadcrumb } from '$lib/components/ui';
+	import { Card, Breadcrumb, EmptyState } from '$lib/components/ui';
 	let { data } = $props();
 </script>
 
 <Breadcrumb items={[{ label: 'Financeiro', href: '/financeiro' }, { label: 'Lucro por cliente' }]} />
 
-<h1 class="text-lg font-semibold text-navy">Lucro por cliente</h1>
-<p class="text-slate mb-4">Receitas menos despesas alocadas a cada cliente.</p>
+<h1 class="text-xl font-bold text-navy">Lucro por cliente</h1>
+<p class="text-sm text-grey mb-4">Receitas menos despesas alocadas a cada cliente.</p>
 
 {#if data.loadError}
 	<div class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">Erro ao carregar: {data.loadError}</div>
@@ -35,7 +35,7 @@
 						</td>
 					</tr>
 				{:else}
-					<tr><td colspan="4" class="px-4 py-12 text-center text-grey">Sem dados ainda.</td></tr>
+					<tr><td colspan="4" class="px-2"><EmptyState icon="chart" title="Sem dados ainda" description="Cadastre transações vinculadas a clientes para ver o lucro." /></td></tr>
 				{/each}
 			</tbody>
 		</table>

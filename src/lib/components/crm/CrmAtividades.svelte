@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Badge, Card, Select } from '$lib/components/ui';
+	import { Badge, Card, Select, EmptyState } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
 	import {
 		atividadeTipo,
@@ -127,11 +127,8 @@
 	{/each}
 
 	{#if !pendentes.length}
-		<Card>
-			<div class="flex flex-col items-center gap-2 py-8 text-grey">
-				<Icon name="check" size={28} />
-				Nenhuma atividade pendente. Tudo em dia! 🎉
-			</div>
+		<Card padding="none">
+			<EmptyState icon="check" title="Tudo em dia" description="Nenhuma atividade pendente." />
 		</Card>
 	{/if}
 

@@ -77,15 +77,15 @@
 		{:else}
 			<div class="grid grid-cols-3 gap-2 mb-4">
 				<div class="rounded-[var(--radius)] bg-bg p-3">
-					<div class="text-[0.66rem] uppercase tracking-wide text-grey font-semibold">Em aberto</div>
+					<div class="text-xs uppercase tracking-wide text-grey font-semibold">Em aberto</div>
 					<div class="text-lg font-bold text-navy tabular-nums mt-0.5">{formatBRL(data.pipeline.valorAberto)}</div>
 				</div>
 				<div class="rounded-[var(--radius)] bg-bg p-3">
-					<div class="text-[0.66rem] uppercase tracking-wide text-grey font-semibold">Ganhos no mês</div>
+					<div class="text-xs uppercase tracking-wide text-grey font-semibold">Ganhos no mês</div>
 					<div class="text-lg font-bold text-brand-green tabular-nums mt-0.5">{data.pipeline.ganhosMes}</div>
 				</div>
 				<div class="rounded-[var(--radius)] bg-bg p-3">
-					<div class="text-[0.66rem] uppercase tracking-wide text-grey font-semibold">Conversão</div>
+					<div class="text-xs uppercase tracking-wide text-grey font-semibold">Conversão</div>
 					<div class="text-lg font-bold text-navy tabular-nums mt-0.5">{data.pipeline.taxaConversao}%</div>
 				</div>
 			</div>
@@ -123,12 +123,12 @@
 			{#each TAREFA_TILES as t (t.chave)}
 				<div class="rounded-[var(--radius)] bg-bg p-3 text-center">
 					<div class="text-xl font-bold text-navy tabular-nums">{data.operacao.tarefas[t.chave]}</div>
-					<div class="text-[0.66rem] uppercase tracking-wide text-grey font-semibold mt-0.5">{t.label}</div>
+					<div class="text-xs uppercase tracking-wide text-grey font-semibold mt-0.5">{t.label}</div>
 				</div>
 			{/each}
 		</div>
 		{#if data.atrasadas > 0}
-			<p class="text-xs text-brand-danger mt-2">⚠ {data.atrasadas} tarefa(s) atrasada(s)</p>
+			<p class="text-xs text-brand-danger mt-2">{data.atrasadas} tarefa(s) atrasada(s)</p>
 		{/if}
 
 		<div class="border-t border-grey-200 mt-4 pt-4">
@@ -142,7 +142,7 @@
 				</a>
 			{/if}
 			{#if data.operacao.publicacoes.length}
-				<div class="text-[0.66rem] uppercase tracking-wide font-semibold text-grey mb-1">Publicações da semana</div>
+				<div class="text-xs uppercase tracking-wide font-semibold text-grey mb-1">Publicações da semana</div>
 				<ul class="divide-y divide-grey-200/60">
 					{#each data.operacao.publicacoes as p (p.id)}
 						<li class="py-1.5 text-sm">
@@ -214,7 +214,7 @@
 				<!-- Tarefas atrasadas -->
 				<section>
 					<h3 class="flex items-center gap-2 font-semibold text-sm mb-3">
-						<span class="size-2.5 rounded-full bg-brand"></span>
+						<span class="size-2.5 rounded-full bg-brand-danger"></span>
 						Tarefas atrasadas <span class="text-grey font-normal">({data.atrasadas})</span>
 					</h3>
 					{#if alertas.tarefas.length}
