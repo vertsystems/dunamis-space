@@ -57,7 +57,10 @@
 			label: 'Administrativo',
 			icon: 'admin',
 			areas: [
-				{ href: '/financeiro', label: 'Financeiro', icon: 'dollar' },
+				{ href: '/cadastro', label: 'Cadastro de Clientes', icon: 'file' },
+				{ href: '/ferramentas', label: 'Ferramentas & Contas', icon: 'key' },
+				{ href: '/fornecedores', label: 'Fornecedores', icon: 'building' },
+				{ href: '/onboarding', label: 'Onboarding', icon: 'clipboard' },
 				{ href: '/equipe', label: 'Equipe', icon: 'users' },
 				{ href: '/base-conhecimento', label: 'Base de Conhecimento', icon: 'book' }
 			]

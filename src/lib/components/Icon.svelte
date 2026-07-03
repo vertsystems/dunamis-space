@@ -129,5 +129,14 @@
 		/>
 	{:else if name === 'chevron'}
 		<path d="m9 18 6-6-6-6" />
+	{:else if name === 'key'}
+		<path
+			d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 1 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"
+		/>
+		<circle cx="16.5" cy="7.5" r=".5" fill="currentColor" />
+	{:else if name === 'clipboard'}
+		<rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+		<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+		<path d="m9 14 2 2 4-4" />
 	{/if}
 </svg>
