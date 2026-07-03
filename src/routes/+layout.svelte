@@ -46,9 +46,10 @@
 			href: '/',
 			areas: [
 				{ href: '/', label: 'Visão Geral', icon: 'home' },
-				{ label: 'Meu Dia', icon: 'calendar', soon: true },
-				{ label: 'Desempenho', icon: 'marketing', soon: true },
-				{ label: 'Atalhos', icon: 'folder', soon: true }
+				{ href: '/meu-dia', label: 'Meu Dia', icon: 'calendar' },
+				{ href: '/desempenho', label: 'Desempenho', icon: 'chart' },
+				{ href: '/atalhos', label: 'Atalhos', icon: 'zap' },
+				{ href: '/notificacoes', label: 'Notificações', icon: 'bell' }
 			]
 		},
 		{

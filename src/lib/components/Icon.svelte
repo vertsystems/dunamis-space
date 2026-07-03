@@ -115,5 +115,19 @@
 	{:else if name === 'search'}
 		<circle cx="11" cy="11" r="8" />
 		<path d="m21 21-4.3-4.3" />
+	{:else if name === 'chart'}
+		<path d="M3 3v18h18" />
+		<path d="M18 17V9" />
+		<path d="M13 17V5" />
+		<path d="M8 17v-3" />
+	{:else if name === 'bell'}
+		<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+		<path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+	{:else if name === 'zap'}
+		<path
+			d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"
+		/>
+	{:else if name === 'chevron'}
+		<path d="m9 18 6-6-6-6" />
 	{/if}
 </svg>
