@@ -17,4 +17,8 @@
 	);
 </script>
 
-<div class="animate-pulse bg-grey-200/60 {r} {extra}" aria-hidden="true"></div>
+<div class="relative overflow-hidden bg-grey-200/50 {r} {extra}" aria-hidden="true">
+	<div
+		class="absolute inset-0 -translate-x-full animate-[shimmer_1.6s_infinite] bg-gradient-to-r from-transparent via-white/70 to-transparent"
+	></div>
+</div>

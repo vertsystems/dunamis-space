@@ -48,6 +48,13 @@
 	--shadow-2xl: 0 32px 64px -16px rgba(16, 24, 40, 0.2);
 }
 
+/* Shimmer dos skeletons (loading state) */
+@keyframes shimmer {
+	100% {
+		transform: translateX(100%);
+	}
+}
+
 /* Renderização de fonte mais limpa/premium */
 html {
 	-webkit-font-smoothing: antialiased;
