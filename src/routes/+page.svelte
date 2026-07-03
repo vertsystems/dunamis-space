@@ -1,49 +1,42 @@
 <script lang="ts">
-	import { formatBRL } from '$lib/clientes';
 	import { diasAte, formatDateBR, prazoContratoLabel } from '$lib/alertas';
-	import { Card, Badge, Skeleton, Button } from '$lib/components/ui';
-	import ProcessosGrid from '$lib/components/ProcessosGrid.svelte';
-	import { goto } from '$app/navigation';
+	import { Card, Badge, Skeleton } from '$lib/components/ui';
+	import Icon from '$lib/components/Icon.svelte';
 
 	let { data } = $props();
 
 	const stats = $derived([
-		{ label: 'Receita recorrente (MRR)', value: formatBRL(data.recorrente), accent: 'text-brand-green' },
-		{ label: 'Lucro (receitas − despesas)', value: formatBRL(data.lucro), accent: data.lucro < 0 ? 'text-brand-danger' : 'text-navy' },
-		{ label: 'Clientes ativos', value: String(data.ativos), accent: 'text-navy' },
-		{ label: 'Tarefas atrasadas', value: String(data.atrasadas), accent: data.atrasadas > 0 ? 'text-brand-danger' : 'text-navy' }
+		{ label: 'Clientes ativos', value: String(data.ativos), accent: 'text-navy', icon: 'contact' },
+		{
+			label: 'Tarefas atrasadas',
+			value: String(data.atrasadas),
+			accent: data.atrasadas > 0 ? 'text-brand-danger' : 'text-brand-green',
+			icon: 'check'
+		}
 	]);
 </script>
 
-<!-- KPIs — números mais importantes no topo -->
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+<div class="mb-4">
+	<h1 class="text-xl font-bold text-navy">Visão Geral</h1>
+	<p class="text-sm text-grey">Resumo rápido do que precisa da sua atenção.</p>
+</div>
+
+<!-- KPIs — só o que importa de cara -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 	{#each stats as s (s.label)}
 		<Card>
-			<div class="text-xs uppercase tracking-wide text-grey font-semibold">{s.label}</div>
-			<div class="text-3xl font-bold mt-1 {s.accent}">{s.value}</div>
+			<div class="flex items-start justify-between gap-3">
+				<div>
+					<div class="text-xs uppercase tracking-wide text-grey font-semibold">{s.label}</div>
+					<div class="text-3xl font-bold mt-1 {s.accent}">{s.value}</div>
+				</div>
+				<span class="grid size-10 place-items-center rounded-[var(--radius)] bg-bg text-slate">
+					<Icon name={s.icon} size={20} />
+				</span>
+			</div>
 		</Card>
 	{/each}
 </div>
-
-<!-- Cronograma de Processos — acompanhamento por etapas -->
-<Card class="mt-6">
-	<div class="flex items-center justify-between gap-3 mb-4">
-		<div>
-			<h2 class="text-lg font-semibold text-navy">Cronograma de Processos</h2>
-			<p class="text-sm text-grey">Acompanhamento das etapas de cada processo</p>
-		</div>
-		<Button size="sm" variant="secondary" onclick={() => goto('/processos')}>Ver todos</Button>
-	</div>
-
-	{#if data.processosPendente}
-		<div class="rounded-[var(--radius)] bg-brand-amber/15 px-4 py-3 text-sm text-brand-brown">
-			O módulo de processos ainda não foi ativado no banco. Aplique a migration
-			<code class="font-mono">supabase/migrations/0004_processos.sql</code> no SQL Editor do Supabase.
-		</div>
-	{:else}
-		<ProcessosGrid processos={data.processos} />
-	{/if}
-</Card>
 
 <!-- Alertas inteligentes — streamed (skeleton enquanto carrega) -->
 <Card class="mt-6">

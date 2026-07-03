@@ -239,6 +239,36 @@ body {
 		font-size: 0.82rem;
 		color: #333333;
 	}
+
+	// Item de submenu ainda não definido (placeholder "em breve")
+	.area-soon {
+		display: flex;
+		align-items: center;
+		gap: 0.7rem;
+		color: #9aa1ab;
+		padding: 0.6rem 0.85rem;
+		border-radius: 10px;
+		font-size: 0.9rem;
+		margin-bottom: 2px;
+		cursor: default;
+
+		svg {
+			opacity: 0.6;
+			flex-shrink: 0;
+		}
+
+		.soon-pill {
+			margin-left: auto;
+			font-size: 0.58rem;
+			text-transform: uppercase;
+			letter-spacing: 0.04em;
+			font-weight: 600;
+			background: #e4e4e4;
+			color: #808690;
+			padding: 1px 6px;
+			border-radius: 999px;
+		}
+	}
 }
 
 .app-content {
@@ -280,11 +310,13 @@ body {
 
 		.sidebar-title,
 		.area-label,
-		.sidebar-empty {
+		.sidebar-empty,
+		.soon-pill {
 			display: none;
 		}
 
-		a {
+		a,
+		.area-soon {
 			justify-content: center;
 			padding: 0.6rem 0;
 

@@ -28,7 +28,7 @@
 		return () => sub.subscription.unsubscribe();
 	});
 
-	type Area = { href: string; label: string; icon: string };
+	type Area = { href?: string; label: string; icon: string; soon?: boolean };
 	type Departamento = {
 		id: string;
 		label: string;
@@ -39,7 +39,18 @@
 	};
 
 	const departamentos: Departamento[] = [
-		{ id: 'home', label: 'Home', icon: 'home', href: '/', areas: [] },
+		{
+			id: 'home',
+			label: 'Home',
+			icon: 'home',
+			href: '/',
+			areas: [
+				{ href: '/', label: 'Visão Geral', icon: 'home' },
+				{ label: 'Meu Dia', icon: 'calendar', soon: true },
+				{ label: 'Desempenho', icon: 'marketing', soon: true },
+				{ label: 'Atalhos', icon: 'folder', soon: true }
+			]
+		},
 		{
 			id: 'administrativo',
 			label: 'Administrativo',
@@ -81,8 +92,10 @@
 		}
 	];
 
-	function areaAtiva(href: string): boolean {
+	function areaAtiva(href: string | undefined): boolean {
+		if (!href) return false;
 		const p = page.url.pathname;
+		if (href === '/') return p === '/';
 		return p === href || p.startsWith(href + '/');
 	}
 
@@ -176,25 +189,30 @@
 		</header>
 
 		<div class="app-body">
-			{#if deptAtivo !== 'home'}
+			{#if areas.length}
 				<aside class="app-sidebar">
 					<div class="sidebar-title">
 						{departamentos.find((d) => d.id === deptAtivo)?.label}
 					</div>
 					<nav>
-						{#each areas as a (a.href)}
-							<a href={a.href} class:is-active={areaAtiva(a.href)} title={a.label}>
-								<Icon name={a.icon} size={17} />
-								<span class="area-label">{a.label}</span>
-							</a>
+						{#each areas as a (a.label)}
+							{#if a.soon || !a.href}
+								<span class="area-soon" title="Em breve">
+									<Icon name={a.icon} size={17} />
+									<span class="area-label">{a.label}</span>
+									<span class="soon-pill">em breve</span>
+								</span>
+							{:else}
+								<a href={a.href} class:is-active={areaAtiva(a.href)} title={a.label}>
+									<Icon name={a.icon} size={17} />
+									<span class="area-label">{a.label}</span>
+								</a>
+							{/if}
 						{/each}
 					</nav>
-					{#if !areas.length}
-						<p class="sidebar-empty">Nenhuma ferramenta ainda. Em breve.</p>
-					{/if}
 				</aside>
 			{/if}
-			<main class="app-content" class:is-full={deptAtivo === 'home'}>
+			<main class="app-content" class:is-full={!areas.length}>
 				{@render children()}
 			</main>
 		</div>

@@ -83,59 +83,28 @@ async function carregarAlertas(supabase: SupabaseClient) {
 	return { contratos: contratosVencendo, tarefas, semInteracao };
 }
 
-/** KPIs do topo — queries rápidas, agregadas num só objeto (cacheável). */
+/** KPIs do topo — só clientes ativos e tarefas atrasadas (queries rápidas, cacheável). */
 async function carregarKpis(supabase: SupabaseClient) {
 	const hoje = new Date().toISOString().slice(0, 10);
 
-	const [{ count: ativos }, { data: mrrRows }, { data: transacoes }, { count: atrasadas }] =
-		await Promise.all([
-			supabase.from('clientes').select('id', { count: 'exact', head: true }).eq('status', 'ativo'),
-			supabase.from('clientes').select('mrr').eq('status', 'ativo'),
-			supabase.from('transacoes').select('tipo, valor'),
-			supabase
-				.from('tarefas')
-				.select('id', { count: 'exact', head: true })
-				.lt('prazo', hoje)
-				.neq('status', 'concluido')
-		]);
+	const [{ count: ativos }, { count: atrasadas }] = await Promise.all([
+		supabase.from('clientes').select('id', { count: 'exact', head: true }).eq('status', 'ativo'),
+		supabase
+			.from('tarefas')
+			.select('id', { count: 'exact', head: true })
+			.lt('prazo', hoje)
+			.neq('status', 'concluido')
+	]);
 
-	const recorrente = (mrrRows ?? []).reduce((sum, r) => sum + Number(r.mrr ?? 0), 0);
-	const receitas = (transacoes ?? [])
-		.filter((t) => t.tipo === 'receita')
-		.reduce((s, t) => s + Number(t.valor ?? 0), 0);
-	const despesas = (transacoes ?? [])
-		.filter((t) => t.tipo === 'despesa')
-		.reduce((s, t) => s + Number(t.valor ?? 0), 0);
-
-	return { ativos: ativos ?? 0, recorrente, lucro: receitas - despesas, atrasadas: atrasadas ?? 0 };
-}
-
-/** Cronograma de processos (acompanhamento por etapas). Degrada gracioso se a
- * tabela ainda não existir (migration 0004 não aplicada) → retorna lista vazia. */
-async function carregarProcessos(supabase: SupabaseClient) {
-	const { data, error } = await supabase
-		.from('processos')
-		.select('id, numero, nome, secretaria, responsavel, prazo, situacao, etapas')
-		.order('numero', { ascending: true, nullsFirst: false })
-		.order('created_at', { ascending: true })
-		.limit(20);
-
-	return {
-		processos: data ?? [],
-		// "relation does not exist" = migration pendente; tratamos como vazio + dica.
-		processosPendente: !!error
-	};
+	return { ativos: ativos ?? 0, atrasadas: atrasadas ?? 0 };
 }
 
 export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 	// KPIs: cacheados 60s (no-op sem Redis), aguardados → SSR imediato.
-	const kpis = await cached('dashboard:kpis', 60, () => carregarKpis(supabase));
-	const { processos, processosPendente } = await carregarProcessos(supabase);
+	const kpis = await cached('dashboard:kpis:v2', 60, () => carregarKpis(supabase));
 
 	return {
 		...kpis,
-		processos,
-		processosPendente,
 		// Alertas: cacheados 60s + Promise não-aguardada → streaming com skeleton.
 		alertas: cached('dashboard:alertas', 60, () => carregarAlertas(supabase))
 	};
