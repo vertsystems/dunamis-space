@@ -1,7 +1,16 @@
 <script lang="ts">
 	import { formatBRL } from '$lib/financeiro';
-	import { Card, Breadcrumb, EmptyState } from '$lib/components/ui';
+	import { Card, Breadcrumb, EmptyState, DataTable } from '$lib/components/ui';
+	import type { ColumnDef } from '$lib/components/ui';
 	let { data } = $props();
+
+	type Linha = (typeof data.linhas)[number];
+	const columns: ColumnDef<Linha>[] = [
+		{ id: 'nome', accessorFn: (l) => l.nome ?? '', meta: { label: 'Cliente' } },
+		{ id: 'receitas', accessorFn: (l) => Number(l.receitas ?? 0), meta: { label: 'Receitas', thClass: 'text-right' } },
+		{ id: 'despesas', accessorFn: (l) => Number(l.despesas ?? 0), meta: { label: 'Despesas', thClass: 'text-right' } },
+		{ id: 'lucro', accessorFn: (l) => Number(l.lucro ?? 0), meta: { label: 'Lucro', thClass: 'text-right' } }
+	];
 </script>
 
 <Breadcrumb items={[{ label: 'Financeiro', href: '/financeiro' }, { label: 'Lucro por cliente' }]} />
@@ -14,30 +23,20 @@
 {/if}
 
 <Card padding="none" class="overflow-hidden">
-	<div class="overflow-x-auto">
-		<table class="w-full text-sm">
-			<thead>
-				<tr class="border-b border-grey-200 text-left text-xs uppercase tracking-wide text-grey">
-					<th class="px-4 py-3 font-semibold">Cliente</th>
-					<th class="px-4 py-3 font-semibold text-right">Receitas</th>
-					<th class="px-4 py-3 font-semibold text-right">Despesas</th>
-					<th class="px-4 py-3 font-semibold text-right">Lucro</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each data.linhas as l (l.cliente_id)}
-					<tr class="border-b border-grey-200/60 last:border-0 hover:bg-bg">
-						<td class="px-4 py-3"><a class="text-brand hover:underline" href={`/clientes/${l.cliente_id}`}>{l.nome}</a></td>
-						<td class="px-4 py-3 text-right tabular-nums text-brand-green">{formatBRL(l.receitas)}</td>
-						<td class="px-4 py-3 text-right tabular-nums text-brand-danger">{formatBRL(l.despesas)}</td>
-						<td class="px-4 py-3 text-right tabular-nums font-semibold {Number(l.lucro) >= 0 ? 'text-brand-green' : 'text-brand-danger'}">
-							{formatBRL(l.lucro)}
-						</td>
-					</tr>
-				{:else}
-					<tr><td colspan="4" class="px-2"><EmptyState icon="chart" title="Sem dados ainda" description="Cadastre transações vinculadas a clientes para ver o lucro." /></td></tr>
-				{/each}
-			</tbody>
-		</table>
-	</div>
+	<DataTable {columns} data={data.linhas} initialSort={[{ id: 'lucro', desc: true }]}>
+		{#snippet row(r)}
+			{@const l = r.original}
+			<tr class="border-b border-grey-200/60 last:border-0 hover:bg-bg">
+				<td class="px-4 py-3"><a class="text-brand hover:underline" href={`/clientes/${l.cliente_id}`}>{l.nome}</a></td>
+				<td class="px-4 py-3 text-right tabular-nums text-brand-green">{formatBRL(l.receitas)}</td>
+				<td class="px-4 py-3 text-right tabular-nums text-brand-danger">{formatBRL(l.despesas)}</td>
+				<td class="px-4 py-3 text-right tabular-nums font-semibold {Number(l.lucro) >= 0 ? 'text-brand-green' : 'text-brand-danger'}">
+					{formatBRL(l.lucro)}
+				</td>
+			</tr>
+		{/snippet}
+		{#snippet empty()}
+			<tr><td colspan="4" class="px-2"><EmptyState icon="chart" title="Sem dados ainda" description="Cadastre transações vinculadas a clientes para ver o lucro." /></td></tr>
+		{/snippet}
+	</DataTable>
 </Card>

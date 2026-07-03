@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, Card, Badge, Input, Select, Textarea, Checkbox, EmptyState } from '$lib/components/ui';
-	import type { BadgeTone } from '$lib/components/ui';
+	import { Button, Card, Badge, Input, Select, Textarea, Checkbox, EmptyState, DataTable } from '$lib/components/ui';
+	import type { BadgeTone, ColumnDef } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
 	import CrmModal from '$lib/components/crm/CrmModal.svelte';
 	import { toast } from '$lib/toast.svelte';
@@ -11,6 +11,23 @@
 
 	type Ferramenta = (typeof data.ferramentas)[number];
 	type Acesso = (typeof data.acessos)[number];
+
+	const ferramentaCols: ColumnDef<Ferramenta>[] = [
+		{ id: 'nome', accessorFn: (f) => f.nome, meta: { label: 'Nome' } },
+		{ id: 'categoria', accessorFn: (f) => f.categoria ?? '', meta: { label: 'Categoria' } },
+		{ id: 'ciclo', accessorFn: (f) => f.ciclo, meta: { label: 'Ciclo' } },
+		{ id: 'custo', accessorFn: (f) => f.custo_mensal, meta: { label: 'Custo/mês', thClass: 'text-right' } },
+		{ id: 'renovacao', accessorFn: (f) => f.proxima_renovacao ?? '', meta: { label: 'Próx. renovação' } },
+		{ id: 'responsavel', accessorFn: (f) => f.responsavel_nome ?? '', meta: { label: 'Responsável' } }
+	];
+
+	const acessoCols: ColumnDef<Acesso>[] = [
+		{ id: 'plataforma', accessorFn: (a) => a.plataforma, meta: { label: 'Plataforma' } },
+		{ id: 'cliente', accessorFn: (a) => (a.cliente_id ? (a.cliente_nome ?? '') : 'Agência'), meta: { label: 'Cliente' } },
+		{ id: 'login', accessorFn: (a) => a.login ?? '', meta: { label: 'Login' } },
+		{ id: 'local_senha', accessorFn: (a) => a.local_senha ?? '', meta: { label: 'Onde está a senha' } },
+		{ id: 'responsavel', accessorFn: (a) => a.responsavel_nome ?? '', meta: { label: 'Responsável' } }
+	];
 
 	const CICLOS = [
 		{ value: 'mensal', label: 'Mensal' },
@@ -100,40 +117,28 @@
 		</div>
 
 		<Card padding="none" class="overflow-hidden">
-			<div class="overflow-x-auto">
-				<table class="w-full text-sm">
-					<thead>
-						<tr class="border-b border-grey-200 text-left text-xs uppercase tracking-wide text-grey">
-							<th class="px-4 py-3 font-semibold">Nome</th>
-							<th class="px-4 py-3 font-semibold">Categoria</th>
-							<th class="px-4 py-3 font-semibold">Ciclo</th>
-							<th class="px-4 py-3 font-semibold text-right">Custo/mês</th>
-							<th class="px-4 py-3 font-semibold">Próx. renovação</th>
-							<th class="px-4 py-3 font-semibold">Responsável</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each data.ferramentas as f (f.id)}
-							<tr
-								class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg"
-								onclick={() => editarFerramenta(f)}
-							>
-								<td class="px-4 py-3">
-									<div class="font-medium text-navy">{f.nome}</div>
-									{#if !f.ativo}<span class="text-xs text-grey">inativa</span>{/if}
-								</td>
-								<td class="px-4 py-3 text-slate">{f.categoria ?? '—'}</td>
-								<td class="px-4 py-3"><Badge tone={cicloTone(f.ciclo)}>{cicloLabel(f.ciclo)}</Badge></td>
-								<td class="px-4 py-3 text-right tabular-nums text-navy">{formatBRL(f.custo_mensal)}</td>
-								<td class="px-4 py-3 text-slate">{f.proxima_renovacao ? fmtData(f.proxima_renovacao) : '—'}</td>
-								<td class="px-4 py-3 text-slate">{f.responsavel_nome ?? '—'}</td>
-							</tr>
-						{:else}
-							<tr><td colspan="6" class="px-2"><EmptyState icon="key" title="Nenhuma ferramenta" description="Cadastre ferramentas e assinaturas da agência." /></td></tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
+			<DataTable columns={ferramentaCols} data={data.ferramentas} initialSort={[{ id: 'nome', desc: false }]}>
+				{#snippet row(r)}
+					{@const f = r.original}
+					<tr
+						class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg"
+						onclick={() => editarFerramenta(f)}
+					>
+						<td class="px-4 py-3">
+							<div class="font-medium text-navy">{f.nome}</div>
+							{#if !f.ativo}<span class="text-xs text-grey">inativa</span>{/if}
+						</td>
+						<td class="px-4 py-3 text-slate">{f.categoria ?? '—'}</td>
+						<td class="px-4 py-3"><Badge tone={cicloTone(f.ciclo)}>{cicloLabel(f.ciclo)}</Badge></td>
+						<td class="px-4 py-3 text-right tabular-nums text-navy">{formatBRL(f.custo_mensal)}</td>
+						<td class="px-4 py-3 text-slate">{f.proxima_renovacao ? fmtData(f.proxima_renovacao) : '—'}</td>
+						<td class="px-4 py-3 text-slate">{f.responsavel_nome ?? '—'}</td>
+					</tr>
+				{/snippet}
+				{#snippet empty()}
+					<tr><td colspan="6" class="px-2"><EmptyState icon="key" title="Nenhuma ferramenta" description="Cadastre ferramentas e assinaturas da agência." /></td></tr>
+				{/snippet}
+			</DataTable>
 		</Card>
 	</section>
 
@@ -152,49 +157,38 @@
 		</p>
 
 		<Card padding="none" class="overflow-hidden">
-			<div class="overflow-x-auto">
-				<table class="w-full text-sm">
-					<thead>
-						<tr class="border-b border-grey-200 text-left text-xs uppercase tracking-wide text-grey">
-							<th class="px-4 py-3 font-semibold">Plataforma</th>
-							<th class="px-4 py-3 font-semibold">Cliente</th>
-							<th class="px-4 py-3 font-semibold">Login</th>
-							<th class="px-4 py-3 font-semibold">Onde está a senha</th>
-							<th class="px-4 py-3 font-semibold">Responsável</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each data.acessos as a (a.id)}
-							<tr
-								class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg"
-								onclick={() => editarAcesso(a)}
-							>
-								<td class="px-4 py-3 font-medium text-navy">{a.plataforma}</td>
-								<td class="px-4 py-3">
-									{#if a.cliente_id}
-										<span class="text-slate">{a.cliente_nome ?? '—'}</span>
-									{:else}
-										<Badge tone="neutral">Agência</Badge>
-									{/if}
-								</td>
-								<td class="px-4 py-3 text-slate">{a.login ?? '—'}</td>
-								<td class="px-4 py-3">
-									{#if a.local_senha}
-										<span class="inline-flex items-center gap-1 text-slate">
-											<Icon name="key" size={14} />{a.local_senha}
-										</span>
-									{:else}
-										<span class="text-grey">—</span>
-									{/if}
-								</td>
-								<td class="px-4 py-3 text-slate">{a.responsavel_nome ?? '—'}</td>
-							</tr>
-						{:else}
-							<tr><td colspan="5" class="px-2"><EmptyState icon="key" title="Nenhum acesso registrado" description="Registre os acessos e contas por cliente." /></td></tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
+			<DataTable columns={acessoCols} data={data.acessos} initialSort={[{ id: 'plataforma', desc: false }]}>
+				{#snippet row(r)}
+					{@const a = r.original}
+					<tr
+						class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg"
+						onclick={() => editarAcesso(a)}
+					>
+						<td class="px-4 py-3 font-medium text-navy">{a.plataforma}</td>
+						<td class="px-4 py-3">
+							{#if a.cliente_id}
+								<span class="text-slate">{a.cliente_nome ?? '—'}</span>
+							{:else}
+								<Badge tone="neutral">Agência</Badge>
+							{/if}
+						</td>
+						<td class="px-4 py-3 text-slate">{a.login ?? '—'}</td>
+						<td class="px-4 py-3">
+							{#if a.local_senha}
+								<span class="inline-flex items-center gap-1 text-slate">
+									<Icon name="key" size={14} />{a.local_senha}
+								</span>
+							{:else}
+								<span class="text-grey">—</span>
+							{/if}
+						</td>
+						<td class="px-4 py-3 text-slate">{a.responsavel_nome ?? '—'}</td>
+					</tr>
+				{/snippet}
+				{#snippet empty()}
+					<tr><td colspan="5" class="px-2"><EmptyState icon="key" title="Nenhum acesso registrado" description="Registre os acessos e contas por cliente." /></td></tr>
+				{/snippet}
+			</DataTable>
 		</Card>
 	</section>
 {/if}

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
-	import { Button, Card, Badge, Input, Select, Textarea, Checkbox, EmptyState } from '$lib/components/ui';
-	import type { BadgeTone } from '$lib/components/ui';
+	import { Button, Card, Badge, Input, Select, Textarea, Checkbox, EmptyState, DataTable } from '$lib/components/ui';
+	import type { BadgeTone, ColumnDef } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import { formatBRL } from '$lib/clientes';
@@ -52,6 +52,19 @@
 	function contato(f: Fornecedor): string {
 		return [f.email, f.telefone].filter(Boolean).join(' · ');
 	}
+
+	const columns: ColumnDef<Fornecedor>[] = [
+		{ id: 'nome', accessorFn: (f) => f.nome ?? '', meta: { label: 'Nome' } },
+		{ id: 'tipo', accessorFn: (f) => tipoLabel[f.tipo] ?? f.tipo, meta: { label: 'Tipo' } },
+		{ id: 'especialidade', accessorFn: (f) => f.especialidade ?? '', meta: { label: 'Especialidade' } },
+		{ id: 'contato', accessorFn: (f) => contato(f), meta: { label: 'Contato' } },
+		{
+			id: 'custo',
+			accessorFn: (f) => f.custo_referencia ?? 0,
+			meta: { label: 'Custo ref.', thClass: 'text-right' }
+		},
+		{ id: 'avaliacao', accessorFn: (f) => f.avaliacao ?? 0, meta: { label: 'Avaliação' } }
+	];
 </script>
 
 <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
@@ -91,48 +104,36 @@
 	</form>
 
 	<Card padding="none" class="overflow-hidden">
-		<div class="overflow-x-auto">
-			<table class="w-full text-sm">
-				<thead>
-					<tr class="border-b border-grey-200 text-left text-xs uppercase tracking-wide text-grey">
-						<th class="px-4 py-3 font-semibold">Nome</th>
-						<th class="px-4 py-3 font-semibold">Tipo</th>
-						<th class="px-4 py-3 font-semibold">Especialidade</th>
-						<th class="px-4 py-3 font-semibold">Contato</th>
-						<th class="px-4 py-3 font-semibold text-right">Custo ref.</th>
-						<th class="px-4 py-3 font-semibold">Avaliação</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each data.itens as f (f.id)}
-						<tr
-							class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg"
-							onclick={() => abrirEdicao(f)}
-						>
-							<td class="px-4 py-3">
-								<span class="font-medium text-navy">{f.nome}</span>
-								{#if !f.ativo}
-									<span class="ml-2 text-xs text-grey">(inativo)</span>
-								{/if}
-							</td>
-							<td class="px-4 py-3">
-								<Badge tone={tipoTone[f.tipo] ?? 'neutral'}>{tipoLabel[f.tipo] ?? f.tipo}</Badge>
-							</td>
-							<td class="px-4 py-3 text-slate">{f.especialidade ?? '—'}</td>
-							<td class="px-4 py-3 text-slate">{contato(f) || '—'}</td>
-							<td class="px-4 py-3 text-right tabular-nums text-navy">
-								{f.custo_referencia != null ? formatBRL(f.custo_referencia) : '—'}
-							</td>
-							<td class="px-4 py-3 tabular-nums text-slate">
-								{f.avaliacao != null ? `★ ${f.avaliacao}/5` : '—'}
-							</td>
-						</tr>
-					{:else}
-						<tr><td colspan="6" class="px-2"><EmptyState icon="building" title="Nenhum fornecedor" description="Cadastre freelancers, fornecedores e parceiros." /></td></tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
+		<DataTable {columns} data={data.itens} initialSort={[{ id: 'nome', desc: false }]}>
+			{#snippet row(r)}
+				{@const f = r.original}
+				<tr
+					class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg"
+					onclick={() => abrirEdicao(f)}
+				>
+					<td class="px-4 py-3">
+						<span class="font-medium text-navy">{f.nome}</span>
+						{#if !f.ativo}
+							<span class="ml-2 text-xs text-grey">(inativo)</span>
+						{/if}
+					</td>
+					<td class="px-4 py-3">
+						<Badge tone={tipoTone[f.tipo] ?? 'neutral'}>{tipoLabel[f.tipo] ?? f.tipo}</Badge>
+					</td>
+					<td class="px-4 py-3 text-slate">{f.especialidade ?? '—'}</td>
+					<td class="px-4 py-3 text-slate">{contato(f) || '—'}</td>
+					<td class="px-4 py-3 text-right tabular-nums text-navy">
+						{f.custo_referencia != null ? formatBRL(f.custo_referencia) : '—'}
+					</td>
+					<td class="px-4 py-3 tabular-nums text-slate">
+						{f.avaliacao != null ? `★ ${f.avaliacao}/5` : '—'}
+					</td>
+				</tr>
+			{/snippet}
+			{#snippet empty()}
+				<tr><td colspan="6" class="px-2"><EmptyState icon="building" title="Nenhum fornecedor" description="Cadastre freelancers, fornecedores e parceiros." /></td></tr>
+			{/snippet}
+		</DataTable>
 	</Card>
 {/if}
 

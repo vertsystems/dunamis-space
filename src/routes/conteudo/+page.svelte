@@ -7,9 +7,19 @@
 		conteudoTipoLabel
 	} from '$lib/conteudo';
 	import { goto } from '$app/navigation';
-	import { Card, Badge, Button, Select, SegmentedNav, EmptyState } from '$lib/components/ui';
+	import { Card, Badge, Button, Select, SegmentedNav, EmptyState, DataTable } from '$lib/components/ui';
+	import type { ColumnDef } from '$lib/components/ui';
 
 	let { data } = $props();
+
+	type Conteudo = (typeof data.conteudos)[number];
+	const columns: ColumnDef<Conteudo>[] = [
+		{ id: 'publicacao', accessorFn: (c) => c.data_publicacao ?? '', meta: { label: 'Publicação' } },
+		{ id: 'titulo', accessorFn: (c) => c.titulo ?? '', meta: { label: 'Título' } },
+		{ id: 'cliente', accessorFn: (c) => c.cliente?.nome ?? '', meta: { label: 'Cliente' } },
+		{ id: 'tipo', accessorFn: (c) => conteudoTipoLabel(c.tipo), meta: { label: 'Tipo' } },
+		{ id: 'status', accessorFn: (c) => conteudoStatusLabel(c.status), meta: { label: 'Status' } }
+	];
 	let status = $state(data.status);
 	let tipo = $state(data.tipo);
 	// Re-sincroniza os filtros com a URL (back/forward do navegador).
@@ -55,30 +65,19 @@
 {#if data.loadError}<div class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">Erro ao carregar: {data.loadError}</div>{/if}
 
 <Card padding="none" class="overflow-hidden">
-	<div class="overflow-x-auto">
-		<table class="w-full text-sm">
-			<thead>
-				<tr class="border-b border-grey-200 text-left text-xs uppercase tracking-wide text-grey">
-					<th class="px-4 py-3 font-semibold">Publicação</th>
-					<th class="px-4 py-3 font-semibold">Título</th>
-					<th class="px-4 py-3 font-semibold">Cliente</th>
-					<th class="px-4 py-3 font-semibold">Tipo</th>
-					<th class="px-4 py-3 font-semibold">Status</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each data.conteudos as c (c.id)}
-					<tr class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg" onclick={() => goto(`/conteudo/${c.id}`)}>
-						<td class="px-4 py-3 whitespace-nowrap">{fmt(c.data_publicacao)}</td>
-						<td class="px-4 py-3"><a class="text-brand hover:underline" href={`/conteudo/${c.id}`}>{c.titulo ?? '(sem título)'}</a></td>
-						<td class="px-4 py-3">{c.cliente?.nome ?? '—'}</td>
-						<td class="px-4 py-3">{conteudoTipoLabel(c.tipo)}</td>
-						<td class="px-4 py-3"><Badge tone={conteudoStatusTone(c.status)}>{conteudoStatusLabel(c.status)}</Badge></td>
-					</tr>
-				{:else}
-					<tr><td colspan="5" class="px-2"><EmptyState icon="edit" title="Nenhum conteúdo ainda" description="Planeje as publicações dos clientes." /></td></tr>
-				{/each}
-			</tbody>
-		</table>
-	</div>
+	<DataTable {columns} data={data.conteudos} initialSort={[{ id: 'publicacao', desc: true }]}>
+		{#snippet row(r)}
+			{@const c = r.original}
+			<tr class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg" onclick={() => goto(`/conteudo/${c.id}`)}>
+				<td class="px-4 py-3 whitespace-nowrap">{fmt(c.data_publicacao)}</td>
+				<td class="px-4 py-3"><a class="text-brand hover:underline" href={`/conteudo/${c.id}`}>{c.titulo ?? '(sem título)'}</a></td>
+				<td class="px-4 py-3">{c.cliente?.nome ?? '—'}</td>
+				<td class="px-4 py-3">{conteudoTipoLabel(c.tipo)}</td>
+				<td class="px-4 py-3"><Badge tone={conteudoStatusTone(c.status)}>{conteudoStatusLabel(c.status)}</Badge></td>
+			</tr>
+		{/snippet}
+		{#snippet empty()}
+			<tr><td colspan="5" class="px-2"><EmptyState icon="edit" title="Nenhum conteúdo ainda" description="Planeje as publicações dos clientes." /></td></tr>
+		{/snippet}
+	</DataTable>
 </Card>

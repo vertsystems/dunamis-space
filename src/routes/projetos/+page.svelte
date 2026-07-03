@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { PROJETO_STATUS, projetoStatusTone, projetoStatusLabel, projetoTipoLabel } from '$lib/projetos';
-	import { Card, Badge, Button, Select, EmptyState } from '$lib/components/ui';
+	import { Card, Badge, Button, Select, EmptyState, DataTable } from '$lib/components/ui';
+	import type { ColumnDef } from '$lib/components/ui';
 
 	let { data } = $props();
 	let status = $state(data.status);
@@ -13,6 +14,16 @@
 	function fmtData(d: string | null) {
 		return d ? new Date(d + 'T00:00:00').toLocaleDateString('pt-BR') : '—';
 	}
+
+	type Projeto = (typeof data.projetos)[number];
+	const columns: ColumnDef<Projeto>[] = [
+		{ id: 'projeto', accessorFn: (p) => p.nome ?? '', meta: { label: 'Projeto' } },
+		{ id: 'cliente', accessorFn: (p) => p.cliente?.nome ?? '', meta: { label: 'Cliente' } },
+		{ id: 'tipo', accessorFn: (p) => projetoTipoLabel(p.tipo), meta: { label: 'Tipo' } },
+		{ id: 'responsavel', accessorFn: (p) => p.responsavel?.nome ?? '', meta: { label: 'Responsável' } },
+		{ id: 'prazo', accessorFn: (p) => p.prazo ?? '', meta: { label: 'Prazo' } },
+		{ id: 'status', accessorFn: (p) => projetoStatusLabel(p.status), meta: { label: 'Status' } }
+	];
 </script>
 
 <div class="mb-4">
@@ -34,32 +45,20 @@
 {#if data.loadError}<div class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">Erro ao carregar: {data.loadError}</div>{/if}
 
 <Card padding="none" class="overflow-hidden">
-	<div class="overflow-x-auto">
-		<table class="w-full text-sm">
-			<thead>
-				<tr class="border-b border-grey-200 text-left text-xs uppercase tracking-wide text-grey">
-					<th class="px-4 py-3 font-semibold">Projeto</th>
-					<th class="px-4 py-3 font-semibold">Cliente</th>
-					<th class="px-4 py-3 font-semibold">Tipo</th>
-					<th class="px-4 py-3 font-semibold">Responsável</th>
-					<th class="px-4 py-3 font-semibold">Prazo</th>
-					<th class="px-4 py-3 font-semibold">Status</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each data.projetos as p (p.id)}
-					<tr class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg" onclick={() => goto(`/projetos/${p.id}`)}>
-						<td class="px-4 py-3"><a class="text-brand hover:underline" href={`/projetos/${p.id}`}>{p.nome}</a></td>
-						<td class="px-4 py-3">{p.cliente?.nome ?? '—'}</td>
-						<td class="px-4 py-3">{projetoTipoLabel(p.tipo)}</td>
-						<td class="px-4 py-3">{p.responsavel?.nome ?? '—'}</td>
-						<td class="px-4 py-3 whitespace-nowrap">{fmtData(p.prazo)}</td>
-						<td class="px-4 py-3"><Badge tone={projetoStatusTone(p.status)}>{projetoStatusLabel(p.status)}</Badge></td>
-					</tr>
-				{:else}
-					<tr><td colspan="6" class="px-2"><EmptyState icon="folder" title="Nenhum projeto ainda" description="Crie projetos e jobs para os clientes." /></td></tr>
-				{/each}
-			</tbody>
-		</table>
-	</div>
+	<DataTable {columns} data={data.projetos} initialSort={[{ id: 'projeto', desc: false }]}>
+		{#snippet row(r)}
+			{@const p = r.original}
+			<tr class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg" onclick={() => goto(`/projetos/${p.id}`)}>
+				<td class="px-4 py-3"><a class="text-brand hover:underline" href={`/projetos/${p.id}`}>{p.nome}</a></td>
+				<td class="px-4 py-3">{p.cliente?.nome ?? '—'}</td>
+				<td class="px-4 py-3">{projetoTipoLabel(p.tipo)}</td>
+				<td class="px-4 py-3">{p.responsavel?.nome ?? '—'}</td>
+				<td class="px-4 py-3 whitespace-nowrap">{fmtData(p.prazo)}</td>
+				<td class="px-4 py-3"><Badge tone={projetoStatusTone(p.status)}>{projetoStatusLabel(p.status)}</Badge></td>
+			</tr>
+		{/snippet}
+		{#snippet empty()}
+			<tr><td colspan="6" class="px-2"><EmptyState icon="folder" title="Nenhum projeto ainda" description="Crie projetos e jobs para os clientes." /></td></tr>
+		{/snippet}
+	</DataTable>
 </Card>

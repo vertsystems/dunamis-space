@@ -1,10 +1,21 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { formatBRL } from '$lib/contratos';
-	import { Card, Badge, Button, Breadcrumb, EmptyState } from '$lib/components/ui';
+	import { Card, Badge, Button, Breadcrumb, EmptyState, DataTable } from '$lib/components/ui';
+	import type { ColumnDef } from '$lib/components/ui';
 
 	let { data } = $props();
 	const lim = (n: number | null) => (n == null ? '—' : n);
+
+	type Plano = (typeof data.planos)[number];
+	const columns: ColumnDef<Plano>[] = [
+		{ id: 'nome', accessorFn: (p) => p.nome ?? '', meta: { label: 'Plano' } },
+		{ id: 'valor', accessorFn: (p) => p.valor_mensal ?? 0, meta: { label: 'Valor mensal', thClass: 'text-right' } },
+		{ id: 'posts', accessorFn: (p) => p.limite_posts ?? 0, meta: { label: 'Posts', thClass: 'text-center' } },
+		{ id: 'stories', accessorFn: (p) => p.limite_stories ?? 0, meta: { label: 'Stories', thClass: 'text-center' } },
+		{ id: 'reels', accessorFn: (p) => p.limite_reels ?? 0, meta: { label: 'Reels', thClass: 'text-center' } },
+		{ id: 'status', accessorFn: (p) => (p.ativo ? 1 : 0), meta: { label: 'Status' } }
+	];
 </script>
 
 <Breadcrumb items={[{ label: 'Contratos', href: '/contratos' }, { label: 'Planos' }]} />
@@ -22,34 +33,22 @@
 {/if}
 
 <Card padding="none" class="overflow-hidden">
-	<div class="overflow-x-auto">
-		<table class="w-full text-sm">
-			<thead>
-				<tr class="border-b border-grey-200 text-left text-xs uppercase tracking-wide text-grey">
-					<th class="px-4 py-3 font-semibold">Plano</th>
-					<th class="px-4 py-3 font-semibold text-right">Valor mensal</th>
-					<th class="px-4 py-3 font-semibold text-center">Posts</th>
-					<th class="px-4 py-3 font-semibold text-center">Stories</th>
-					<th class="px-4 py-3 font-semibold text-center">Reels</th>
-					<th class="px-4 py-3 font-semibold">Status</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each data.planos as p (p.id)}
-					<tr class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg" onclick={() => goto(`/contratos/planos/${p.id}`)}>
-						<td class="px-4 py-3"><a class="text-brand hover:underline" href={`/contratos/planos/${p.id}`}>{p.nome}</a></td>
-						<td class="px-4 py-3 text-right tabular-nums">{formatBRL(p.valor_mensal)}</td>
-						<td class="px-4 py-3 text-center">{lim(p.limite_posts)}</td>
-						<td class="px-4 py-3 text-center">{lim(p.limite_stories)}</td>
-						<td class="px-4 py-3 text-center">{lim(p.limite_reels)}</td>
-						<td class="px-4 py-3">
-							<Badge tone={p.ativo ? 'success' : 'neutral'}>{p.ativo ? 'Ativo' : 'Inativo'}</Badge>
-						</td>
-					</tr>
-				{:else}
-					<tr><td colspan="6" class="px-2"><EmptyState icon="tag" title="Nenhum plano ainda" description="Crie os planos oferecidos pela agência." /></td></tr>
-				{/each}
-			</tbody>
-		</table>
-	</div>
+	<DataTable {columns} data={data.planos} initialSort={[{ id: 'nome', desc: false }]}>
+		{#snippet row(r)}
+			{@const p = r.original}
+			<tr class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg" onclick={() => goto(`/contratos/planos/${p.id}`)}>
+				<td class="px-4 py-3"><a class="text-brand hover:underline" href={`/contratos/planos/${p.id}`}>{p.nome}</a></td>
+				<td class="px-4 py-3 text-right tabular-nums">{formatBRL(p.valor_mensal)}</td>
+				<td class="px-4 py-3 text-center">{lim(p.limite_posts)}</td>
+				<td class="px-4 py-3 text-center">{lim(p.limite_stories)}</td>
+				<td class="px-4 py-3 text-center">{lim(p.limite_reels)}</td>
+				<td class="px-4 py-3">
+					<Badge tone={p.ativo ? 'success' : 'neutral'}>{p.ativo ? 'Ativo' : 'Inativo'}</Badge>
+				</td>
+			</tr>
+		{/snippet}
+		{#snippet empty()}
+			<tr><td colspan="6" class="px-2"><EmptyState icon="tag" title="Nenhum plano ainda" description="Crie os planos oferecidos pela agência." /></td></tr>
+		{/snippet}
+	</DataTable>
 </Card>

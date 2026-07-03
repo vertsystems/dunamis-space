@@ -1,9 +1,24 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { formatBRL } from '$lib/clientes';
-	import { Button, Card, Input, EmptyState } from '$lib/components/ui';
+	import { Button, Card, Input, EmptyState, DataTable } from '$lib/components/ui';
+	import type { ColumnDef } from '$lib/components/ui';
 
 	let { data } = $props();
+
+	type Cliente = (typeof data.clientes)[number];
+	const columns: ColumnDef<Cliente>[] = [
+		{ id: 'nome', accessorFn: (c) => c.nome ?? '', meta: { label: 'Nome' } },
+		{ id: 'cnpj_cpf', accessorFn: (c) => c.cnpj_cpf ?? '', meta: { label: 'CNPJ/CPF' } },
+		{ id: 'cidade', accessorFn: (c) => c.cidade ?? '', meta: { label: 'Cidade/UF' } },
+		{ id: 'plano', accessorFn: (c) => c.plano_ref ?? '', meta: { label: 'Plano' } },
+		{ id: 'mrr', accessorFn: (c) => c.mrr ?? 0, meta: { label: 'Valor ref.', thClass: 'text-right' } },
+		{
+			id: 'dia_vencimento',
+			accessorFn: (c) => c.dia_vencimento ?? 0,
+			meta: { label: 'Venc.', thClass: 'text-right' }
+		}
+	];
 
 	let q = $state(data.q);
 	// Re-sincroniza o campo com a URL (ex.: back/forward do navegador).
@@ -36,40 +51,28 @@
 	{/if}
 
 	<Card padding="none" class="overflow-hidden">
-		<div class="overflow-x-auto">
-			<table class="w-full text-sm">
-				<thead>
-					<tr class="border-b border-grey-200 text-left text-xs uppercase tracking-wide text-grey">
-						<th class="px-4 py-3 font-semibold">Nome</th>
-						<th class="px-4 py-3 font-semibold">CNPJ/CPF</th>
-						<th class="px-4 py-3 font-semibold">Cidade/UF</th>
-						<th class="px-4 py-3 font-semibold">Plano</th>
-						<th class="px-4 py-3 font-semibold text-right">Valor ref.</th>
-						<th class="px-4 py-3 font-semibold text-right">Venc.</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each data.clientes as c (c.id)}
-						<tr
-							class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg"
-							onclick={() => goto('/cadastro/' + c.id)}
-						>
-							<td class="px-4 py-3 font-medium text-navy">{c.nome}</td>
-							<td class="px-4 py-3 text-slate">{c.cnpj_cpf ?? '—'}</td>
-							<td class="px-4 py-3 text-slate">
-								{c.cidade ?? '—'}{c.estado ? ` / ${c.estado}` : ''}
-							</td>
-							<td class="px-4 py-3 text-slate">{c.plano_ref ?? '—'}</td>
-							<td class="px-4 py-3 text-right tabular-nums text-navy">{formatBRL(c.mrr)}</td>
-							<td class="px-4 py-3 text-right tabular-nums text-slate">
-								{c.dia_vencimento ?? '—'}
-							</td>
-						</tr>
-					{:else}
-						<tr><td colspan="6" class="px-2"><EmptyState icon="file" title="Nenhum cliente encontrado" description="Os clientes cadastrados aparecem aqui." /></td></tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
+		<DataTable {columns} data={data.clientes} initialSort={[{ id: 'nome', desc: false }]}>
+			{#snippet row(r)}
+				{@const c = r.original}
+				<tr
+					class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg"
+					onclick={() => goto('/cadastro/' + c.id)}
+				>
+					<td class="px-4 py-3 font-medium text-navy">{c.nome}</td>
+					<td class="px-4 py-3 text-slate">{c.cnpj_cpf ?? '—'}</td>
+					<td class="px-4 py-3 text-slate">
+						{c.cidade ?? '—'}{c.estado ? ` / ${c.estado}` : ''}
+					</td>
+					<td class="px-4 py-3 text-slate">{c.plano_ref ?? '—'}</td>
+					<td class="px-4 py-3 text-right tabular-nums text-navy">{formatBRL(c.mrr)}</td>
+					<td class="px-4 py-3 text-right tabular-nums text-slate">
+						{c.dia_vencimento ?? '—'}
+					</td>
+				</tr>
+			{/snippet}
+			{#snippet empty()}
+				<tr><td colspan="6" class="px-2"><EmptyState icon="file" title="Nenhum cliente encontrado" description="Os clientes cadastrados aparecem aqui." /></td></tr>
+			{/snippet}
+		</DataTable>
 	</Card>
 {/if}

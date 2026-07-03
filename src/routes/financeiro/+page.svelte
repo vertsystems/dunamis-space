@@ -7,9 +7,24 @@
 		statusLabel,
 		formatBRL
 	} from '$lib/financeiro';
-	import { Card, Badge, Button, Select, EmptyState } from '$lib/components/ui';
+	import { Card, Badge, Button, Select, EmptyState, DataTable } from '$lib/components/ui';
+	import type { ColumnDef } from '$lib/components/ui';
 
 	let { data } = $props();
+
+	type Transacao = (typeof data.transacoes)[number];
+	const columns: ColumnDef<Transacao>[] = [
+		{ id: 'competencia', accessorFn: (t) => t.data_competencia ?? '', meta: { label: 'Competência' } },
+		{ id: 'descricao', accessorFn: (t) => t.descricao ?? '', meta: { label: 'Descrição' } },
+		{ id: 'categoria', accessorFn: (t) => t.categoria ?? '', meta: { label: 'Categoria' } },
+		{ id: 'cliente', accessorFn: (t) => t.cliente?.nome ?? '', meta: { label: 'Cliente' } },
+		{ id: 'status', accessorFn: (t) => statusLabel(t.status), meta: { label: 'Status' } },
+		{
+			id: 'valor',
+			accessorFn: (t) => (t.tipo === 'receita' ? 1 : -1) * Number(t.valor ?? 0),
+			meta: { label: 'Valor', thClass: 'text-right' }
+		}
+	];
 	let tipo = $state(data.tipo);
 	let status = $state(data.status);
 	// Re-sincroniza os filtros com a URL (back/forward do navegador).
@@ -72,35 +87,23 @@
 {/if}
 
 <Card padding="none" class="overflow-hidden">
-	<div class="overflow-x-auto">
-		<table class="w-full text-sm">
-			<thead>
-				<tr class="border-b border-grey-200 text-left text-xs uppercase tracking-wide text-grey">
-					<th class="px-4 py-3 font-semibold">Competência</th>
-					<th class="px-4 py-3 font-semibold">Descrição</th>
-					<th class="px-4 py-3 font-semibold">Categoria</th>
-					<th class="px-4 py-3 font-semibold">Cliente</th>
-					<th class="px-4 py-3 font-semibold">Status</th>
-					<th class="px-4 py-3 font-semibold text-right">Valor</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each data.transacoes as t (t.id)}
-					{@const receita = t.tipo === 'receita'}
-					<tr class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg" onclick={() => goto(`/financeiro/${t.id}`)}>
-						<td class="px-4 py-3 whitespace-nowrap">{fmtData(t.data_competencia)}</td>
-						<td class="px-4 py-3"><a class="text-brand hover:underline" href={`/financeiro/${t.id}`}>{t.descricao ?? '—'}</a></td>
-						<td class="px-4 py-3">{t.categoria ?? '—'}</td>
-						<td class="px-4 py-3">{t.cliente?.nome ?? '—'}</td>
-						<td class="px-4 py-3"><Badge tone={statusTone(t.status)}>{statusLabel(t.status)}</Badge></td>
-						<td class="px-4 py-3 text-right tabular-nums font-medium {receita ? 'text-brand-green' : 'text-brand-danger'}">
-							{receita ? '+' : '−'}{formatBRL(t.valor)}
-						</td>
-					</tr>
-				{:else}
-					<tr><td colspan="6" class="px-2"><EmptyState icon="dollar" title="Nenhuma transação ainda" description="Registre receitas e despesas para acompanhar o caixa." /></td></tr>
-				{/each}
-			</tbody>
-		</table>
-	</div>
+	<DataTable {columns} data={data.transacoes} initialSort={[{ id: 'competencia', desc: true }]}>
+		{#snippet row(r)}
+			{@const t = r.original}
+			{@const receita = t.tipo === 'receita'}
+			<tr class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg" onclick={() => goto(`/financeiro/${t.id}`)}>
+				<td class="px-4 py-3 whitespace-nowrap">{fmtData(t.data_competencia)}</td>
+				<td class="px-4 py-3"><a class="text-brand hover:underline" href={`/financeiro/${t.id}`}>{t.descricao ?? '—'}</a></td>
+				<td class="px-4 py-3">{t.categoria ?? '—'}</td>
+				<td class="px-4 py-3">{t.cliente?.nome ?? '—'}</td>
+				<td class="px-4 py-3"><Badge tone={statusTone(t.status)}>{statusLabel(t.status)}</Badge></td>
+				<td class="px-4 py-3 text-right tabular-nums font-medium {receita ? 'text-brand-green' : 'text-brand-danger'}">
+					{receita ? '+' : '−'}{formatBRL(t.valor)}
+				</td>
+			</tr>
+		{/snippet}
+		{#snippet empty()}
+			<tr><td colspan="6" class="px-2"><EmptyState icon="dollar" title="Nenhuma transação ainda" description="Registre receitas e despesas para acompanhar o caixa." /></td></tr>
+		{/snippet}
+	</DataTable>
 </Card>
