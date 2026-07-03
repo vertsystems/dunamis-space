@@ -72,8 +72,6 @@
 			icon: 'comercial',
 			areas: [
 				{ href: '/crm', label: 'CRM Master', icon: 'funnel' },
-				{ href: '/clientes', label: 'Clientes (CRM)', icon: 'contact' },
-				{ href: '/contratos', label: 'Contratos & Planos', icon: 'file' },
 				{ href: '/financeiro', label: 'Financeiro', icon: 'dollar' }
 			]
 		},

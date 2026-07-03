@@ -32,10 +32,13 @@
 		<h1 class="text-xl font-bold text-navy">Cadastro de Clientes</h1>
 		<p class="text-sm text-grey">Ficha cadastral e dados de referência dos clientes</p>
 	</div>
-	<form class="flex items-end gap-2" method="GET">
-		<Input type="search" name="q" placeholder="Buscar por nome" bind:value={q} wrapperClass="w-56" />
-		<Button variant="secondary" type="submit">Buscar</Button>
-	</form>
+	<div class="flex flex-wrap items-end gap-2">
+		<form class="flex items-end gap-2" method="GET">
+			<Input type="search" name="q" placeholder="Buscar por nome" bind:value={q} wrapperClass="w-56" />
+			<Button variant="secondary" type="submit">Buscar</Button>
+		</form>
+		<Button onclick={() => goto('/clientes/novo')}>+ Novo cliente</Button>
+	</div>
 </div>
 
 {#if data.pendente}
