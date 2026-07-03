@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { deserialize } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
-	import { Button } from '$lib/components/ui';
+	import { Button, Tabs, Select } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import CrmKpis from '$lib/components/crm/CrmKpis.svelte';
@@ -44,13 +44,12 @@
 
 	// ---------------- Visão ----------------
 	const VIEWS = [
-		{ id: 'pipeline', label: 'Pipeline' },
-		{ id: 'negocios', label: 'Negócios' },
-		{ id: 'contatos', label: 'Contatos' },
-		{ id: 'atividades', label: 'Atividades' }
-	] as const;
-	type View = (typeof VIEWS)[number]['id'];
-	let view = $state<View>('pipeline');
+		{ value: 'pipeline', label: 'Pipeline' },
+		{ value: 'negocios', label: 'Negócios' },
+		{ value: 'contatos', label: 'Contatos' },
+		{ value: 'atividades', label: 'Atividades' }
+	];
+	let view = $state('pipeline');
 
 	// ---------------- Drawer ----------------
 	let drawerAberto = $state(false);
@@ -156,13 +155,9 @@
 	</div>
 	<div class="flex items-center gap-2">
 		{#if data.pipelines.length > 1 && view === 'pipeline'}
-			<select
-				class="h-9 rounded-[var(--radius)] border border-grey-200 bg-surface px-2 text-sm text-navy"
-				bind:value={pipelineAtivo}
-				aria-label="Funil"
-			>
+			<Select bind:value={pipelineAtivo} aria-label="Funil" wrapperClass="w-44">
 				{#each data.pipelines as p (p.id)}<option value={p.id}>{p.nome}</option>{/each}
-			</select>
+			</Select>
 		{/if}
 		{#if !data.crmPendente}
 			{#if podeCriarContato}
@@ -191,19 +186,7 @@
 
 	<div class="mb-4"><CrmKpis {kpis} /></div>
 
-	<div class="inline-flex rounded-[var(--radius)] border border-grey-200 bg-surface p-0.5 mb-4">
-		{#each VIEWS as v (v.id)}
-			<button
-				type="button"
-				class="px-3 py-1.5 text-sm font-medium rounded-[var(--radius-sm)] {view === v.id
-					? 'bg-brand text-white'
-					: 'text-slate hover:bg-bg'}"
-				onclick={() => (view = v.id)}
-			>
-				{v.label}
-			</button>
-		{/each}
-	</div>
+	<Tabs items={VIEWS} bind:value={view} class="mb-4" />
 
 	{#if view === 'pipeline'}
 		<CrmPipeline

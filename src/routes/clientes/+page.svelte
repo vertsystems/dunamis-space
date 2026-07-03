@@ -3,6 +3,7 @@
 	import { formatBRL } from '$lib/clientes';
 	import { Button, Input } from '$lib/components/ui';
 	import { toast } from '$lib/toast.svelte';
+	import { autoanimate } from '$lib/autoAnimate';
 
 	let { data } = $props();
 
@@ -87,6 +88,7 @@
 				? 'outline-2 outline-dashed outline-brand bg-grey-200/40'
 				: ''}"
 			role="list"
+			use:autoanimate
 			ondragover={(e) => {
 				e.preventDefault();
 				overCol = col.status;

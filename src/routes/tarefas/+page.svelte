@@ -2,6 +2,7 @@
 	import { TAREFA_STATUS, prioridadeTone, prioridadeLabel } from '$lib/tarefas';
 	import { Badge, Button } from '$lib/components/ui';
 	import { toast } from '$lib/toast.svelte';
+	import { autoanimate } from '$lib/autoAnimate';
 
 	let { data } = $props();
 
@@ -68,6 +69,7 @@
 		<div
 			class="rounded-[var(--radius-lg)] bg-bg p-3 min-h-50 transition-colors {overCol === col.value ? 'outline-2 outline-dashed outline-brand bg-grey-200/40' : ''}"
 			role="list"
+			use:autoanimate
 			ondragover={(e) => {
 				e.preventDefault();
 				overCol = col.value;
