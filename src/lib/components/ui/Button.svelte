@@ -29,20 +29,24 @@
 
 	const base =
 		'inline-flex items-center justify-center gap-2 font-semibold rounded-[var(--radius)] ' +
-		'transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ' +
-		'disabled:opacity-50 disabled:pointer-events-none select-none';
+		'transition-all duration-150 ease-out active:scale-[0.98] whitespace-nowrap ' +
+		'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35 focus-visible:ring-offset-2 focus-visible:ring-offset-bg ' +
+		'disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100 disabled:shadow-none select-none';
 
 	const variants: Record<ButtonVariant, string> = {
-		primary: 'bg-brand text-white hover:bg-brand-danger',
-		secondary: 'bg-surface text-navy border border-grey-200 hover:bg-bg',
-		ghost: 'bg-transparent text-slate hover:bg-bg',
-		danger: 'bg-brand-danger text-white hover:brightness-110',
-		success: 'bg-brand-green text-white hover:brightness-110'
+		primary:
+			'bg-brand text-white shadow-[0_2px_10px_-2px_rgba(59,110,246,0.55)] hover:brightness-[1.07] active:brightness-95',
+		secondary: 'bg-surface text-navy border border-grey-200 shadow-xs hover:bg-bg hover:border-grey',
+		ghost: 'bg-transparent text-slate hover:bg-bg hover:text-navy',
+		danger:
+			'bg-brand-danger text-white shadow-[0_2px_10px_-2px_rgba(240,68,56,0.5)] hover:brightness-[1.07] active:brightness-95',
+		success:
+			'bg-brand-green text-white shadow-[0_2px_10px_-2px_rgba(23,178,106,0.5)] hover:brightness-[1.07] active:brightness-95'
 	};
 
 	const sizes: Record<ButtonSize, string> = {
-		sm: 'h-8 px-3 text-sm',
-		md: 'h-10 px-4 text-sm',
+		sm: 'h-8 px-3.5 text-sm',
+		md: 'h-10 px-4.5 text-sm',
 		lg: 'h-12 px-6 text-base'
 	};
 </script>

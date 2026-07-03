@@ -12,6 +12,6 @@
 	const pad = $derived({ none: '', sm: 'p-3', md: 'p-5', lg: 'p-6' }[padding]);
 </script>
 
-<div class="bg-surface border border-grey-200 rounded-[var(--radius-lg)] {pad} {extra}">
+<div class="bg-surface border border-grey-200 rounded-[var(--radius-lg)] shadow-sm {pad} {extra}">
 	{@render children()}
 </div>

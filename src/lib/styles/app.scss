@@ -1,28 +1,24 @@
-// Dunamis Space — App shell + tokens CSS (Bootstrap removido; design system = Tailwind)
-// Neutros: #05141B #182E3F #495B69 #939EA2 #CCD0CF
-// Acentos: #DE4908 (primary) · #F6AA19 (warning) · #FDDCA2 (cream) · #28A65F (success) · #4F311F (brown)
+// Dunamis Space — App shell (estética iOS 26 / minimalismo claro)
+// Tokens de cor/raio/sombra vivem em design-system.css (@theme). Aqui fica o
+// layout do shell: topbar flutuante em glass + sidebar contextual em glass.
 
-// Variáveis CSS expostas (paleta da marca) + aliases usados pelo layout custom.
 :root {
-	--ds-navy-900: #05141b;
-	--ds-navy: #182e3f;
-	--ds-slate: #495b69;
-	--ds-cream: #fddca2;
-	--ds-green: #28a65f;
-	--ds-amber: #f6aa19;
-	--ds-brown: #4f311f;
-	--ds-danger: #a8350a;
-	// Aliases usados pelo app shell
-	--ds-red: #de4908; // primary / laranja
-	--ds-dark: #182e3f; // topo / sidebar / avatar
-	--ds-grey: #ccd0cf;
-	--ds-light: #eef1f1; // fundo claro
+	--ds-navy-900: #0b1220;
+	--ds-navy: #1c2534;
+	--ds-slate: #5b6576;
+	--ds-primary: #3b6ef6; // azul primário
+	--ds-primary-600: #2f5fe0;
+	--ds-dark: #1c2534; // texto forte / neutro escuro
+	--ds-grey: #e6e9f1;
+	--ds-light: #f3f6fb; // fundo do app (gelo azulado)
+	--ds-glass: rgba(255, 255, 255, 0.72);
+	--ds-glass-border: rgba(255, 255, 255, 0.65);
 
 	// Layout: barra de departamentos flutuante + sidebar contextual
-	--ds-topbar-h: 48px;
-	--ds-topbar-gap: 7px; // margem lateral (max-width)
-	--ds-topbar-top: 3vh; // margem do topo
-	--ds-topbar-space: calc(var(--ds-topbar-top) + var(--ds-topbar-h) + 14px);
+	--ds-topbar-h: 50px;
+	--ds-topbar-gap: 10px;
+	--ds-topbar-top: 2.4vh;
+	--ds-topbar-space: calc(var(--ds-topbar-top) + var(--ds-topbar-h) + 16px);
 }
 
 html,
@@ -33,11 +29,23 @@ body {
 	min-height: 100vh;
 }
 
+// Fundo com brilhos suaves (aura azul/lilás) — profundidade sem poluição
+body::before {
+	content: '';
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	pointer-events: none;
+	background:
+		radial-gradient(60rem 60rem at 82% -8%, rgba(59, 110, 246, 0.07), transparent 60%),
+		radial-gradient(50rem 50rem at -10% 8%, rgba(139, 122, 246, 0.06), transparent 55%);
+}
+
 .app {
 	min-height: 100vh;
 }
 
-// Links de navegação nunca sublinham (nem no hover)
+// Links de navegação nunca sublinham
 .app-topbar a,
 .app-topbar a:hover,
 .app-sidebar a,
@@ -45,7 +53,7 @@ body {
 	text-decoration: none;
 }
 
-// Barra de departamentos flutuante (topo) — estilo claro
+// Barra de departamentos flutuante (topo) — glass
 .app-topbar {
 	position: fixed;
 	top: var(--ds-topbar-top);
@@ -55,28 +63,32 @@ body {
 	max-width: calc(100% - 2 * var(--ds-topbar-gap));
 	z-index: 30;
 	height: var(--ds-topbar-h);
-	background-color: #fff;
-	border: 1px solid #ececec;
-	border-radius: 12px;
-	box-shadow: 0 5px 16px rgba(0, 0, 0, 0.08);
+	background: var(--ds-glass);
+	backdrop-filter: blur(20px) saturate(180%);
+	-webkit-backdrop-filter: blur(20px) saturate(180%);
+	border: 1px solid var(--ds-glass-border);
+	border-radius: 18px;
+	box-shadow:
+		0 8px 24px -6px rgba(16, 24, 40, 0.14),
+		0 2px 6px rgba(16, 24, 40, 0.05);
 	display: flex;
 	align-items: center;
-	gap: 0.77rem;
-	padding: 0 0.62rem;
+	gap: 0.6rem;
+	padding: 0 0.6rem;
 
 	.brand {
 		display: flex;
 		align-items: center;
 		flex-shrink: 0;
+		padding-right: 0.1rem;
 
 		.brand-logo {
-			height: 18px;
+			height: 19px;
 			width: auto;
 			display: block;
 		}
 	}
 
-	// Departamentos (ao lado da marca, sem caixa de fundo)
 	.departments {
 		display: flex;
 		align-items: center;
@@ -86,34 +98,39 @@ body {
 			position: relative;
 			display: flex;
 			align-items: center;
-			gap: 0.33rem;
-			color: #6b7280;
-			padding: 0.39rem 0.69rem;
-			border-radius: 7px;
+			gap: 0.36rem;
+			color: #64707f;
+			padding: 0.42rem 0.72rem;
+			border-radius: 11px;
 			font-weight: 600;
-			font-size: 0.7rem;
+			font-size: 0.72rem;
+			transition:
+				background-color 0.18s ease,
+				color 0.18s ease,
+				box-shadow 0.18s ease;
 
 			&:hover {
 				color: var(--ds-dark);
+				background: rgba(16, 24, 40, 0.045);
 			}
 
 			&.is-active {
-				background: var(--ds-dark);
+				background: var(--ds-primary);
 				color: #fff;
-				box-shadow: 0 2px 7px rgba(0, 0, 0, 0.2);
+				box-shadow: 0 4px 12px -2px rgba(59, 110, 246, 0.5);
 			}
 
 			.badge {
 				position: absolute;
-				top: -4px;
+				top: -3px;
 				right: -2px;
-				min-width: 13px;
-				height: 13px;
+				min-width: 14px;
+				height: 14px;
 				padding: 0 3px;
-				background: var(--ds-red);
+				background: var(--color-brand-danger, #f04438);
 				color: #fff;
-				border-radius: 7px;
-				font-size: 0.5rem;
+				border-radius: 8px;
+				font-size: 0.52rem;
 				font-weight: 700;
 				display: flex;
 				align-items: center;
@@ -126,23 +143,26 @@ body {
 	.actions {
 		display: flex;
 		align-items: center;
-		gap: 0.31rem;
+		gap: 0.3rem;
 		flex-shrink: 0;
 
 		.icon-btn {
-			width: 28px;
-			height: 28px;
-			border-radius: 8px;
+			width: 30px;
+			height: 30px;
+			border-radius: 10px;
 			border: none;
 			background: transparent;
-			color: #9aa1ab;
+			color: #8a94a6;
 			cursor: pointer;
 			display: flex;
 			align-items: center;
 			justify-content: center;
+			transition:
+				background-color 0.18s ease,
+				color 0.18s ease;
 
 			&:hover {
-				background: #f1f1f2;
+				background: rgba(16, 24, 40, 0.05);
 				color: var(--ds-dark);
 			}
 
@@ -152,17 +172,18 @@ body {
 		}
 
 		.avatar {
-			width: 28px;
-			height: 28px;
+			width: 30px;
+			height: 30px;
 			border-radius: 50%;
-			background: var(--ds-dark);
+			background: linear-gradient(135deg, #4c82ff, #2f5fe0);
 			color: #fff;
 			font-weight: 700;
-			font-size: 0.6rem;
+			font-size: 0.62rem;
 			display: flex;
 			align-items: center;
 			justify-content: center;
 			flex-shrink: 0;
+			box-shadow: 0 2px 8px -1px rgba(59, 110, 246, 0.5);
 		}
 	}
 }
@@ -180,16 +201,18 @@ body {
 	min-height: 100vh;
 }
 
-// Sidebar contextual (áreas do departamento ativo)
+// Sidebar contextual — glass
 .app-sidebar {
-	width: 240px;
+	width: 244px;
 	flex-shrink: 0;
-	margin: 0.75rem 0 0 50px; // topo alinhado com o conteúdo da direita
-	padding: 0.6rem 0.55rem;
-	background: #f2f2f2;
-	border: 1px solid rgba(5, 20, 27, 0.08);
-	border-radius: 16px;
-	box-shadow: 0 6px 20px rgba(5, 20, 27, 0.1);
+	margin: 0.75rem 0 0 50px;
+	padding: 0.7rem 0.6rem;
+	background: var(--ds-glass);
+	backdrop-filter: blur(20px) saturate(180%);
+	-webkit-backdrop-filter: blur(20px) saturate(180%);
+	border: 1px solid var(--ds-glass-border);
+	border-radius: 22px;
+	box-shadow: 0 14px 34px -10px rgba(16, 24, 40, 0.14);
 	position: sticky;
 	top: var(--ds-topbar-space);
 	align-self: flex-start;
@@ -197,35 +220,39 @@ body {
 	.sidebar-title {
 		font-size: 0.66rem;
 		text-transform: uppercase;
-		letter-spacing: 0.09em;
-		color: #333333;
-		font-weight: 600;
-		padding: 0.5rem 0.85rem 0.7rem;
+		letter-spacing: 0.1em;
+		color: #8a94a6;
+		font-weight: 700;
+		padding: 0.5rem 0.85rem 0.75rem;
 	}
 
 	a {
 		display: flex;
 		align-items: center;
 		gap: 0.7rem;
-		color: #333333;
-		padding: 0.6rem 0.85rem;
-		border-radius: 10px;
+		color: #4a5464;
+		padding: 0.62rem 0.85rem;
+		border-radius: 13px;
 		font-size: 0.9rem;
-		margin-bottom: 2px;
+		font-weight: 500;
+		margin-bottom: 3px;
+		transition:
+			background-color 0.16s ease,
+			color 0.16s ease;
 
 		svg {
-			opacity: 0.85;
+			opacity: 0.8;
 			flex-shrink: 0;
 		}
 
 		&:hover {
-			background-color: #e6e6e6;
-			color: #333333;
+			background-color: rgba(16, 24, 40, 0.05);
+			color: var(--ds-dark);
 		}
 
 		&.is-active {
-			background-color: #e6e6e6;
-			color: #333333;
+			background-color: rgba(59, 110, 246, 0.1);
+			color: var(--ds-primary);
 			font-weight: 600;
 
 			svg {
@@ -237,7 +264,7 @@ body {
 	.sidebar-empty {
 		padding: 0.5rem 0.85rem;
 		font-size: 0.82rem;
-		color: #333333;
+		color: #8a94a6;
 	}
 
 	// Item de submenu ainda não definido (placeholder "em breve")
@@ -245,27 +272,28 @@ body {
 		display: flex;
 		align-items: center;
 		gap: 0.7rem;
-		color: #9aa1ab;
-		padding: 0.6rem 0.85rem;
-		border-radius: 10px;
+		color: #aab4c5;
+		padding: 0.62rem 0.85rem;
+		border-radius: 13px;
 		font-size: 0.9rem;
-		margin-bottom: 2px;
+		font-weight: 500;
+		margin-bottom: 3px;
 		cursor: default;
 
 		svg {
-			opacity: 0.6;
+			opacity: 0.55;
 			flex-shrink: 0;
 		}
 
 		.soon-pill {
 			margin-left: auto;
-			font-size: 0.58rem;
+			font-size: 0.56rem;
 			text-transform: uppercase;
-			letter-spacing: 0.04em;
-			font-weight: 600;
-			background: #e4e4e4;
-			color: #808690;
-			padding: 1px 6px;
+			letter-spacing: 0.05em;
+			font-weight: 700;
+			background: rgba(16, 24, 40, 0.06);
+			color: #98a2b3;
+			padding: 2px 7px;
 			border-radius: 999px;
 		}
 	}
@@ -274,14 +302,14 @@ body {
 .app-content {
 	flex: 1;
 	min-width: 0;
-	padding: 0.75rem 80px 2.5rem;
+	padding: 0.9rem 80px 3rem;
 }
 
 // Mobile: topo e sidebar mostram apenas ícones
 @media (max-width: 768px) {
 	.app-topbar {
-		gap: 0.5rem;
-		padding: 0 0.5rem;
+		gap: 0.4rem;
+		padding: 0 0.45rem;
 
 		.brand-name {
 			display: none;
@@ -291,7 +319,7 @@ body {
 			gap: 0.1rem;
 
 			a {
-				padding: 0.5rem 0.6rem;
+				padding: 0.5rem 0.58rem;
 			}
 
 			.dept-label {
@@ -305,8 +333,9 @@ body {
 	}
 
 	.app-sidebar {
-		width: 56px;
-		padding: 0.5rem 0.4rem;
+		width: 60px;
+		margin-left: 12px;
+		padding: 0.5rem 0.45rem;
 
 		.sidebar-title,
 		.area-label,
@@ -318,7 +347,7 @@ body {
 		a,
 		.area-soon {
 			justify-content: center;
-			padding: 0.6rem 0;
+			padding: 0.62rem 0;
 
 			.ico {
 				font-size: 1.15rem;
@@ -328,7 +357,7 @@ body {
 	}
 
 	.app-content {
-		padding: 0.75rem 0.9rem 2.5rem;
+		padding: 0.9rem 0.9rem 2.5rem;
 
 		&.is-full {
 			padding-left: 0.9rem;

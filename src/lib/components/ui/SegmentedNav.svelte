@@ -6,12 +6,19 @@
 	let { items, current }: { items: Segment[]; current: string } = $props();
 </script>
 
-<div class="inline-flex rounded-[var(--radius)] border border-grey-200 bg-surface p-0.5">
+<div class="inline-flex gap-0.5 rounded-[var(--radius)] bg-bg p-1">
 	{#each items as it (it.href)}
 		{#if it.label === current}
-			<span class="px-3 py-1.5 text-sm font-medium rounded-[var(--radius-sm)] bg-brand text-white">{it.label}</span>
+			<span
+				class="px-3.5 py-1.5 text-sm font-semibold rounded-[var(--radius-sm)] bg-surface text-navy shadow-sm"
+				>{it.label}</span
+			>
 		{:else}
-			<a href={it.href} class="px-3 py-1.5 text-sm font-medium rounded-[var(--radius-sm)] text-slate hover:bg-bg">{it.label}</a>
+			<a
+				href={it.href}
+				class="px-3.5 py-1.5 text-sm font-medium rounded-[var(--radius-sm)] text-slate transition-colors hover:text-navy"
+				>{it.label}</a
+			>
 		{/if}
 	{/each}
 </div>

@@ -1,5 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { fade, scale } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	import Icon from '$lib/components/Icon.svelte';
 
 	let {
@@ -23,23 +25,25 @@
 
 {#if open}
 	<div
-		class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy-900/40 p-4 pt-[8vh]"
+		class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy-900/30 backdrop-blur-[3px] p-4 pt-[8vh]"
 		role="presentation"
 		onclick={(e) => {
 			if (e.target === e.currentTarget) onClose();
 		}}
+		transition:fade={{ duration: 160 }}
 	>
 		<div
-			class="w-full max-w-lg rounded-[var(--radius-lg)] bg-surface border border-grey-200 shadow-2xl"
+			class="w-full max-w-lg rounded-[var(--radius-xl)] bg-surface border border-grey-200 shadow-2xl"
 			role="dialog"
 			aria-modal="true"
 			aria-label={title}
+			transition:scale={{ start: 0.96, opacity: 0, duration: 200, easing: cubicOut }}
 		>
-			<div class="flex items-center justify-between gap-3 border-b border-grey-200 px-5 py-3.5">
+			<div class="flex items-center justify-between gap-3 border-b border-grey-200 px-5 py-4">
 				<h2 class="text-base font-semibold text-navy">{title}</h2>
 				<button
 					type="button"
-					class="grid size-8 place-items-center rounded-[var(--radius)] text-grey hover:bg-bg hover:text-navy"
+					class="grid size-8 place-items-center rounded-[var(--radius)] text-grey transition-colors hover:bg-bg hover:text-navy"
 					onclick={onClose}
 					aria-label="Fechar"
 				>

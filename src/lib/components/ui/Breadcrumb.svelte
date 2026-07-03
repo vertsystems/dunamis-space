@@ -15,7 +15,7 @@
 				{:else}
 					<span aria-current="page" class="text-navy font-medium">{item.label}</span>
 				{/if}
-				{#if i < items.length - 1}<span class="text-grey-200">/</span>{/if}
+				{#if i < items.length - 1}<span class="text-grey-200">›</span>{/if}
 			</li>
 		{/each}
 	</ol>
