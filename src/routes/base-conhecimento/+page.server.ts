@@ -1,3 +1,4 @@
+import { um } from '$lib/db';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
@@ -11,5 +12,6 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	if (q) query = query.ilike('titulo', `%${q}%`);
 
 	const { data, error } = await query;
-	return { artigos: data ?? [], q, loadError: error?.message ?? null };
+	const artigos = (data ?? []).map((a) => ({ ...a, cliente: um(a.cliente) }));
+	return { artigos, q, loadError: error?.message ?? null };
 };

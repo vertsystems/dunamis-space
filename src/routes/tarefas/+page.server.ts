@@ -1,4 +1,5 @@
 import { fail } from '@sveltejs/kit';
+import { um } from '$lib/db';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
@@ -22,7 +23,12 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		projetoNome = p?.nome ?? null;
 	}
 
-	return { tarefas: data ?? [], projeto, projetoNome, loadError: error?.message ?? null };
+	const tarefas = (data ?? []).map((t) => ({
+		...t,
+		projeto: um(t.projeto),
+		responsavel: um(t.responsavel)
+	}));
+	return { tarefas, projeto, projetoNome, loadError: error?.message ?? null };
 };
 
 export const actions: Actions = {

@@ -1,3 +1,4 @@
+import { um } from '$lib/db';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals: { supabase } }) => {
@@ -5,5 +6,6 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 		.from('campanhas')
 		.select('id, nome, data_inicio, data_fim, cliente:clientes(nome)')
 		.order('created_at', { ascending: false });
-	return { campanhas: data ?? [], loadError: error?.message ?? null };
+	const campanhas = (data ?? []).map((c) => ({ ...c, cliente: um(c.cliente) }));
+	return { campanhas, loadError: error?.message ?? null };
 };

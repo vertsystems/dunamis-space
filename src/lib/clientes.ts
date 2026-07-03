@@ -38,7 +38,9 @@ export function clienteFromForm(fd: FormData) {
 		const s = typeof v === 'string' ? v.trim() : '';
 		return s === '' ? null : s;
 	};
+	// MRR vem de <input type="number">: valor já normalizado com ponto decimal.
 	const mrrRaw = str('mrr');
+	const mrrNum = mrrRaw === null ? null : Number(mrrRaw);
 	return {
 		nome: str('nome') ?? '',
 		razao_social: str('razao_social'),
@@ -50,7 +52,7 @@ export function clienteFromForm(fd: FormData) {
 		status: str('status') ?? 'lead',
 		responsavel_id: str('responsavel_id'),
 		data_inicio: str('data_inicio'),
-		mrr: mrrRaw === null ? null : Number(mrrRaw.replace(/\./g, '').replace(',', '.')),
+		mrr: mrrNum !== null && Number.isNaN(mrrNum) ? null : mrrNum,
 		observacoes: str('observacoes')
 	};
 }

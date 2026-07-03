@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { TAREFA_STATUS, prioridadeTone, prioridadeLabel } from '$lib/tarefas';
 	import { Badge, Button } from '$lib/components/ui';
+	import { toast } from '$lib/toast.svelte';
 
 	let { data } = $props();
 
@@ -15,10 +16,22 @@
 	const byStatus = $derived((s: string) => cards.filter((c) => c.status === s));
 
 	async function persist(id: string, status: string) {
+		const anterior = data.tarefas.find((t) => t.id === id)?.status;
 		const fd = new FormData();
 		fd.set('id', id);
 		fd.set('status', status);
-		await fetch('?/move', { method: 'POST', body: fd, headers: { 'x-sveltekit-action': 'true' } });
+		try {
+			const res = await fetch('?/move', {
+				method: 'POST',
+				body: fd,
+				headers: { 'x-sveltekit-action': 'true' }
+			});
+			if (!res.ok) throw new Error();
+		} catch {
+			const card = cards.find((c) => c.id === id);
+			if (card && anterior !== undefined) card.status = anterior; // rollback otimista
+			toast.error('Não foi possível mover a tarefa.');
+		}
 	}
 
 	function onDrop(status: string) {

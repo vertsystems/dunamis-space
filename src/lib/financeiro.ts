@@ -38,9 +38,12 @@ function str(fd: FormData, k: string): string | null {
 	return s === '' ? null : s;
 }
 
+// Valor vem de <input type="number">: já em formato canônico (ponto decimal).
 function num(fd: FormData, k: string): number | null {
 	const s = str(fd, k);
-	return s === null ? null : Number(s.replace(/\./g, '').replace(',', '.'));
+	if (s === null) return null;
+	const n = Number(s);
+	return Number.isNaN(n) ? null : n;
 }
 
 function today(): string {

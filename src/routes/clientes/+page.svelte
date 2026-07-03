@@ -15,6 +15,10 @@
 	] as const;
 
 	let q = $state(data.q);
+	// Re-sincroniza o campo com a URL (ex.: back/forward do navegador).
+	$effect(() => {
+		q = data.q;
+	});
 
 	// Cópia local reativa (re-sincroniza quando o servidor devolve dados novos).
 	let cards = $state(data.clientes.map((c) => ({ ...c })));
@@ -30,24 +34,31 @@
 		daColuna(status).reduce((s, c) => s + Number(c.mrr ?? 0), 0)
 	);
 
-	async function persist(id: string, status: string) {
+	async function persist(id: string, status: string, prev: string, card: { status: string }) {
 		const fd = new FormData();
 		fd.set('id', id);
 		fd.set('status', status);
-		const res = await fetch('?/move', {
-			method: 'POST',
-			body: fd,
-			headers: { 'x-sveltekit-action': 'true' }
-		});
-		if (!res.ok) toast.error('Não foi possível mover o cliente.');
+		try {
+			const res = await fetch('?/move', {
+				method: 'POST',
+				body: fd,
+				headers: { 'x-sveltekit-action': 'true' }
+			});
+			if (!res.ok) throw new Error();
+		} catch {
+			// Reverte o card (proxy reativo → volta de coluna e recalcula o MRR).
+			card.status = prev;
+			toast.error('Não foi possível mover o cliente.');
+		}
 	}
 
 	function onDrop(status: string) {
 		overCol = null;
 		const card = cards.find((c) => c.id === dragId);
 		if (card && card.status !== status) {
-			card.status = status;
-			persist(card.id, status);
+			const prev = card.status;
+			card.status = status; // otimista
+			persist(card.id, status, prev, card);
 		}
 		dragId = null;
 	}

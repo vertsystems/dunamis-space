@@ -1,3 +1,4 @@
+import { um } from '$lib/db';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
@@ -25,7 +26,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		.reduce((s, t) => s + Number(t.valor ?? 0), 0);
 
 	return {
-		transacoes: transacoes ?? [],
+		transacoes: (transacoes ?? []).map((t) => ({ ...t, cliente: um(t.cliente) })),
 		tipo,
 		status,
 		receitas,

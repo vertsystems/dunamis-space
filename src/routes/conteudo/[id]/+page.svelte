@@ -46,7 +46,7 @@
 
 <Card class="mt-6">
 	<h2 class="text-base font-semibold text-navy mb-3">Aprovação do cliente</h2>
-	{#if aprovacao}
+	{#if aprovacao && aprovacao.status === 'pendente'}
 		<p class="mb-2 flex items-center gap-2 text-sm">
 			Status:
 			<Badge tone={aprovacaoStatusTone(aprovacao.status)}>{aprovacaoStatusLabel(aprovacao.status)}</Badge>
@@ -56,13 +56,20 @@
 			<Button variant="secondary" onclick={copiar}>{copiado ? 'Copiado!' : 'Copiar link'}</Button>
 		</div>
 		<p class="text-xs text-grey mt-1">Envie este link para o cliente aprovar ou pedir alteração (não precisa de login).</p>
-		{#if aprovacao.comentario_cliente}
-			<div class="mt-2 rounded-[var(--radius)] bg-bg px-4 py-3 text-sm text-slate"><strong>Comentário do cliente:</strong> {aprovacao.comentario_cliente}</div>
-		{/if}
 	{:else}
-		<p class="mb-3 text-slate">Gere um link público para o cliente aprovar este conteúdo.</p>
+		{#if aprovacao}
+			<p class="mb-2 flex items-center gap-2 text-sm">
+				Última resposta:
+				<Badge tone={aprovacaoStatusTone(aprovacao.status)}>{aprovacaoStatusLabel(aprovacao.status)}</Badge>
+			</p>
+			{#if aprovacao.comentario_cliente}
+				<div class="mb-3 rounded-[var(--radius)] bg-bg px-4 py-3 text-sm text-slate"><strong>Comentário do cliente:</strong> {aprovacao.comentario_cliente}</div>
+			{/if}
+		{:else}
+			<p class="mb-3 text-slate">Gere um link público para o cliente aprovar este conteúdo.</p>
+		{/if}
 		<form method="POST" action="?/enviarAprovacao" use:enhance>
-			<Button type="submit">Gerar link de aprovação</Button>
+			<Button type="submit">Gerar {aprovacao ? 'novo ' : ''}link de aprovação</Button>
 		</form>
 	{/if}
 </Card>

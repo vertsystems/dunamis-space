@@ -10,6 +10,10 @@
 
 	let { data } = $props();
 	let status = $state(data.status);
+	// Re-sincroniza o filtro com a URL (back/forward do navegador).
+	$effect(() => {
+		status = data.status;
+	});
 	let copiadoId = $state<string | null>(null);
 
 	const segs = [

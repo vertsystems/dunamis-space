@@ -12,6 +12,11 @@
 	let { data } = $props();
 	let status = $state(data.status);
 	let tipo = $state(data.tipo);
+	// Re-sincroniza os filtros com a URL (back/forward do navegador).
+	$effect(() => {
+		status = data.status;
+		tipo = data.tipo;
+	});
 
 	const segs = [
 		{ label: 'Lista', href: '/conteudo' },

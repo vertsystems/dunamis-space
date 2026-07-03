@@ -1,3 +1,4 @@
+import { um } from '$lib/db';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
@@ -11,5 +12,10 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	if (status) query = query.eq('status', status);
 
 	const { data, error } = await query;
-	return { projetos: data ?? [], status, loadError: error?.message ?? null };
+	const projetos = (data ?? []).map((p) => ({
+		...p,
+		cliente: um(p.cliente),
+		responsavel: um(p.responsavel)
+	}));
+	return { projetos, status, loadError: error?.message ?? null };
 };

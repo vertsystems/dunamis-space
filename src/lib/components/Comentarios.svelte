@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { Card, Button, Textarea } from '$lib/components/ui';
+	import { toast } from '$lib/toast.svelte';
 
 	let { entidadeTipo, entidadeId }: { entidadeTipo: string; entidadeId: string } = $props();
 
@@ -41,14 +42,18 @@
 		e.preventDefault();
 		if (!texto.trim()) return;
 		saving = true;
-		await supabase.from('comentarios').insert({
+		const { error } = await supabase.from('comentarios').insert({
 			entidade_tipo: entidadeTipo,
 			entidade_id: entidadeId,
 			colaborador_id: meuId,
 			texto: texto.trim()
 		});
-		texto = '';
 		saving = false;
+		if (error) {
+			toast.error('Não foi possível enviar o comentário.');
+			return; // mantém o texto para reenvio
+		}
+		texto = '';
 		await carregar();
 	}
 

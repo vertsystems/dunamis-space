@@ -12,6 +12,11 @@
 	let { data } = $props();
 	let tipo = $state(data.tipo);
 	let status = $state(data.status);
+	// Re-sincroniza os filtros com a URL (back/forward do navegador).
+	$effect(() => {
+		tipo = data.tipo;
+		status = data.status;
+	});
 
 	function fmtData(d: string | null) {
 		return d ? new Date(d + 'T00:00:00').toLocaleDateString('pt-BR') : '—';

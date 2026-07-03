@@ -15,11 +15,12 @@
 		loading = true;
 		error = '';
 		const { error: err } = await supabase.auth.signInWithPassword({ email, password });
-		loading = false;
 		if (err) {
+			loading = false;
 			error = err.message;
 			return;
 		}
+		// Mantém loading=true até a navegação concluir (evita duplo submit / flash do botão).
 		await invalidateAll();
 		await goto('/');
 	}

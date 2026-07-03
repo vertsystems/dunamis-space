@@ -27,9 +27,13 @@ function str(fd: FormData, k: string): string | null {
 	return s === '' ? null : s;
 }
 
+// Campos monetários vêm de <input type="number">: valor já em formato canônico
+// (ponto decimal, sem separador de milhar). Number() direto — sem parse pt-BR.
 function num(fd: FormData, k: string): number | null {
 	const s = str(fd, k);
-	return s === null ? null : Number(s.replace(/\./g, '').replace(',', '.'));
+	if (s === null) return null;
+	const n = Number(s);
+	return Number.isNaN(n) ? null : n;
 }
 
 function int(fd: FormData, k: string): number | null {

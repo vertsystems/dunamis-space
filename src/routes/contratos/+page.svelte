@@ -5,6 +5,10 @@
 
 	let { data } = $props();
 	let status = $state(data.status);
+	// Re-sincroniza o filtro com a URL (back/forward do navegador).
+	$effect(() => {
+		status = data.status;
+	});
 
 	function fmtData(d: string | null) {
 		return d ? new Date(d + 'T00:00:00').toLocaleDateString('pt-BR') : '—';

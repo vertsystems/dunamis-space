@@ -24,13 +24,27 @@
 
 	let saving = $state(false);
 	const v = (k: string) => conteudo?.[k] ?? '';
-	const dataPub = conteudo?.data_publicacao ? String(conteudo.data_publicacao).slice(0, 16) : '';
+	// Renderiza o instante armazenado (UTC) como hora LOCAL no input datetime-local,
+	// reativo a `conteudo` (ex.: revalidação após erro). A conversão de volta p/ UTC
+	// acontece no cliente, dentro do use:enhance (o fuso do servidor Vercel é UTC).
+	const dataPub = $derived.by(() => {
+		if (!conteudo?.data_publicacao) return '';
+		const d = new Date(conteudo.data_publicacao);
+		if (isNaN(d.getTime())) return '';
+		return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+	});
 </script>
 
 <form
 	method="POST"
 	{action}
-	use:enhance={() => {
+	use:enhance={({ formData }) => {
+		// datetime-local guarda hora local → converte para instante UTC antes de enviar.
+		const dp = formData.get('data_publicacao');
+		if (typeof dp === 'string' && dp) {
+			const d = new Date(dp);
+			if (!isNaN(d.getTime())) formData.set('data_publicacao', d.toISOString());
+		}
 		saving = true;
 		return async ({ update }) => {
 			await update();

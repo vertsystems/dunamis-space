@@ -1,3 +1,4 @@
+import { um } from '$lib/db';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
@@ -13,5 +14,6 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	if (tipo) query = query.eq('tipo', tipo);
 
 	const { data, error } = await query;
-	return { conteudos: data ?? [], status, tipo, loadError: error?.message ?? null };
+	const conteudos = (data ?? []).map((c) => ({ ...c, cliente: um(c.cliente) }));
+	return { conteudos, status, tipo, loadError: error?.message ?? null };
 };

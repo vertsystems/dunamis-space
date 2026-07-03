@@ -8,7 +8,7 @@
 	import '$lib/styles/design-system.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import logo from '$lib/assets/dspace-logo.svg';
-	import { invalidate, invalidateAll } from '$app/navigation';
+	import { goto, invalidate, invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { DTOOLS_FERRAMENTAS } from '$lib/dtools';
@@ -61,6 +61,7 @@
 				{ href: '/ferramentas', label: 'Ferramentas & Contas', icon: 'key' },
 				{ href: '/fornecedores', label: 'Fornecedores', icon: 'building' },
 				{ href: '/onboarding', label: 'Onboarding', icon: 'clipboard' },
+				{ href: '/processos', label: 'Processos', icon: 'clipboard' },
 				{ href: '/equipe', label: 'Equipe', icon: 'users' },
 				{ href: '/base-conhecimento', label: 'Base de Conhecimento', icon: 'book' }
 			]
@@ -72,7 +73,8 @@
 			areas: [
 				{ href: '/crm', label: 'CRM Master', icon: 'funnel' },
 				{ href: '/clientes', label: 'Clientes (CRM)', icon: 'contact' },
-				{ href: '/contratos', label: 'Contratos & Planos', icon: 'file' }
+				{ href: '/contratos', label: 'Contratos & Planos', icon: 'file' },
+				{ href: '/financeiro', label: 'Financeiro', icon: 'dollar' }
 			]
 		},
 		{
@@ -144,6 +146,8 @@
 
 	async function signOut() {
 		await supabase.auth.signOut();
+		// Navega para /login e re-roda todos os loads (limpa conteúdo protegido da tela).
+		await goto('/login', { invalidateAll: true });
 	}
 </script>
 

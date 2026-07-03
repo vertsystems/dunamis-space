@@ -3,6 +3,10 @@
 	import { Card, Badge, Button, Input, EmptyState } from '$lib/components/ui';
 	let { data } = $props();
 	let q = $state(data.q);
+	// Re-sincroniza o campo com a URL (ex.: back/forward do navegador).
+	$effect(() => {
+		q = data.q;
+	});
 </script>
 
 <div class="flex flex-wrap items-end justify-between gap-3 mb-4">

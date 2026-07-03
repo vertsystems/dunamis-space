@@ -48,7 +48,9 @@ function str(fd: FormData, k: string): string | null {
 }
 
 export function projetoFromForm(fd: FormData) {
-	const valor = str(fd, 'valor');
+	// Valor vem de <input type="number">: já em formato canônico (ponto decimal).
+	const valorRaw = str(fd, 'valor');
+	const valorNum = valorRaw === null ? null : Number(valorRaw);
 	return {
 		cliente_id: str(fd, 'cliente_id'),
 		responsavel_id: str(fd, 'responsavel_id'),
@@ -57,7 +59,7 @@ export function projetoFromForm(fd: FormData) {
 		tipo: str(fd, 'tipo') ?? 'social_media',
 		status: str(fd, 'status') ?? 'em_andamento',
 		recorrente: fd.get('recorrente') !== null,
-		valor: valor === null ? null : Number(valor.replace(/\./g, '').replace(',', '.')),
+		valor: valorNum !== null && Number.isNaN(valorNum) ? null : valorNum,
 		data_inicio: str(fd, 'data_inicio'),
 		prazo: str(fd, 'prazo')
 	};

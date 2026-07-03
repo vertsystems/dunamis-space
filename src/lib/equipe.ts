@@ -17,12 +17,14 @@ function str(fd: FormData, k: string): string | null {
 }
 
 export function colaboradorFromForm(fd: FormData) {
-	const custo = str(fd, 'custo_hora');
+	// Custo/hora vem de <input type="number">: já em formato canônico (ponto decimal).
+	const custoRaw = str(fd, 'custo_hora');
+	const custoNum = custoRaw === null ? null : Number(custoRaw);
 	return {
 		nome: str(fd, 'nome') ?? '',
 		email: str(fd, 'email') ?? '',
 		funcao: str(fd, 'funcao') ?? 'social_media',
-		custo_hora: custo === null ? null : Number(custo.replace(/\./g, '').replace(',', '.')),
+		custo_hora: custoNum !== null && Number.isNaN(custoNum) ? null : custoNum,
 		ativo: fd.get('ativo') !== null
 	};
 }
