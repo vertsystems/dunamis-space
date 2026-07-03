@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { CONTRATO_STATUS, contratoStatusTone, contratoStatusLabel, formatBRL } from '$lib/contratos';
-	import { Card, Badge, Button, Select, EmptyState } from '$lib/components/ui';
+	import { Card, Badge, Button, Select, EmptyState, DataTable } from '$lib/components/ui';
+	import type { ColumnDef } from '$lib/components/ui';
 
 	let { data } = $props();
 	let status = $state(data.status);
@@ -13,6 +14,24 @@
 	function fmtData(d: string | null) {
 		return d ? new Date(d + 'T00:00:00').toLocaleDateString('pt-BR') : '—';
 	}
+
+	type Contrato = (typeof data.contratos)[number];
+	const columns: ColumnDef<Contrato>[] = [
+		{ id: 'cliente', accessorFn: (c) => c.cliente?.nome ?? '', meta: { label: 'Cliente' } },
+		{ id: 'plano', accessorFn: (c) => c.plano?.nome ?? '', meta: { label: 'Plano' } },
+		{
+			id: 'valor',
+			accessorFn: (c) => c.valor_mensal ?? 0,
+			meta: { label: 'Valor mensal', thClass: 'text-right' }
+		},
+		{ id: 'vigencia', accessorFn: (c) => c.data_inicio ?? '', meta: { label: 'Vigência' } },
+		{
+			id: 'renovacao',
+			accessorFn: (c) => (c.renovacao_automatica ? 'Automática' : 'Manual'),
+			meta: { label: 'Renovação' }
+		},
+		{ id: 'status', accessorFn: (c) => c.status ?? '', meta: { label: 'Status' } }
+	];
 </script>
 
 <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
@@ -38,35 +57,23 @@
 {/if}
 
 <Card padding="none" class="overflow-hidden">
-	<div class="overflow-x-auto">
-		<table class="w-full text-sm">
-			<thead>
-				<tr class="border-b border-grey-200 text-left text-xs uppercase tracking-wide text-grey">
-					<th class="px-4 py-3 font-semibold">Cliente</th>
-					<th class="px-4 py-3 font-semibold">Plano</th>
-					<th class="px-4 py-3 font-semibold text-right">Valor mensal</th>
-					<th class="px-4 py-3 font-semibold">Vigência</th>
-					<th class="px-4 py-3 font-semibold">Renovação</th>
-					<th class="px-4 py-3 font-semibold">Status</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each data.contratos as c (c.id)}
-					<tr
-						class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg"
-						onclick={() => goto(`/contratos/${c.id}`)}
-					>
-						<td class="px-4 py-3"><a class="text-brand hover:underline" href={`/contratos/${c.id}`}>{c.cliente?.nome ?? '—'}</a></td>
-						<td class="px-4 py-3">{c.plano?.nome ?? '—'}</td>
-						<td class="px-4 py-3 text-right tabular-nums">{formatBRL(c.valor_mensal)}</td>
-						<td class="px-4 py-3 whitespace-nowrap">{fmtData(c.data_inicio)} → {fmtData(c.data_fim)}</td>
-						<td class="px-4 py-3">{c.renovacao_automatica ? 'Automática' : 'Manual'}</td>
-						<td class="px-4 py-3"><Badge tone={contratoStatusTone(c.status)}>{contratoStatusLabel(c.status)}</Badge></td>
-					</tr>
-				{:else}
-					<tr><td colspan="6" class="px-2"><EmptyState icon="file" title="Nenhum contrato ainda" description="Cadastre os contratos dos clientes." /></td></tr>
-				{/each}
-			</tbody>
-		</table>
-	</div>
+	<DataTable {columns} data={data.contratos} initialSort={[{ id: 'cliente', desc: false }]}>
+		{#snippet row(r)}
+			{@const c = r.original}
+			<tr
+				class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg"
+				onclick={() => goto(`/contratos/${c.id}`)}
+			>
+				<td class="px-4 py-3"><a class="text-brand hover:underline" href={`/contratos/${c.id}`}>{c.cliente?.nome ?? '—'}</a></td>
+				<td class="px-4 py-3">{c.plano?.nome ?? '—'}</td>
+				<td class="px-4 py-3 text-right tabular-nums">{formatBRL(c.valor_mensal)}</td>
+				<td class="px-4 py-3 whitespace-nowrap">{fmtData(c.data_inicio)} → {fmtData(c.data_fim)}</td>
+				<td class="px-4 py-3">{c.renovacao_automatica ? 'Automática' : 'Manual'}</td>
+				<td class="px-4 py-3"><Badge tone={contratoStatusTone(c.status)}>{contratoStatusLabel(c.status)}</Badge></td>
+			</tr>
+		{/snippet}
+		{#snippet empty()}
+			<tr><td colspan="6" class="px-2"><EmptyState icon="file" title="Nenhum contrato ainda" description="Cadastre os contratos dos clientes." /></td></tr>
+		{/snippet}
+	</DataTable>
 </Card>

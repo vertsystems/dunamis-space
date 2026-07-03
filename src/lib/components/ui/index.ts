@@ -12,6 +12,7 @@ export { default as Toaster } from './Toaster.svelte';
 export { default as EmptyState } from './EmptyState.svelte';
 export { default as Tabs } from './Tabs.svelte';
 export { default as Dropdown } from './Dropdown.svelte';
+export { default as DataTable } from './DataTable.svelte';
 
 export { toneClasses } from './Badge.svelte';
 
@@ -21,3 +22,4 @@ export type { Crumb } from './Breadcrumb.svelte';
 export type { Segment } from './SegmentedNav.svelte';
 export type { Tab } from './Tabs.svelte';
 export type { DropdownItem } from './Dropdown.svelte';
+export type { ColMeta, ColumnDef } from './DataTable.svelte';
