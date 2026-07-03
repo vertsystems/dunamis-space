@@ -45,7 +45,6 @@
 			label: 'Administrativo',
 			icon: 'admin',
 			areas: [
-				{ href: '/processos', label: 'Processos', icon: 'file' },
 				{ href: '/financeiro', label: 'Financeiro', icon: 'dollar' },
 				{ href: '/equipe', label: 'Equipe', icon: 'users' },
 				{ href: '/base-conhecimento', label: 'Base de Conhecimento', icon: 'book' }
