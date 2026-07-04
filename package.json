@@ -29,6 +29,7 @@
 		"vite": "^8.0.16"
 	},
 	"dependencies": {
+		"@fontsource/dancing-script": "^5.2.8",
 		"@fontsource/inter": "^5.2.8",
 		"@formkit/auto-animate": "^0.9.0",
 		"@lucide/svelte": "^1.23.0",

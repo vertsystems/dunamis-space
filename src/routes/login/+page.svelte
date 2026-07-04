@@ -2,6 +2,7 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { Button, Input } from '$lib/components/ui';
 	import logo from '$lib/assets/dspace-logo.svg';
+	import '@fontsource/dancing-script/600.css';
 
 	let { data } = $props();
 	let { supabase } = $derived(data);
@@ -163,10 +164,12 @@
 			></div>
 			<div class="login-hero__scrim"></div>
 			<div class="relative flex h-full flex-col justify-end p-10 text-white">
-				<div class="text-2xl font-extrabold tracking-tight">Dunamis Space</div>
-				<p class="mt-1 max-w-xs text-sm text-white/80">
-					A gestão da agência — clientes, comercial, marketing e operação — num só lugar.
-				</p>
+				{#if data.frase}
+					<blockquote class="max-w-sm text-xl leading-snug font-medium drop-shadow-md">
+						“{data.frase.q}”
+					</blockquote>
+					<p class="font-calig mt-2 text-lg text-white/85 drop-shadow-md">{data.frase.a}</p>
+				{/if}
 			</div>
 		</div>
 	</div>
@@ -187,6 +190,15 @@
 	.login-hero__scrim {
 		position: absolute;
 		inset: 0;
-		background: linear-gradient(to top, rgba(11, 18, 32, 0.6), rgba(11, 18, 32, 0.05));
+		background: linear-gradient(
+			to top,
+			rgba(11, 18, 32, 0.82) 0%,
+			rgba(11, 18, 32, 0.35) 45%,
+			rgba(11, 18, 32, 0.05) 100%
+		);
+	}
+	/* Autor em fonte caligráfica */
+	.font-calig {
+		font-family: 'Dancing Script', ui-rounded, cursive;
 	}
 </style>
