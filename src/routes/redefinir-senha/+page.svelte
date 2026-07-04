@@ -58,13 +58,8 @@
 
 <section class="grid min-h-screen place-items-center p-4">
 	<div class="w-full max-w-[26rem]">
-		<div class="mb-6 flex items-center justify-center gap-2.5">
-			<span
-				class="grid size-9 place-items-center rounded-[var(--radius)] bg-brand text-lg font-bold text-white shadow-md"
-			>
-				D
-			</span>
-			<img src={logo} alt="Dunamis Space" class="h-5 w-auto" />
+		<div class="mb-6 flex items-center justify-center">
+			<img src={logo} alt="Dunamis Space" class="h-[23px] w-auto" />
 		</div>
 
 		<div class="rounded-[var(--radius-xl)] border border-grey-200 bg-surface p-7 shadow-xl">

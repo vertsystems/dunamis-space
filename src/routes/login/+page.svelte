@@ -63,13 +63,8 @@
 	>
 		<!-- Formulário -->
 		<div class="flex flex-col justify-center p-8 sm:p-10 lg:p-14">
-			<div class="mb-7 flex items-center gap-2.5">
-				<span
-					class="grid size-9 place-items-center rounded-[var(--radius)] bg-brand text-lg font-bold text-white shadow-md"
-				>
-					D
-				</span>
-				<img src={logo} alt="Dunamis Space" class="h-5 w-auto" />
+			<div class="mb-7 flex items-center">
+				<img src={logo} alt="Dunamis Space" class="h-[23px] w-auto" />
 			</div>
 
 			{#if modo === 'login'}
