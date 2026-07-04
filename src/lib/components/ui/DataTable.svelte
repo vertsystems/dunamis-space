@@ -45,7 +45,12 @@
 		state: {
 			get sorting() {
 				return sorting;
-			}
+			},
+			// createTable() usa exatamente o objeto passado aqui, sem preencher
+			// defaults das outras features — getHeaderGroups() sempre lê
+			// columnPinning.left/right internamente, então sem isso quebra em
+			// TODA tabela (mesmo sem nenhuma coluna fixada).
+			columnPinning: { left: [], right: [] }
 		},
 		onSortingChange: (updater: Updater<SortingState>) => {
 			sorting = typeof updater === 'function' ? updater(sorting) : updater;
