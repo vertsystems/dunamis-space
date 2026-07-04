@@ -96,10 +96,10 @@
 			label: 'Marketing',
 			icon: 'marketing',
 			areas: [
+				{ href: '/campanhas', label: 'Campanhas', icon: 'tag' },
 				{ href: '/projetos', label: 'Projetos', icon: 'folder' },
 				{ href: '/tarefas', label: 'Tarefas', icon: 'check' },
-				{ href: '/conteudo', label: 'Conteúdo', icon: 'edit' },
-				{ href: '/campanhas', label: 'Campanhas', icon: 'tag' }
+				{ href: '/conteudo', label: 'Conteúdo', icon: 'edit' }
 			]
 		},
 		{
