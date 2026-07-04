@@ -168,7 +168,7 @@
 					<blockquote class="max-w-sm text-xl leading-snug font-medium drop-shadow-md">
 						“{data.frase.q}”
 					</blockquote>
-					<p class="font-calig mt-2 text-lg text-white/85 drop-shadow-md">{data.frase.a}</p>
+					<p class="font-calig mt-1.5 text-[10px] text-white/85 drop-shadow-md">{data.frase.a}</p>
 				{/if}
 			</div>
 		</div>
