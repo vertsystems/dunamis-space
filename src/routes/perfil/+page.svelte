@@ -363,7 +363,7 @@
 					>
 						<p class="text-sm font-medium text-navy">Nenhum avatar disponível ainda.</p>
 						<p class="mt-1 text-sm text-grey">
-							Coloque imagens (.png) em
+							Coloque imagens (.webp) em
 							<span class="font-mono text-xs">static/avatares/</span> e faça o deploy.
 						</p>
 					</div>
