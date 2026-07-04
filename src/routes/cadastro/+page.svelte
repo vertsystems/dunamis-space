@@ -29,7 +29,7 @@
 
 <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
 	<div>
-		<h1 class="text-xl font-bold text-navy">Cadastro de Clientes</h1>
+		<h1 class="text-xl font-bold text-navy">Clientes</h1>
 		<p class="text-sm text-grey">Ficha cadastral e dados de referência dos clientes</p>
 	</div>
 	<div class="flex flex-wrap items-end gap-2">
