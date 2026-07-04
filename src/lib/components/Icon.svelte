@@ -37,6 +37,11 @@
 		Key,
 		ClipboardCheck,
 		FileUp,
+		Palette,
+		Settings,
+		MapPin,
+		Globe,
+		Camera,
 		type IconProps
 	} from '@lucide/svelte';
 	import type { Component } from 'svelte';
@@ -75,7 +80,12 @@
 		chevron: ChevronRight,
 		key: Key,
 		clipboard: ClipboardCheck,
-		pagsup: FileUp
+		pagsup: FileUp,
+		palette: Palette,
+		settings: Settings,
+		map: MapPin,
+		globe: Globe,
+		camera: Camera
 	};
 </script>
 

@@ -27,8 +27,14 @@ export const load: LayoutLoad = async ({ data, depends, fetch }) => {
 		data: { user }
 	} = await supabase.auth.getUser();
 
-	// Encaminha aprovacoesPendentes do +layout.server.ts (o universal load NÃO
-	// mescla o server load automaticamente). Não espalhar `...data` para não
+	// Encaminha aprovacoesPendentes + perfil do +layout.server.ts (o universal load
+	// NÃO mescla o server load automaticamente). Não espalhar `...data` para não
 	// serializar os cookies de auth no payload do cliente.
-	return { supabase, session, user, aprovacoesPendentes: data.aprovacoesPendentes };
+	return {
+		supabase,
+		session,
+		user,
+		aprovacoesPendentes: data.aprovacoesPendentes,
+		perfil: data.perfil
+	};
 };

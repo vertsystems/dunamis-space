@@ -12,12 +12,20 @@
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { DTOOLS_FERRAMENTAS } from '$lib/dtools';
+	import { temaCss } from '$lib/tema';
 	import Icon from '$lib/components/Icon.svelte';
 	import { Toaster } from '$lib/components/ui';
 	import { toast } from '$lib/toast.svelte';
 
 	let { children, data } = $props();
 	let { supabase, session } = $derived(data);
+
+	// Perfil do usuário (nome/avatar no topo + cor de tema pessoal).
+	const perfil = $derived(
+		data.perfil as { nome?: string; avatar_url?: string; cor_tema?: string } | null
+	);
+	// CSS que sobrescreve a primária do sistema só para este login (SSR — sem flash).
+	const temaStyle = $derived(temaCss(perfil?.cor_tema));
 
 	onMount(() => {
 		const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
@@ -49,7 +57,8 @@
 				{ href: '/meu-dia', label: 'Meu Dia', icon: 'calendar' },
 				{ href: '/desempenho', label: 'Desempenho', icon: 'chart' },
 				{ href: '/atalhos', label: 'Atalhos', icon: 'zap' },
-				{ href: '/notificacoes', label: 'Notificações', icon: 'bell' }
+				{ href: '/notificacoes', label: 'Notificações', icon: 'bell' },
+				{ href: '/perfil', label: 'Meu Perfil', icon: 'contact' }
 			]
 		},
 		{
@@ -153,6 +162,10 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
+	{#if temaStyle}
+		<!-- eslint-disable-next-line svelte/no-at-html-tags — temaStyle é hex validado -->
+		{@html `<style>${temaStyle}</style>`}
+	{/if}
 </svelte:head>
 
 <Toaster />
@@ -188,7 +201,18 @@
 					<Icon name="refresh" size={14} />
 				</button>
 				{#if session}
-					<span class="avatar" title={session.user.email}>{initials}</span>
+					<a
+						class="avatar"
+						href="/perfil"
+						title={perfil?.nome ?? session.user.email}
+						aria-label="Meu perfil"
+					>
+						{#if perfil?.avatar_url}
+							<img src={perfil.avatar_url} alt="" />
+						{:else}
+							{initials}
+						{/if}
+					</a>
 					<button class="icon-btn" onclick={signOut} title="Sair" aria-label="Sair">
 						<Icon name="logout" size={14} />
 					</button>
