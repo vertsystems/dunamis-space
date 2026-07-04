@@ -152,7 +152,9 @@
 
 	// Rotas "nuas" (sem o app shell): login e o portal público de aprovação.
 	const isBare = $derived(
-		page.url.pathname === '/login' || page.url.pathname.startsWith('/aprovar')
+		page.url.pathname === '/login' ||
+			page.url.pathname.startsWith('/redefinir-senha') ||
+			page.url.pathname.startsWith('/aprovar')
 	);
 
 	async function signOut() {
