@@ -59,6 +59,17 @@ export const ORIGENS = [
 	'Outro'
 ] as const;
 
+// ---------- Motivos de perda sugeridos ----------
+export const MOTIVOS_PERDA = [
+	'Preço',
+	'Timing',
+	'Concorrente',
+	'Sem resposta',
+	'Sem orçamento',
+	'Não qualificado',
+	'Outro'
+] as const;
+
 // ---------- Cores de etapa (token de tom -> classes) ----------
 export type StageCor = 'neutral' | 'info' | 'brand' | 'warning' | 'success' | 'danger';
 
@@ -372,6 +383,117 @@ export function computeKpis(
 		taxa_conversao: fechados ? Math.round((ganhosTotal / fechados) * 100) : 0,
 		atividades_atrasadas
 	};
+}
+
+// ============================================================
+// Comercial — Metas & ranking, motivos de perda, origem dos leads
+// (todos derivados no client a partir dos arrays reativos, como computeKpis)
+// ============================================================
+export type Meta = { colaborador_id: string; valor_meta: number };
+
+export type RankingLinha = {
+	colaborador_id: string;
+	nome: string;
+	ganhos_qtd: number;
+	valor_ganho: number;
+	meta: number;
+	progresso: number; // % da meta atingida no mês (0 se sem meta)
+};
+
+/** Ranking do mês por vendedor: ganhos fechados vs meta. Inclui todos os colaboradores passados. */
+export function computeRanking(
+	negocios: Negocio[],
+	colaboradores: Colaborador[],
+	metas: Meta[],
+	agora = new Date()
+): RankingLinha[] {
+	const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1).getTime();
+	const metaMap = new Map(metas.map((m) => [m.colaborador_id, Number(m.valor_meta ?? 0)]));
+	const agg = new Map<string, { ganhos_qtd: number; valor_ganho: number }>();
+	for (const n of negocios) {
+		if (n.status !== 'ganho' || !n.responsavel_id) continue;
+		if (!n.ganho_em || new Date(n.ganho_em).getTime() < inicioMes) continue;
+		const a = agg.get(n.responsavel_id) ?? { ganhos_qtd: 0, valor_ganho: 0 };
+		a.ganhos_qtd++;
+		a.valor_ganho += n.valor;
+		agg.set(n.responsavel_id, a);
+	}
+	return colaboradores
+		.map((c) => {
+			const a = agg.get(c.id);
+			const meta = metaMap.get(c.id) ?? 0;
+			const valor_ganho = a?.valor_ganho ?? 0;
+			return {
+				colaborador_id: c.id,
+				nome: c.nome,
+				ganhos_qtd: a?.ganhos_qtd ?? 0,
+				valor_ganho,
+				meta,
+				progresso: meta > 0 ? Math.round((valor_ganho / meta) * 100) : 0
+			};
+		})
+		.sort((x, y) => y.valor_ganho - x.valor_ganho || y.meta - x.meta || x.nome.localeCompare(y.nome));
+}
+
+export type MotivoPerdaLinha = { motivo: string; qtd: number; valor: number };
+
+/** Distribuição dos negócios perdidos por motivo. */
+export function computeMotivosPerda(negocios: Negocio[]): MotivoPerdaLinha[] {
+	const agg = new Map<string, { qtd: number; valor: number }>();
+	for (const n of negocios) {
+		if (n.status !== 'perdido') continue;
+		const motivo = (n.motivo_perda ?? '').trim() || 'Não informado';
+		const a = agg.get(motivo) ?? { qtd: 0, valor: 0 };
+		a.qtd++;
+		a.valor += n.valor;
+		agg.set(motivo, a);
+	}
+	return [...agg.entries()]
+		.map(([motivo, a]) => ({ motivo, qtd: a.qtd, valor: a.valor }))
+		.sort((x, y) => y.qtd - x.qtd);
+}
+
+export type OrigemLinha = {
+	origem: string;
+	leads: number;
+	negocios: number;
+	ganhos: number;
+	valor_ganho: number;
+	conversao: number; // % ganhos / negócios da origem
+};
+
+/** Conversão por origem do lead (origem vive no contato; negócio herda via contato_id). */
+export function computeOrigens(negocios: Negocio[], contatos: Contato[]): OrigemLinha[] {
+	const origemDe = new Map(contatos.map((c) => [c.id, (c.origem ?? '').trim() || 'Sem origem']));
+	const agg = new Map<string, { leads: number; negocios: number; ganhos: number; valor_ganho: number }>();
+	const get = (o: string) => {
+		let a = agg.get(o);
+		if (!a) {
+			a = { leads: 0, negocios: 0, ganhos: 0, valor_ganho: 0 };
+			agg.set(o, a);
+		}
+		return a;
+	};
+	for (const c of contatos) get((c.origem ?? '').trim() || 'Sem origem').leads++;
+	for (const n of negocios) {
+		const o = n.contato_id ? (origemDe.get(n.contato_id) ?? 'Sem origem') : 'Sem origem';
+		const a = get(o);
+		a.negocios++;
+		if (n.status === 'ganho') {
+			a.ganhos++;
+			a.valor_ganho += n.valor;
+		}
+	}
+	return [...agg.entries()]
+		.map(([origem, a]) => ({
+			origem,
+			leads: a.leads,
+			negocios: a.negocios,
+			ganhos: a.ganhos,
+			valor_ganho: a.valor_ganho,
+			conversao: a.negocios ? Math.round((a.ganhos / a.negocios) * 100) : 0
+		}))
+		.sort((x, y) => y.valor_ganho - x.valor_ganho || y.negocios - x.negocios);
 }
 
 /** Iniciais para avatar (mesmo padrão do app shell). */

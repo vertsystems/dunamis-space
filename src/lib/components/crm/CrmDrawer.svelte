@@ -7,6 +7,7 @@
 	import CrmContatoForm from './CrmContatoForm.svelte';
 	import {
 		ATIVIDADE_TIPOS,
+		MOTIVOS_PERDA,
 		atividadeTipo,
 		formatBRL,
 		formatData,
@@ -172,7 +173,10 @@
 					<form method="POST" action="?/negocio_status" class="flex items-end gap-2" use:enhance={() => { statusSaving = true; return async ({ result, update }) => { await update(); statusSaving = false; if (result.type === 'success') perderMode = false; else if (result.type === 'failure') toast.error(erroDe(result)); }; }}>
 						<input type="hidden" name="id" value={negocio.id} />
 						<input type="hidden" name="status" value="perdido" />
-						<Input label="Motivo da perda" name="motivo_perda" wrapperClass="flex-1" placeholder="Ex.: preço, sem retorno…" />
+						<Select label="Motivo da perda" name="motivo_perda" wrapperClass="flex-1">
+							<option value="">Selecione…</option>
+							{#each MOTIVOS_PERDA as m (m)}<option value={m}>{m}</option>{/each}
+						</Select>
 						<Button variant="danger" size="md" type="submit" loading={statusSaving}>Confirmar</Button>
 					</form>
 				{/if}

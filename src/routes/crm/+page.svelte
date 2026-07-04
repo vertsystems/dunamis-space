@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { deserialize } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
-	import { Button, Tabs, Select } from '$lib/components/ui';
+	import { Button, Tabs, Select, Dropdown } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import CrmKpis from '$lib/components/crm/CrmKpis.svelte';
@@ -9,11 +9,19 @@
 	import CrmTabela from '$lib/components/crm/CrmTabela.svelte';
 	import CrmContatos from '$lib/components/crm/CrmContatos.svelte';
 	import CrmAtividades from '$lib/components/crm/CrmAtividades.svelte';
+	import CrmMetas from '$lib/components/crm/CrmMetas.svelte';
+	import CrmRelatorios from '$lib/components/crm/CrmRelatorios.svelte';
 	import CrmDrawer from '$lib/components/crm/CrmDrawer.svelte';
 	import CrmModal from '$lib/components/crm/CrmModal.svelte';
 	import CrmNegocioForm from '$lib/components/crm/CrmNegocioForm.svelte';
 	import CrmContatoForm from '$lib/components/crm/CrmContatoForm.svelte';
-	import { computeKpis } from '$lib/crm';
+	import {
+		computeKpis,
+		computeRanking,
+		computeMotivosPerda,
+		computeOrigens,
+		MOTIVOS_PERDA
+	} from '$lib/crm';
 	import type { Negocio, Atividade } from '$lib/crm';
 
 	let { data } = $props();
@@ -42,12 +50,29 @@
 	// KPIs derivados no cliente -> sempre consistentes com quadro/lista (inclusive otimista).
 	const kpis = $derived(computeKpis(negocios, atividades, data.stages));
 
+	// Comercial: metas (estado local p/ update otimista) + relatórios derivados.
+	let metas = $state(data.metas ?? []);
+	$effect(() => {
+		metas = data.metas ?? [];
+	});
+	const ranking = $derived(computeRanking(negocios, data.colaboradores, metas));
+	const motivos = $derived(computeMotivosPerda(negocios));
+	const origens = $derived(computeOrigens(negocios, data.contatos));
+	const mesLabel = $derived(
+		new Date(data.mesRef.ano, data.mesRef.mes - 1, 1).toLocaleDateString('pt-BR', {
+			month: 'long',
+			year: 'numeric'
+		})
+	);
+
 	// ---------------- Visão ----------------
 	const VIEWS = [
 		{ value: 'pipeline', label: 'Pipeline' },
 		{ value: 'negocios', label: 'Negócios' },
 		{ value: 'contatos', label: 'Contatos' },
-		{ value: 'atividades', label: 'Atividades' }
+		{ value: 'atividades', label: 'Atividades' },
+		{ value: 'metas', label: 'Metas' },
+		{ value: 'relatorios', label: 'Relatórios' }
 	];
 	let view = $state('pipeline');
 
@@ -106,12 +131,15 @@
 		}
 	}
 
-	async function mudarStatus(id: string, status: 'ganho' | 'perdido') {
+	async function mudarStatus(id: string, status: 'ganho' | 'perdido', motivo: string | null = null) {
 		const anterior = negocios;
-		negocios = negocios.map((n) => (n.id === id ? { ...n, status } : n));
+		negocios = negocios.map((n) =>
+			n.id === id ? { ...n, status, motivo_perda: status === 'perdido' ? motivo : null } : n
+		);
 		const fd = new FormData();
 		fd.set('id', id);
 		fd.set('status', status);
+		if (status === 'perdido' && motivo) fd.set('motivo_perda', motivo);
 		try {
 			const r = await postar('?/negocio_status', fd);
 			if (r.type !== 'success') throw new Error();
@@ -120,6 +148,41 @@
 		} catch {
 			negocios = anterior;
 			toast.error('Não foi possível atualizar o negócio.');
+		}
+	}
+
+	// Fluxo de perda: abre modal p/ escolher o motivo antes de marcar perdido.
+	let perdaAberta = $state(false);
+	let perdaId = $state<string | null>(null);
+	let perdaMotivo = $state('');
+	function abrirPerda(id: string) {
+		perdaId = id;
+		perdaMotivo = '';
+		perdaAberta = true;
+	}
+	async function confirmarPerda() {
+		const id = perdaId;
+		perdaAberta = false;
+		if (id) await mudarStatus(id, 'perdido', perdaMotivo.trim() || null);
+		perdaId = null;
+	}
+
+	// Metas: define/atualiza a meta do mês (otimista).
+	async function definirMeta(colaboradorId: string, valor: number) {
+		const anterior = metas;
+		metas = metas.some((m) => m.colaborador_id === colaboradorId)
+			? metas.map((m) => (m.colaborador_id === colaboradorId ? { ...m, valor_meta: valor } : m))
+			: [...metas, { colaborador_id: colaboradorId, valor_meta: valor }];
+		const fd = new FormData();
+		fd.set('colaborador_id', colaboradorId);
+		fd.set('valor_meta', String(valor));
+		try {
+			const r = await postar('?/meta_definir', fd);
+			if (r.type !== 'success') throw new Error();
+			toast.success('Meta atualizada.');
+		} catch {
+			metas = anterior;
+			toast.error('Não foi possível salvar a meta.');
 		}
 	}
 
@@ -142,8 +205,6 @@
 		}
 	}
 
-	// Botão de criação contextual por visão.
-	const podeCriarContato = $derived(view === 'contatos');
 </script>
 
 <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
@@ -160,11 +221,16 @@
 			</Select>
 		{/if}
 		{#if !data.crmPendente}
-			{#if podeCriarContato}
-				<Button onclick={() => (novoContato = true)}><Icon name="plus" size={15} /> Novo contato</Button>
-			{:else}
-				<Button onclick={() => abrirNovoNegocio()}><Icon name="plus" size={15} /> Novo negócio</Button>
-			{/if}
+			<Dropdown
+				align="end"
+				triggerClass="inline-flex size-10 items-center justify-center rounded-[var(--radius)] bg-brand text-white shadow-[0_2px_10px_-2px_rgba(59,110,246,0.55)] transition-all hover:brightness-[1.07] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35 focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
+				items={[
+					{ label: 'Novo negócio', icon: 'funnel', onSelect: () => abrirNovoNegocio() },
+					{ label: 'Novo contato', icon: 'contact', onSelect: () => (novoContato = true) }
+				]}
+			>
+				{#snippet trigger()}<Icon name="plus" size={18} />{/snippet}
+			</Dropdown>
 		{/if}
 	</div>
 </div>
@@ -195,7 +261,7 @@
 			onOpen={abrirNegocio}
 			onMove={mover}
 			onGanho={(id) => mudarStatus(id, 'ganho')}
-			onPerdido={(id) => mudarStatus(id, 'perdido')}
+			onPerdido={abrirPerda}
 			onNovo={(stageId) => abrirNovoNegocio(stageId)}
 		/>
 	{:else if view === 'negocios'}
@@ -210,6 +276,10 @@
 			onOpenNegocio={abrirNegocio}
 			onOpenContato={abrirContato}
 		/>
+	{:else if view === 'metas'}
+		<CrmMetas {ranking} {mesLabel} metasPendente={data.metasPendente} onSetMeta={definirMeta} />
+	{:else if view === 'relatorios'}
+		<CrmRelatorios {motivos} {origens} />
 	{/if}
 {/if}
 
@@ -256,4 +326,26 @@
 		onSuccess={() => (novoContato = false)}
 		onCancel={() => (novoContato = false)}
 	/>
+</CrmModal>
+
+<!-- Modal: motivo de perda -->
+<CrmModal open={perdaAberta} title="Marcar como perdido" onClose={() => (perdaAberta = false)}>
+	<p class="mb-3 text-sm text-slate">Qual o motivo da perda? <span class="text-grey">(opcional)</span></p>
+	<div class="flex flex-wrap gap-2">
+		{#each MOTIVOS_PERDA as m (m)}
+			<button
+				type="button"
+				class="rounded-full border px-3 py-1.5 text-sm transition-colors {perdaMotivo === m
+					? 'border-brand bg-brand/10 font-medium text-brand'
+					: 'border-grey-200 text-slate hover:border-grey'}"
+				onclick={() => (perdaMotivo = perdaMotivo === m ? '' : m)}
+			>
+				{m}
+			</button>
+		{/each}
+	</div>
+	<div class="mt-5 flex justify-end gap-2">
+		<Button variant="secondary" onclick={() => (perdaAberta = false)}>Cancelar</Button>
+		<Button variant="danger" onclick={confirmarPerda}>Confirmar perda</Button>
+	</div>
 </CrmModal>

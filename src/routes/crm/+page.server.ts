@@ -7,7 +7,8 @@ import {
 	type Contato,
 	type Atividade,
 	type Stage,
-	type Pipeline
+	type Pipeline,
+	type Meta
 } from '$lib/crm';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -17,6 +18,9 @@ function um<T>(v: T | T[] | null | undefined): T | null {
 }
 
 export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
+	const now = new Date();
+	const mesRef = { ano: now.getFullYear(), mes: now.getMonth() + 1 };
+
 	// Funis primeiro — serve também para detectar migration não aplicada.
 	const { data: pipelinesRaw, error: pErr } = await supabase
 		.from('crm_pipelines')
@@ -36,7 +40,10 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 			contatos: [] as Contato[],
 			atividades: [] as Atividade[],
 			colaboradores: [] as { id: string; nome: string }[],
-			clientes: [] as { id: string; nome: string }[]
+			clientes: [] as { id: string; nome: string }[],
+			metas: [] as Meta[],
+			metasPendente: false,
+			mesRef
 		};
 	}
 
@@ -167,6 +174,21 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		};
 	});
 
+	// Metas do mês corrente (tabela nova — degrada se a migration 0007 não foi aplicada).
+	const { data: metasRaw, error: metasErr } = await supabase
+		.from('crm_metas')
+		.select('colaborador_id, valor_meta')
+		.eq('ano', mesRef.ano)
+		.eq('mes', mesRef.mes);
+	const metasPendente =
+		!!metasErr && /crm_metas|does not exist|schema cache|relation/i.test(metasErr.message);
+	const metas: Meta[] = metasPendente
+		? []
+		: (metasRaw ?? []).map((m) => ({
+				colaborador_id: m.colaborador_id as string,
+				valor_meta: Number(m.valor_meta ?? 0)
+			}));
+
 	return {
 		crmPendente: false,
 		loadError: null as string | null,
@@ -177,7 +199,10 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		contatos,
 		atividades,
 		colaboradores: (colabRes.data ?? []) as { id: string; nome: string }[],
-		clientes: (clientesRes.data ?? []) as { id: string; nome: string }[]
+		clientes: (clientesRes.data ?? []) as { id: string; nome: string }[],
+		metas,
+		metasPendente,
+		mesRef
 	};
 };
 
@@ -340,6 +365,25 @@ export const actions: Actions = {
 		const { error } = await supabase.from('crm_negocios').delete().eq('id', id);
 		if (error) return fail(500, { error: error.message });
 		return { deleted: true };
+	},
+
+	// ---------------- Metas (comercial) ----------------
+	meta_definir: async ({ request, locals: { supabase } }) => {
+		const fd = await request.formData();
+		const colaborador_id = idDe(fd, 'colaborador_id');
+		if (!colaborador_id) return fail(400, { error: 'Colaborador inválido.' });
+		const raw = fd.get('valor_meta');
+		const valor_meta = typeof raw === 'string' && raw.trim() ? Number(raw) : 0;
+		if (!Number.isFinite(valor_meta) || valor_meta < 0) {
+			return fail(400, { error: 'Valor de meta inválido.' });
+		}
+		const now = new Date();
+		const { error } = await supabase.from('crm_metas').upsert(
+			{ colaborador_id, ano: now.getFullYear(), mes: now.getMonth() + 1, valor_meta },
+			{ onConflict: 'colaborador_id,ano,mes' }
+		);
+		if (error) return fail(500, { error: error.message });
+		return { saved: true };
 	},
 
 	// ---------------- Contatos ----------------
