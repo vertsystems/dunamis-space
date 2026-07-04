@@ -86,7 +86,7 @@
 		'h-9 w-full rounded-[var(--radius-sm)] border border-grey-200 bg-surface px-3 text-sm text-navy-900 shadow-xs placeholder:text-grey/80 transition-colors hover:border-grey focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25';
 </script>
 
-<div class="mx-auto max-w-6xl">
+<div>
 	<div class="flex flex-wrap items-center justify-between gap-3 mb-6">
 		<div>
 			<h2 class="text-xl font-bold text-navy tracking-tight">Prestadores de Serviço</h2>

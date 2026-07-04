@@ -110,7 +110,7 @@
 		'h-10 w-full rounded-[var(--radius)] border border-grey-200 bg-surface px-3.5 text-sm text-navy-900 shadow-xs placeholder:text-grey/80 transition-colors hover:border-grey focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25';
 </script>
 
-<div class="mx-auto max-w-6xl">
+<div>
 	<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
 		<div>
 			<h2 class="text-xl font-bold text-navy tracking-tight">Cronograma de Negociações</h2>

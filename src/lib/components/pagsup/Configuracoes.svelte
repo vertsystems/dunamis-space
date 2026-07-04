@@ -12,7 +12,7 @@
 	]);
 </script>
 
-<div class="mx-auto max-w-3xl">
+<div class="max-w-3xl">
 	<div class="mb-6">
 		<h2 class="text-xl font-bold text-navy tracking-tight">Configurações</h2>
 		<p class="text-sm text-grey mt-0.5">Gerencie as preferências e módulos do sistema.</p>
