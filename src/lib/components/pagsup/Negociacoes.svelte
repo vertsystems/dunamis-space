@@ -4,6 +4,7 @@
 	import { exportNegociacoesXlsx } from '$lib/pagsup/excel';
 	import { formatBRL } from '$lib/clientes';
 	import { Button, Card } from '$lib/components/ui';
+	import ClienteSelector from './ClienteSelector.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import { Plus, Trash2, Calendar, DollarSign, Pencil, Check, X, FileSpreadsheet } from '@lucide/svelte';
 
@@ -110,21 +111,20 @@
 </script>
 
 <div class="mx-auto max-w-6xl">
-	<div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
+	<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
 		<div>
 			<h2 class="text-xl font-bold text-navy tracking-tight">Cronograma de Negociações</h2>
 			<p class="text-sm text-grey mt-0.5">Selecione os serviços mensais fixos para o pagamento.</p>
 		</div>
-		<div class="flex flex-wrap items-center gap-3">
-			<div class="flex items-center gap-3 rounded-[var(--radius-lg)] border border-grey-200 bg-surface px-5 h-14 shadow-sm">
-				<span class="grid size-8 place-items-center rounded-[var(--radius-sm)] bg-brand-green/12 text-brand-green"><DollarSign size={18} /></span>
-				<div>
-					<p class="text-[10px] font-bold text-grey uppercase tracking-widest leading-none mb-1">Total do Pagamento</p>
-					<p class="text-lg font-bold text-navy leading-none tabular-nums">{formatBRL(grandTotal)}</p>
-				</div>
+		<div class="flex flex-wrap items-center gap-2.5">
+			<div class="flex items-center gap-2.5 rounded-[var(--radius)] border border-grey-200 bg-surface px-4 h-10 shadow-xs">
+				<span class="grid size-6 place-items-center rounded-[var(--radius-sm)] bg-brand-green/12 text-brand-green"><DollarSign size={15} /></span>
+				<p class="text-[10px] font-bold text-grey uppercase tracking-wider leading-none">Total</p>
+				<p class="text-sm font-bold text-navy leading-none tabular-nums">{formatBRL(grandTotal)}</p>
 			</div>
 			<Button onclick={() => { isAddingExtra = false; isAdding = !isAdding; }}>Adic. Pagamento</Button>
 			<Button variant="secondary" onclick={() => { isAdding = false; isAddingExtra = !isAddingExtra; }}>Novo Pagamento</Button>
+			<ClienteSelector />
 		</div>
 	</div>
 

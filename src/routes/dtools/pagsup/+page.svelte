@@ -4,7 +4,7 @@
 	import Prestadores from '$lib/components/pagsup/Prestadores.svelte';
 	import Negociacoes from '$lib/components/pagsup/Negociacoes.svelte';
 	import Configuracoes from '$lib/components/pagsup/Configuracoes.svelte';
-	import { Calendar, Users, Briefcase, Settings, Building2, FileUp } from '@lucide/svelte';
+	import { Calendar, Users, Briefcase, Settings } from '@lucide/svelte';
 
 	type ModuleId = 'cronograma' | 'prestadores' | 'negociacoes' | 'configuracoes';
 	let active = $state<ModuleId>('cronograma');
@@ -15,8 +15,6 @@
 		{ id: 'negociacoes', label: 'Negociações', icon: Briefcase },
 		{ id: 'configuracoes', label: 'Configurações', icon: Settings }
 	] as const;
-
-	const showClient = $derived(active !== 'configuracoes');
 </script>
 
 <svelte:head>
@@ -24,34 +22,6 @@
 </svelte:head>
 
 <div class="pagsup-root">
-	<!-- Cabeçalho: marca + seletor de cliente -->
-	<div class="flex flex-wrap items-center justify-between gap-4 mb-6">
-		<div class="flex items-center gap-3">
-			<span class="grid size-11 place-items-center rounded-[var(--radius-lg)] bg-navy text-white shadow-sm">
-				<FileUp size={22} strokeWidth={2.4} />
-			</span>
-			<div>
-				<h1 class="text-xl font-bold text-navy leading-none">Pag's Up</h1>
-				<p class="text-[11px] font-semibold text-grey uppercase tracking-[0.14em] mt-1">Gestão de Marketing Inteligente</p>
-			</div>
-		</div>
-
-		{#if showClient}
-			<div class="flex items-center gap-3 rounded-[var(--radius-lg)] border border-grey-200 bg-surface px-4 h-12 shadow-sm">
-				<span class="grid size-8 place-items-center rounded-[var(--radius-sm)] bg-brand/10 text-brand"><Building2 size={18} /></span>
-				<label for="pagsup-client" class="text-[10px] font-semibold text-grey uppercase tracking-wider whitespace-nowrap">Cliente</label>
-				<select
-					id="pagsup-client"
-					value={pagsup.selectedClientId}
-					onchange={(e) => pagsup.selectClient(e.currentTarget.value)}
-					class="bg-transparent text-navy font-bold text-sm outline-none cursor-pointer pr-1"
-				>
-					{#each pagsup.clients as c (c.id)}<option value={c.id}>{c.name}</option>{/each}
-				</select>
-			</div>
-		{/if}
-	</div>
-
 	<!-- Conteúdo do módulo ativo -->
 	<div class="module-area">
 		{#if active === 'cronograma'}

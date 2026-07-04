@@ -2,6 +2,7 @@
 	import { pagsup } from '$lib/pagsup/store.svelte';
 	import { SERVICE_CATEGORIES, type Provider } from '$lib/pagsup/types';
 	import { Button, Card } from '$lib/components/ui';
+	import ClienteSelector from './ClienteSelector.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import { Plus, Search, Trash2, Pencil, Check, X } from '@lucide/svelte';
 
@@ -86,14 +87,17 @@
 </script>
 
 <div class="mx-auto max-w-6xl">
-	<div class="flex flex-wrap items-end justify-between gap-3 mb-6">
+	<div class="flex flex-wrap items-center justify-between gap-3 mb-6">
 		<div>
 			<h2 class="text-xl font-bold text-navy tracking-tight">Prestadores de Serviço</h2>
 			<p class="text-sm text-grey mt-0.5">Gerencie a equipe de prestadores de serviço.</p>
 		</div>
-		<Button onclick={() => (isAdding = !isAdding)}>
-			<Plus size={18} /> Novo Prestador
-		</Button>
+		<div class="flex items-center gap-2.5">
+			<Button onclick={() => (isAdding = !isAdding)}>
+				<Plus size={18} /> Novo Prestador
+			</Button>
+			<ClienteSelector />
+		</div>
 	</div>
 
 	{#if isAdding}
