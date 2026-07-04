@@ -13,6 +13,25 @@ export const CONTEUDO_STATUS = [
 	{ value: 'publicado', label: 'Publicado' }
 ] as const;
 
+// Redes sociais do post (cross-post — um post pode ter mais de uma).
+export const CONTEUDO_REDE = [
+	{ value: 'instagram', label: 'Instagram' },
+	{ value: 'tiktok', label: 'TikTok' }
+] as const;
+
+const REDES_VALIDAS = new Set(CONTEUDO_REDE.map((r) => r.value as string));
+
+export function conteudoRedeLabel(rede: string): string {
+	return CONTEUDO_REDE.find((r) => r.value === rede)?.label ?? rede;
+}
+
+/** Extrai as redes marcadas do formulário (checkbox múltiplo name="redes"), validando. */
+export function redesFromForm(fd: FormData): string[] {
+	return fd
+		.getAll('redes')
+		.filter((v): v is string => typeof v === 'string' && REDES_VALIDAS.has(v));
+}
+
 export function conteudoStatusTone(
 	status: string
 ): 'neutral' | 'warning' | 'info' | 'brand' | 'success' {
@@ -78,6 +97,7 @@ export function conteudoFromForm(fd: FormData) {
 		arte_url: str(fd, 'arte_url'),
 		data_publicacao: str(fd, 'data_publicacao'),
 		status: str(fd, 'status') ?? 'rascunho',
+		redes: redesFromForm(fd),
 		publicado_manual: fd.get('publicado_manual') !== null
 	};
 }

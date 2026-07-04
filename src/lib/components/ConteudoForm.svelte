@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
-	import { CONTEUDO_TIPO, CONTEUDO_STATUS } from '$lib/conteudo';
+	import { CONTEUDO_TIPO, CONTEUDO_STATUS, CONTEUDO_REDE } from '$lib/conteudo';
 	import { Button, Input, Select, Textarea, Checkbox } from '$lib/components/ui';
 
 	let {
@@ -70,6 +70,27 @@
 
 		<Input label="Título" name="titulo" value={v('titulo')} wrapperClass="md:col-span-6" />
 		<Input label="Data de publicação" type="datetime-local" name="data_publicacao" value={dataPub} wrapperClass="md:col-span-6" />
+
+		<div class="md:col-span-12">
+			<span class="block text-sm font-medium text-navy mb-1.5">Redes sociais</span>
+			<div class="flex flex-wrap gap-1.5">
+				{#each CONTEUDO_REDE as r (r.value)}
+					<label class="cursor-pointer">
+						<input
+							type="checkbox"
+							name="redes"
+							value={r.value}
+							checked={(conteudo?.redes ?? []).includes(r.value)}
+							class="peer sr-only"
+						/>
+						<span
+							class="inline-flex rounded-full bg-bg px-3.5 py-1.5 text-sm font-medium text-slate transition-colors hover:bg-grey-200/70 peer-checked:bg-brand peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-brand/30"
+							>{r.label}</span
+						>
+					</label>
+				{/each}
+			</div>
+		</div>
 
 		<Select label="Projeto" name="projeto_id" value={conteudo?.projeto_id ?? ''} wrapperClass="md:col-span-4">
 			<option value="">—</option>

@@ -9,7 +9,8 @@
 		conteudoStatusLabel,
 		conteudoTipoLabel,
 		CONTEUDO_TIPO,
-		CONTEUDO_STATUS
+		CONTEUDO_STATUS,
+		CONTEUDO_REDE
 	} from '$lib/conteudo';
 	import { Card, Button, Breadcrumb, Modal, Input, Select, toneClasses } from '$lib/components/ui';
 
@@ -51,11 +52,17 @@
 	let modalAberto = $state(false);
 	let diaSelecionado = $state(''); // 'AAAA-MM-DD'
 	let hora = $state('09:00');
+	let redes = $state<string[]>([]);
 	let salvando = $state(false);
+
+	function toggleRede(v: string) {
+		redes = redes.includes(v) ? redes.filter((r) => r !== v) : [...redes, v];
+	}
 
 	function abrirAgendar(k: string) {
 		diaSelecionado = k;
 		hora = '09:00';
+		redes = ['instagram'];
 		modalAberto = true;
 	}
 
@@ -175,6 +182,9 @@
 			// Monta o instante UTC a partir do dia + horário local escolhidos.
 			const dt = new Date(`${diaSelecionado}T${hora}:00`);
 			if (!isNaN(dt.getTime())) formData.set('data_publicacao', dt.toISOString());
+			// Redes selecionadas (cross-post) — vão como múltiplos campos "redes".
+			formData.delete('redes');
+			redes.forEach((r) => formData.append('redes', r));
 			salvando = true;
 			return async ({ result, update }) => {
 				salvando = false;
@@ -192,6 +202,22 @@
 		class="space-y-4"
 	>
 		<Input label="Título (opcional)" name="titulo" placeholder="Ex.: Post de oferta da semana" />
+
+		<div>
+			<span class="mb-1.5 block text-sm font-medium text-navy">Redes sociais</span>
+			<div class="flex flex-wrap gap-1.5">
+				{#each CONTEUDO_REDE as r (r.value)}
+					<button
+						type="button"
+						onclick={() => toggleRede(r.value)}
+						aria-pressed={redes.includes(r.value)}
+						class="rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors {redes.includes(r.value)
+							? 'bg-brand text-white'
+							: 'bg-bg text-slate hover:bg-grey-200/70'}"
+					>{r.label}</button>
+				{/each}
+			</div>
+		</div>
 
 		<div>
 			<span class="mb-1.5 block text-sm font-medium text-navy">Horário</span>

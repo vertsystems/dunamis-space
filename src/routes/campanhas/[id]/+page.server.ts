@@ -1,5 +1,6 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { campanhaFromForm } from '$lib/campanhas';
+import { redesFromForm } from '$lib/conteudo';
 import { parseMes, fmtMes, mesAnterior, mesSeguinte, celulasMes } from '$lib/calendario';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -97,6 +98,7 @@ export const actions: Actions = {
 			tipo: str('tipo') ?? 'feed',
 			status: str('status') ?? 'programado',
 			responsavel_id: str('responsavel_id'),
+			redes: redesFromForm(fd),
 			data_publicacao: dataPublicacao,
 			publicado_manual: false
 		});
