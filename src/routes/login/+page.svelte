@@ -160,9 +160,12 @@
 			<p class="mt-8 text-xs text-grey">Dunamis Company · Marketing Digital</p>
 		</div>
 
-		<!-- Hero (imagem opcional em static/login.webp — com fallback de gradiente) -->
+		<!-- Hero: foto rotativa (sorteada em static/login-fotos/) com fallback de gradiente -->
 		<div class="login-hero relative hidden overflow-hidden lg:block">
-			<div class="login-hero__img"></div>
+			<div
+				class="login-hero__img"
+				style={data.hero ? `background-image: url('${data.hero}')` : ''}
+			></div>
 			<div class="login-hero__scrim"></div>
 			<div class="relative flex h-full flex-col justify-end p-10 text-white">
 				<div class="text-2xl font-extrabold tracking-tight">Dunamis Space</div>
@@ -178,12 +181,11 @@
 	.login-hero {
 		background: linear-gradient(135deg, #3b6ef6 0%, #2f5fe0 45%, #6d28d9 100%);
 	}
-	/* Imagem opcional: se static/login.webp (ou .jpg) existir, aparece por cima do
-	   gradiente; se não, os 404 não pintam nada e o gradiente permanece. */
+	/* A foto (background-image) é definida inline a partir de data.hero; sem foto,
+	   fica transparente e o gradiente da marca (.login-hero) aparece. */
 	.login-hero__img {
 		position: absolute;
 		inset: 0;
-		background-image: url('/login.webp'), url('/login.jpg');
 		background-size: cover;
 		background-position: center;
 	}
