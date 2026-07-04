@@ -11,6 +11,8 @@
 	import CrmAtividades from '$lib/components/crm/CrmAtividades.svelte';
 	import CrmMetas from '$lib/components/crm/CrmMetas.svelte';
 	import CrmRelatorios from '$lib/components/crm/CrmRelatorios.svelte';
+	import CrmForecast from '$lib/components/crm/CrmForecast.svelte';
+	import CrmFollowups from '$lib/components/crm/CrmFollowups.svelte';
 	import CrmDrawer from '$lib/components/crm/CrmDrawer.svelte';
 	import CrmModal from '$lib/components/crm/CrmModal.svelte';
 	import CrmNegocioForm from '$lib/components/crm/CrmNegocioForm.svelte';
@@ -20,6 +22,8 @@
 		computeRanking,
 		computeMotivosPerda,
 		computeOrigens,
+		computeForecast,
+		computeFollowups,
 		MOTIVOS_PERDA
 	} from '$lib/crm';
 	import type { Negocio, Atividade } from '$lib/crm';
@@ -58,6 +62,8 @@
 	const ranking = $derived(computeRanking(negocios, data.colaboradores, metas));
 	const motivos = $derived(computeMotivosPerda(negocios));
 	const origens = $derived(computeOrigens(negocios, data.contatos));
+	const forecast = $derived(computeForecast(negocios, stagesDoPipeline));
+	const followups = $derived(computeFollowups(negocios));
 	const mesLabel = $derived(
 		new Date(data.mesRef.ano, data.mesRef.mes - 1, 1).toLocaleDateString('pt-BR', {
 			month: 'long',
@@ -255,6 +261,10 @@
 	<Tabs items={VIEWS} bind:value={view} class="mb-4" />
 
 	{#if view === 'pipeline'}
+		<div class="mb-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+			<CrmForecast {forecast} />
+			<CrmFollowups {followups} onOpen={abrirNegocio} />
+		</div>
 		<CrmPipeline
 			stages={stagesDoPipeline}
 			{negocios}

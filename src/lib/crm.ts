@@ -496,6 +496,114 @@ export function computeOrigens(negocios: Negocio[], contatos: Contato[]): Origem
 		.sort((x, y) => y.valor_ganho - x.valor_ganho || y.negocios - x.negocios);
 }
 
+// ---------- Previsão de receita (forecast ponderado) ----------
+export type ForecastStage = {
+	stage_id: string;
+	nome: string;
+	cor: string;
+	prob: number;
+	qtd: number;
+	valor: number;
+	ponderado: number;
+};
+
+export type Forecast = {
+	total_aberto: number;
+	total_ponderado: number;
+	mes_valor: number; // negócios com previsão de fechamento neste mês
+	mes_ponderado: number;
+	por_stage: ForecastStage[];
+};
+
+/** Forecast das etapas passadas (funil ativo): valor × probabilidade dos negócios abertos. */
+export function computeForecast(negocios: Negocio[], stages: Stage[], agora = new Date()): Forecast {
+	const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1).getTime();
+	const fimMes = new Date(agora.getFullYear(), agora.getMonth() + 1, 1).getTime();
+	const byStage = new Map(stages.map((s) => [s.id, s]));
+	const acc = new Map<string, { qtd: number; valor: number; ponderado: number }>();
+	let total_aberto = 0,
+		total_ponderado = 0,
+		mes_valor = 0,
+		mes_ponderado = 0;
+	for (const n of negocios) {
+		if (n.status !== 'aberto' || !n.stage_id) continue;
+		const s = byStage.get(n.stage_id);
+		if (!s) continue; // só negócios nas etapas do funil ativo
+		const pond = (n.valor * (s.probabilidade ?? 0)) / 100;
+		total_aberto += n.valor;
+		total_ponderado += pond;
+		const a = acc.get(s.id) ?? { qtd: 0, valor: 0, ponderado: 0 };
+		a.qtd++;
+		a.valor += n.valor;
+		a.ponderado += pond;
+		acc.set(s.id, a);
+		if (n.previsao_fechamento) {
+			const t = new Date(n.previsao_fechamento + 'T00:00:00').getTime();
+			if (t >= inicioMes && t < fimMes) {
+				mes_valor += n.valor;
+				mes_ponderado += pond;
+			}
+		}
+	}
+	const por_stage = stages.map((s) => {
+		const a = acc.get(s.id) ?? { qtd: 0, valor: 0, ponderado: 0 };
+		return {
+			stage_id: s.id,
+			nome: s.nome,
+			cor: s.cor,
+			prob: s.probabilidade ?? 0,
+			qtd: a.qtd,
+			valor: a.valor,
+			ponderado: a.ponderado
+		};
+	});
+	return { total_aberto, total_ponderado, mes_valor, mes_ponderado, por_stage };
+}
+
+// ---------- Follow-ups: negócios que precisam de atenção ----------
+export type FollowupLinha = {
+	id: string;
+	titulo: string;
+	contato: string | null;
+	responsavel_nome: string | null;
+	valor: number;
+	prox_atividade: string | null;
+	situacao: 'atrasada' | 'sem_followup';
+	dias: number | null; // dias de atraso (null p/ sem follow-up)
+};
+
+/** Negócios abertos com follow-up atrasado ou sem próxima atividade agendada. */
+export function computeFollowups(negocios: Negocio[], agora = new Date()): FollowupLinha[] {
+	const linhas: FollowupLinha[] = [];
+	for (const n of negocios) {
+		if (n.status !== 'aberto') continue;
+		let situacao: 'atrasada' | 'sem_followup' | null = null;
+		if (n.prox_atividade && vencimentoDe(n.prox_atividade, agora) === 'atrasada') situacao = 'atrasada';
+		else if (!n.prox_atividade) situacao = 'sem_followup';
+		if (!situacao) continue;
+		const dias =
+			situacao === 'atrasada' && n.prox_atividade
+				? Math.floor((agora.getTime() - new Date(n.prox_atividade).getTime()) / 86_400_000)
+				: null;
+		linhas.push({
+			id: n.id,
+			titulo: n.titulo,
+			contato: n.contato_empresa ?? n.contato_nome,
+			responsavel_nome: n.responsavel_nome,
+			valor: n.valor,
+			prox_atividade: n.prox_atividade,
+			situacao,
+			dias
+		});
+	}
+	// Atrasadas primeiro (mais dias no topo); depois sem follow-up (maior valor).
+	return linhas.sort((a, b) => {
+		if (a.situacao !== b.situacao) return a.situacao === 'atrasada' ? -1 : 1;
+		if (a.situacao === 'atrasada') return (b.dias ?? 0) - (a.dias ?? 0);
+		return b.valor - a.valor;
+	});
+}
+
 /** Iniciais para avatar (mesmo padrão do app shell). */
 export function iniciais(nome: string | null | undefined): string {
 	const n = (nome ?? '').trim();
