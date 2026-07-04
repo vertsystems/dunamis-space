@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { SupabaseClient } from '@supabase/supabase-js';
 	import { page } from '$app/state';
+	import { invalidateAll } from '$app/navigation';
 	import { scale } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import Icon from '$lib/components/Icon.svelte';
@@ -46,6 +47,7 @@
 		descricao = '';
 		aberto = false;
 		toast.success('Chamado SOS enviado. A equipe foi avisada.');
+		await invalidateAll(); // atualiza o badge de abertos na sidebar
 	}
 
 	function onWindowClick(e: MouseEvent) {

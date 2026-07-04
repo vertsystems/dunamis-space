@@ -254,6 +254,7 @@ body::before {
 	}
 
 	a {
+		position: relative;
 		display: flex;
 		align-items: center;
 		gap: 0.7rem;
@@ -270,6 +271,23 @@ body::before {
 		svg {
 			opacity: 0.8;
 			flex-shrink: 0;
+		}
+
+		// Badge de contagem (ex.: chamados SOS em aberto no item Central SOS)
+		.area-badge {
+			margin-left: auto;
+			min-width: 20px;
+			height: 20px;
+			padding: 0 6px;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			background: var(--color-brand-danger, #f04438);
+			color: #fff;
+			border-radius: 999px;
+			font-size: 0.66rem;
+			font-weight: 700;
+			line-height: 1;
 		}
 
 		&:hover {
@@ -380,6 +398,18 @@ body::before {
 				font-size: 1.15rem;
 				opacity: 0.9;
 			}
+		}
+
+		// Sidebar recolhida: badge vira um ponto no canto do ícone.
+		.area-badge {
+			position: absolute;
+			top: 3px;
+			right: 7px;
+			margin-left: 0;
+			min-width: 15px;
+			height: 15px;
+			padding: 0 3px;
+			font-size: 0.5rem;
 		}
 	}
 

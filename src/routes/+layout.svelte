@@ -28,6 +28,9 @@
 	// CSS que sobrescreve a primária do sistema só para este login (SSR — sem flash).
 	const temaStyle = $derived(temaCss(perfil?.cor_tema));
 
+	// Chamados SOS em aberto → badge no item "Central SOS" da sidebar.
+	const sosAbertos = $derived((data.sosAbertos as number) ?? 0);
+
 	onMount(() => {
 		const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
 			if (newSession?.expires_at !== session?.expires_at) {
@@ -242,6 +245,9 @@
 								<a href={a.href} class:is-active={areaAtiva(a.href)} title={a.label}>
 									<Icon name={a.icon} size={17} />
 									<span class="area-label">{a.label}</span>
+									{#if a.href === '/sos' && sosAbertos > 0}
+										<span class="area-badge">{sosAbertos}</span>
+									{/if}
 								</a>
 							{/if}
 						{/each}
