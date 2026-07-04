@@ -14,11 +14,11 @@
 			<div>
 				<h1 class="text-2xl font-bold text-navy leading-none">DTools</h1>
 				<p class="text-[11px] font-semibold text-grey uppercase tracking-[0.14em] mt-1.5">
-					Central de Ferramentas Dunamis
+					Central de Ferramentas Dunamis Company
 				</p>
 				<p class="text-sm text-slate mt-3 max-w-2xl">
-					Ferramentas internas da Dunamis, independentes e prontas, rodando dentro do sistema — mesmo
-					login, mesmo visual, tudo integrado. Acesse cada ferramenta pelo menu à esquerda.
+					Ferramentas exclusivas da Dunamis, integradas ao sistema. Acesse todas pelo menu à
+					esquerda, com o mesmo login e a mesma experiência.
 				</p>
 			</div>
 		</div>
