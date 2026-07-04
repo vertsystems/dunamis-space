@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { conteudoStatusTone, conteudoStatusLabel, conteudoTipoLabel } from '$lib/conteudo';
+	import { SEMANA, MESES, chaveDia, celulasMes } from '$lib/calendario';
 	import { Card, Button, SegmentedNav, toneClasses } from '$lib/components/ui';
 
 	let { data } = $props();
@@ -11,21 +12,11 @@
 		{ label: 'Aprovações', href: '/conteudo/aprovacoes' }
 	];
 
-	const SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-	const MESES = [
-		'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-		'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-	];
-
-	function chave(d: Date) {
-		return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-	}
-
 	const porDia = $derived.by(() => {
 		const map = new Map<string, typeof data.conteudos>();
 		for (const c of data.conteudos) {
 			if (!c.data_publicacao) continue;
-			const k = chave(new Date(c.data_publicacao));
+			const k = chaveDia(new Date(c.data_publicacao));
 			const arr = map.get(k) ?? [];
 			arr.push(c);
 			map.set(k, arr);
@@ -33,20 +24,9 @@
 		return map;
 	});
 
-	const celulas = $derived.by(() => {
-		const primeiro = new Date(data.ano, data.mes, 1);
-		const inicioSemana = primeiro.getDay();
-		const diasNoMes = new Date(data.ano, data.mes + 1, 0).getDate();
-		const total = Math.ceil((inicioSemana + diasNoMes) / 7) * 7;
-		const inicio = new Date(data.ano, data.mes, 1 - inicioSemana);
-		return Array.from({ length: total }, (_, i) => {
-			const d = new Date(inicio);
-			d.setDate(inicio.getDate() + i);
-			return d;
-		});
-	});
+	const celulas = $derived(celulasMes(data.ano, data.mes));
 
-	const hojeKey = chave(new Date());
+	const hojeKey = chaveDia(new Date());
 
 	function horaCurta(iso: string | null) {
 		return iso ? new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
@@ -77,7 +57,7 @@
 	</div>
 	<div class="grid grid-cols-7 gap-1.5">
 		{#each celulas as d (d.toISOString())}
-			{@const k = chave(d)}
+			{@const k = chaveDia(d)}
 			{@const itens = porDia.get(k) ?? []}
 			{@const foraDoMes = d.getMonth() !== data.mes}
 			<div
