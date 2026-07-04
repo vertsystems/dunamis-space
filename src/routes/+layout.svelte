@@ -14,6 +14,7 @@
 	import { DTOOLS_FERRAMENTAS } from '$lib/dtools';
 	import { temaCss } from '$lib/tema';
 	import Icon from '$lib/components/Icon.svelte';
+	import SosWidget from '$lib/components/SosWidget.svelte';
 	import { Toaster } from '$lib/components/ui';
 	import { toast } from '$lib/toast.svelte';
 
@@ -74,7 +75,8 @@
 				{ href: '/onboarding', label: 'Onboarding', icon: 'clipboard' },
 				{ href: '/equipe', label: 'Equipe', icon: 'users' },
 				{ href: '/ferramentas', label: 'Ferramentas & Contas', icon: 'key' },
-				{ href: '/base-conhecimento', label: 'Base de Conhecimento', icon: 'book' }
+				{ href: '/base-conhecimento', label: 'Base de Conhecimento', icon: 'book' },
+				{ href: '/sos', label: 'Central SOS', icon: 'lifebuoy' }
 			]
 		},
 		{
@@ -249,4 +251,10 @@
 			</main>
 		</div>
 	</div>
+
+	<SosWidget
+		{supabase}
+		autorNome={perfil?.nome ?? null}
+		autorEmail={session?.user?.email ?? null}
+	/>
 {/if}

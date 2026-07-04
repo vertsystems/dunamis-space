@@ -42,6 +42,7 @@
 		MapPin,
 		Globe,
 		Camera,
+		LifeBuoy,
 		type IconProps
 	} from '@lucide/svelte';
 	import type { Component } from 'svelte';
@@ -85,7 +86,8 @@
 		settings: Settings,
 		map: MapPin,
 		globe: Globe,
-		camera: Camera
+		camera: Camera,
+		lifebuoy: LifeBuoy
 	};
 </script>
 
