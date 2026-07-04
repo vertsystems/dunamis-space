@@ -4,61 +4,28 @@
 	import Icon from '$lib/components/Icon.svelte';
 </script>
 
-<div class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 items-start">
-	<!-- Esquerda: grade de ferramentas -->
-	<div>
-		<div class="mb-4">
-			<h1 class="text-xl font-bold text-navy">DTools — Ferramentas Dunamis</h1>
-			<p class="text-sm text-grey">Central de ferramentas internas da Dunamis integradas ao sistema.</p>
-		</div>
-
-		{#if DTOOLS_FERRAMENTAS.length}
-			<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-				{#each DTOOLS_FERRAMENTAS as f (f.href)}
-					<a
-						class="flex items-center gap-3.5 p-4 rounded-[var(--radius-lg)] border border-grey-200 bg-surface text-navy no-underline h-full transition-shadow hover:border-brand hover:shadow-md"
-						href={f.href}
-					>
-						<span class="grid size-11 shrink-0 place-items-center rounded-[var(--radius)] bg-brand/10 text-brand">
-							<Icon name={f.icon} size={22} />
-						</span>
-						<div>
-							<strong>{f.label}</strong>
-							{#if f.descricao}<p class="text-sm text-grey mb-0">{f.descricao}</p>{/if}
-						</div>
-					</a>
-				{/each}
-			</div>
-		{:else}
-			<div class="rounded-[var(--radius)] bg-bg px-4 py-3 text-sm text-slate">
-				<strong>Nenhuma ferramenta configurada ainda.</strong>
-				<p class="mt-1 mb-0">
-					Este é o espaço reservado para as ferramentas da Dunamis. Conforme forem definidas, elas
-					aparecerão aqui e no menu lateral de DTools.
+<div class="space-y-4">
+	<!-- Identidade / boas-vindas (hero) -->
+	<Card>
+		<div class="flex items-start gap-4">
+			<span class="grid size-14 shrink-0 place-items-center rounded-[var(--radius-lg)] bg-brand text-white shadow-md">
+				<Icon name="dtools" size={28} />
+			</span>
+			<div>
+				<h1 class="text-2xl font-bold text-navy leading-none">DTools</h1>
+				<p class="text-[11px] font-semibold text-grey uppercase tracking-[0.14em] mt-1.5">
+					Central de Ferramentas Dunamis
+				</p>
+				<p class="text-sm text-slate mt-3 max-w-2xl">
+					Ferramentas internas da Dunamis, independentes e prontas, rodando dentro do sistema — mesmo
+					login, mesmo visual, tudo integrado. Acesse cada ferramenta pelo menu à esquerda.
 				</p>
 			</div>
-		{/if}
-	</div>
+		</div>
+	</Card>
 
-	<!-- Direita: rail geral do DTools -->
-	<aside class="space-y-4">
-		<!-- Identidade / boas-vindas -->
-		<Card>
-			<div class="flex items-center gap-3 mb-3">
-				<span class="grid size-11 place-items-center rounded-[var(--radius-lg)] bg-brand text-white shadow-sm">
-					<Icon name="dtools" size={22} />
-				</span>
-				<div>
-					<h2 class="text-base font-bold text-navy leading-tight">DTools</h2>
-					<p class="text-[11px] font-semibold text-grey uppercase tracking-wider">Central de Ferramentas</p>
-				</div>
-			</div>
-			<p class="text-sm text-slate">
-				Ferramentas internas da Dunamis, independentes e prontas, rodando dentro do sistema — mesmo
-				login, mesmo visual, tudo integrado.
-			</p>
-		</Card>
-
+	<!-- Painéis -->
+	<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3 items-start">
 		<!-- Resumo do hub -->
 		<Card>
 			<h3 class="text-xs font-semibold text-grey uppercase tracking-wider mb-3">Resumo</h3>
@@ -112,5 +79,5 @@
 				<p class="text-sm text-grey">Novas ferramentas aparecerão aqui em breve.</p>
 			{/if}
 		</Card>
-	</aside>
+	</div>
 </div>
