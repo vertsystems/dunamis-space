@@ -1,11 +1,14 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
+	import { fade, scale } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	import { Card, Button, Input, Select } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import { FUNCAO, funcaoLabel } from '$lib/equipe';
 	import { CORES_TEMA, COR_PADRAO, normalizaHex, escurece } from '$lib/tema';
+	import { AVATARES } from '$lib/avatares';
 
 	let { data } = $props();
 
@@ -32,6 +35,29 @@
 	let local = $state((colab?.local as string) ?? '');
 	let funcao = $state((colab?.funcao as string) ?? 'social_media');
 	let salvando = $state(false);
+
+	// --- Avatar: galeria de imagens de static/avatares/ ---
+	let avatarAtual = $state((colab?.avatar_url as string | null) ?? null);
+	let modalAvatar = $state(false);
+	let salvandoAvatar = $state(false);
+
+	async function escolherAvatar(url: string | null) {
+		if (salvandoAvatar) return;
+		avatarAtual = url; // reflete no cabeçalho na hora
+		salvandoAvatar = true;
+		const { error } = await data.supabase
+			.from('colaboradores')
+			.update({ avatar_url: url })
+			.eq('email', data.email);
+		salvandoAvatar = false;
+		if (error) {
+			toast.error('Não foi possível salvar o avatar.');
+			return;
+		}
+		modalAvatar = false;
+		toast.success(url ? 'Avatar atualizado.' : 'Avatar removido.');
+		await invalidateAll(); // sincroniza o avatar do topo
+	}
 
 	// --- Personalização: cor de destaque do sistema (só para este login) ---
 	let corAtual = $state(normalizaHex(colab?.cor_tema) ?? COR_PADRAO);
@@ -83,14 +109,25 @@
 		class="relative overflow-hidden rounded-[var(--radius-2xl)] bg-gradient-to-br from-navy-900 to-navy p-6 shadow-lg"
 	>
 		<div class="flex items-center gap-4">
-			<div
-				class="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white/10 text-2xl font-bold text-white ring-1 ring-white/15"
-			>
-				{#if colab?.avatar_url}
-					<img src={colab.avatar_url} alt="" class="h-full w-full object-cover" />
-				{:else}
-					{iniciais}
-				{/if}
+			<div class="relative shrink-0">
+				<div
+					class="grid h-20 w-20 place-items-center overflow-hidden rounded-2xl bg-white/10 text-2xl font-bold text-white ring-1 ring-white/15"
+				>
+					{#if avatarAtual}
+						<img src={avatarAtual} alt="" class="h-full w-full object-cover" />
+					{:else}
+						{iniciais}
+					{/if}
+				</div>
+				<button
+					type="button"
+					onclick={() => (modalAvatar = true)}
+					class="absolute -right-1.5 -bottom-1.5 grid h-7 w-7 place-items-center rounded-full bg-brand text-white shadow-md ring-2 ring-navy-900 transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+					aria-label="Alterar avatar"
+					title="Alterar avatar"
+				>
+					<Icon name="camera" size={14} />
+				</button>
 			</div>
 			<div class="min-w-0">
 				<h1 class="truncate text-xl font-bold text-white">{colab?.nome || 'Usuário'}</h1>
@@ -250,3 +287,88 @@
 		</div>
 	</div>
 </div>
+
+<svelte:window
+	onkeydown={modalAvatar ? (e) => e.key === 'Escape' && (modalAvatar = false) : undefined}
+/>
+
+{#if modalAvatar}
+	<div
+		class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy-900/30 p-4 pt-[8vh] backdrop-blur-[3px]"
+		role="presentation"
+		onclick={(e) => {
+			if (e.target === e.currentTarget) modalAvatar = false;
+		}}
+		transition:fade={{ duration: 160 }}
+	>
+		<div
+			class="w-full max-w-lg rounded-[var(--radius-xl)] border border-grey-200 bg-surface shadow-2xl"
+			role="dialog"
+			aria-modal="true"
+			aria-label="Escolher avatar"
+			transition:scale={{ start: 0.96, opacity: 0, duration: 200, easing: cubicOut }}
+		>
+			<div class="flex items-center justify-between gap-3 border-b border-grey-200 px-5 py-4">
+				<h2 class="text-base font-semibold text-navy">Escolher avatar</h2>
+				<button
+					type="button"
+					class="grid size-8 place-items-center rounded-[var(--radius)] text-grey transition-colors hover:bg-bg hover:text-navy"
+					onclick={() => (modalAvatar = false)}
+					aria-label="Fechar"
+				>
+					<Icon name="x" size={18} />
+				</button>
+			</div>
+
+			<div class="p-5">
+				<div class="grid grid-cols-4 gap-3 sm:grid-cols-5">
+					<!-- Sem foto (volta às iniciais) -->
+					<button
+						type="button"
+						onclick={() => escolherAvatar(null)}
+						aria-pressed={avatarAtual === null}
+						title="Sem foto (iniciais)"
+						class="grid aspect-square place-items-center rounded-xl bg-bg text-sm font-bold text-navy ring-2 transition {avatarAtual ===
+						null
+							? 'ring-brand'
+							: 'ring-transparent hover:ring-grey-200'}"
+					>
+						{iniciais}
+					</button>
+
+					{#each AVATARES as a (a.key)}
+						<button
+							type="button"
+							onclick={() => escolherAvatar(a.url)}
+							aria-pressed={avatarAtual === a.url}
+							title={a.nome}
+							class="relative aspect-square overflow-hidden rounded-xl ring-2 transition {avatarAtual ===
+							a.url
+								? 'ring-brand'
+								: 'ring-transparent hover:ring-brand/40'}"
+						>
+							<img src={a.url} alt={a.nome} class="h-full w-full object-cover" />
+							{#if avatarAtual === a.url}
+								<span class="absolute inset-0 grid place-items-center bg-navy-900/35 text-white">
+									<Icon name="check" size={18} />
+								</span>
+							{/if}
+						</button>
+					{/each}
+				</div>
+
+				{#if !AVATARES.length}
+					<div
+						class="mt-3 rounded-[var(--radius)] border border-dashed border-grey-200 bg-bg px-4 py-6 text-center"
+					>
+						<p class="text-sm font-medium text-navy">Nenhum avatar disponível ainda.</p>
+						<p class="mt-1 text-sm text-grey">
+							Coloque imagens (.png) em
+							<span class="font-mono text-xs">static/avatares/</span> e faça o deploy.
+						</p>
+					</div>
+				{/if}
+			</div>
+		</div>
+	</div>
+{/if}

@@ -4,10 +4,13 @@
 	"version": "0.0.1",
 	"type": "module",
 	"scripts": {
+		"avatares": "node scripts/gen-avatares.mjs",
+		"predev": "node scripts/gen-avatares.mjs",
 		"dev": "vite dev",
+		"prebuild": "node scripts/gen-avatares.mjs",
 		"build": "vite build",
 		"preview": "vite preview",
-		"prepare": "svelte-kit sync || echo ''",
+		"prepare": "node scripts/gen-avatares.mjs && (svelte-kit sync || echo '')",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
 	},
