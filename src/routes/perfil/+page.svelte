@@ -103,7 +103,7 @@
 	}
 </script>
 
-<div class="mx-auto max-w-4xl space-y-4">
+<div class="space-y-4">
 	<!-- Cabeçalho / identidade -->
 	<div
 		class="relative overflow-hidden rounded-[var(--radius-2xl)] bg-gradient-to-br from-navy-900 to-navy p-6 shadow-lg"
