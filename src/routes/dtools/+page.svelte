@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { DTOOLS_FERRAMENTAS } from '$lib/dtools';
 	import { Card } from '$lib/components/ui';
+	import Icon from '$lib/components/Icon.svelte';
 </script>
 
 <Card>
@@ -14,7 +15,9 @@
 					class="flex items-center gap-3.5 p-4 rounded-[var(--radius-lg)] border border-grey-200 bg-surface text-navy no-underline h-full transition-shadow hover:border-brand hover:shadow-md"
 					href={f.href}
 				>
-					<span class="text-2xl leading-none">{f.icon}</span>
+					<span class="grid size-11 shrink-0 place-items-center rounded-[var(--radius)] bg-brand/10 text-brand">
+						<Icon name={f.icon} size={22} />
+					</span>
 					<div>
 						<strong>{f.label}</strong>
 						{#if f.descricao}<p class="text-sm text-grey mb-0">{f.descricao}</p>{/if}

@@ -36,6 +36,7 @@
 		ChevronRight,
 		Key,
 		ClipboardCheck,
+		FileUp,
 		type IconProps
 	} from '@lucide/svelte';
 	import type { Component } from 'svelte';
@@ -73,7 +74,8 @@
 		zap: Zap,
 		chevron: ChevronRight,
 		key: Key,
-		clipboard: ClipboardCheck
+		clipboard: ClipboardCheck,
+		pagsup: FileUp
 	};
 </script>
 

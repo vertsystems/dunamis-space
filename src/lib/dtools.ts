@@ -7,14 +7,17 @@
 // automaticamente a partir desta lista.
 
 export type Ferramenta = {
-	href: string; // ex.: '/dtools/encurtador'
+	href: string; // ex.: '/dtools/pagsup'
 	label: string;
-	icon: string; // glyph ou emoji
+	icon: string; // nome de ícone do <Icon> (mapa Lucide em Icon.svelte)
 	descricao?: string;
 };
 
 export const DTOOLS_FERRAMENTAS: Ferramenta[] = [
-	// Exemplos de como ficará (descomente/edite quando criar a ferramenta):
-	// { href: '/dtools/encurtador', label: 'Encurtador de Links', icon: '🔗', descricao: 'Gera links curtos da Dunamis.' },
-	// { href: '/dtools/gerador-utm', label: 'Gerador de UTM', icon: '🏷️', descricao: 'Monta URLs com parâmetros de campanha.' }
+	{
+		href: '/dtools/pagsup',
+		label: "Pag's Up",
+		icon: 'pagsup',
+		descricao: 'Gestão de pagamentos de marketing: cronograma, prestadores e negociações.'
+	}
 ];

@@ -21,3 +21,7 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# DTools — staging de código-fonte dos apps a integrar (não faz parte do build;
+# cada app é portado para src/lib/pagsup, src/routes/dtools/<app>, etc.)
+/dtools
