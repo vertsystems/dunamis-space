@@ -1,12 +1,13 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { campanhaFromForm } from '$lib/campanhas';
-import { parseMes, fmtMes, mesAnterior, mesSeguinte } from '$lib/calendario';
+import { parseMes, fmtMes, mesAnterior, mesSeguinte, celulasMes } from '$lib/calendario';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, url, locals: { supabase } }) => {
-	const [{ data: campanha, error: e }, { data: clientes }] = await Promise.all([
+	const [{ data: campanha, error: e }, { data: clientes }, { data: colaboradores }] = await Promise.all([
 		supabase.from('campanhas').select('*, cliente:clientes(nome)').eq('id', params.id).single(),
-		supabase.from('clientes').select('id, nome').order('nome')
+		supabase.from('clientes').select('id, nome').order('nome'),
+		supabase.from('colaboradores').select('id, nome').eq('ativo', true).order('nome')
 	]);
 	if (e || !campanha) throw error(404, 'Campanha não encontrada');
 
@@ -20,10 +21,19 @@ export const load: PageServerLoad = async ({ params, url, locals: { supabase } }
 		};
 		const { ano, mes } = base;
 
-		// Intervalo do mês com folga de ±1 dia (segurança de fuso, igual ao módulo Conteúdo).
+		// Intervalo cobrindo TODO o grid exibido — incluindo os dias que "vazam" do
+		// mês anterior/seguinte para fechar as semanas — com folga de ±1 dia p/ fuso.
+		// (Sem isso, agendar num dia de virada de mês inseria mas o post não aparecia.)
+		const cels = celulasMes(ano, mes);
+		const primeira = cels[0];
+		const ultima = cels[cels.length - 1];
 		const DIA = 86_400_000;
-		const gte = new Date(Date.UTC(ano, mes, 1) - DIA).toISOString();
-		const lt = new Date(Date.UTC(ano, mes + 1, 1) + DIA).toISOString();
+		const gte = new Date(
+			Date.UTC(primeira.getFullYear(), primeira.getMonth(), primeira.getDate()) - DIA
+		).toISOString();
+		const lt = new Date(
+			Date.UTC(ultima.getFullYear(), ultima.getMonth(), ultima.getDate() + 1) + DIA
+		).toISOString();
 
 		const { data: conteudos } = await supabase
 			.from('conteudos')
@@ -48,6 +58,7 @@ export const load: PageServerLoad = async ({ params, url, locals: { supabase } }
 	return {
 		campanha,
 		clientes: clientes ?? [],
+		colaboradores: colaboradores ?? [],
 		calendario
 	};
 };
@@ -60,6 +71,37 @@ export const actions: Actions = {
 		const { error: e } = await supabase.from('campanhas').update(values).eq('id', params.id);
 		if (e) return fail(500, { error: e.message, values });
 		return { saved: true };
+	},
+	// Agendamento rápido de conteúdo pelo calendário (modal). O cliente vem da
+	// campanha (não confiamos no formulário); data_publicacao chega como ISO UTC.
+	agendar: async ({ request, params, locals: { supabase } }) => {
+		const fd = await request.formData();
+		const str = (k: string) => {
+			const v = fd.get(k);
+			return typeof v === 'string' && v.trim() !== '' ? v.trim() : null;
+		};
+
+		const { data: camp } = await supabase
+			.from('campanhas')
+			.select('cliente_id')
+			.eq('id', params.id)
+			.single();
+		if (!camp?.cliente_id) return fail(400, { agendarError: 'Campanha sem cliente vinculado.' });
+
+		const dataPublicacao = str('data_publicacao');
+		if (!dataPublicacao) return fail(400, { agendarError: 'Escolha um horário para o post.' });
+
+		const { error: e } = await supabase.from('conteudos').insert({
+			cliente_id: camp.cliente_id,
+			titulo: str('titulo'),
+			tipo: str('tipo') ?? 'feed',
+			status: str('status') ?? 'programado',
+			responsavel_id: str('responsavel_id'),
+			data_publicacao: dataPublicacao,
+			publicado_manual: false
+		});
+		if (e) return fail(500, { agendarError: e.message });
+		return { agendado: true };
 	},
 	delete: async ({ params, locals: { supabase } }) => {
 		const { error: e } = await supabase.from('campanhas').delete().eq('id', params.id);

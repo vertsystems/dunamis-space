@@ -9,7 +9,7 @@
 <Card>
 	<h1 class="text-lg font-semibold text-navy mb-4">Novo conteúdo</h1>
 	<ConteudoForm
-		conteudo={form?.values ?? data.prefill}
+		conteudo={form?.values ?? null}
 		clientes={data.clientes}
 		projetos={data.projetos}
 		colaboradores={data.colaboradores}
