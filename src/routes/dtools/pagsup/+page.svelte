@@ -4,7 +4,11 @@
 	import Prestadores from '$lib/components/pagsup/Prestadores.svelte';
 	import Negociacoes from '$lib/components/pagsup/Negociacoes.svelte';
 	import Configuracoes from '$lib/components/pagsup/Configuracoes.svelte';
+	import { Button } from '$lib/components/ui';
 	import { Calendar, Users, Briefcase, Settings } from '@lucide/svelte';
+	import type { PageData } from './$types';
+
+	let { data }: { data: PageData } = $props();
 
 	type ModuleId = 'cronograma' | 'prestadores' | 'negociacoes' | 'configuracoes';
 	let active = $state<ModuleId>('cronograma');
@@ -15,6 +19,11 @@
 		{ id: 'negociacoes', label: 'Negociações', icon: Briefcase },
 		{ id: 'configuracoes', label: 'Configurações', icon: Settings }
 	] as const;
+
+	// Inicializa o store com o cliente Supabase (autenticado) do layout.
+	$effect(() => {
+		if (data.supabase) pagsup.init(data.supabase);
+	});
 </script>
 
 <svelte:head>
@@ -24,7 +33,17 @@
 <div class="pagsup-root">
 	<!-- Conteúdo do módulo ativo -->
 	<div class="module-area">
-		{#if active === 'cronograma'}
+		{#if pagsup.loading}
+			<div class="flex flex-col items-center justify-center py-24 text-grey">
+				<span class="size-8 rounded-full border-2 border-grey-200 border-t-brand animate-spin"></span>
+				<p class="mt-3 text-sm">Carregando dados…</p>
+			</div>
+		{:else if pagsup.error}
+			<div class="flex flex-col items-center justify-center py-24 text-center">
+				<p class="text-brand-danger mb-3">{pagsup.error}</p>
+				<Button variant="secondary" onclick={() => pagsup.load()}>Tentar novamente</Button>
+			</div>
+		{:else if active === 'cronograma'}
 			<Cronograma />
 		{:else if active === 'prestadores'}
 			<Prestadores />

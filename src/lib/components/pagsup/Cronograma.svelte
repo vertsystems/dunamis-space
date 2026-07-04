@@ -84,7 +84,6 @@
 
 	function finalizar() {
 		pagsup.clearScheduleForCurrentClient();
-		pagsup.resetProvidersForCurrentClient();
 		sendToFinanceDate = '';
 		paymentDate = '';
 		showResetModal = false;

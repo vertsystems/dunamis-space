@@ -1,22 +1,20 @@
-// Pag's Up — store de estado (Svelte 5 runes) com persistência em localStorage.
-// Substitui os useState/useEffect do App.tsx original. Estado é global (singleton)
-// para ser compartilhado entre os módulos (Cronograma, Prestadores, Negociações).
-//
-// Persistência real (Supabase) virá depois; por ora mantém o mesmo esquema de
-// chaves `pagsup_*` em localStorage do app original.
+// Pag's Up — store de estado (Svelte 5 runes) com persistência no Supabase.
+// Carga assíncrona via db.fetchAll; mutations são otimistas (atualizam a UI na
+// hora e persistem em segundo plano, com rollback + toast em caso de erro).
+// A seleção de cliente fica em localStorage só por conveniência de UX.
 
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Provider, ScheduledService, Negotiation, ScheduledNegotiation, Client } from './types';
-import { INITIAL_CLIENTS, INITIAL_PROVIDERS, INITIAL_NEGOTIATIONS } from './data';
+import { toast } from '$lib/toast.svelte';
+import * as db from './db';
 
-const K_PROVIDERS = 'pagsup_providers';
-const K_SCHEDULE = 'pagsup_schedule';
-const K_NEGOTIATIONS = 'pagsup_negotiations';
-const K_SCHED_NEG = 'pagsup_scheduled_negotiations';
 const K_CLIENT = 'pagsup_selected_client';
 
-/** ID curto aleatório (só roda no cliente, em resposta a interação). */
 function uid(): string {
-	return Math.random().toString(36).slice(2, 11);
+	return crypto.randomUUID();
+}
+function hoje(): string {
+	return new Date().toISOString().split('T')[0];
 }
 
 /** Remove pontuação de CPF/CNPJ (mantém só dígitos/letras da chave). */
@@ -24,86 +22,102 @@ export function cleanDoc(v: string | undefined | null): string {
 	return v ? v.replace(/[.\-/\\ ]/g, '') : '';
 }
 
-function read<T>(key: string, fallback: T): T {
-	if (typeof localStorage === 'undefined') return fallback;
-	const raw = localStorage.getItem(key);
-	if (!raw) return fallback;
-	try {
-		return JSON.parse(raw) as T;
-	} catch {
-		return fallback;
-	}
-}
-
-function write(key: string, value: unknown) {
-	if (typeof localStorage === 'undefined') return;
-	try {
-		localStorage.setItem(key, JSON.stringify(value));
-	} catch {
-		/* quota/priv mode — ignora */
-	}
-}
-
 class PagsupStore {
-	clients = $state<Client[]>(INITIAL_CLIENTS);
-	selectedClientId = $state<string>('mari');
+	supabase: SupabaseClient | null = null;
+	#ready = false;
 
-	providers = $state<Provider[]>(INITIAL_PROVIDERS);
+	loading = $state(true);
+	error = $state<string | null>(null);
+
+	clients = $state<Client[]>([]);
+	selectedClientId = $state<string>('');
+
+	providers = $state<Provider[]>([]);
 	scheduledServices = $state<ScheduledService[]>([]);
-	negotiations = $state<Negotiation[]>(INITIAL_NEGOTIATIONS);
+	negotiations = $state<Negotiation[]>([]);
 	scheduledNegotiations = $state<ScheduledNegotiation[]>([]);
 
-	constructor() {
-		if (typeof localStorage === 'undefined') return;
-		// Hidrata do localStorage já no cliente (a rota roda com ssr desligado).
-		this.providers = read<Provider[]>(K_PROVIDERS, INITIAL_PROVIDERS).map((p) => ({
-			...p,
-			clientId: p.clientId || 'mari'
-		}));
-		this.scheduledServices = read<ScheduledService[]>(K_SCHEDULE, []).map((s) => ({
-			...s,
-			clientId: s.clientId || 'mari'
-		}));
-		this.negotiations = read<Negotiation[]>(K_NEGOTIATIONS, INITIAL_NEGOTIATIONS).map((n) => ({
-			...n,
-			clientId: n.clientId || 'mari'
-		}));
-		this.scheduledNegotiations = read<ScheduledNegotiation[]>(K_SCHED_NEG, []).map((sn) => ({
-			...sn,
-			clientId: sn.clientId || 'mari'
-		}));
-		this.selectedClientId = localStorage.getItem(K_CLIENT) || 'mari';
-	}
-
 	// ---- Derivados filtrados pelo cliente selecionado ----------------------
-	filteredProviders = $derived(
-		this.providers.filter((p) => (p.clientId ?? 'mari') === this.selectedClientId)
-	);
+	filteredProviders = $derived(this.providers.filter((p) => p.clientId === this.selectedClientId));
 	filteredScheduledServices = $derived(
-		this.scheduledServices.filter((s) => (s.clientId ?? 'mari') === this.selectedClientId)
+		this.scheduledServices.filter((s) => s.clientId === this.selectedClientId)
 	);
 	filteredNegotiations = $derived(
-		this.negotiations.filter((n) => (n.clientId ?? 'mari') === this.selectedClientId)
+		this.negotiations.filter((n) => n.clientId === this.selectedClientId)
 	);
 	filteredScheduledNegotiations = $derived(
-		this.scheduledNegotiations.filter((sn) => (sn.clientId ?? 'mari') === this.selectedClientId)
+		this.scheduledNegotiations.filter((sn) => sn.clientId === this.selectedClientId)
 	);
 
 	get selectedClientName(): string {
 		return this.clients.find((c) => c.id === this.selectedClientId)?.name ?? '';
 	}
 
-	// ---- Seleção de cliente ------------------------------------------------
+	// ---- Ciclo de vida -----------------------------------------------------
+	async init(supabase: SupabaseClient) {
+		if (this.#ready) return;
+		this.#ready = true;
+		this.supabase = supabase;
+		await this.load();
+	}
+
+	async load() {
+		if (!this.supabase) return;
+		this.loading = true;
+		this.error = null;
+		try {
+			const snap = await db.fetchAll(this.supabase);
+			this.clients = snap.clients;
+			this.providers = snap.providers;
+			this.scheduledServices = snap.scheduledServices;
+			this.negotiations = snap.negotiations;
+			this.scheduledNegotiations = snap.scheduledNegotiations;
+
+			const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(K_CLIENT) : null;
+			this.selectedClientId =
+				saved && this.clients.some((c) => c.id === saved) ? saved : (this.clients[0]?.id ?? '');
+		} catch (e) {
+			console.error('[pagsup] load', e);
+			this.error = 'Não foi possível carregar os dados. Tente atualizar a página.';
+		} finally {
+			this.loading = false;
+		}
+	}
+
+	/** Executa a persistência em segundo plano; reverte + avisa se falhar. */
+	#persist(action: () => Promise<void>, rollback: () => void, errMsg: string) {
+		if (!this.supabase) return;
+		action().catch((e) => {
+			console.error('[pagsup]', errMsg, e);
+			rollback();
+			toast.error(errMsg);
+		});
+	}
+
+	// ---- Cliente -----------------------------------------------------------
 	selectClient(id: string) {
 		this.selectedClientId = id;
 		if (typeof localStorage !== 'undefined') localStorage.setItem(K_CLIENT, id);
 	}
 
-	// ---- Prestadores -------------------------------------------------------
-	#saveProviders() {
-		write(K_PROVIDERS, this.providers);
+	async addClient(nome: string): Promise<Client | null> {
+		if (!this.supabase) return null;
+		const trimmed = nome.trim();
+		if (!trimmed) return null;
+		try {
+			const c = await db.insertClient(this.supabase, trimmed);
+			this.clients = [...this.clients, c].sort((a, b) => a.name.localeCompare(b.name));
+			this.selectClient(c.id);
+			toast.success('Cliente adicionado');
+			return c;
+		} catch (e) {
+			console.error('[pagsup] addClient', e);
+			toast.error('Falha ao adicionar cliente.');
+			return null;
+		}
 	}
 
+	// ---- Prestadores -------------------------------------------------------
 	addProvider(data: Omit<Provider, 'id' | 'clientId'>): Provider {
 		const provider: Provider = {
 			...data,
@@ -112,81 +126,98 @@ class PagsupStore {
 			clientId: this.selectedClientId
 		};
 		this.providers = [...this.providers, provider];
-		this.#saveProviders();
+		this.#persist(
+			() => db.insertProvider(this.supabase!, provider),
+			() => (this.providers = this.providers.filter((p) => p.id !== provider.id)),
+			'Falha ao salvar prestador.'
+		);
 		return provider;
 	}
 
 	updateProvider(id: string, patch: Partial<Provider>) {
-		this.providers = this.providers.map((p) =>
-			p.id === id ? { ...p, ...patch, cpf: patch.cpf !== undefined ? cleanDoc(patch.cpf) : p.cpf } : p
+		const snapshot = this.providers;
+		const clean = patch.cpf !== undefined ? { ...patch, cpf: cleanDoc(patch.cpf) } : patch;
+		this.providers = this.providers.map((p) => (p.id === id ? { ...p, ...clean } : p));
+		this.#persist(
+			() => db.updateProvider(this.supabase!, id, clean),
+			() => (this.providers = snapshot),
+			'Falha ao atualizar prestador.'
 		);
-		this.#saveProviders();
 	}
 
 	deleteProvider(id: string) {
+		const snapProviders = this.providers;
+		const snapSchedule = this.scheduledServices;
 		this.providers = this.providers.filter((p) => p.id !== id);
-		this.#saveProviders();
+		this.scheduledServices = this.scheduledServices.filter((s) => s.providerId !== id);
+		this.#persist(
+			() => db.deleteProvider(this.supabase!, id),
+			() => {
+				this.providers = snapProviders;
+				this.scheduledServices = snapSchedule;
+			},
+			'Falha ao excluir prestador.'
+		);
 	}
 
-	/** Restaura os prestadores do cliente atual para o seed (usado no "Finalizar"). */
-	resetProvidersForCurrentClient() {
-		const seed = INITIAL_PROVIDERS.filter((p) => (p.clientId ?? 'mari') === this.selectedClientId);
-		this.providers = [
-			...this.providers.filter((p) => (p.clientId ?? 'mari') !== this.selectedClientId),
-			...seed
-		];
-		this.#saveProviders();
-	}
-
-	// ---- Cronograma (schedule) --------------------------------------------
-	#saveSchedule() {
-		write(K_SCHEDULE, this.scheduledServices);
-	}
-
+	// ---- Cronograma --------------------------------------------------------
 	scheduleProvider(providerId: string, price: number | '' = '', notes = '') {
 		const item: ScheduledService = {
 			id: uid(),
 			clientId: this.selectedClientId,
 			providerId,
-			date: new Date().toISOString().split('T')[0],
+			date: hoje(),
 			price,
 			notes
 		};
 		this.scheduledServices = [...this.scheduledServices, item];
-		this.#saveSchedule();
+		this.#persist(
+			() => db.insertScheduled(this.supabase!, item),
+			() => (this.scheduledServices = this.scheduledServices.filter((s) => s.id !== item.id)),
+			'Falha ao escalar prestador.'
+		);
 	}
 
 	updateScheduled(id: string, patch: Partial<Pick<ScheduledService, 'price' | 'notes'>>) {
-		this.scheduledServices = this.scheduledServices.map((s) =>
-			s.id === id ? { ...s, ...patch } : s
+		const snapshot = this.scheduledServices;
+		this.scheduledServices = this.scheduledServices.map((s) => (s.id === id ? { ...s, ...patch } : s));
+		this.#persist(
+			() => db.updateScheduled(this.supabase!, id, patch),
+			() => (this.scheduledServices = snapshot),
+			'Falha ao atualizar item.'
 		);
-		this.#saveSchedule();
 	}
 
 	deleteScheduled(id: string) {
+		const snapshot = this.scheduledServices;
 		this.scheduledServices = this.scheduledServices.filter((s) => s.id !== id);
-		this.#saveSchedule();
+		this.#persist(
+			() => db.deleteScheduled(this.supabase!, id),
+			() => (this.scheduledServices = snapshot),
+			'Falha ao remover item.'
+		);
 	}
 
 	clearScheduleForCurrentClient() {
-		this.scheduledServices = this.scheduledServices.filter(
-			(s) => (s.clientId ?? 'mari') !== this.selectedClientId
+		const cid = this.selectedClientId;
+		const snapshot = this.scheduledServices;
+		this.scheduledServices = this.scheduledServices.filter((s) => s.clientId !== cid);
+		this.#persist(
+			() => db.clearScheduledForClient(this.supabase!, cid),
+			() => (this.scheduledServices = snapshot),
+			'Falha ao finalizar cronograma.'
 		);
-		this.#saveSchedule();
 	}
 
 	// ---- Negociações -------------------------------------------------------
-	#saveNegotiations() {
-		write(K_NEGOTIATIONS, this.negotiations);
-	}
-	#saveSchedNeg() {
-		write(K_SCHED_NEG, this.scheduledNegotiations);
-	}
-
 	addNegotiation(data: Omit<Negotiation, 'id' | 'clientId'>): Negotiation {
 		const negotiation: Negotiation = { ...data, id: uid(), clientId: this.selectedClientId };
 		this.negotiations = [...this.negotiations, negotiation];
-		this.#saveNegotiations();
+		this.#persist(
+			() => db.insertNegotiation(this.supabase!, negotiation),
+			() => (this.negotiations = this.negotiations.filter((n) => n.id !== negotiation.id)),
+			'Falha ao salvar negociação.'
+		);
 		return negotiation;
 	}
 
@@ -195,31 +226,50 @@ class PagsupStore {
 			id: uid(),
 			clientId: this.selectedClientId,
 			negotiationId,
-			date: new Date().toISOString().split('T')[0],
+			date: hoje(),
 			price,
 			notes
 		};
 		this.scheduledNegotiations = [...this.scheduledNegotiations, item];
-		this.#saveSchedNeg();
+		this.#persist(
+			() => db.insertScheduledNeg(this.supabase!, item),
+			() =>
+				(this.scheduledNegotiations = this.scheduledNegotiations.filter((s) => s.id !== item.id)),
+			'Falha ao escalar negociação.'
+		);
 	}
 
 	updateScheduledNeg(id: string, patch: Partial<Pick<ScheduledNegotiation, 'price' | 'notes'>>) {
+		const snapshot = this.scheduledNegotiations;
 		this.scheduledNegotiations = this.scheduledNegotiations.map((s) =>
 			s.id === id ? { ...s, ...patch } : s
 		);
-		this.#saveSchedNeg();
+		this.#persist(
+			() => db.updateScheduledNeg(this.supabase!, id, patch),
+			() => (this.scheduledNegotiations = snapshot),
+			'Falha ao atualizar negociação.'
+		);
 	}
 
 	removeScheduledNeg(id: string) {
+		const snapshot = this.scheduledNegotiations;
 		this.scheduledNegotiations = this.scheduledNegotiations.filter((s) => s.id !== id);
-		this.#saveSchedNeg();
+		this.#persist(
+			() => db.deleteScheduledNeg(this.supabase!, id),
+			() => (this.scheduledNegotiations = snapshot),
+			'Falha ao remover negociação.'
+		);
 	}
 
 	clearScheduledNegForCurrentClient() {
-		this.scheduledNegotiations = this.scheduledNegotiations.filter(
-			(sn) => (sn.clientId ?? 'mari') !== this.selectedClientId
+		const cid = this.selectedClientId;
+		const snapshot = this.scheduledNegotiations;
+		this.scheduledNegotiations = this.scheduledNegotiations.filter((s) => s.clientId !== cid);
+		this.#persist(
+			() => db.clearScheduledNegForClient(this.supabase!, cid),
+			() => (this.scheduledNegotiations = snapshot),
+			'Falha ao finalizar negociações.'
 		);
-		this.#saveSchedNeg();
 	}
 }
 
