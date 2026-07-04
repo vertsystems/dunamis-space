@@ -56,12 +56,14 @@
 			id: 'administrativo',
 			label: 'Administrativo',
 			icon: 'admin',
+			href: '/administrativo',
+			base: '/administrativo',
 			areas: [
+				{ href: '/administrativo', label: 'Visão Geral', icon: 'admin' },
 				{ href: '/cadastro', label: 'Cadastro de Clientes', icon: 'file' },
 				{ href: '/ferramentas', label: 'Ferramentas & Contas', icon: 'key' },
 				{ href: '/fornecedores', label: 'Fornecedores', icon: 'building' },
 				{ href: '/onboarding', label: 'Onboarding', icon: 'clipboard' },
-				{ href: '/processos', label: 'Processos', icon: 'clipboard' },
 				{ href: '/equipe', label: 'Equipe', icon: 'users' },
 				{ href: '/base-conhecimento', label: 'Base de Conhecimento', icon: 'book' }
 			]
