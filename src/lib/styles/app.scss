@@ -19,6 +19,10 @@
 	--ds-topbar-gap: 10px;
 	--ds-topbar-top: 2.4vh;
 	--ds-topbar-space: calc(var(--ds-topbar-top) + var(--ds-topbar-h) + 16px);
+
+	// Largura máxima da coluna do app (sidebar + conteúdo). Centraliza tudo em
+	// telas largas, empurrando o conteúdo para o centro (~25% de margem em 1920px).
+	--ds-app-max: 1440px;
 }
 
 html,
@@ -207,6 +211,9 @@ body::before {
 	align-items: flex-start;
 	padding-top: var(--ds-topbar-space);
 	min-height: 100vh;
+	// Coluna do app centralizada: mais respiro nas laterais em telas largas.
+	max-width: var(--ds-app-max);
+	margin-inline: auto;
 }
 
 // Sidebar contextual — glass
