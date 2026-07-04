@@ -104,16 +104,17 @@
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6 items-start">
 	<!-- Pipeline de vendas -->
 	<Card>
-		<div class="flex items-center justify-between gap-2 mb-4">
-			<h2 class="text-lg font-semibold text-navy flex items-center gap-2"><Icon name="funnel" size={17} /> Pipeline de vendas</h2>
-			<a class="text-sm text-brand hover:underline" href="/crm">Abrir CRM</a>
-		</div>
+		<h2 class="text-lg font-semibold text-navy flex items-center gap-2 mb-4"><Icon name="funnel" size={17} /> Pipeline de vendas</h2>
 
 		{#if data.pipeline.crmPendente}
 			<div class="rounded-[var(--radius)] bg-brand-amber/15 px-4 py-3 text-sm text-brand-brown">
 				CRM ainda não ativado no banco.
 			</div>
 		{:else}
+			<div class="flex items-center justify-between mb-2">
+				<h3 class="text-xs uppercase tracking-wide font-semibold text-grey">Resumo</h3>
+				<a class="text-xs text-brand hover:underline" href="/crm">Abrir CRM</a>
+			</div>
 			<div class="grid grid-cols-3 gap-2 mb-4">
 				<div class="rounded-[var(--radius)] bg-bg p-3">
 					<div class="text-xs uppercase tracking-wide text-grey font-semibold">Em aberto</div>
