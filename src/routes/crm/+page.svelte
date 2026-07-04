@@ -52,17 +52,21 @@
 	const contatosLite = $derived(data.contatos.map((c) => ({ id: c.id, nome: c.nome, empresa: c.empresa })));
 
 	// KPIs derivados no cliente -> sempre consistentes com quadro/lista (inclusive otimista).
-	const kpis = $derived(computeKpis(negocios, atividades, data.stages));
+	// data.mesRef (mês do servidor) é a fonte única do "mês corrente" — casa com as metas
+	// e o rótulo, sem divergência de fuso na virada do mês.
+	const kpis = $derived(computeKpis(negocios, atividades, data.stages, new Date(), data.mesRef));
 
 	// Comercial: metas (estado local p/ update otimista) + relatórios derivados.
 	let metas = $state(data.metas ?? []);
 	$effect(() => {
 		metas = data.metas ?? [];
 	});
-	const ranking = $derived(computeRanking(negocios, data.colaboradores, metas));
+	const ranking = $derived(
+		computeRanking(negocios, data.colaboradores, metas, new Date(), data.mesRef)
+	);
 	const motivos = $derived(computeMotivosPerda(negocios));
 	const origens = $derived(computeOrigens(negocios, data.contatos));
-	const forecast = $derived(computeForecast(negocios, stagesDoPipeline));
+	const forecast = $derived(computeForecast(negocios, stagesDoPipeline, new Date(), data.mesRef));
 	const followups = $derived(computeFollowups(negocios));
 	const mesLabel = $derived(
 		new Date(data.mesRef.ano, data.mesRef.mes - 1, 1).toLocaleDateString('pt-BR', {
@@ -139,8 +143,19 @@
 
 	async function mudarStatus(id: string, status: 'ganho' | 'perdido', motivo: string | null = null) {
 		const anterior = negocios;
+		const agora = new Date().toISOString();
+		// Espelha o patch do servidor (ganho_em/perdido_em) para KPI e ranking do mês
+		// refletirem imediatamente no update otimista.
 		negocios = negocios.map((n) =>
-			n.id === id ? { ...n, status, motivo_perda: status === 'perdido' ? motivo : null } : n
+			n.id === id
+				? {
+						...n,
+						status,
+						motivo_perda: status === 'perdido' ? motivo : null,
+						ganho_em: status === 'ganho' ? agora : null,
+						perdido_em: status === 'perdido' ? agora : null
+					}
+				: n
 		);
 		const fd = new FormData();
 		fd.set('id', id);
@@ -205,6 +220,8 @@
 		try {
 			const r = await postar('?/atividade_concluir', fd);
 			if (r.type !== 'success') throw new Error();
+			// Recalcula prox_atividade no servidor -> follow-ups e KPI de atrasadas atualizam.
+			await invalidateAll();
 		} catch {
 			atividades = anterior;
 			toast.error('Não foi possível atualizar a atividade.');

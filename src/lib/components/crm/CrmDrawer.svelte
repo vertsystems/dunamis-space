@@ -155,7 +155,7 @@
 							</Button>
 						</form>
 					{/if}
-					{#if negocio.status !== 'perdido'}
+					{#if negocio.status === 'aberto'}
 						<Button variant="secondary" size="sm" type="button" onclick={() => (perderMode = !perderMode)}>
 							<Icon name="x" size={15} /> Marcar perdido
 						</Button>
@@ -169,7 +169,7 @@
 					{/if}
 				</div>
 
-				{#if perderMode}
+				{#if perderMode && negocio.status === 'aberto'}
 					<form method="POST" action="?/negocio_status" class="flex items-end gap-2" use:enhance={() => { statusSaving = true; return async ({ result, update }) => { await update(); statusSaving = false; if (result.type === 'success') perderMode = false; else if (result.type === 'failure') toast.error(erroDe(result)); }; }}>
 						<input type="hidden" name="id" value={negocio.id} />
 						<input type="hidden" name="status" value="perdido" />

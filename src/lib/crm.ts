@@ -336,6 +336,19 @@ export type Kpis = {
 	atividades_atrasadas: number;
 };
 
+/** Mês de referência do negócio (ano/mês 1-based). */
+export type MesRef = { ano: number; mes: number };
+
+/**
+ * Janela [início, fim) do mês. Com `mesRef` (fonte única do "mês corrente", vinda
+ * do servidor) evita divergência de fuso na virada do mês; sem ele, usa `agora`.
+ */
+function janelaMes(agora: Date, mesRef?: MesRef): [number, number] {
+	const ano = mesRef ? mesRef.ano : agora.getFullYear();
+	const mes0 = mesRef ? mesRef.mes - 1 : agora.getMonth();
+	return [new Date(ano, mes0, 1).getTime(), new Date(ano, mes0 + 1, 1).getTime()];
+}
+
 /**
  * KPIs derivados no cliente a partir dos arrays reativos — assim o painel
  * fica sempre consistente com o quadro/lista (inclusive em updates otimistas).
@@ -344,10 +357,11 @@ export function computeKpis(
 	negocios: Negocio[],
 	atividades: Atividade[],
 	stages: Stage[],
-	agora = new Date()
+	agora = new Date(),
+	mesRef?: MesRef
 ): Kpis {
 	const prob = new Map(stages.map((s) => [s.id, s.probabilidade]));
-	const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1).getTime();
+	const [inicioMes] = janelaMes(agora, mesRef);
 	let abertos_qtd = 0,
 		valor_aberto = 0,
 		valor_ponderado = 0,
@@ -398,6 +412,7 @@ export type RankingLinha = {
 	valor_ganho: number;
 	meta: number;
 	progresso: number; // % da meta atingida no mês (0 se sem meta)
+	editavel: boolean; // false p/ linhas residuais (sem responsável / inativo)
 };
 
 /** Ranking do mês por vendedor: ganhos fechados vs meta. Inclui todos os colaboradores passados. */
@@ -405,34 +420,56 @@ export function computeRanking(
 	negocios: Negocio[],
 	colaboradores: Colaborador[],
 	metas: Meta[],
-	agora = new Date()
+	agora = new Date(),
+	mesRef?: MesRef
 ): RankingLinha[] {
-	const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1).getTime();
+	const [inicioMes] = janelaMes(agora, mesRef);
 	const metaMap = new Map(metas.map((m) => [m.colaborador_id, Number(m.valor_meta ?? 0)]));
+	const SEM_RESP = '__sem_resp__';
 	const agg = new Map<string, { ganhos_qtd: number; valor_ganho: number }>();
+	const nomeExtra = new Map<string, string>(); // nome de responsável fora da lista (inativo)
 	for (const n of negocios) {
-		if (n.status !== 'ganho' || !n.responsavel_id) continue;
+		if (n.status !== 'ganho') continue;
 		if (!n.ganho_em || new Date(n.ganho_em).getTime() < inicioMes) continue;
-		const a = agg.get(n.responsavel_id) ?? { ganhos_qtd: 0, valor_ganho: 0 };
+		const key = n.responsavel_id ?? SEM_RESP;
+		const a = agg.get(key) ?? { ganhos_qtd: 0, valor_ganho: 0 };
 		a.ganhos_qtd++;
 		a.valor_ganho += n.valor;
-		agg.set(n.responsavel_id, a);
+		agg.set(key, a);
+		if (n.responsavel_id && n.responsavel_nome) nomeExtra.set(n.responsavel_id, n.responsavel_nome);
 	}
-	return colaboradores
-		.map((c) => {
-			const a = agg.get(c.id);
-			const meta = metaMap.get(c.id) ?? 0;
-			const valor_ganho = a?.valor_ganho ?? 0;
-			return {
-				colaborador_id: c.id,
-				nome: c.nome,
-				ganhos_qtd: a?.ganhos_qtd ?? 0,
-				valor_ganho,
-				meta,
-				progresso: meta > 0 ? Math.round((valor_ganho / meta) * 100) : 0
-			};
-		})
-		.sort((x, y) => y.valor_ganho - x.valor_ganho || y.meta - x.meta || x.nome.localeCompare(y.nome));
+	const ativos = new Set(colaboradores.map((c) => c.id));
+	const linhas: RankingLinha[] = colaboradores.map((c) => {
+		const a = agg.get(c.id);
+		const meta = metaMap.get(c.id) ?? 0;
+		const valor_ganho = a?.valor_ganho ?? 0;
+		return {
+			colaborador_id: c.id,
+			nome: c.nome,
+			ganhos_qtd: a?.ganhos_qtd ?? 0,
+			valor_ganho,
+			meta,
+			progresso: meta > 0 ? Math.round((valor_ganho / meta) * 100) : 0,
+			editavel: true
+		};
+	});
+	// Linhas residuais: ganhos sem responsável ou de vendedores inativos — para que
+	// o total do ranking reconcilie com o KPI "Ganhos no mês".
+	for (const [key, a] of agg) {
+		if (key !== SEM_RESP && ativos.has(key)) continue;
+		linhas.push({
+			colaborador_id: key,
+			nome: key === SEM_RESP ? 'Sem responsável' : (nomeExtra.get(key) ?? 'Inativo'),
+			ganhos_qtd: a.ganhos_qtd,
+			valor_ganho: a.valor_ganho,
+			meta: 0,
+			progresso: 0,
+			editavel: false
+		});
+	}
+	return linhas.sort(
+		(x, y) => y.valor_ganho - x.valor_ganho || y.meta - x.meta || x.nome.localeCompare(y.nome)
+	);
 }
 
 export type MotivoPerdaLinha = { motivo: string; qtd: number; valor: number };
@@ -516,9 +553,13 @@ export type Forecast = {
 };
 
 /** Forecast das etapas passadas (funil ativo): valor × probabilidade dos negócios abertos. */
-export function computeForecast(negocios: Negocio[], stages: Stage[], agora = new Date()): Forecast {
-	const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1).getTime();
-	const fimMes = new Date(agora.getFullYear(), agora.getMonth() + 1, 1).getTime();
+export function computeForecast(
+	negocios: Negocio[],
+	stages: Stage[],
+	agora = new Date(),
+	mesRef?: MesRef
+): Forecast {
+	const [inicioMes, fimMes] = janelaMes(agora, mesRef);
 	const byStage = new Map(stages.map((s) => [s.id, s]));
 	const acc = new Map<string, { qtd: number; valor: number; ponderado: number }>();
 	let total_aberto = 0,
@@ -581,10 +622,14 @@ export function computeFollowups(negocios: Negocio[], agora = new Date()): Follo
 		if (n.prox_atividade && vencimentoDe(n.prox_atividade, agora) === 'atrasada') situacao = 'atrasada';
 		else if (!n.prox_atividade) situacao = 'sem_followup';
 		if (!situacao) continue;
-		const dias =
-			situacao === 'atrasada' && n.prox_atividade
-				? Math.floor((agora.getTime() - new Date(n.prox_atividade).getTime()) / 86_400_000)
-				: null;
+		// Dias de atraso em CALENDÁRIO (mesma base de vencimentoDe), não blocos de 24h.
+		let dias: number | null = null;
+		if (situacao === 'atrasada' && n.prox_atividade) {
+			const d = new Date(n.prox_atividade);
+			const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+			const alvo = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+			dias = Math.round((hoje.getTime() - alvo.getTime()) / 86_400_000);
+		}
 		linhas.push({
 			id: n.id,
 			titulo: n.titulo,

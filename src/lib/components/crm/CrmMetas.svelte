@@ -105,7 +105,7 @@
 										<Button size="sm" onclick={() => salvar(l.colaborador_id)}>Salvar</Button>
 										<Button size="sm" variant="ghost" onclick={() => (editId = null)}>Cancelar</Button>
 									</span>
-								{:else}
+								{:else if l.editavel}
 									<button
 										type="button"
 										class="text-brand hover:underline"
@@ -113,6 +113,8 @@
 									>
 										Meta: {l.meta ? formatBRL(l.meta) : 'definir'}
 									</button>
+								{:else}
+									<span class="text-grey">sem meta</span>
 								{/if}
 							</div>
 						</div>

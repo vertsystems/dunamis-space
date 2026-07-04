@@ -18,8 +18,17 @@ function um<T>(v: T | T[] | null | undefined): T | null {
 }
 
 export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
-	const now = new Date();
-	const mesRef = { ano: now.getFullYear(), mes: now.getMonth() + 1 };
+	// "Mês corrente" no fuso do negócio (Brasil), não no fuso do servidor (Vercel = UTC),
+	// para bater com o mês local do cliente na virada do mês. Fonte única propagada ao client.
+	const partesBR = new Intl.DateTimeFormat('en-CA', {
+		timeZone: 'America/Sao_Paulo',
+		year: 'numeric',
+		month: 'numeric'
+	}).formatToParts(new Date());
+	const mesRef = {
+		ano: Number(partesBR.find((p) => p.type === 'year')?.value),
+		mes: Number(partesBR.find((p) => p.type === 'month')?.value)
+	};
 
 	// Funis primeiro — serve também para detectar migration não aplicada.
 	const { data: pipelinesRaw, error: pErr } = await supabase
@@ -180,9 +189,14 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		.select('colaborador_id, valor_meta')
 		.eq('ano', mesRef.ano)
 		.eq('mes', mesRef.mes);
+	// Tabela ausente (migration 0007 não aplicada): PostgREST 'PGRST205' ou mensagem
+	// de schema-cache/inexistência. Só isso é "pendente"; outros erros são reais e sobem.
 	const metasPendente =
-		!!metasErr && /crm_metas|does not exist|schema cache|relation/i.test(metasErr.message);
-	const metas: Meta[] = metasPendente
+		!!metasErr &&
+		(metasErr.code === 'PGRST205' ||
+			/schema cache|does not exist|could not find the table/i.test(metasErr.message ?? ''));
+	const metasErroReal = metasErr && !metasPendente ? metasErr.message : null;
+	const metas: Meta[] = metasErr
 		? []
 		: (metasRaw ?? []).map((m) => ({
 				colaborador_id: m.colaborador_id as string,
@@ -191,7 +205,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 
 	return {
 		crmPendente: false,
-		loadError: null as string | null,
+		loadError: metasErroReal as string | null,
 		pipelines,
 		stages,
 		pipelineAtivoId,
