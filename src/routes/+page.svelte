@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { formatBRL } from '$lib/clientes';
-	import { stageDot } from '$lib/crm';
+	import { stageDot, iniciais } from '$lib/crm';
 	import { diasAte, formatDateBR, prazoContratoLabel } from '$lib/alertas';
 	import { Card, Badge, Skeleton } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
@@ -37,6 +37,14 @@
 			minute: '2-digit'
 		});
 	}
+
+	// Cor determinística do avatar a partir do nome (variação visual consistente).
+	const AVATAR_CORES = ['bg-navy', 'bg-brand', 'bg-brand-green', 'bg-brand-danger', 'bg-slate'];
+	function corAvatar(nome: string): string {
+		let h = 0;
+		for (let i = 0; i < nome.length; i++) h = (h * 31 + nome.charCodeAt(i)) >>> 0;
+		return AVATAR_CORES[h % AVATAR_CORES.length];
+	}
 </script>
 
 <div class="mb-4">
@@ -60,6 +68,37 @@
 		</Card>
 	{/each}
 </div>
+
+<!-- Clientes (bolinhas com iniciais) -->
+<Card class="mt-6">
+	<div class="flex items-center justify-between gap-2 mb-4">
+		<h2 class="text-lg font-semibold text-navy flex items-center gap-2">
+			<Icon name="contact" size={17} /> Clientes
+			<span class="text-sm font-normal text-grey">({data.clientes.length})</span>
+		</h2>
+		<a class="text-sm text-brand hover:underline" href="/clientes">Ver todos</a>
+	</div>
+
+	{#if data.clientes.length}
+		<div class="grid grid-cols-[repeat(auto-fill,minmax(76px,1fr))] gap-x-2 gap-y-4">
+			{#each data.clientes as c (c.id)}
+				<a
+					href={`/clientes/${c.id}`}
+					class="group flex flex-col items-center gap-1.5 text-center"
+					title={c.nome}
+				>
+					<span
+						class="grid size-12 place-items-center rounded-full text-sm font-bold text-white shadow-sm transition group-hover:scale-105 group-hover:shadow-md {corAvatar(c.nome)}"
+						>{iniciais(c.nome)}</span
+					>
+					<span class="w-full text-[0.7rem] leading-tight text-slate line-clamp-2">{c.nome}</span>
+				</a>
+			{/each}
+		</div>
+	{:else}
+		<p class="text-sm text-grey">Nenhum cliente ativo ainda.</p>
+	{/if}
+</Card>
 
 <!-- Blocos temáticos -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6 items-start">

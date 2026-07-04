@@ -162,6 +162,16 @@ async function carregarPipeline(supabase: SupabaseClient) {
 	};
 }
 
+/** Lista de clientes ativos para o painel de bolinhas na Visão Geral. */
+async function carregarClientes(supabase: SupabaseClient) {
+	const { data } = await supabase
+		.from('clientes')
+		.select('id, nome')
+		.eq('status', 'ativo')
+		.order('nome', { ascending: true });
+	return (data ?? []).map((c) => ({ id: c.id as string, nome: c.nome as string }));
+}
+
 /** Bloco Operação: resumo do Kanban de tarefas + conteúdo (publicações/aprovações). */
 async function carregarOperacao(supabase: SupabaseClient) {
 	const now = new Date().toISOString();
@@ -197,16 +207,18 @@ async function carregarOperacao(supabase: SupabaseClient) {
 }
 
 export const load: PageServerLoad = async ({ locals: { supabase } }) => {
-	const [kpis, pipeline, operacao] = await Promise.all([
+	const [kpis, pipeline, operacao, clientes] = await Promise.all([
 		cached('dashboard:kpis:v3', 60, () => carregarKpis(supabase)),
 		carregarPipeline(supabase),
-		carregarOperacao(supabase)
+		carregarOperacao(supabase),
+		cached('dashboard:clientes', 60, () => carregarClientes(supabase))
 	]);
 
 	return {
 		...kpis,
 		pipeline,
 		operacao,
+		clientes,
 		// Alertas: cacheados 60s + Promise não-aguardada → streaming com skeleton.
 		alertas: cached('dashboard:alertas', 60, () => carregarAlertas(supabase))
 	};

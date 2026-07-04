@@ -60,11 +60,11 @@
 			base: '/administrativo',
 			areas: [
 				{ href: '/administrativo', label: 'Visão Geral', icon: 'admin' },
-				{ href: '/cadastro', label: 'Cadastro de Clientes', icon: 'file' },
-				{ href: '/ferramentas', label: 'Ferramentas & Contas', icon: 'key' },
+				{ href: '/cadastro', label: 'Clientes', icon: 'file' },
 				{ href: '/fornecedores', label: 'Fornecedores', icon: 'building' },
 				{ href: '/onboarding', label: 'Onboarding', icon: 'clipboard' },
 				{ href: '/equipe', label: 'Equipe', icon: 'users' },
+				{ href: '/ferramentas', label: 'Ferramentas & Contas', icon: 'key' },
 				{ href: '/base-conhecimento', label: 'Base de Conhecimento', icon: 'book' }
 			]
 		},
