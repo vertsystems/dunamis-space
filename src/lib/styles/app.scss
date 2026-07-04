@@ -276,16 +276,16 @@ body::before {
 		// Badge de contagem (ex.: chamados SOS em aberto no item Central SOS)
 		.area-badge {
 			margin-left: auto;
-			min-width: 20px;
-			height: 20px;
-			padding: 0 6px;
+			min-width: 16px;
+			height: 16px;
+			padding: 0 5px;
 			display: inline-flex;
 			align-items: center;
 			justify-content: center;
 			background: var(--color-brand-danger, #f04438);
 			color: #fff;
 			border-radius: 999px;
-			font-size: 0.66rem;
+			font-size: 0.53rem;
 			font-weight: 700;
 			line-height: 1;
 		}
@@ -406,10 +406,10 @@ body::before {
 			top: 3px;
 			right: 7px;
 			margin-left: 0;
-			min-width: 15px;
-			height: 15px;
-			padding: 0 3px;
-			font-size: 0.5rem;
+			min-width: 12px;
+			height: 12px;
+			padding: 0 2px;
+			font-size: 0.4rem;
 		}
 	}
 
