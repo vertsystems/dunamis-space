@@ -36,7 +36,6 @@
 	async function excluir(c: Record<string, any> | null, e?: Event) {
 		e?.stopPropagation();
 		if (!c || processando) return;
-		if (!confirm('Excluir este conteúdo? Esta ação não pode ser desfeita.')) return;
 		processando = true;
 		const fd = new FormData();
 		fd.set('id', c.id);
