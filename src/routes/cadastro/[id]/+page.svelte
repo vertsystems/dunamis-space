@@ -70,14 +70,14 @@
 		>{iniciais(c.nome)}</span>
 		<div class="min-w-0 flex-1">
 			<div class="flex flex-wrap items-center gap-2">
-				<h1 class="text-lg font-semibold text-navy">{c.nome}</h1>
+				<h1 class="text-[1.3rem] font-semibold text-navy">{c.nome}</h1>
 				<Badge tone={statusTone(c.status)}>{statusLabel(c.status)}</Badge>
 			</div>
 			{#if c.segmento}
 				<p class="mt-0.5 text-sm text-grey">{c.segmento}</p>
 			{/if}
 			{#if c.responsaveis?.length}
-				<div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+				<div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 origin-left scale-[0.8]">
 					<span class="text-xs text-grey">Resp.:</span>
 					{#each c.responsaveis as r (r.id)}
 						<span class="flex items-center gap-1.5">
