@@ -277,11 +277,11 @@
 					{/if}
 				</section>
 
-				<!-- Clientes sem contato -->
+				<!-- Clientes sem interação -->
 				<section>
 					<h3 class="flex items-center gap-2 font-semibold text-sm mb-3">
 						<span class="size-2.5 rounded-full bg-brand-amber"></span>
-						Clientes sem contato <span class="text-grey font-normal">({alertas.semInteracao.length})</span>
+						Clientes sem interação <span class="text-grey font-normal">({alertas.semInteracao.length})</span>
 					</h3>
 					{#if alertas.semInteracao.length}
 						<ul class="divide-y divide-grey-200/60">
@@ -289,13 +289,13 @@
 								<li class="py-1.5 text-sm">
 									<a class="text-brand hover:underline" href={`/clientes/${c.id}`}>{c.nome}</a>
 									<span class="block text-xs text-grey">
-										{c.ultima ? `último contato ${formatDateBR(c.ultima)}` : 'sem interações'}
+										{c.ultima ? `última interação ${formatDateBR(c.ultima)}` : 'nenhuma interação registrada'}
 									</span>
 								</li>
 							{/each}
 						</ul>
 					{:else}
-						<p class="text-grey text-sm">Todos os clientes ativos tiveram contato recente.</p>
+						<p class="text-grey text-sm">Todos os clientes ativos tiveram interação recente.</p>
 					{/if}
 				</section>
 			</div>

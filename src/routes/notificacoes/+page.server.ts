@@ -114,13 +114,13 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 		if (ultima !== null && ultima >= cutoffInteracaoStr) continue;
 		itens.push({
 			id: `cliente-${c.id}`,
-			tipo: 'Cliente sem contato',
+			tipo: 'Cliente sem interação',
 			tone: 'warning',
 			icon: 'contact',
 			titulo: c.nome as string,
 			detalhe: ultima
-				? `Último contato ${new Date(ultima).toLocaleDateString('pt-BR')}`
-				: 'Sem interações registradas',
+				? `Última interação em ${new Date(ultima).toLocaleDateString('pt-BR')}`
+				: 'Nenhuma interação registrada',
 			href: `/clientes/${c.id}`,
 			peso: 50
 		});
