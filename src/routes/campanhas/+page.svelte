@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { Card, Button, EmptyState, DataTable, Modal } from '$lib/components/ui';
 	import type { ColumnDef } from '$lib/components/ui';
+	import Icon from '$lib/components/Icon.svelte';
 	import CampanhaForm from '$lib/components/CampanhaForm.svelte';
 	import { toast } from '$lib/toast.svelte';
 
@@ -22,6 +24,7 @@
 
 	let novoAberto = $state(false);
 	let editando = $state<Campanha | null>(null);
+	let excluindo = $state<Campanha | null>(null);
 
 	function aposCriar() {
 		novoAberto = false;
@@ -54,7 +57,21 @@
 				<td class="px-4 py-3">{c.cliente?.nome ?? '—'}</td>
 				<td class="px-4 py-3 whitespace-nowrap">{fmt(c.data_inicio)} → {fmt(c.data_fim)}</td>
 				<td class="px-4 py-3 text-right">
-					<a class="text-sm text-brand hover:underline" href={`/campanhas/${c.id}`} onclick={(e) => e.stopPropagation()}>Abrir</a>
+					<div class="flex items-center justify-end gap-3">
+						<a class="text-sm text-brand hover:underline" href={`/campanhas/${c.id}`} onclick={(e) => e.stopPropagation()}>Abrir</a>
+						<button
+							type="button"
+							class="grid size-7 place-items-center rounded-[var(--radius)] text-grey transition-colors hover:bg-brand-danger/10 hover:text-brand-danger"
+							title="Excluir campanha"
+							aria-label={`Excluir campanha ${c.nome}`}
+							onclick={(e) => {
+								e.stopPropagation();
+								excluindo = c;
+							}}
+						>
+							<Icon name="trash" size={16} />
+						</button>
+					</div>
 				</td>
 			</tr>
 		{/snippet}
@@ -86,6 +103,37 @@
 			error={res?.error ?? null}
 			onCancel={() => (editando = null)}
 			onDone={aposEditar}
+			onDelete={() => (excluindo = editando)}
 		/>
+	{/if}
+</Modal>
+
+<Modal open={!!excluindo} title="Excluir campanha" size="sm" onClose={() => (excluindo = null)}>
+	{#if excluindo}
+		<p class="mb-4 text-sm text-slate">
+			Excluir a campanha <strong class="text-navy">{excluindo.nome}</strong>? Esta ação não pode ser
+			desfeita.
+		</p>
+		<form
+			method="POST"
+			action={`/campanhas/${excluindo.id}?/delete`}
+			use:enhance={() => {
+				return async ({ result }) => {
+					if (result.type === 'redirect' || result.type === 'success') {
+						excluindo = null;
+						editando = null;
+						toast.success('Campanha excluída');
+						invalidateAll();
+					} else {
+						toast.error('Não foi possível excluir a campanha');
+					}
+				};
+			}}
+		>
+			<div class="flex justify-end gap-2">
+				<Button type="button" variant="secondary" onclick={() => (excluindo = null)}>Cancelar</Button>
+				<Button type="submit" variant="danger">Sim, excluir</Button>
+			</div>
+		</form>
 	{/if}
 </Modal>

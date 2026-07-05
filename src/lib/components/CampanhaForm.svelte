@@ -10,7 +10,8 @@
 		submitLabel = 'Salvar',
 		action = '',
 		onCancel,
-		onDone
+		onDone,
+		onDelete
 	}: {
 		campanha?: Record<string, any> | null;
 		clientes?: { id: string; nome: string }[];
@@ -21,6 +22,8 @@
 		onCancel?: () => void;
 		/** Modo modal: chamado ao salvar com sucesso (em vez de navegar/recarregar). */
 		onDone?: () => void;
+		/** Quando presente (edição), mostra o botão Excluir. */
+		onDelete?: () => void;
 	} = $props();
 
 	let saving = $state(false);
@@ -58,8 +61,11 @@
 		<Textarea label="Descrição" name="descricao" rows={2} value={v('descricao')} wrapperClass="md:col-span-12" />
 	</div>
 
-	<div class="flex gap-2 mt-4">
+	<div class="flex items-center gap-2 mt-4">
 		<Button type="submit" loading={saving}>{submitLabel}</Button>
 		<Button variant="secondary" onclick={() => (onCancel ? onCancel() : goto('/campanhas'))}>Cancelar</Button>
+		{#if onDelete}
+			<Button variant="danger" onclick={onDelete} class="ml-auto">Excluir</Button>
+		{/if}
 	</div>
 </form>
