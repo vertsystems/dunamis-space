@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { invalidateAll } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { formatBRL } from '$lib/clientes';
 	import { Button, Card, Input, EmptyState, DataTable, Modal } from '$lib/components/ui';
 	import type { ColumnDef } from '$lib/components/ui';
@@ -77,7 +77,7 @@
 				{@const c = r.original}
 				<tr
 					class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg"
-					onclick={() => (editando = c)}
+					onclick={() => goto(`/cadastro/${c.id}`)}
 				>
 					<td class="px-4 py-3 font-medium text-navy">{c.nome}</td>
 					<td class="px-4 py-3 text-slate">{c.cnpj_cpf ?? '—'}</td>
