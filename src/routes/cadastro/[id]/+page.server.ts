@@ -11,7 +11,7 @@ export const load: PageServerLoad = async ({ params, url, locals: { supabase } }
 	const [{ data: cliente, error: e }, calendario] = await Promise.all([
 		supabase
 			.from('clientes')
-			.select('*, responsavel:colaboradores(nome, avatar_url, funcao)')
+			.select('*, responsavel:colaboradores(nome, avatar_url, funcao, funcoes)')
 			.eq('id', params.id)
 			.single(),
 		carregarCalendario(supabase, url, { clienteFixo: params.id })
@@ -19,14 +19,17 @@ export const load: PageServerLoad = async ({ params, url, locals: { supabase } }
 
 	if (e || !cliente) throw error(404, 'Cliente não encontrado');
 
-	const resp = um<{ nome: string; avatar_url: string | null; funcao: string | null }>(cliente.responsavel);
+	const resp = um<{ nome: string; avatar_url: string | null; funcao: string | null; funcoes: string[] | null }>(
+		cliente.responsavel
+	);
 
 	return {
 		cliente: {
 			...cliente,
 			responsavel_nome: resp?.nome ?? null,
 			responsavel_avatar: resp?.avatar_url ?? null,
-			responsavel_funcao: resp?.funcao ?? null
+			responsavel_funcao: resp?.funcao ?? null,
+			responsavel_funcoes: resp?.funcoes?.length ? resp.funcoes : resp?.funcao ? [resp.funcao] : []
 		},
 		calendario
 	};

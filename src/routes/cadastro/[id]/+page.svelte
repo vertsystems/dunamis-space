@@ -77,7 +77,7 @@
 						<span class="grid size-6 shrink-0 place-items-center rounded-full text-[0.6rem] font-semibold text-white {corAvatar(c.responsavel_nome)}">{iniciais(c.responsavel_nome)}</span>
 					{/if}
 					<span class="text-sm font-medium text-navy">{c.responsavel_nome}</span>
-					<CargoBadge funcao={c.responsavel_funcao} />
+					{#each c.responsavel_funcoes ?? [] as f (f)}<CargoBadge funcao={f} />{/each}
 				</div>
 			{/if}
 		</div>

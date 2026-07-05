@@ -25,6 +25,20 @@ export function funcaoStyle(funcao: string | null | undefined): string | null {
 	return f ? `background: ${f.grad}; border-color: ${f.borda};` : null;
 }
 
+const FUNCOES_VALIDAS = new Set<string>(FUNCAO.map((f) => f.value));
+
+/** Funções marcadas no formulário (checkbox múltiplo name="funcoes"), validadas. */
+export function funcoesFromForm(fd: FormData): string[] {
+	return fd.getAll('funcoes').filter((v): v is string => typeof v === 'string' && FUNCOES_VALIDAS.has(v));
+}
+
+/** Lista de funções de um colaborador; cai p/ [funcao] em registros antigos. */
+export function funcoesDe(
+	c: { funcoes?: string[] | null; funcao?: string | null } | null | undefined
+): string[] {
+	return c?.funcoes?.length ? c.funcoes : c?.funcao ? [c.funcao] : [];
+}
+
 function str(fd: FormData, k: string): string | null {
 	const v = fd.get(k);
 	const s = typeof v === 'string' ? v.trim() : '';
@@ -35,10 +49,15 @@ export function colaboradorFromForm(fd: FormData) {
 	// Custo/hora vem de <input type="number">: já em formato canônico (ponto decimal).
 	const custoRaw = str(fd, 'custo_hora');
 	const custoNum = custoRaw === null ? null : Number(custoRaw);
+	// Funções multi; compat com forms de função única (name="funcao").
+	let funcoes = funcoesFromForm(fd);
+	const funcaoUnica = str(fd, 'funcao');
+	if (funcoes.length === 0 && funcaoUnica) funcoes = [funcaoUnica];
 	return {
 		nome: str(fd, 'nome') ?? '',
 		email: str(fd, 'email') ?? '',
-		funcao: str(fd, 'funcao') ?? 'social_media',
+		funcao: funcoes[0] ?? 'social_media', // enum single = primeira (compat)
+		funcoes,
 		custo_hora: custoNum !== null && Number.isNaN(custoNum) ? null : custoNum,
 		ativo: fd.get('ativo') !== null
 	};

@@ -6,7 +6,7 @@
 	import { Card, Button, Input, Select } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
 	import { toast } from '$lib/toast.svelte';
-	import { FUNCAO, funcaoLabel } from '$lib/equipe';
+	import { FUNCAO, funcaoLabel, funcoesDe } from '$lib/equipe';
 	import CargoBadge from '$lib/components/CargoBadge.svelte';
 	import { CORES_TEMA, COR_PADRAO, normalizaHex, escurece } from '$lib/tema';
 	import { AVATARES } from '$lib/avatares';
@@ -34,7 +34,10 @@
 	let nome = $state((colab?.nome as string) ?? '');
 	let telefone = $state((colab?.telefone as string) ?? '');
 	let local = $state((colab?.local as string) ?? '');
-	let funcao = $state((colab?.funcao as string) ?? 'social_media');
+	let funcoes = $state<string[]>(funcoesDe(colab));
+	function toggleFuncao(v: string) {
+		funcoes = funcoes.includes(v) ? funcoes.filter((f) => f !== v) : [...funcoes, v];
+	}
 	let salvando = $state(false);
 
 	// --- Avatar: galeria de imagens de static/avatares/ ---
@@ -131,11 +134,11 @@
 				</button>
 			</div>
 			<div class="min-w-0">
-				<div class="flex items-center gap-2">
+				<div class="flex flex-wrap items-center gap-2">
 					<h1 class="truncate text-base font-semibold text-white">{colab?.nome || 'Usuário'}</h1>
-					<CargoBadge funcao={colab?.funcao} />
+					{#each funcoesDe(colab) as f (f)}<CargoBadge funcao={f} />{/each}
 				</div>
-				<p class="text-sm text-white/70">{funcaoLabel(colab?.funcao ?? '')}</p>
+				<p class="text-sm text-white/70">{funcoesDe(colab).map(funcaoLabel).join(' · ') || '—'}</p>
 				<p class="truncate text-sm text-white/50">{data.email}</p>
 			</div>
 		</div>
@@ -206,11 +209,27 @@
 					<Input label="Telefone" name="telefone" bind:value={telefone} placeholder="(11) 99999-9999" />
 					<Input label="Localização" name="local" bind:value={local} placeholder="Cidade, UF" />
 
-					<Select label="Cargo" name="funcao" bind:value={funcao} wrapperClass="sm:col-span-2">
-						{#each FUNCAO as f (f.value)}
-							<option value={f.value}>{f.label}</option>
-						{/each}
-					</Select>
+					<div class="sm:col-span-2">
+						<span class="mb-1.5 block text-sm font-medium text-navy">Cargos</span>
+						<div class="flex flex-wrap gap-1.5">
+							{#each FUNCAO as f (f.value)}
+								<label class="cursor-pointer">
+									<input
+										type="checkbox"
+										name="funcoes"
+										value={f.value}
+										checked={funcoes.includes(f.value)}
+										onchange={() => toggleFuncao(f.value)}
+										class="peer sr-only"
+									/>
+									<span
+										class="inline-flex rounded-full bg-bg px-3.5 py-1.5 text-sm font-medium text-slate transition-colors hover:bg-grey-200/70 peer-checked:bg-brand peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-brand/30"
+										>{f.label}</span
+									>
+								</label>
+							{/each}
+						</div>
+					</div>
 				</div>
 
 				<div class="mt-5 flex justify-end">

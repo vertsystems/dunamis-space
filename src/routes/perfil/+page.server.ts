@@ -1,8 +1,6 @@
 import { fail } from '@sveltejs/kit';
-import { FUNCAO } from '$lib/equipe';
+import { funcoesFromForm } from '$lib/equipe';
 import type { Actions, PageServerLoad } from './$types';
-
-const FUNCOES = FUNCAO.map((f) => f.value) as string[];
 
 export const load: PageServerLoad = async ({ locals: { supabase, user } }) => {
 	const email = user?.email ?? '';
@@ -65,12 +63,13 @@ export const actions: Actions = {
 
 		const telefone = ((fd.get('telefone') as string) ?? '').trim() || null;
 		const local = ((fd.get('local') as string) ?? '').trim() || null;
-		let funcao = ((fd.get('funcao') as string) ?? '').trim();
-		if (!FUNCOES.includes(funcao)) funcao = 'social_media';
+		let funcoes = funcoesFromForm(fd);
+		if (funcoes.length === 0) funcoes = ['social_media'];
+		const funcao = funcoes[0]; // enum single = primeira (compat)
 
 		const { error } = await supabase
 			.from('colaboradores')
-			.update({ nome, telefone, local, funcao })
+			.update({ nome, telefone, local, funcao, funcoes })
 			.eq('email', email);
 		if (error) return fail(500, { error: error.message });
 
