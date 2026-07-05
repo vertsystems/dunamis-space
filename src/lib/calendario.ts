@@ -22,10 +22,12 @@ export function fmtMes(ano: number, mes: number): string {
 	return `${ano}-${String(mes + 1).padStart(2, '0')}`;
 }
 
-/** Interpreta "AAAA-MM" → { ano, mes (0-11) } ou null se inválido. */
+/** Interpreta "AAAA-MM" → { ano, mes (0-11) } ou null se inválido/fora de faixa. */
 export function parseMes(s: string | null | undefined): { ano: number; mes: number } | null {
 	if (!s || !MES_RE.test(s)) return null;
-	return { ano: Number(s.slice(0, 4)), mes: Number(s.slice(5, 7)) - 1 };
+	const mes = Number(s.slice(5, 7));
+	if (mes < 1 || mes > 12) return null;
+	return { ano: Number(s.slice(0, 4)), mes: mes - 1 };
 }
 
 export function mesAnterior(ano: number, mes: number): string {
