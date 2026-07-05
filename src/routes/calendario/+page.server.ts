@@ -77,7 +77,7 @@ export const load: PageServerLoad = async ({ url, locals: { supabase } }) => {
 	let qConteudos = supabase
 		.from('conteudos')
 		.select(
-			'id, titulo, tipo, status, data_publicacao, legenda, arte_url, redes, publicado_manual, cliente_id, projeto_id, responsavel_id, cliente:clientes(nome)'
+			'id, titulo, tipo, tipos, status, data_publicacao, legenda, arte_url, redes, publicado_manual, cliente_id, projeto_id, responsavel_id, cliente:clientes(nome)'
 		)
 		.not('data_publicacao', 'is', null)
 		.gte('data_publicacao', gteISO)
@@ -124,6 +124,7 @@ export const load: PageServerLoad = async ({ url, locals: { supabase } }) => {
 		id: c.id as string,
 		titulo: c.titulo as string | null,
 		tipo: c.tipo as string,
+		tipos: (c.tipos as string[] | null) ?? [],
 		status: c.status as string,
 		dia: fmtDia.format(new Date(c.data_publicacao as string)),
 		hora: fmtHora.format(new Date(c.data_publicacao as string)),

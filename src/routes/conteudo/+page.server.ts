@@ -8,7 +8,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	let query = supabase
 		.from('conteudos')
 		.select(
-			'id, titulo, tipo, status, data_publicacao, cliente_id, projeto_id, responsavel_id, arte_url, legenda, redes, publicado_manual, cliente:clientes(nome)'
+			'id, titulo, tipo, tipos, status, data_publicacao, cliente_id, projeto_id, responsavel_id, arte_url, legenda, redes, publicado_manual, cliente:clientes(nome)'
 		)
 		.order('data_publicacao', { ascending: false, nullsFirst: false });
 

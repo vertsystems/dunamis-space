@@ -33,6 +33,18 @@
 		invalidateAll();
 	}
 
+	// --- Agenda do dia (clique no quadrado) ---
+	let diaAberto = $state<string | null>(null);
+	function editarDoDia(c: Record<string, any>) {
+		diaAberto = null;
+		editando = c;
+	}
+	function novoNoDia() {
+		const k = diaAberto;
+		diaAberto = null;
+		if (k) abrirNovo(k);
+	}
+
 	const VIEWS = [
 		{ key: 'semana', label: 'Semana', icon: 'calendar' },
 		{ key: 'lista', label: 'Conteúdos', icon: 'clipboard' },
@@ -60,6 +72,9 @@
 		}
 		return m;
 	});
+	// Tipos do post (multi); cai p/ [tipo] em registros antigos sem `tipos`.
+	const tiposDe = (c: { tipos?: string[]; tipo?: string }) =>
+		c.tipos?.length ? c.tipos : c.tipo ? [c.tipo] : [];
 	function acoesDoDia(key: string) {
 		return [
 			...(conteudosPorDia.get(key) ?? []).map((c) => ({ k: 'c' as const, c })),
@@ -174,7 +189,10 @@
 		{#if a.k === 'c'}
 			<button
 				type="button"
-				onclick={() => (editando = a.c)}
+				onclick={(e) => {
+					e.stopPropagation();
+					editando = a.c;
+				}}
 				title={`${conteudoTipoLabel(a.c.tipo)} · ${conteudoStatusLabel(a.c.status)}${a.c.cliente_nome ? ' · ' + a.c.cliente_nome : ''}`}
 				class="flex w-full flex-col gap-0.5 rounded-[var(--radius-sm)] border border-grey-200/70 bg-surface px-1.5 py-1 text-left transition-colors hover:bg-bg"
 			>
@@ -185,8 +203,10 @@
 				<span class="flex">
 					<span class="inline-flex items-center rounded-full px-1 py-px text-[0.56rem] font-medium leading-tight {toneClasses[conteudoStatusTone(a.c.status)]}">{conteudoStatusLabel(a.c.status)}</span>
 				</span>
-				<span class="flex">
-					<span class="inline-flex items-center rounded-full bg-bg px-1 py-px text-[0.56rem] font-medium leading-tight text-slate">{conteudoTipoLabel(a.c.tipo)}</span>
+				<span class="flex flex-wrap gap-0.5">
+					{#each tiposDe(a.c) as tp (tp)}
+						<span class="inline-flex items-center rounded-full bg-bg px-1 py-px text-[0.56rem] font-medium leading-tight text-slate">{conteudoTipoLabel(tp)}</span>
+					{/each}
 				</span>
 				{#if a.c.cliente_nome}
 					<span class="flex items-center gap-0.5 truncate text-[0.56rem] leading-tight text-grey">
@@ -197,6 +217,7 @@
 		{:else}
 			<a
 				href="/tarefas"
+				onclick={(e) => e.stopPropagation()}
 				title={`Tarefa: ${a.t.titulo}${semCliente && a.t.cliente_nome ? ' · ' + a.t.cliente_nome : ''}`}
 				class="flex items-center gap-1 truncate rounded-[var(--radius-sm)] bg-brand-amber/15 px-1.5 py-0.5 text-[0.64rem] font-medium text-brand-brown no-underline transition-colors hover:bg-brand-amber/25"
 			>
@@ -205,10 +226,14 @@
 		{/if}
 	{/each}
 	{#if cap && itens.length > cap}
-		<a
-			href={href({ view: 'lista', mes: mesAtual })}
-			class="mt-auto text-[0.7rem] font-medium text-grey no-underline hover:text-navy"
-		>+{itens.length - limite} mais</a>
+		<button
+			type="button"
+			onclick={(e) => {
+				e.stopPropagation();
+				diaAberto = key;
+			}}
+			class="mt-auto text-left text-[0.7rem] font-medium text-grey hover:text-navy"
+		>+{itens.length - limite} mais</button>
 	{/if}
 {/snippet}
 
@@ -267,11 +292,21 @@
 			{/each}
 		</div>
 		<div class="grid grid-cols-7 gap-1.5">
-			{#each celulasDoMes as d (d.toISOString())}
+			{#each celulasDoMes as d (chaveDia(d))}
 				{@const key = chaveDia(d)}
 				{@const foraDoMes = d.getMonth() !== data.mes}
 				<div
-					class="flex min-h-40 flex-col gap-1 overflow-hidden rounded-[var(--radius-sm)] border p-1.5 {foraDoMes
+					role="button"
+					tabindex="0"
+					aria-label={`Ver agenda de ${key}`}
+					onclick={() => (diaAberto = key)}
+					onkeydown={(e) => {
+						if (e.key === 'Enter' || e.key === ' ') {
+							e.preventDefault();
+							diaAberto = key;
+						}
+					}}
+					class="flex min-h-40 cursor-pointer flex-col gap-1 overflow-hidden rounded-[var(--radius-sm)] border p-1.5 text-left transition-colors hover:border-brand/50 {foraDoMes
 						? 'border-grey-200/60 bg-bg'
 						: 'border-grey-200 bg-surface'} {key === hojeKey ? 'ring-1 ring-brand' : ''}"
 				>
@@ -280,7 +315,10 @@
 						{#if !foraDoMes}
 							<button
 								type="button"
-								onclick={() => abrirNovo(key)}
+								onclick={(e) => {
+									e.stopPropagation();
+									abrirNovo(key);
+								}}
 								title="Adicionar post"
 								aria-label={`Adicionar post em ${key}`}
 								class="grid size-5 shrink-0 place-items-center rounded-full bg-brand text-white shadow-sm transition-opacity hover:opacity-90"
@@ -296,7 +334,7 @@
 	<Card>
 		{@render bandaCampanhas()}
 		<div class="grid grid-cols-1 gap-2 md:grid-cols-7">
-			{#each diasDaSemana as d (d.toISOString())}
+			{#each diasDaSemana as d (chaveDia(d))}
 				{@const key = chaveDia(d)}
 				<div
 					class="flex min-h-20 flex-col gap-1 rounded-[var(--radius-sm)] border bg-surface p-2 md:min-h-40 {key === hojeKey
@@ -411,6 +449,50 @@
 			onCancel={() => (editando = null)}
 			onDone={aposEditar}
 		/>
+	{/if}
+</Modal>
+
+<Modal open={!!diaAberto} title={diaAberto ? diaLongo(diaAberto) : ''} size="md" onClose={() => (diaAberto = null)}>
+	{#if diaAberto}
+		{@const cs = conteudosPorDia.get(diaAberto) ?? []}
+		{@const ts = tarefasPorDia.get(diaAberto) ?? []}
+		<div class="flex flex-col gap-3">
+			{#if cs.length === 0 && ts.length === 0}
+				<p class="text-sm text-grey">Nada programado neste dia.</p>
+			{:else}
+				<div class="flex flex-col gap-1.5">
+					{#each cs as c (c.id)}
+						<button
+							type="button"
+							onclick={() => editarDoDia(c)}
+							class="flex w-full flex-col gap-1 rounded-[var(--radius)] border border-grey-200 bg-surface px-3 py-2 text-left transition-colors hover:bg-bg"
+						>
+							<span class="flex items-center gap-2">
+								<span class="shrink-0 tabular-nums text-xs text-brand">{c.hora}</span>
+								<span class="truncate font-medium text-navy">{c.titulo ?? conteudoTipoLabel(c.tipo)}</span>
+							</span>
+							<span class="flex flex-wrap items-center gap-1">
+								<span class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[0.7rem] font-medium {toneClasses[conteudoStatusTone(c.status)]}">{conteudoStatusLabel(c.status)}</span>
+								{#each tiposDe(c) as tp (tp)}
+								<span class="inline-flex items-center rounded-full bg-bg px-1.5 py-0.5 text-[0.7rem] font-medium text-slate">{conteudoTipoLabel(tp)}</span>
+							{/each}
+								{#if c.cliente_nome}<span class="inline-flex items-center gap-0.5 text-[0.7rem] text-grey"><Icon name="building" size={11} />{c.cliente_nome}</span>{/if}
+							</span>
+						</button>
+					{/each}
+					{#each ts as t (t.id)}
+						<a
+							href="/tarefas"
+							class="flex items-center gap-2 rounded-[var(--radius)] bg-brand-amber/10 px-3 py-2 text-sm text-brand-brown no-underline transition-colors hover:bg-brand-amber/20"
+						>
+							<Icon name="check" size={13} /><span class="truncate">{t.titulo}</span>
+							{#if semCliente && t.cliente_nome}<span class="ml-auto shrink-0 text-xs text-slate">{t.cliente_nome}</span>{/if}
+						</a>
+					{/each}
+				</div>
+			{/if}
+			<Button onclick={novoNoDia}><Icon name="plus" size={15} /> Novo post</Button>
+		</div>
 	{/if}
 </Modal>
 

@@ -42,7 +42,7 @@ export const actions: Actions = {
 	enviarAprovacao: async ({ params, locals: { supabase } }) => {
 		const { error: e } = await supabase.from('aprovacoes').insert({ conteudo_id: params.id });
 		if (e) return fail(500, { error: e.message });
-		await supabase.from('conteudos').update({ status: 'em_aprovacao' }).eq('id', params.id);
+		await supabase.from('conteudos').update({ status: 'aprovar_conteudo' }).eq('id', params.id);
 		return { aprovacaoCriada: true };
 	},
 	delete: async ({ params, locals: { supabase } }) => {

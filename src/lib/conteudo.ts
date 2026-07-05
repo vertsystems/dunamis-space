@@ -42,6 +42,15 @@ export const CONTEUDO_REDE = [
 	{ value: 'tiktok', label: 'TikTok' }
 ] as const;
 
+const TIPOS_VALIDOS = new Set(CONTEUDO_TIPO.map((t) => t.value as string));
+
+/** Extrai os tipos marcados do formulário (checkbox múltiplo name="tipos"), validando. */
+export function tiposFromForm(fd: FormData): string[] {
+	return fd
+		.getAll('tipos')
+		.filter((v): v is string => typeof v === 'string' && TIPOS_VALIDOS.has(v));
+}
+
 const REDES_VALIDAS = new Set(CONTEUDO_REDE.map((r) => r.value as string));
 
 export function conteudoRedeLabel(rede: string): string {
@@ -128,11 +137,16 @@ function str(fd: FormData, k: string): string | null {
 }
 
 export function conteudoFromForm(fd: FormData) {
+	// Tipos multi-seleção; compat com forms de tipo único (name="tipo").
+	let tipos = tiposFromForm(fd);
+	const tipoUnico = str(fd, 'tipo');
+	if (tipos.length === 0 && tipoUnico) tipos = [tipoUnico];
 	return {
 		cliente_id: str(fd, 'cliente_id'),
 		projeto_id: str(fd, 'projeto_id'),
 		responsavel_id: str(fd, 'responsavel_id'),
-		tipo: str(fd, 'tipo') ?? 'feed',
+		tipo: tipos[0] ?? 'feed', // enum single = primeiro tipo (compat)
+		tipos,
 		titulo: str(fd, 'titulo'),
 		legenda: str(fd, 'legenda'),
 		arte_url: str(fd, 'arte_url'),

@@ -92,10 +92,7 @@
 			<option value="" disabled>Selecione um cliente</option>
 			{#each clientes as c (c.id)}<option value={c.id}>{c.nome}</option>{/each}
 		</Select>
-		<Select label="Tipo" name="tipo" value={conteudo?.tipo ?? 'feed'} wrapperClass="md:col-span-3">
-			{#each CONTEUDO_TIPO as t (t.value)}<option value={t.value}>{t.label}</option>{/each}
-		</Select>
-		<Select label="Status" name="status" value={conteudo?.status ?? CONTEUDO_STATUS_PADRAO} wrapperClass="md:col-span-3">
+		<Select label="Status" name="status" value={conteudo?.status ?? CONTEUDO_STATUS_PADRAO} wrapperClass="md:col-span-6">
 			{#each CONTEUDO_STATUS_GRUPOS as g (g.grupo)}
 				<optgroup label={g.grupo}>
 					{#each g.itens as s (s.value)}<option value={s.value}>{s.label}</option>{/each}
@@ -109,6 +106,27 @@
 			<option value="">--:--</option>
 			{#each horasOpcoes as hora (hora)}<option value={hora}>{hora}</option>{/each}
 		</Select>
+
+		<div class="md:col-span-12">
+			<span class="block text-sm font-medium text-navy mb-1.5">Tipo</span>
+			<div class="flex flex-wrap gap-1.5">
+				{#each CONTEUDO_TIPO as t (t.value)}
+					<label class="cursor-pointer">
+						<input
+							type="checkbox"
+							name="tipos"
+							value={t.value}
+							checked={(conteudo?.tipos ?? (conteudo?.tipo ? [conteudo.tipo] : ['feed'])).includes(t.value)}
+							class="peer sr-only"
+						/>
+						<span
+							class="inline-flex rounded-full bg-bg px-3.5 py-1.5 text-sm font-medium text-slate transition-colors hover:bg-grey-200/70 peer-checked:bg-brand peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-brand/30"
+							>{t.label}</span
+						>
+					</label>
+				{/each}
+			</div>
+		</div>
 
 		<div class="md:col-span-12">
 			<span class="block text-sm font-medium text-navy mb-1.5">Redes sociais</span>
