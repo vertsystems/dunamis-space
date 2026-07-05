@@ -548,15 +548,25 @@
 						</div>
 						<div class="flex flex-col gap-1">
 							{#each conteudosPorDia.get(key) ?? [] as c (c.id)}
-								<a
-									href={`/conteudo/${c.id}`}
-									class="flex items-center gap-2 rounded-[var(--radius)] px-2 py-1 text-sm no-underline transition-colors hover:bg-bg"
+								<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+								<div
+									onclick={() => editarDoDia(c)}
+									class="group flex cursor-pointer items-center gap-2 rounded-[var(--radius)] px-2 py-1 text-sm transition-colors hover:bg-bg"
 								>
 									<span class="grid size-6 shrink-0 place-items-center rounded-[var(--radius-sm)] bg-brand/10 text-brand"><Icon name="edit" size={13} /></span>
 									<span class="w-10 shrink-0 tabular-nums text-xs text-grey">{c.hora}</span>
-									<span class="truncate text-navy">{c.titulo ?? conteudoTipoLabel(c.tipo)}</span>
-									{#if semCliente && c.cliente_nome}<span class="ml-auto shrink-0 text-xs text-slate">{c.cliente_nome}</span>{/if}
-								</a>
+									<span class="min-w-0 flex-1 truncate text-navy">{c.titulo ?? conteudoTipoLabel(c.tipo)}</span>
+									{#if semCliente && c.cliente_nome}<span class="shrink-0 text-xs text-slate">{c.cliente_nome}</span>{/if}
+									<button
+										type="button"
+										onclick={(e) => excluir(c, e)}
+										class="shrink-0 text-grey/70 transition-colors hover:text-brand-danger"
+										title="Excluir conteúdo"
+										aria-label="Excluir conteúdo"
+									>
+										<Icon name="trash" size={14} />
+									</button>
+								</div>
 							{/each}
 							{#each tarefasPorDia.get(key) ?? [] as t (t.id)}
 								<a
