@@ -7,15 +7,18 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 
 	let query = supabase
 		.from('transacoes')
-		.select('id, tipo, categoria, descricao, valor, data_competencia, status, cliente:clientes(nome)')
+		.select(
+			'id, tipo, categoria, descricao, valor, data_competencia, data_pagamento, status, cliente_id, recorrente, cliente:clientes(nome)'
+		)
 		.order('data_competencia', { ascending: false });
 
 	if (tipo) query = query.eq('tipo', tipo);
 	if (status) query = query.eq('status', status);
 
-	const [{ data: transacoes, error }, { data: all }] = await Promise.all([
+	const [{ data: transacoes, error }, { data: all }, { data: clientes }] = await Promise.all([
 		query,
-		supabase.from('transacoes').select('tipo, valor')
+		supabase.from('transacoes').select('tipo, valor'),
+		supabase.from('clientes').select('id, nome').order('nome')
 	]);
 
 	const receitas = (all ?? [])
@@ -27,6 +30,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 
 	return {
 		transacoes: (transacoes ?? []).map((t) => ({ ...t, cliente: um(t.cliente) })),
+		clientes: clientes ?? [],
 		tipo,
 		status,
 		receitas,

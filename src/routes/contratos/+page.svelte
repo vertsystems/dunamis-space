@@ -1,10 +1,14 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { CONTRATO_STATUS, contratoStatusTone, contratoStatusLabel, formatBRL } from '$lib/contratos';
-	import { Card, Badge, Button, Select, EmptyState, DataTable } from '$lib/components/ui';
+	import { Card, Badge, Button, Select, EmptyState, DataTable, Modal } from '$lib/components/ui';
 	import type { ColumnDef } from '$lib/components/ui';
+	import ContratoForm from '$lib/components/ContratoForm.svelte';
+	import { toast } from '$lib/toast.svelte';
 
-	let { data } = $props();
+	let { data, form } = $props();
+	// O form vem de actions de outras rotas (/contratos/novo, /[id]?/update) → tipagem solta.
+	const res = $derived(form as { values?: Record<string, any>; error?: string } | null);
 	let status = $state(data.status);
 	// Re-sincroniza o filtro com a URL (back/forward do navegador).
 	$effect(() => {
@@ -30,8 +34,23 @@
 			accessorFn: (c) => (c.renovacao_automatica ? 'Automática' : 'Manual'),
 			meta: { label: 'Renovação' }
 		},
-		{ id: 'status', accessorFn: (c) => c.status ?? '', meta: { label: 'Status' } }
+		{ id: 'status', accessorFn: (c) => c.status ?? '', meta: { label: 'Status' } },
+		{ id: 'acoes', accessorFn: () => '', meta: { label: '' } }
 	];
+
+	let novoAberto = $state(false);
+	let editando = $state<Contrato | null>(null);
+
+	function aposCriar() {
+		novoAberto = false;
+		toast.success('Contrato criado');
+		invalidateAll();
+	}
+	function aposEditar() {
+		editando = null;
+		toast.success('Contrato salvo');
+		invalidateAll();
+	}
 </script>
 
 <div class="mb-4">
@@ -51,7 +70,7 @@
 	</form>
 	<div class="flex gap-2">
 		<Button variant="secondary" onclick={() => goto('/contratos/planos')}>Gerenciar planos</Button>
-		<Button onclick={() => goto('/contratos/novo')}>+ Novo contrato</Button>
+		<Button onclick={() => (novoAberto = true)}>+ Novo contrato</Button>
 	</div>
 </div>
 
@@ -67,18 +86,49 @@
 			{@const c = r.original}
 			<tr
 				class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg"
-				onclick={() => goto(`/contratos/${c.id}`)}
+				onclick={() => (editando = c)}
 			>
-				<td class="px-4 py-3"><a class="text-brand hover:underline" href={`/contratos/${c.id}`}>{c.cliente?.nome ?? '—'}</a></td>
+				<td class="px-4 py-3 font-medium text-navy">{c.cliente?.nome ?? '—'}</td>
 				<td class="px-4 py-3">{c.plano?.nome ?? '—'}</td>
 				<td class="px-4 py-3 text-right tabular-nums">{formatBRL(c.valor_mensal)}</td>
 				<td class="px-4 py-3 whitespace-nowrap">{fmtData(c.data_inicio)} → {fmtData(c.data_fim)}</td>
 				<td class="px-4 py-3">{c.renovacao_automatica ? 'Automática' : 'Manual'}</td>
 				<td class="px-4 py-3"><Badge tone={contratoStatusTone(c.status)}>{contratoStatusLabel(c.status)}</Badge></td>
+				<td class="px-4 py-3 text-right">
+					<a class="text-sm text-brand hover:underline" href={`/contratos/${c.id}`} onclick={(e) => e.stopPropagation()}>Abrir</a>
+				</td>
 			</tr>
 		{/snippet}
 		{#snippet empty()}
-			<tr><td colspan="6" class="px-2"><EmptyState icon="file" title="Nenhum contrato ainda" description="Cadastre os contratos dos clientes." /></td></tr>
+			<tr><td colspan="7" class="px-2"><EmptyState icon="file" title="Nenhum contrato ainda" description="Cadastre os contratos dos clientes." /></td></tr>
 		{/snippet}
 	</DataTable>
 </Card>
+
+<Modal open={novoAberto} title="Novo contrato" size="lg" onClose={() => (novoAberto = false)}>
+	<ContratoForm
+		action="/contratos/novo"
+		submitLabel="Criar contrato"
+		clientes={data.clientes}
+		planos={data.planos}
+		contrato={res?.values ?? null}
+		error={res?.error ?? null}
+		onCancel={() => (novoAberto = false)}
+		onDone={aposCriar}
+	/>
+</Modal>
+
+<Modal open={!!editando} title="Editar contrato" size="lg" onClose={() => (editando = null)}>
+	{#if editando}
+		<ContratoForm
+			action={`/contratos/${editando.id}?/update`}
+			submitLabel="Salvar alterações"
+			clientes={data.clientes}
+			planos={data.planos}
+			contrato={res?.values ?? editando}
+			error={res?.error ?? null}
+			onCancel={() => (editando = null)}
+			onDone={aposEditar}
+		/>
+	{/if}
+</Modal>

@@ -10,7 +10,9 @@
 		colaboradores = [],
 		error = null,
 		submitLabel = 'Salvar',
-		action = ''
+		action = '',
+		onCancel,
+		onDone
 	}: {
 		projeto?: Record<string, any> | null;
 		clientes?: { id: string; nome: string }[];
@@ -18,6 +20,10 @@
 		error?: string | null;
 		submitLabel?: string;
 		action?: string;
+		/** Modo modal: chamado ao cancelar (em vez de navegar). */
+		onCancel?: () => void;
+		/** Modo modal: chamado ao salvar com sucesso (em vez de navegar/recarregar). */
+		onDone?: () => void;
 	} = $props();
 
 	let saving = $state(false);
@@ -29,7 +35,12 @@
 	{action}
 	use:enhance={() => {
 		saving = true;
-		return async ({ update }) => {
+		return async ({ result, update }) => {
+			if (onDone && (result.type === 'success' || result.type === 'redirect')) {
+				saving = false;
+				onDone();
+				return;
+			}
 			await update();
 			saving = false;
 		};
@@ -69,6 +80,6 @@
 
 	<div class="flex gap-2 mt-4">
 		<Button type="submit" loading={saving}>{submitLabel}</Button>
-		<Button variant="secondary" onclick={() => goto('/projetos')}>Cancelar</Button>
+		<Button variant="secondary" onclick={() => (onCancel ? onCancel() : goto('/projetos'))}>Cancelar</Button>
 	</div>
 </form>

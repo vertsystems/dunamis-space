@@ -1,10 +1,14 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { invalidateAll } from '$app/navigation';
 	import { formatBRL } from '$lib/contratos';
-	import { Card, Badge, Button, Breadcrumb, EmptyState, DataTable } from '$lib/components/ui';
+	import { Card, Badge, Button, Breadcrumb, EmptyState, DataTable, Modal } from '$lib/components/ui';
 	import type { ColumnDef } from '$lib/components/ui';
+	import PlanoForm from '$lib/components/PlanoForm.svelte';
+	import { toast } from '$lib/toast.svelte';
 
-	let { data } = $props();
+	let { data, form } = $props();
+	// O form vem de actions de outras rotas (/contratos/planos/novo, /[id]?/update) → tipagem solta.
+	const res = $derived(form as { values?: Record<string, any>; error?: string } | null);
 	const lim = (n: number | null) => (n == null ? '—' : n);
 
 	type Plano = (typeof data.planos)[number];
@@ -14,8 +18,23 @@
 		{ id: 'posts', accessorFn: (p) => p.limite_posts ?? 0, meta: { label: 'Posts', thClass: 'text-center' } },
 		{ id: 'stories', accessorFn: (p) => p.limite_stories ?? 0, meta: { label: 'Stories', thClass: 'text-center' } },
 		{ id: 'reels', accessorFn: (p) => p.limite_reels ?? 0, meta: { label: 'Reels', thClass: 'text-center' } },
-		{ id: 'status', accessorFn: (p) => (p.ativo ? 1 : 0), meta: { label: 'Status' } }
+		{ id: 'status', accessorFn: (p) => (p.ativo ? 1 : 0), meta: { label: 'Status' } },
+		{ id: 'acoes', accessorFn: () => '', meta: { label: '' } }
 	];
+
+	let novoAberto = $state(false);
+	let editando = $state<Plano | null>(null);
+
+	function aposCriar() {
+		novoAberto = false;
+		toast.success('Plano criado');
+		invalidateAll();
+	}
+	function aposEditar() {
+		editando = null;
+		toast.success('Plano salvo');
+		invalidateAll();
+	}
 </script>
 
 <Breadcrumb items={[{ label: 'Contratos', href: '/contratos' }, { label: 'Planos' }]} />
@@ -25,7 +44,7 @@
 		<h1 class="text-xl font-bold text-navy">Planos</h1>
 		<p class="text-sm text-grey">Planos de serviço oferecidos aos clientes.</p>
 	</div>
-	<Button onclick={() => goto('/contratos/planos/novo')}>+ Novo plano</Button>
+	<Button onclick={() => (novoAberto = true)}>+ Novo plano</Button>
 </div>
 
 {#if data.loadError}
@@ -36,8 +55,8 @@
 	<DataTable {columns} data={data.planos} initialSort={[{ id: 'nome', desc: false }]}>
 		{#snippet row(r)}
 			{@const p = r.original}
-			<tr class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg" onclick={() => goto(`/contratos/planos/${p.id}`)}>
-				<td class="px-4 py-3"><a class="text-brand hover:underline" href={`/contratos/planos/${p.id}`}>{p.nome}</a></td>
+			<tr class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg" onclick={() => (editando = p)}>
+				<td class="px-4 py-3 font-medium text-navy">{p.nome}</td>
 				<td class="px-4 py-3 text-right tabular-nums">{formatBRL(p.valor_mensal)}</td>
 				<td class="px-4 py-3 text-center">{lim(p.limite_posts)}</td>
 				<td class="px-4 py-3 text-center">{lim(p.limite_stories)}</td>
@@ -45,10 +64,37 @@
 				<td class="px-4 py-3">
 					<Badge tone={p.ativo ? 'success' : 'neutral'}>{p.ativo ? 'Ativo' : 'Inativo'}</Badge>
 				</td>
+				<td class="px-4 py-3 text-right">
+					<a class="text-sm text-brand hover:underline" href={`/contratos/planos/${p.id}`} onclick={(e) => e.stopPropagation()}>Abrir</a>
+				</td>
 			</tr>
 		{/snippet}
 		{#snippet empty()}
-			<tr><td colspan="6" class="px-2"><EmptyState icon="tag" title="Nenhum plano ainda" description="Crie os planos oferecidos pela agência." /></td></tr>
+			<tr><td colspan="7" class="px-2"><EmptyState icon="tag" title="Nenhum plano ainda" description="Crie os planos oferecidos pela agência." /></td></tr>
 		{/snippet}
 	</DataTable>
 </Card>
+
+<Modal open={novoAberto} title="Novo plano" size="lg" onClose={() => (novoAberto = false)}>
+	<PlanoForm
+		action="/contratos/planos/novo"
+		submitLabel="Criar plano"
+		plano={res?.values ?? null}
+		error={res?.error ?? null}
+		onCancel={() => (novoAberto = false)}
+		onDone={aposCriar}
+	/>
+</Modal>
+
+<Modal open={!!editando} title="Editar plano" size="lg" onClose={() => (editando = null)}>
+	{#if editando}
+		<PlanoForm
+			action={`/contratos/planos/${editando.id}?/update`}
+			submitLabel="Salvar alterações"
+			plano={res?.values ?? editando}
+			error={res?.error ?? null}
+			onCancel={() => (editando = null)}
+			onDone={aposEditar}
+		/>
+	{/if}
+</Modal>

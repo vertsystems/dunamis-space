@@ -6,16 +6,26 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 
 	let query = supabase
 		.from('projetos')
-		.select('id, nome, tipo, status, prazo, cliente:clientes(nome), responsavel:colaboradores(nome)')
+		.select('id, nome, tipo, status, cliente_id, responsavel_id, data_inicio, prazo, valor, recorrente, descricao, cliente:clientes(nome), responsavel:colaboradores(nome)')
 		.order('created_at', { ascending: false });
 
 	if (status) query = query.eq('status', status);
 
-	const { data, error } = await query;
+	const [{ data, error }, { data: clientes }, { data: colaboradores }] = await Promise.all([
+		query,
+		supabase.from('clientes').select('id, nome').order('nome'),
+		supabase.from('colaboradores').select('id, nome').eq('ativo', true).order('nome')
+	]);
 	const projetos = (data ?? []).map((p) => ({
 		...p,
 		cliente: um(p.cliente),
 		responsavel: um(p.responsavel)
 	}));
-	return { projetos, status, loadError: error?.message ?? null };
+	return {
+		projetos,
+		status,
+		clientes: clientes ?? [],
+		colaboradores: colaboradores ?? [],
+		loadError: error?.message ?? null
+	};
 };

@@ -1,11 +1,29 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { invalidateAll } from '$app/navigation';
 	import { formatBRL } from '$lib/clientes';
-	import { Button, Input } from '$lib/components/ui';
+	import { Button, Input, Modal } from '$lib/components/ui';
+	import ClienteForm from '$lib/components/ClienteForm.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import { autoanimate } from '$lib/autoAnimate';
 
-	let { data } = $props();
+	let { data, form } = $props();
+	// O form vem de actions de outras rotas (/clientes/novo, /[id]?/update) → tipagem solta.
+	const res = $derived(form as { values?: Record<string, any>; error?: string } | null);
+
+	type Cliente = (typeof data.clientes)[number];
+	let novoAberto = $state(false);
+	let editando = $state<Cliente | null>(null);
+
+	function aposCriar() {
+		novoAberto = false;
+		toast.success('Cliente criado');
+		invalidateAll();
+	}
+	function aposEditar() {
+		editando = null;
+		toast.success('Cliente salvo');
+		invalidateAll();
+	}
 
 	// Colunas do quadro (rótulos a pedido: "Ativo" aparece como "Fixos").
 	const COLUNAS = [
@@ -75,7 +93,7 @@
 		<Input type="search" name="q" placeholder="Buscar por nome" bind:value={q} wrapperClass="w-56" />
 		<Button variant="secondary" type="submit">Buscar</Button>
 	</form>
-	<Button onclick={() => goto('/clientes/novo')}>+ Novo cliente</Button>
+	<Button onclick={() => (novoAberto = true)}>+ Novo cliente</Button>
 </div>
 
 {#if data.loadError}
@@ -118,8 +136,9 @@
 					draggable="true"
 					role="listitem"
 					ondragstart={() => (dragId = c.id)}
+					onclick={() => (editando = c)}
 				>
-					<a class="font-medium text-navy hover:text-brand" href={`/clientes/${c.id}`}>{c.nome}</a>
+					<div class="font-medium text-navy">{c.nome}</div>
 					{#if c.contato_email}<div class="text-xs text-grey truncate">{c.contato_email}</div>{/if}
 					<div class="flex items-center justify-between gap-2 mt-1.5">
 						<span class="text-xs text-grey truncate">
@@ -129,6 +148,13 @@
 							<span class="text-xs font-medium text-navy tabular-nums whitespace-nowrap">{formatBRL(c.mrr)}</span>
 						{/if}
 					</div>
+					<a
+						class="mt-1.5 inline-block text-xs text-brand hover:underline"
+						href={`/clientes/${c.id}`}
+						onclick={(e) => e.stopPropagation()}
+					>
+						Abrir
+					</a>
 				</div>
 			{:else}
 				<p class="px-1 py-2 text-sm text-grey">Nenhum cliente.</p>
@@ -136,3 +162,29 @@
 		</div>
 	{/each}
 </div>
+
+<Modal open={novoAberto} title="Novo cliente" size="lg" onClose={() => (novoAberto = false)}>
+	<ClienteForm
+		action="/clientes/novo"
+		submitLabel="Criar cliente"
+		colaboradores={data.colaboradores}
+		cliente={res?.values ?? null}
+		error={res?.error ?? null}
+		onCancel={() => (novoAberto = false)}
+		onDone={aposCriar}
+	/>
+</Modal>
+
+<Modal open={!!editando} title="Editar cliente" size="lg" onClose={() => (editando = null)}>
+	{#if editando}
+		<ClienteForm
+			action={`/clientes/${editando.id}?/update`}
+			submitLabel="Salvar alterações"
+			colaboradores={data.colaboradores}
+			cliente={res?.values ?? editando}
+			error={res?.error ?? null}
+			onCancel={() => (editando = null)}
+			onDone={aposEditar}
+		/>
+	{/if}
+</Modal>

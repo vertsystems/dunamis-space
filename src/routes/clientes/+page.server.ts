@@ -12,12 +12,18 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 
 	let query = supabase
 		.from('clientes')
-		.select('id, nome, status, segmento, mrr, contato_email, responsavel:colaboradores(nome)')
+		.select(
+			'id, nome, status, segmento, mrr, contato_email, razao_social, cnpj_cpf, contato_nome, contato_whatsapp, responsavel_id, data_inicio, observacoes, responsavel:colaboradores(nome)'
+		)
 		.order('created_at', { ascending: false });
 
 	if (q) query = query.ilike('nome', `%${q}%`);
 
-	const { data, error } = await query;
+	// Carrega, em paralelo, os colaboradores usados pelo <select> do modal de criar/editar.
+	const [{ data, error }, { data: colaboradores }] = await Promise.all([
+		query,
+		supabase.from('colaboradores').select('id, nome').eq('ativo', true).order('nome')
+	]);
 
 	const clientes = (data ?? []).map((c) => ({
 		id: c.id as string,
@@ -26,11 +32,20 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		segmento: c.segmento as string | null,
 		mrr: c.mrr as number | null,
 		contato_email: c.contato_email as string | null,
-		responsavel_nome: um<{ nome: string }>(c.responsavel)?.nome ?? null
+		responsavel_nome: um<{ nome: string }>(c.responsavel)?.nome ?? null,
+		// Campos extras necessários p/ preencher o modal de edição.
+		razao_social: c.razao_social as string | null,
+		cnpj_cpf: c.cnpj_cpf as string | null,
+		contato_nome: c.contato_nome as string | null,
+		contato_whatsapp: c.contato_whatsapp as string | null,
+		responsavel_id: c.responsavel_id as string | null,
+		data_inicio: c.data_inicio as string | null,
+		observacoes: c.observacoes as string | null
 	}));
 
 	return {
 		clientes,
+		colaboradores: colaboradores ?? [],
 		q,
 		loadError: error?.message ?? null
 	};

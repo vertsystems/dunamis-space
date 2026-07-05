@@ -1,12 +1,30 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { invalidateAll } from '$app/navigation';
 	import { TAREFA_STATUS, prioridadeTone, prioridadeLabel } from '$lib/tarefas';
-	import { Badge, Button } from '$lib/components/ui';
+	import { Badge, Button, Modal } from '$lib/components/ui';
+	import TarefaForm from '$lib/components/TarefaForm.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import { autoanimate } from '$lib/autoAnimate';
 
-	let { data } = $props();
+	let { data, form } = $props();
+	// O form vem de actions de outras rotas (/tarefas/novo, /[id]?/update) → tipagem solta.
+	const res = $derived(form as { values?: Record<string, any>; error?: string } | null);
+
+	type Tarefa = (typeof data.tarefas)[number];
+	let novoAberto = $state(false);
+	let editando = $state<Tarefa | null>(null);
+
+	function aposCriar() {
+		novoAberto = false;
+		toast.success('Tarefa criada');
+		invalidateAll();
+	}
+	function aposEditar() {
+		editando = null;
+		toast.success('Tarefa salva');
+		invalidateAll();
+	}
 
 	let cards = $state(data.tarefas.map((t) => ({ ...t })));
 	$effect(() => {
@@ -63,7 +81,7 @@
 			</div>
 		{/if}
 	</div>
-	<Button onclick={() => goto('/tarefas/novo')}>+ Nova tarefa</Button>
+	<Button onclick={() => (novoAberto = true)}>+ Nova tarefa</Button>
 </div>
 
 {#if data.loadError}<div class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">Erro ao carregar: {data.loadError}</div>{/if}
@@ -93,8 +111,12 @@
 					draggable="true"
 					role="listitem"
 					ondragstart={() => (dragId = t.id)}
+					onclick={() => (editando = t)}
 				>
-					<a class="block font-medium text-navy hover:text-brand" href={`/tarefas/${t.id}`}>{t.titulo}</a>
+					<div class="flex items-start justify-between gap-2">
+						<span class="block font-medium text-navy">{t.titulo}</span>
+						<a class="shrink-0 text-xs text-brand hover:underline" href={`/tarefas/${t.id}`} onclick={(e) => e.stopPropagation()}>Abrir</a>
+					</div>
 					{#if t.projeto?.nome}<div class="text-xs text-grey">{t.projeto.nome}</div>{/if}
 					<div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
 						<Badge tone={prioridadeTone(t.prioridade)}>{prioridadeLabel(t.prioridade)}</Badge>
@@ -106,3 +128,31 @@
 		</div>
 	{/each}
 </div>
+
+<Modal open={novoAberto} title="Nova tarefa" size="lg" onClose={() => (novoAberto = false)}>
+	<TarefaForm
+		action="/tarefas/novo"
+		submitLabel="Criar tarefa"
+		projetos={data.projetos}
+		colaboradores={data.colaboradores}
+		tarefa={res?.values ?? null}
+		error={res?.error ?? null}
+		onCancel={() => (novoAberto = false)}
+		onDone={aposCriar}
+	/>
+</Modal>
+
+<Modal open={!!editando} title="Editar tarefa" size="lg" onClose={() => (editando = null)}>
+	{#if editando}
+		<TarefaForm
+			action={`/tarefas/${editando.id}?/update`}
+			submitLabel="Salvar alterações"
+			projetos={data.projetos}
+			colaboradores={data.colaboradores}
+			tarefa={res?.values ?? editando}
+			error={res?.error ?? null}
+			onCancel={() => (editando = null)}
+			onDone={aposEditar}
+		/>
+	{/if}
+</Modal>

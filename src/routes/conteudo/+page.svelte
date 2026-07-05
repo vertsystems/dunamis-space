@@ -6,11 +6,15 @@
 		conteudoStatusLabel,
 		conteudoTipoLabel
 	} from '$lib/conteudo';
-	import { goto } from '$app/navigation';
-	import { Card, Badge, Button, Select, SegmentedNav, EmptyState, DataTable } from '$lib/components/ui';
+	import { invalidateAll } from '$app/navigation';
+	import { Card, Badge, Button, Select, SegmentedNav, EmptyState, DataTable, Modal } from '$lib/components/ui';
 	import type { ColumnDef } from '$lib/components/ui';
+	import ConteudoForm from '$lib/components/ConteudoForm.svelte';
+	import { toast } from '$lib/toast.svelte';
 
-	let { data } = $props();
+	let { data, form } = $props();
+	// O form vem de actions de outras rotas (/conteudo/novo, /[id]?/update) → tipagem solta.
+	const res = $derived(form as { values?: Record<string, any>; error?: string } | null);
 
 	type Conteudo = (typeof data.conteudos)[number];
 	const columns: ColumnDef<Conteudo>[] = [
@@ -18,7 +22,8 @@
 		{ id: 'titulo', accessorFn: (c) => c.titulo ?? '', meta: { label: 'Título' } },
 		{ id: 'cliente', accessorFn: (c) => c.cliente?.nome ?? '', meta: { label: 'Cliente' } },
 		{ id: 'tipo', accessorFn: (c) => conteudoTipoLabel(c.tipo), meta: { label: 'Tipo' } },
-		{ id: 'status', accessorFn: (c) => conteudoStatusLabel(c.status), meta: { label: 'Status' } }
+		{ id: 'status', accessorFn: (c) => conteudoStatusLabel(c.status), meta: { label: 'Status' } },
+		{ id: 'acoes', accessorFn: () => '', meta: { label: '' } }
 	];
 	let status = $state(data.status);
 	let tipo = $state(data.tipo);
@@ -36,6 +41,20 @@
 
 	function fmt(d: string | null) {
 		return d ? new Date(d).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+	}
+
+	let novoAberto = $state(false);
+	let editando = $state<Conteudo | null>(null);
+
+	function aposCriar() {
+		novoAberto = false;
+		toast.success('Conteúdo criado');
+		invalidateAll();
+	}
+	function aposEditar() {
+		editando = null;
+		toast.success('Conteúdo salvo');
+		invalidateAll();
 	}
 </script>
 
@@ -59,7 +78,7 @@
 			<Button variant="secondary" type="submit">Filtrar</Button>
 		</form>
 	</div>
-	<Button onclick={() => goto('/conteudo/novo')}>+ Novo conteúdo</Button>
+	<Button onclick={() => (novoAberto = true)}>+ Novo conteúdo</Button>
 </div>
 
 {#if data.loadError}<div class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">Erro ao carregar: {data.loadError}</div>{/if}
@@ -68,16 +87,49 @@
 	<DataTable {columns} data={data.conteudos} initialSort={[{ id: 'publicacao', desc: true }]}>
 		{#snippet row(r)}
 			{@const c = r.original}
-			<tr class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg" onclick={() => goto(`/conteudo/${c.id}`)}>
+			<tr class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg" onclick={() => (editando = c)}>
 				<td class="px-4 py-3 whitespace-nowrap">{fmt(c.data_publicacao)}</td>
-				<td class="px-4 py-3"><a class="text-brand hover:underline" href={`/conteudo/${c.id}`}>{c.titulo ?? '(sem título)'}</a></td>
+				<td class="px-4 py-3 font-medium text-navy">{c.titulo ?? '(sem título)'}</td>
 				<td class="px-4 py-3">{c.cliente?.nome ?? '—'}</td>
 				<td class="px-4 py-3">{conteudoTipoLabel(c.tipo)}</td>
 				<td class="px-4 py-3"><Badge tone={conteudoStatusTone(c.status)}>{conteudoStatusLabel(c.status)}</Badge></td>
+				<td class="px-4 py-3 text-right">
+					<a class="text-sm text-brand hover:underline" href={`/conteudo/${c.id}`} onclick={(e) => e.stopPropagation()}>Abrir</a>
+				</td>
 			</tr>
 		{/snippet}
 		{#snippet empty()}
-			<tr><td colspan="5" class="px-2"><EmptyState icon="edit" title="Nenhum conteúdo ainda" description="Planeje as publicações dos clientes." /></td></tr>
+			<tr><td colspan="6" class="px-2"><EmptyState icon="edit" title="Nenhum conteúdo ainda" description="Planeje as publicações dos clientes." /></td></tr>
 		{/snippet}
 	</DataTable>
 </Card>
+
+<Modal open={novoAberto} title="Novo conteúdo" size="lg" onClose={() => (novoAberto = false)}>
+	<ConteudoForm
+		action="/conteudo/novo"
+		submitLabel="Criar conteúdo"
+		clientes={data.clientes}
+		projetos={data.projetos}
+		colaboradores={data.colaboradores}
+		conteudo={res?.values ?? null}
+		error={res?.error ?? null}
+		onCancel={() => (novoAberto = false)}
+		onDone={aposCriar}
+	/>
+</Modal>
+
+<Modal open={!!editando} title="Editar conteúdo" size="lg" onClose={() => (editando = null)}>
+	{#if editando}
+		<ConteudoForm
+			action={`/conteudo/${editando.id}?/update`}
+			submitLabel="Salvar alterações"
+			clientes={data.clientes}
+			projetos={data.projetos}
+			colaboradores={data.colaboradores}
+			conteudo={res?.values ?? editando}
+			error={res?.error ?? null}
+			onCancel={() => (editando = null)}
+			onDone={aposEditar}
+		/>
+	{/if}
+</Modal>

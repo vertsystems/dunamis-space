@@ -8,14 +8,18 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	let query = supabase
 		.from('tarefas')
 		.select(
-			'id, titulo, status, prioridade, prazo, projeto_id, projeto:projetos(nome), responsavel:colaboradores(nome)'
+			'id, titulo, status, prioridade, prazo, projeto_id, responsavel_id, descricao, tempo_estimado, tempo_gasto, projeto:projetos(nome), responsavel:colaboradores(nome)'
 		)
 		.order('ordem', { ascending: true })
 		.order('created_at', { ascending: false });
 
 	if (projeto) query = query.eq('projeto_id', projeto);
 
-	const { data, error } = await query;
+	const [{ data, error }, { data: projetos }, { data: colaboradores }] = await Promise.all([
+		query,
+		supabase.from('projetos').select('id, nome').order('created_at', { ascending: false }),
+		supabase.from('colaboradores').select('id, nome').eq('ativo', true).order('nome')
+	]);
 
 	let projetoNome: string | null = null;
 	if (projeto) {
@@ -28,7 +32,14 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		projeto: um(t.projeto),
 		responsavel: um(t.responsavel)
 	}));
-	return { tarefas, projeto, projetoNome, loadError: error?.message ?? null };
+	return {
+		tarefas,
+		projeto,
+		projetoNome,
+		projetos: projetos ?? [],
+		colaboradores: colaboradores ?? [],
+		loadError: error?.message ?? null
+	};
 };
 
 export const actions: Actions = {

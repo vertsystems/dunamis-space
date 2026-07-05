@@ -1,10 +1,14 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { invalidateAll } from '$app/navigation';
 	import { PROJETO_STATUS, projetoStatusTone, projetoStatusLabel, projetoTipoLabel } from '$lib/projetos';
-	import { Card, Badge, Button, Select, EmptyState, DataTable } from '$lib/components/ui';
+	import { Card, Badge, Button, Select, EmptyState, DataTable, Modal } from '$lib/components/ui';
 	import type { ColumnDef } from '$lib/components/ui';
+	import ProjetoForm from '$lib/components/ProjetoForm.svelte';
+	import { toast } from '$lib/toast.svelte';
 
-	let { data } = $props();
+	let { data, form } = $props();
+	// O form vem de actions de outras rotas (/projetos/novo, /[id]?/update) → tipagem solta.
+	const res = $derived(form as { values?: Record<string, any>; error?: string } | null);
 	let status = $state(data.status);
 	// Re-sincroniza o filtro com a URL (back/forward do navegador).
 	$effect(() => {
@@ -22,8 +26,23 @@
 		{ id: 'tipo', accessorFn: (p) => projetoTipoLabel(p.tipo), meta: { label: 'Tipo' } },
 		{ id: 'responsavel', accessorFn: (p) => p.responsavel?.nome ?? '', meta: { label: 'Responsável' } },
 		{ id: 'prazo', accessorFn: (p) => p.prazo ?? '', meta: { label: 'Prazo' } },
-		{ id: 'status', accessorFn: (p) => projetoStatusLabel(p.status), meta: { label: 'Status' } }
+		{ id: 'status', accessorFn: (p) => projetoStatusLabel(p.status), meta: { label: 'Status' } },
+		{ id: 'acoes', accessorFn: () => '', meta: { label: '' } }
 	];
+
+	let novoAberto = $state(false);
+	let editando = $state<Projeto | null>(null);
+
+	function aposCriar() {
+		novoAberto = false;
+		toast.success('Projeto criado');
+		invalidateAll();
+	}
+	function aposEditar() {
+		editando = null;
+		toast.success('Projeto salvo');
+		invalidateAll();
+	}
 </script>
 
 <div class="mb-4">
@@ -39,7 +58,7 @@
 		</Select>
 		<Button variant="secondary" type="submit">Filtrar</Button>
 	</form>
-	<Button onclick={() => goto('/projetos/novo')}>+ Novo projeto</Button>
+	<Button onclick={() => (novoAberto = true)}>+ Novo projeto</Button>
 </div>
 
 {#if data.loadError}<div class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">Erro ao carregar: {data.loadError}</div>{/if}
@@ -48,17 +67,46 @@
 	<DataTable {columns} data={data.projetos} initialSort={[{ id: 'projeto', desc: false }]}>
 		{#snippet row(r)}
 			{@const p = r.original}
-			<tr class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg" onclick={() => goto(`/projetos/${p.id}`)}>
-				<td class="px-4 py-3"><a class="text-brand hover:underline" href={`/projetos/${p.id}`}>{p.nome}</a></td>
+			<tr class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg" onclick={() => (editando = p)}>
+				<td class="px-4 py-3 font-medium text-navy">{p.nome}</td>
 				<td class="px-4 py-3">{p.cliente?.nome ?? '—'}</td>
 				<td class="px-4 py-3">{projetoTipoLabel(p.tipo)}</td>
 				<td class="px-4 py-3">{p.responsavel?.nome ?? '—'}</td>
 				<td class="px-4 py-3 whitespace-nowrap">{fmtData(p.prazo)}</td>
 				<td class="px-4 py-3"><Badge tone={projetoStatusTone(p.status)}>{projetoStatusLabel(p.status)}</Badge></td>
+				<td class="px-4 py-3 text-right"><a class="text-sm text-brand hover:underline" href={`/projetos/${p.id}`} onclick={(e) => e.stopPropagation()}>Abrir</a></td>
 			</tr>
 		{/snippet}
 		{#snippet empty()}
-			<tr><td colspan="6" class="px-2"><EmptyState icon="folder" title="Nenhum projeto ainda" description="Crie projetos e jobs para os clientes." /></td></tr>
+			<tr><td colspan="7" class="px-2"><EmptyState icon="folder" title="Nenhum projeto ainda" description="Crie projetos e jobs para os clientes." /></td></tr>
 		{/snippet}
 	</DataTable>
 </Card>
+
+<Modal open={novoAberto} title="Novo projeto" size="lg" onClose={() => (novoAberto = false)}>
+	<ProjetoForm
+		action="/projetos/novo"
+		submitLabel="Criar projeto"
+		clientes={data.clientes}
+		colaboradores={data.colaboradores}
+		projeto={res?.values ?? null}
+		error={res?.error ?? null}
+		onCancel={() => (novoAberto = false)}
+		onDone={aposCriar}
+	/>
+</Modal>
+
+<Modal open={!!editando} title="Editar projeto" size="lg" onClose={() => (editando = null)}>
+	{#if editando}
+		<ProjetoForm
+			action={`/projetos/${editando.id}?/update`}
+			submitLabel="Salvar alterações"
+			clientes={data.clientes}
+			colaboradores={data.colaboradores}
+			projeto={res?.values ?? editando}
+			error={res?.error ?? null}
+			onCancel={() => (editando = null)}
+			onDone={aposEditar}
+		/>
+	{/if}
+</Modal>
