@@ -2,6 +2,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import ClienteForm from '$lib/components/ClienteForm.svelte';
 	import CalendarioConteudos from '$lib/components/CalendarioConteudos.svelte';
+	import CargoBadge from '$lib/components/CargoBadge.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import { Card, Badge, Button, Breadcrumb, Modal } from '$lib/components/ui';
 	import { statusTone, statusLabel, formatBRL } from '$lib/clientes';
@@ -10,18 +11,6 @@
 
 	let { data, form } = $props();
 	const c = $derived(data.cliente);
-
-	// Função do responsável → rótulo do selo (admin = CEO/dono).
-	const FUNCAO_LABEL: Record<string, string> = {
-		admin: 'CEO',
-		gestor: 'Gestor',
-		social_media: 'Social Media',
-		designer: 'Designer',
-		trafego: 'Tráfego'
-	};
-	const respFuncao = $derived(
-		c.responsavel_funcao ? (FUNCAO_LABEL[c.responsavel_funcao] ?? c.responsavel_funcao) : null
-	);
 
 	// Cor determinística do avatar a partir do nome.
 	const AVATAR_CORES = ['bg-navy', 'bg-brand', 'bg-brand-green', 'bg-brand-danger', 'bg-slate'];
@@ -88,12 +77,7 @@
 						<span class="grid size-6 shrink-0 place-items-center rounded-full text-[0.6rem] font-semibold text-white {corAvatar(c.responsavel_nome)}">{iniciais(c.responsavel_nome)}</span>
 					{/if}
 					<span class="text-sm font-medium text-navy">{c.responsavel_nome}</span>
-					{#if respFuncao}
-						<span
-							class="inline-flex items-center rounded-md border px-1.5 py-px text-[0.6rem] font-bold uppercase tracking-wide text-white shadow-sm"
-							style="background: linear-gradient(135deg, #b8860b 0%, #f5d67b 45%, #c99a2e 100%); border-color: #a5761a;"
-						>{respFuncao}</span>
-					{/if}
+					<CargoBadge funcao={c.responsavel_funcao} />
 				</div>
 			{/if}
 		</div>

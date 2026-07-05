@@ -7,6 +7,7 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import { FUNCAO, funcaoLabel } from '$lib/equipe';
+	import CargoBadge from '$lib/components/CargoBadge.svelte';
 	import { CORES_TEMA, COR_PADRAO, normalizaHex, escurece } from '$lib/tema';
 	import { AVATARES } from '$lib/avatares';
 
@@ -130,7 +131,10 @@
 				</button>
 			</div>
 			<div class="min-w-0">
-				<h1 class="truncate text-base font-semibold text-white">{colab?.nome || 'Usuário'}</h1>
+				<div class="flex items-center gap-2">
+					<h1 class="truncate text-base font-semibold text-white">{colab?.nome || 'Usuário'}</h1>
+					<CargoBadge funcao={colab?.funcao} />
+				</div>
 				<p class="text-sm text-white/70">{funcaoLabel(colab?.funcao ?? '')}</p>
 				<p class="truncate text-sm text-white/50">{data.email}</p>
 			</div>

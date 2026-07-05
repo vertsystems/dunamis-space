@@ -5,6 +5,7 @@
 	import { Card, Badge, Button, EmptyState, DataTable, Modal } from '$lib/components/ui';
 	import type { ColumnDef } from '$lib/components/ui';
 	import ColaboradorForm from '$lib/components/ColaboradorForm.svelte';
+	import CargoBadge from '$lib/components/CargoBadge.svelte';
 	import { toast } from '$lib/toast.svelte';
 
 	let { data, form } = $props();
@@ -51,7 +52,7 @@
 		{#snippet row(r)}
 			{@const c = r.original}
 			<tr class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg" onclick={() => (editando = c)}>
-				<td class="px-4 py-3 font-medium text-navy">{c.nome}</td>
+				<td class="px-4 py-3 font-medium text-navy"><span class="inline-flex items-center gap-2">{c.nome}<CargoBadge funcao={c.funcao} /></span></td>
 				<td class="px-4 py-3">{c.email}</td>
 				<td class="px-4 py-3">{funcaoLabel(c.funcao)}</td>
 				<td class="px-4 py-3 text-right tabular-nums">{c.custo_hora != null ? formatBRL(c.custo_hora) : '—'}</td>

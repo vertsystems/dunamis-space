@@ -1,13 +1,19 @@
 export const FUNCAO = [
-	{ value: 'admin', label: 'Administrador' },
-	{ value: 'gestor', label: 'Gestor' },
-	{ value: 'social_media', label: 'Social media' },
-	{ value: 'designer', label: 'Designer' },
-	{ value: 'trafego', label: 'Tráfego' }
+	{ value: 'ceo', label: 'Diretor Executivo', sigla: 'CEO' },
+	{ value: 'admin', label: 'Administrador', sigla: 'ADM' },
+	{ value: 'comercial', label: 'Comercial', sigla: 'SDR' },
+	{ value: 'social_media', label: 'Social Media', sigla: 'SM' },
+	{ value: 'digital_creator', label: 'Digital Creator', sigla: 'DC' },
+	{ value: 'growth_manager', label: 'Growth Manager', sigla: 'GM' }
 ] as const;
 
 export function funcaoLabel(funcao: string): string {
 	return FUNCAO.find((f) => f.value === funcao)?.label ?? funcao;
+}
+
+/** Sigla do cargo (para a bandeirinha ao lado do nome). */
+export function funcaoSigla(funcao: string | null | undefined): string | null {
+	return FUNCAO.find((f) => f.value === funcao)?.sigla ?? null;
 }
 
 function str(fd: FormData, k: string): string | null {
