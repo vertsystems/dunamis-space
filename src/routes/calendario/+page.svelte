@@ -33,8 +33,8 @@
 		toast.success('Conteúdo salvo');
 		invalidateAll();
 	}
-	async function excluirConteudo() {
-		const c = editando;
+	async function excluir(c: Record<string, any> | null, e?: Event) {
+		e?.stopPropagation();
 		if (!c || processando) return;
 		if (!confirm('Excluir este conteúdo? Esta ação não pode ser desfeita.')) return;
 		processando = true;
@@ -44,7 +44,7 @@
 		const result = deserialize(await resp.text());
 		processando = false;
 		if (result.type === 'success') {
-			editando = null;
+			if (editando?.id === c.id) editando = null;
 			toast.success('Conteúdo excluído');
 			invalidateAll();
 		} else if (result.type === 'failure') {
@@ -286,7 +286,7 @@
 					}
 				}}
 				title={`${conteudoTipoLabel(a.c.tipo)} · ${conteudoStatusLabel(a.c.status)}${a.c.cliente_nome ? ' · ' + a.c.cliente_nome : ''}`}
-				class="flex w-full cursor-grab flex-col gap-0.5 rounded-[var(--radius-sm)] border border-grey-200/70 bg-surface px-1.5 py-1 text-left transition-colors hover:bg-bg active:cursor-grabbing"
+				class="relative flex w-full cursor-grab flex-col gap-0.5 rounded-[var(--radius-sm)] border border-grey-200/70 bg-surface px-1.5 py-1 pr-5 text-left transition-colors hover:bg-bg active:cursor-grabbing"
 			>
 				<span class="flex items-baseline gap-1">
 					<span class="truncate text-[0.68rem] font-semibold leading-tight text-navy-900">{a.c.titulo ?? conteudoTipoLabel(a.c.tipo)}</span>
@@ -322,6 +322,13 @@
 						<Icon name="building" size={9} /><span class="truncate">{a.c.cliente_nome}</span>
 					</span>
 				{/if}
+				<button
+					type="button"
+					onclick={(e) => excluir(a.c, e)}
+					title="Excluir conteúdo"
+					aria-label="Excluir conteúdo"
+					class="absolute bottom-1 right-1 grid size-4 place-items-center rounded-full bg-brand-danger/15 text-brand-danger transition-colors hover:bg-brand-danger hover:text-white"
+				><Icon name="trash" size={9} /></button>
 			</div>
 		{:else}
 			<a
@@ -587,7 +594,7 @@
 			error={res?.error ?? null}
 			onCancel={() => (editando = null)}
 			onDone={aposEditar}
-			onDelete={excluirConteudo}
+			onDelete={() => excluir(editando)}
 		/>
 	{/if}
 </Modal>
