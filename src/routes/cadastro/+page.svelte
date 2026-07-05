@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { goto, invalidateAll } from '$app/navigation';
+	import { invalidateAll } from '$app/navigation';
 	import { formatBRL } from '$lib/clientes';
 	import { Button, Card, Input, EmptyState, DataTable, Modal } from '$lib/components/ui';
 	import type { ColumnDef } from '$lib/components/ui';
@@ -9,14 +9,21 @@
 	let { data, form } = $props();
 	const res = $derived(form as { values?: Record<string, any>; error?: string } | null);
 
+	type Cliente = (typeof data.clientes)[number];
+
 	let novoAberto = $state(false);
+	let editando = $state<Cliente | null>(null);
 	function aposCriar() {
 		novoAberto = false;
 		toast.success('Cliente criado');
 		invalidateAll();
 	}
+	function aposEditar() {
+		editando = null;
+		toast.success('Cliente salvo');
+		invalidateAll();
+	}
 
-	type Cliente = (typeof data.clientes)[number];
 	const columns: ColumnDef<Cliente>[] = [
 		{ id: 'nome', accessorFn: (c) => c.nome ?? '', meta: { label: 'Nome' } },
 		{ id: 'cnpj_cpf', accessorFn: (c) => c.cnpj_cpf ?? '', meta: { label: 'CNPJ/CPF' } },
@@ -27,7 +34,8 @@
 			id: 'dia_vencimento',
 			accessorFn: (c) => c.dia_vencimento ?? 0,
 			meta: { label: 'Venc.', thClass: 'text-right' }
-		}
+		},
+		{ id: 'acoes', accessorFn: () => '', meta: { label: '' } }
 	];
 
 	let q = $state(data.q);
@@ -69,7 +77,7 @@
 				{@const c = r.original}
 				<tr
 					class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg"
-					onclick={() => goto('/cadastro/' + c.id)}
+					onclick={() => (editando = c)}
 				>
 					<td class="px-4 py-3 font-medium text-navy">{c.nome}</td>
 					<td class="px-4 py-3 text-slate">{c.cnpj_cpf ?? '—'}</td>
@@ -81,10 +89,13 @@
 					<td class="px-4 py-3 text-right tabular-nums text-slate">
 						{c.dia_vencimento ?? '—'}
 					</td>
+					<td class="px-4 py-3 text-right">
+						<a class="text-sm text-brand hover:underline" href={`/cadastro/${c.id}`} onclick={(e) => e.stopPropagation()}>Abrir</a>
+					</td>
 				</tr>
 			{/snippet}
 			{#snippet empty()}
-				<tr><td colspan="6" class="px-2"><EmptyState icon="file" title="Nenhum cliente encontrado" description="Os clientes cadastrados aparecem aqui." /></td></tr>
+				<tr><td colspan="7" class="px-2"><EmptyState icon="file" title="Nenhum cliente encontrado" description="Os clientes cadastrados aparecem aqui." /></td></tr>
 			{/snippet}
 		</DataTable>
 	</Card>
@@ -100,4 +111,18 @@
 		onCancel={() => (novoAberto = false)}
 		onDone={aposCriar}
 	/>
+</Modal>
+
+<Modal open={!!editando} title="Editar cliente" size="lg" onClose={() => (editando = null)}>
+	{#if editando}
+		<ClienteForm
+			action={`/cadastro/${editando.id}?/update`}
+			submitLabel="Salvar alterações"
+			colaboradores={data.colaboradores}
+			cliente={res?.values ?? editando}
+			error={res?.error ?? null}
+			onCancel={() => (editando = null)}
+			onDone={aposEditar}
+		/>
+	{/if}
 </Modal>

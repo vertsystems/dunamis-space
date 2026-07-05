@@ -31,28 +31,44 @@ export function formatBRL(value: number | null | undefined): string {
 	return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value ?? 0);
 }
 
-/** Normaliza os campos do formulário de cliente vindos de FormData. */
+/** Normaliza os campos do formulário (unificado) de cliente vindos de FormData. */
 export function clienteFromForm(fd: FormData) {
 	const str = (k: string) => {
 		const v = fd.get(k);
 		const s = typeof v === 'string' ? v.trim() : '';
 		return s === '' ? null : s;
 	};
-	// MRR vem de <input type="number">: valor já normalizado com ponto decimal.
-	const mrrRaw = str('mrr');
-	const mrrNum = mrrRaw === null ? null : Number(mrrRaw);
+	// Números de <input type="number">: já vêm com ponto decimal.
+	const numero = (k: string) => {
+		const s = str(k);
+		if (s === null) return null;
+		const n = Number(s);
+		return Number.isNaN(n) ? null : n;
+	};
 	return {
+		// Geral
 		nome: str('nome') ?? '',
+		status: str('status') ?? 'lead',
 		razao_social: str('razao_social'),
 		cnpj_cpf: str('cnpj_cpf'),
 		segmento: str('segmento'),
+		responsavel_id: str('responsavel_id'),
+		data_inicio: str('data_inicio'),
+		// Contato
 		contato_nome: str('contato_nome'),
 		contato_email: str('contato_email'),
 		contato_whatsapp: str('contato_whatsapp'),
-		status: str('status') ?? 'lead',
-		responsavel_id: str('responsavel_id'),
-		data_inicio: str('data_inicio'),
-		mrr: mrrNum !== null && Number.isNaN(mrrNum) ? null : mrrNum,
+		contato_financeiro: str('contato_financeiro'),
+		// Endereço
+		endereco: str('endereco'),
+		cidade: str('cidade'),
+		estado: str('estado'),
+		cep: str('cep'),
+		// Financeiro
+		plano_ref: str('plano_ref'),
+		forma_pagamento: str('forma_pagamento'),
+		mrr: numero('mrr'),
+		dia_vencimento: numero('dia_vencimento'),
 		observacoes: str('observacoes')
 	};
 }

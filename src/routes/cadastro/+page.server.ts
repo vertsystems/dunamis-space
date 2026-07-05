@@ -5,7 +5,9 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 
 	let query = supabase
 		.from('clientes')
-		.select('id, nome, cnpj_cpf, cidade, estado, plano_ref, mrr, dia_vencimento')
+		.select(
+			'id, nome, status, razao_social, cnpj_cpf, segmento, responsavel_id, data_inicio, contato_nome, contato_email, contato_whatsapp, contato_financeiro, endereco, cidade, estado, cep, plano_ref, forma_pagamento, mrr, dia_vencimento, observacoes'
+		)
 		.order('nome', { ascending: true });
 
 	if (q) query = query.ilike('nome', `%${q}%`);
