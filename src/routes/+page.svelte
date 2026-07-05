@@ -76,7 +76,7 @@
 			<Icon name="contact" size={17} /> Clientes
 			<span class="text-sm font-normal text-grey">({data.clientes.length})</span>
 		</h2>
-		<a class="text-sm text-brand hover:underline" href="/clientes">Ver todos</a>
+		<a class="text-sm text-brand hover:underline" href="/cadastro">Ver todos</a>
 	</div>
 
 	{#if data.clientes.length}

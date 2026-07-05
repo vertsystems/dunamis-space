@@ -14,7 +14,7 @@
 
 	const acessar: Atalho[] = [
 		{ href: '/crm', label: 'CRM Master', desc: 'Pipeline de vendas', icon: 'funnel' },
-		{ href: '/clientes', label: 'Clientes', desc: 'Base de clientes', icon: 'contact' },
+		{ href: '/cadastro', label: 'Clientes', desc: 'Base de clientes', icon: 'contact' },
 		{ href: '/tarefas', label: 'Tarefas', desc: 'Kanban da equipe', icon: 'check' },
 		{ href: '/conteudo', label: 'Conteúdo', desc: 'Calendário editorial', icon: 'edit' },
 		{ href: '/financeiro', label: 'Financeiro', desc: 'Receitas e despesas', icon: 'dollar' },

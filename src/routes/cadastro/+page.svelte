@@ -1,10 +1,20 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { formatBRL } from '$lib/clientes';
-	import { Button, Card, Input, EmptyState, DataTable } from '$lib/components/ui';
+	import { Button, Card, Input, EmptyState, DataTable, Modal } from '$lib/components/ui';
 	import type { ColumnDef } from '$lib/components/ui';
+	import ClienteForm from '$lib/components/ClienteForm.svelte';
+	import { toast } from '$lib/toast.svelte';
 
-	let { data } = $props();
+	let { data, form } = $props();
+	const res = $derived(form as { values?: Record<string, any>; error?: string } | null);
+
+	let novoAberto = $state(false);
+	function aposCriar() {
+		novoAberto = false;
+		toast.success('Cliente criado');
+		invalidateAll();
+	}
 
 	type Cliente = (typeof data.clientes)[number];
 	const columns: ColumnDef<Cliente>[] = [
@@ -37,7 +47,7 @@
 			<Input type="search" name="q" placeholder="Buscar por nome" bind:value={q} wrapperClass="w-56" />
 			<Button variant="secondary" type="submit">Buscar</Button>
 		</form>
-		<Button onclick={() => goto('/clientes/novo')}>+ Novo cliente</Button>
+		<Button onclick={() => (novoAberto = true)}>+ Novo cliente</Button>
 	</div>
 </div>
 
@@ -79,3 +89,15 @@
 		</DataTable>
 	</Card>
 {/if}
+
+<Modal open={novoAberto} title="Novo cliente" size="lg" onClose={() => (novoAberto = false)}>
+	<ClienteForm
+		action="/clientes/novo"
+		submitLabel="Criar cliente"
+		colaboradores={data.colaboradores}
+		cliente={res?.values ?? null}
+		error={res?.error ?? null}
+		onCancel={() => (novoAberto = false)}
+		onDone={aposCriar}
+	/>
+</Modal>

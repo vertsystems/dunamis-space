@@ -12,7 +12,7 @@
 	let confirmDelete = $state(false);
 </script>
 
-<Breadcrumb items={[{ label: 'Clientes', href: '/clientes' }, { label: data.cliente.nome }]} />
+<Breadcrumb items={[{ label: 'Clientes', href: '/cadastro' }, { label: data.cliente.nome }]} />
 
 <div class="flex items-center gap-3 mb-4">
 	<h1 class="text-lg font-semibold text-navy">{data.cliente.nome}</h1>

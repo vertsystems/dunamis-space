@@ -24,6 +24,6 @@ export const actions: Actions = {
 	delete: async ({ params, locals: { supabase } }) => {
 		const { error: e } = await supabase.from('clientes').delete().eq('id', params.id);
 		if (e) return fail(500, { error: e.message });
-		throw redirect(303, '/clientes');
+		throw redirect(303, '/cadastro');
 	}
 };

@@ -10,7 +10,10 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 
 	if (q) query = query.ilike('nome', `%${q}%`);
 
-	const { data, error } = await query;
+	const [{ data, error }, { data: colaboradores }] = await Promise.all([
+		query,
+		supabase.from('colaboradores').select('id, nome').eq('ativo', true).order('nome')
+	]);
 
 	// Degradação: a migration 0006 pode não ter sido aplicada (colunas novas).
 	const pendente =
@@ -18,6 +21,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 
 	return {
 		clientes: pendente ? [] : (data ?? []),
+		colaboradores: colaboradores ?? [],
 		q,
 		pendente,
 		loadError: pendente ? null : (error?.message ?? null)

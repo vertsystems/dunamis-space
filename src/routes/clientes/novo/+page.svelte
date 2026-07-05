@@ -5,7 +5,7 @@
 	let { data, form } = $props();
 </script>
 
-<Breadcrumb items={[{ label: 'Clientes', href: '/clientes' }, { label: 'Novo' }]} />
+<Breadcrumb items={[{ label: 'Clientes', href: '/cadastro' }, { label: 'Novo' }]} />
 
 <Card>
 	<h1 class="text-lg font-semibold text-navy mb-4">Novo cliente</h1>

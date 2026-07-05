@@ -86,6 +86,6 @@
 
 	<div class="flex gap-2 mt-4">
 		<Button type="submit" loading={saving}>{submitLabel}</Button>
-		<Button variant="secondary" onclick={() => (onCancel ? onCancel() : goto('/clientes'))}>Cancelar</Button>
+		<Button variant="secondary" onclick={() => (onCancel ? onCancel() : goto('/cadastro'))}>Cancelar</Button>
 	</div>
 </form>
