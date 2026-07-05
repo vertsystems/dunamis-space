@@ -189,6 +189,10 @@
 
 			<Input label="Telefone" name="telefone" value={editando?.telefone ?? ''} />
 
+			<Input label="Site" name="site" type="url" placeholder="https://..." value={editando?.site ?? ''} />
+
+			<Input label="Instagram" name="instagram" placeholder="@usuario ou link" value={editando?.instagram ?? ''} />
+
 			<Input
 				label="Custo de referência (R$)"
 				name="custo_referencia"

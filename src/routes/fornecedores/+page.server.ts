@@ -12,12 +12,14 @@ export type Fornecedor = {
 	avaliacao: number | null;
 	ativo: boolean;
 	observacoes: string | null;
+	site: string | null;
+	instagram: string | null;
 };
 
 const TIPOS = ['freelancer', 'fornecedor', 'parceiro'];
 
 const COLUNAS =
-	'id, nome, tipo, especialidade, email, telefone, custo_referencia, avaliacao, ativo, observacoes';
+	'id, nome, tipo, especialidade, email, telefone, custo_referencia, avaliacao, ativo, observacoes, site, instagram';
 
 export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	const tipoParam = url.searchParams.get('tipo');
@@ -83,7 +85,9 @@ function fornecedorFromForm(fd: FormData) {
 		custo_referencia,
 		avaliacao,
 		ativo: fd.get('ativo') != null,
-		observacoes: str('observacoes')
+		observacoes: str('observacoes'),
+		site: str('site'),
+		instagram: str('instagram')
 	};
 }
 

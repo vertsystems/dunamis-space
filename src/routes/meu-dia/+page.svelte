@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
-	import { Card, Badge, Button } from '$lib/components/ui';
+	import { Card, Badge, Button, Modal } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
 	import { diasAte, formatDateBR } from '$lib/alertas';
 	import { prioridadeTone, prioridadeLabel } from '$lib/tarefas';
@@ -22,8 +22,14 @@
 	const feitosHoje = $derived(hojeItens.filter((i) => feitos.has(i.id)).length);
 	const progresso = $derived(hojeItens.length ? Math.round((feitosHoje / hojeItens.length) * 100) : 0);
 
-	let editando = $state(false);
-	let novos = $state<Record<number, string>>({});
+	// Modal de um dia (visualizar / gerenciar os itens daquele dia).
+	let diaModal = $state<number | null>(null);
+	let novoItem = $state('');
+	const itensModal = $derived(diaModal !== null ? (itensPorDia[diaModal] ?? []) : []);
+	function abrirDia(dia: number) {
+		diaModal = dia;
+		novoItem = '';
+	}
 
 	async function post(action: string, body: Record<string, string>): Promise<boolean> {
 		const fd = new FormData();
@@ -56,11 +62,12 @@
 		}
 	}
 
-	async function adicionar(dia: number) {
-		const titulo = (novos[dia] ?? '').trim();
+	async function adicionar() {
+		if (diaModal === null) return;
+		const titulo = novoItem.trim();
 		if (!titulo) return;
-		if (await post('criarItem', { cargo: data.rotina.cargoSel, dia_semana: String(dia), titulo })) {
-			novos[dia] = '';
+		if (await post('criarItem', { cargo: data.rotina.cargoSel, dia_semana: String(diaModal), titulo })) {
+			novoItem = '';
 			await invalidateAll();
 		} else toast.error('Não foi possível adicionar.');
 	}
@@ -126,21 +133,14 @@
 			<Icon name="map" size={16} /> Mapa de Rotina
 			<span class="text-sm font-normal text-grey">· {data.rotina.cargoLabel}</span>
 		</h2>
-		{#if data.rotina.podeGerenciar}
-			<div class="flex items-center gap-2">
-				{#if data.rotina.cargos.length > 1}
-					<select
-						value={data.rotina.cargoSel}
-						onchange={trocarCargo}
-						class="rounded-[var(--radius)] border border-grey-200 bg-surface px-2.5 py-1.5 text-sm text-navy focus:border-brand focus:outline-none"
-					>
-						{#each data.rotina.cargos as c (c.value)}<option value={c.value}>{c.label}</option>{/each}
-					</select>
-				{/if}
-				<Button variant={editando ? 'primary' : 'secondary'} size="sm" onclick={() => (editando = !editando)}>
-					<Icon name={editando ? 'check' : 'edit'} size={14} /> {editando ? 'Concluir edição' : 'Editar'}
-				</Button>
-			</div>
+		{#if data.rotina.podeGerenciar && data.rotina.cargos.length > 1}
+			<select
+				value={data.rotina.cargoSel}
+				onchange={trocarCargo}
+				class="rounded-[var(--radius)] border border-grey-200 bg-surface px-2.5 py-1.5 text-sm text-navy focus:border-brand focus:outline-none"
+			>
+				{#each data.rotina.cargos as c (c.value)}<option value={c.value}>{c.label}</option>{/each}
+			</select>
 		{/if}
 	</div>
 
@@ -202,68 +202,105 @@
 		<Card padding="sm">
 			<div class="mb-2 flex items-center justify-between">
 				<h3 class="text-sm font-semibold text-navy">A semana</h3>
-				<span class="text-xs text-grey">Domingo → Sábado</span>
+				<span class="text-xs text-grey">Clique num dia para {data.rotina.podeGerenciar ? 'ver / editar' : 'ver'}</span>
 			</div>
-			<div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:[grid-template-columns:0.58fr_repeat(6,minmax(0,1fr))]">
+			<div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:[grid-template-columns:0.34fr_repeat(6,minmax(0,1fr))]">
 				{#each DIAS as d (d.idx)}
 					{@const itens = itensPorDia[d.idx] ?? []}
 					{@const ehHoje = d.idx === data.rotina.dia}
-					<div class="rounded-[var(--radius)] p-2 {ehHoje ? 'bg-brand/5 ring-2 ring-brand/40' : 'bg-bg'}">
-						<div class="mb-1.5 flex items-center justify-between px-0.5">
-							<span class="text-xs font-semibold {ehHoje ? 'text-brand' : 'text-slate'}">{d.curto}</span>
+					{@const domingo = d.idx === 0}
+					<button
+						type="button"
+						onclick={() => abrirDia(d.idx)}
+						class="rounded-[var(--radius)] p-2 text-left transition-colors {ehHoje
+							? 'bg-brand/5 ring-2 ring-brand/40'
+							: 'bg-bg hover:bg-grey-200/50'}"
+					>
+						<div class="mb-1.5 flex flex-wrap items-center gap-1 px-0.5">
+							<span class="text-xs font-semibold {ehHoje ? 'text-brand' : 'text-slate'}">{domingo ? 'D' : d.curto}</span>
 							{#if ehHoje}<span class="rounded-full bg-brand px-1.5 text-[0.6rem] font-bold text-white">HOJE</span>{/if}
 						</div>
 						<div class="space-y-1">
 							{#each itens as it (it.id)}
 								{@const feito = ehHoje && feitos.has(it.id)}
-								{#if editando}
-									<div class="flex items-center gap-1 rounded-[var(--radius)] bg-surface px-1.5 py-1 shadow-xs">
-										<input
-											value={it.titulo}
-											onchange={(e) => renomear(it.id, e.currentTarget.value)}
-											class="min-w-0 flex-1 bg-transparent text-[0.7rem] text-navy focus:outline-none"
-										/>
-										<button type="button" onclick={() => excluir(it.id)} class="shrink-0 text-grey hover:text-brand-danger" aria-label="Excluir item" title="Excluir">
-											<Icon name="trash" size={11} />
-										</button>
-									</div>
-								{:else}
-									<div class="rounded-[var(--radius)] bg-surface px-2 py-1.5 text-[0.72rem] leading-snug shadow-xs {feito ? 'text-grey line-through' : 'text-slate'}">
-										{it.titulo}
-									</div>
-								{/if}
-							{/each}
-
-							{#if editando}
-								<div class="flex items-center gap-1 rounded-[var(--radius)] border border-dashed border-grey-300 px-1.5 py-1">
-									<input
-										bind:value={novos[d.idx]}
-										placeholder="+ item"
-										onkeydown={(e) => {
-											if (e.key === 'Enter') {
-												e.preventDefault();
-												adicionar(d.idx);
-											}
-										}}
-										class="min-w-0 flex-1 bg-transparent text-[0.7rem] text-navy placeholder:text-grey focus:outline-none"
-									/>
-									<button type="button" onclick={() => adicionar(d.idx)} class="shrink-0 text-brand hover:text-brand-600" aria-label="Adicionar item" title="Adicionar">
-										<Icon name="plus" size={12} />
-									</button>
+								<div class="rounded-[var(--radius)] bg-surface px-2 py-1.5 text-[0.72rem] leading-snug shadow-xs {feito ? 'text-grey line-through' : 'text-slate'}">
+									{it.titulo}
 								</div>
-							{:else if !itens.length}
+							{/each}
+							{#if !itens.length}
 								<p class="px-1 py-1.5 text-[0.68rem] text-grey/70">—</p>
 							{/if}
 						</div>
-					</div>
+					</button>
 				{/each}
 			</div>
-			{#if editando}
-				<p class="mt-2 text-xs text-grey">Editando a rotina de <strong>{data.rotina.cargoLabel}</strong>. As mudanças valem para todos desse cargo.</p>
-			{/if}
 		</Card>
 	</div>
 </section>
+
+<!-- Modal do dia: visualizar / gerenciar itens -->
+<Modal
+	open={diaModal !== null}
+	title={diaModal !== null ? `${DIAS[diaModal].nome} · ${data.rotina.cargoLabel}` : ''}
+	onClose={() => (diaModal = null)}
+>
+	{#if diaModal !== null}
+		{#if itensModal.length}
+			<ul class="space-y-2">
+				{#each itensModal as it (it.id)}
+					<li class="flex items-center gap-2">
+						{#if data.rotina.podeGerenciar}
+							<input
+								value={it.titulo}
+								onblur={(e) => renomear(it.id, e.currentTarget.value)}
+								onkeydown={(e) => {
+									if (e.key === 'Enter') {
+										e.preventDefault();
+										e.currentTarget.blur();
+									}
+								}}
+								class="min-w-0 flex-1 rounded-[var(--radius)] border border-grey-200 bg-surface px-3 py-2 text-sm text-navy focus:border-brand focus:outline-none"
+							/>
+							<button
+								type="button"
+								onclick={() => excluir(it.id)}
+								class="grid size-9 shrink-0 place-items-center rounded-[var(--radius)] text-grey transition-colors hover:bg-brand-danger/10 hover:text-brand-danger"
+								title="Excluir item"
+								aria-label="Excluir item"
+							>
+								<Icon name="trash" size={16} />
+							</button>
+						{:else}
+							<div class="flex-1 rounded-[var(--radius)] bg-bg px-3 py-2 text-sm text-slate">{it.titulo}</div>
+						{/if}
+					</li>
+				{/each}
+			</ul>
+		{:else}
+			<p class="py-6 text-center text-sm text-grey">Nenhum item para {DIAS[diaModal].nome}.</p>
+		{/if}
+
+		{#if data.rotina.podeGerenciar}
+			<form
+				onsubmit={(e) => {
+					e.preventDefault();
+					adicionar();
+				}}
+				class="mt-4 flex items-center gap-2 border-t border-grey-200 pt-4"
+			>
+				<input
+					bind:value={novoItem}
+					placeholder="Adicionar novo item…"
+					class="min-w-0 flex-1 rounded-[var(--radius)] border border-grey-200 bg-surface px-3 py-2 text-sm text-navy focus:border-brand focus:outline-none"
+				/>
+				<Button type="submit" size="sm" disabled={!novoItem.trim()}>
+					<Icon name="plus" size={15} /> Adicionar
+				</Button>
+			</form>
+			<p class="mt-2 text-xs text-grey">As mudanças valem para todos do cargo <strong>{data.rotina.cargoLabel}</strong>.</p>
+		{/if}
+	{/if}
+</Modal>
 
 <!-- ===================== TAREFAS / CRM ===================== -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
