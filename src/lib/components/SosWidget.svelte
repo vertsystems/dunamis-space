@@ -134,7 +134,7 @@
 		onclick={() => (aberto = !aberto)}
 		aria-expanded={aberto}
 		title="SOS — relatar um problema"
-		class="inline-flex h-12 items-center gap-2 rounded-full bg-brand-danger pr-5 pl-4 font-bold text-white shadow-[0_8px_22px_-6px_rgba(240,68,56,0.6)] ring-1 ring-brand-danger/40 transition-transform hover:scale-105 active:scale-95 focus-visible:ring-2 focus-visible:ring-brand-danger focus-visible:ring-offset-2 focus-visible:outline-none"
+		class="inline-flex h-12 items-center gap-2 rounded-full bg-grey-200 pr-5 pl-4 font-bold text-slate shadow-sm ring-1 ring-grey-200 transition-all hover:scale-105 hover:bg-grey-200/80 active:scale-95 focus-visible:ring-2 focus-visible:ring-slate focus-visible:ring-offset-2 focus-visible:outline-none"
 	>
 		<Icon name={aberto ? 'x' : 'lifebuoy'} size={20} />
 		<span class="text-sm tracking-wide">SOS</span>

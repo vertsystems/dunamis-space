@@ -82,9 +82,9 @@
 		<section>
 			<h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-grey">Endereço</h3>
 			<div class="grid grid-cols-1 md:grid-cols-12 gap-4">
-				<Input label="Endereço" name="endereco" value={v('endereco')} wrapperClass="md:col-span-6" />
+				<Input label="Endereço" name="endereco" value={v('endereco')} wrapperClass="md:col-span-5" />
 				<Input label="Cidade" name="cidade" value={v('cidade')} wrapperClass="md:col-span-3" />
-				<Input label="UF" name="estado" maxlength={2} placeholder="UF" value={v('estado')} wrapperClass="md:col-span-1" />
+				<Input label="UF" name="estado" maxlength={2} placeholder="UF" value={v('estado')} wrapperClass="md:col-span-2" />
 				<Input label="CEP" name="cep" value={v('cep')} wrapperClass="md:col-span-2" />
 			</div>
 		</section>

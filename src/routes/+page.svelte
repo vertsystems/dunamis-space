@@ -83,7 +83,7 @@
 		<div class="grid grid-cols-[repeat(auto-fill,minmax(76px,1fr))] gap-x-2 gap-y-4">
 			{#each data.clientes as c (c.id)}
 				<a
-					href={`/clientes/${c.id}`}
+					href={`/cadastro/${c.id}`}
 					class="group flex flex-col items-center gap-1.5 text-center"
 					title={c.nome}
 				>

@@ -1,16 +1,27 @@
 <script lang="ts">
-	import { goto, invalidateAll } from '$app/navigation';
+	import { invalidateAll } from '$app/navigation';
 	import ClienteForm from '$lib/components/ClienteForm.svelte';
+	import CalendarioConteudos from '$lib/components/CalendarioConteudos.svelte';
 	import Icon from '$lib/components/Icon.svelte';
-	import { Card, Badge, Button, Breadcrumb, Modal, toneClasses } from '$lib/components/ui';
+	import { Card, Badge, Button, Breadcrumb, Modal } from '$lib/components/ui';
 	import { statusTone, statusLabel, formatBRL } from '$lib/clientes';
 	import { iniciais } from '$lib/crm';
-	import { SEMANA, MESES, chaveDia, celulasMes } from '$lib/calendario';
-	import { conteudoStatusTone, conteudoStatusLabel, conteudoTipoLabel } from '$lib/conteudo';
 	import { toast } from '$lib/toast.svelte';
 
 	let { data, form } = $props();
 	const c = $derived(data.cliente);
+
+	// Função do responsável → rótulo do selo (admin = CEO/dono).
+	const FUNCAO_LABEL: Record<string, string> = {
+		admin: 'CEO',
+		gestor: 'Gestor',
+		social_media: 'Social Media',
+		designer: 'Designer',
+		trafego: 'Tráfego'
+	};
+	const respFuncao = $derived(
+		c.responsavel_funcao ? (FUNCAO_LABEL[c.responsavel_funcao] ?? c.responsavel_funcao) : null
+	);
 
 	// Cor determinística do avatar a partir do nome.
 	const AVATAR_CORES = ['bg-navy', 'bg-brand', 'bg-brand-green', 'bg-brand-danger', 'bg-slate'];
@@ -31,8 +42,6 @@
 		[
 			{ label: 'Razão social', value: c.razao_social },
 			{ label: 'CNPJ / CPF', value: c.cnpj_cpf },
-			{ label: 'Segmento', value: c.segmento },
-			{ label: 'Responsável', value: c.responsavel_nome },
 			{ label: 'Cliente desde', value: fmtData(c.data_inicio) },
 			{ label: 'MRR', value: c.mrr != null ? formatBRL(c.mrr) : null },
 			{ label: 'Plano', value: c.plano_ref },
@@ -52,32 +61,13 @@
 	}
 	let confirmDelete = $state(false);
 	let excluindo = $state(false);
-
-	// --- Calendário de posts do cliente ---
-	const cal = $derived(data.calendario);
-	const celulas = $derived(celulasMes(cal.ano, cal.mes));
-	const porDia = $derived.by(() => {
-		const map = new Map<string, NonNullable<typeof cal>['conteudos']>();
-		for (const ct of cal.conteudos) {
-			if (!ct.data_publicacao) continue;
-			const k = chaveDia(new Date(ct.data_publicacao));
-			const arr = map.get(k) ?? [];
-			arr.push(ct);
-			map.set(k, arr);
-		}
-		return map;
-	});
-	const hojeKey = chaveDia(new Date());
-	function horaCurta(iso: string | null) {
-		return iso ? new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
-	}
 </script>
 
 <Breadcrumb items={[{ label: 'Clientes', href: '/cadastro' }, { label: c.nome }]} />
 
-<!-- Header estilo perfil: avatar (iniciais) + nome + status + ações -->
+<!-- Header estilo perfil: avatar (iniciais) + nome + status + responsável -->
 <Card>
-	<div class="flex flex-wrap items-center gap-4">
+	<div class="flex flex-wrap items-start gap-4">
 		<span
 			class="grid size-16 shrink-0 place-items-center rounded-full text-lg font-semibold text-white shadow-sm {corAvatar(c.nome)}"
 		>{iniciais(c.nome)}</span>
@@ -86,9 +76,26 @@
 				<h1 class="text-lg font-semibold text-navy">{c.nome}</h1>
 				<Badge tone={statusTone(c.status)}>{statusLabel(c.status)}</Badge>
 			</div>
-			<p class="mt-0.5 text-sm text-grey">
-				{[c.segmento, c.responsavel_nome && `Resp.: ${c.responsavel_nome}`].filter(Boolean).join(' · ') || 'Perfil do cliente'}
-			</p>
+			{#if c.segmento}
+				<p class="mt-0.5 text-sm text-grey">{c.segmento}</p>
+			{/if}
+			{#if c.responsavel_nome}
+				<div class="mt-2 flex items-center gap-2">
+					<span class="text-xs text-grey">Resp.:</span>
+					{#if c.responsavel_avatar}
+						<img src={c.responsavel_avatar} alt={c.responsavel_nome} class="size-6 shrink-0 rounded-full object-cover shadow-sm" />
+					{:else}
+						<span class="grid size-6 shrink-0 place-items-center rounded-full text-[0.6rem] font-semibold text-white {corAvatar(c.responsavel_nome)}">{iniciais(c.responsavel_nome)}</span>
+					{/if}
+					<span class="text-sm font-medium text-navy">{c.responsavel_nome}</span>
+					{#if respFuncao}
+						<span
+							class="inline-flex items-center py-0.5 pl-2 pr-3 text-[0.7rem] font-bold uppercase tracking-wide text-white shadow-sm"
+							style="background: linear-gradient(135deg, #b8860b 0%, #f5d67b 45%, #c99a2e 100%); clip-path: polygon(0 0, 100% 0, calc(100% - 6px) 50%, 100% 100%, 0 100%);"
+						>{respFuncao}</span>
+					{/if}
+				</div>
+			{/if}
 		</div>
 		<Button variant="secondary" onclick={() => (editAberto = true)}>
 			<Icon name="edit" size={15} /> Editar
@@ -130,58 +137,17 @@
 	</Card>
 {/if}
 
-<!-- Calendário de posts do cliente -->
-<Card class="mt-4">
-	<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-		<div>
-			<h2 class="text-sm font-semibold text-navy">Calendário de posts</h2>
-			<p class="text-xs text-grey">Publicações programadas deste cliente.</p>
-		</div>
-		<div class="flex items-center gap-2">
-			<span class="text-sm font-semibold capitalize text-navy tabular-nums whitespace-nowrap">{MESES[cal.mes]} {cal.ano}</span>
-			<div class="flex gap-1">
-				<Button size="sm" variant="secondary" onclick={() => goto(`?cal=${cal.prev}`)} aria-label="Mês anterior">‹</Button>
-				{#if cal.atual !== cal.inicioMes}
-					<Button size="sm" variant="secondary" onclick={() => goto(`?cal=${cal.inicioMes}`)}>Hoje</Button>
-				{/if}
-				<Button size="sm" variant="secondary" onclick={() => goto(`?cal=${cal.next}`)} aria-label="Próximo mês">›</Button>
-			</div>
-		</div>
-	</div>
-
-	<div class="mb-1.5 grid grid-cols-7 gap-1.5">
-		{#each SEMANA as dia (dia)}
-			<div class="text-center text-xs font-semibold uppercase tracking-wide text-grey">{dia}</div>
-		{/each}
-	</div>
-	<div class="grid grid-cols-7 gap-1.5">
-		{#each celulas as d (d.toISOString())}
-			{@const k = chaveDia(d)}
-			{@const itens = porDia.get(k) ?? []}
-			{@const foraDoMes = d.getMonth() !== cal.mes}
-			<div
-				class="flex min-h-24 flex-col gap-1 overflow-hidden rounded-[var(--radius-sm)] border p-1.5 {foraDoMes
-					? 'border-grey-200/60 bg-bg'
-					: 'border-grey-200 bg-surface'} {k === hojeKey ? 'ring-1 ring-brand' : ''}"
-			>
-				<span class="text-xs font-semibold leading-none {foraDoMes ? 'text-grey-200' : 'text-slate'}">{d.getDate()}</span>
-				{#each itens as ct (ct.id)}
-					<a
-						class="block truncate rounded-[var(--radius-sm)] px-1.5 py-0.5 text-[0.72rem] font-medium no-underline {toneClasses[conteudoStatusTone(ct.status)]}"
-						href={`/conteudo/${ct.id}`}
-						title={`${conteudoTipoLabel(ct.tipo)} · ${conteudoStatusLabel(ct.status)}`}
-					>
-						<span class="mr-1 tabular-nums opacity-70">{horaCurta(ct.data_publicacao)}</span>{ct.titulo ?? conteudoTipoLabel(ct.tipo)}
-					</a>
-				{/each}
-			</div>
-		{/each}
-	</div>
-
-	<div class="mt-3 flex items-center gap-2 text-xs text-grey">
-		<span class="flex items-center gap-1.5"><span class="size-3 rounded ring-1 ring-brand"></span> Hoje</span>
-	</div>
-</Card>
+<!-- Calendário de posts do cliente (mesmo do marketing, filtrado a este cliente) -->
+<div class="mt-6">
+	<h2 class="mb-3 text-sm font-semibold text-navy">Calendário de posts</h2>
+	<CalendarioConteudos
+		data={data.calendario}
+		{form}
+		clienteFixo={c.id}
+		basePath={`/cadastro/${c.id}`}
+		mostrarCabecalho={false}
+	/>
+</div>
 
 <!-- Zona de perigo -->
 <Card class="mt-4">
@@ -203,7 +169,7 @@
 	<ClienteForm
 		action="?/update"
 		submitLabel="Salvar alterações"
-		colaboradores={data.colaboradores}
+		colaboradores={data.calendario.colaboradores}
 		cliente={form?.values ?? c}
 		error={form?.error ?? null}
 		onCancel={() => (editAberto = false)}
