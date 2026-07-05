@@ -37,7 +37,7 @@
 <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
 	{#each cards as s (s.label)}
 		<Card padding="sm">
-			<div class="text-xs uppercase tracking-wide text-grey font-semibold leading-tight">
+			<div class="text-[0.49rem] uppercase tracking-wide text-grey font-semibold leading-tight">
 				{s.label}
 			</div>
 			<div class="text-base font-semibold mt-1 tabular-nums {s.accent}">{s.value}</div>
