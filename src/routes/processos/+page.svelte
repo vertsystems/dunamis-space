@@ -1,8 +1,14 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { Card, Button, Badge, Modal } from '$lib/components/ui';
-	import { PROCESSO_ETAPAS, etapaCelula, situacaoTone, situacaoLabel, type EtapaStatus } from '$lib/processos';
-	import type { ProcessoRow } from '$lib/components/ProcessosGrid.svelte';
+	import {
+		PROCESSO_ETAPAS,
+		etapaCelula,
+		situacaoTone,
+		situacaoLabel,
+		type EtapaStatus,
+		type ProcessoRow
+	} from '$lib/processos';
 	import ProcessoForm from '$lib/components/ProcessoForm.svelte';
 	import { toast } from '$lib/toast.svelte';
 

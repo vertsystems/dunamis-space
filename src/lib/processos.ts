@@ -1,5 +1,17 @@
 import type { BadgeTone } from '$lib/components/ui';
 
+/** Linha de processo exibida na grade da listagem. */
+export type ProcessoRow = {
+	id: string;
+	numero: string | null;
+	nome: string;
+	secretaria: string | null;
+	responsavel: string | null;
+	prazo: string | null;
+	situacao: string;
+	etapas: Record<string, string> | null;
+};
+
 /** Etapas fixas do processo, na ordem do fluxo. */
 export const PROCESSO_ETAPAS = [
 	{ key: 'dfd', label: 'DFD' },

@@ -107,11 +107,18 @@
 			{#each byStatus(col.value) as t (t.id)}
 				{@const prazo = fmtData(t.prazo)}
 				<div
-					class="bg-surface border border-grey-200 rounded-[var(--radius)] px-3 py-2.5 mb-2.5 cursor-grab active:cursor-grabbing"
+					class="bg-surface border border-grey-200 rounded-[var(--radius)] px-3 py-2.5 mb-2.5 cursor-grab active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
 					draggable="true"
-					role="listitem"
+					role="button"
+					tabindex="0"
 					ondragstart={() => (dragId = t.id)}
 					onclick={() => (editando = t)}
+					onkeydown={(e) => {
+						if (e.key === 'Enter' || e.key === ' ') {
+							e.preventDefault();
+							editando = t;
+						}
+					}}
 				>
 					<div class="flex items-start justify-between gap-2">
 						<span class="block font-medium text-navy">{t.titulo}</span>

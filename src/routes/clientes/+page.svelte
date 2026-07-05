@@ -132,11 +132,18 @@
 
 			{#each lista as c (c.id)}
 				<div
-					class="bg-surface border border-grey-200 rounded-[var(--radius)] px-3 py-2.5 mb-2.5 cursor-grab active:cursor-grabbing hover:border-grey"
+					class="bg-surface border border-grey-200 rounded-[var(--radius)] px-3 py-2.5 mb-2.5 cursor-grab active:cursor-grabbing hover:border-grey focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
 					draggable="true"
-					role="listitem"
+					role="button"
+					tabindex="0"
 					ondragstart={() => (dragId = c.id)}
 					onclick={() => (editando = c)}
+					onkeydown={(e) => {
+						if (e.key === 'Enter' || e.key === ' ') {
+							e.preventDefault();
+							editando = c;
+						}
+					}}
 				>
 					<div class="font-medium text-navy">{c.nome}</div>
 					{#if c.contato_email}<div class="text-xs text-grey truncate">{c.contato_email}</div>{/if}
