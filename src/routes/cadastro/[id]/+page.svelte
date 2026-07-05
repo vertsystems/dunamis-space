@@ -90,8 +90,8 @@
 					<span class="text-sm font-medium text-navy">{c.responsavel_nome}</span>
 					{#if respFuncao}
 						<span
-							class="inline-flex items-center py-0.5 pl-2 pr-3 text-[0.7rem] font-bold uppercase tracking-wide text-white shadow-sm"
-							style="background: linear-gradient(135deg, #b8860b 0%, #f5d67b 45%, #c99a2e 100%); clip-path: polygon(0 0, 100% 0, calc(100% - 6px) 50%, 100% 100%, 0 100%);"
+							class="inline-flex items-center rounded-md border px-1.5 py-px text-[0.6rem] font-bold uppercase tracking-wide text-white shadow-sm"
+							style="background: linear-gradient(135deg, #b8860b 0%, #f5d67b 45%, #c99a2e 100%); border-color: #a5761a;"
 						>{respFuncao}</span>
 					{/if}
 				</div>

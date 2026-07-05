@@ -131,7 +131,10 @@
 
 	<button
 		type="button"
-		onclick={() => (aberto = !aberto)}
+		onclick={(e) => {
+			e.stopPropagation();
+			aberto = !aberto;
+		}}
 		aria-expanded={aberto}
 		title="SOS — relatar um problema"
 		class="inline-flex h-12 items-center gap-2 rounded-full bg-grey-200 pr-5 pl-4 font-bold text-slate shadow-sm ring-1 ring-grey-200 transition-all hover:scale-105 hover:bg-grey-200/80 active:scale-95 focus-visible:ring-2 focus-visible:ring-slate focus-visible:ring-offset-2 focus-visible:outline-none"

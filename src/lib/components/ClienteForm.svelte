@@ -72,10 +72,13 @@
 		<section>
 			<h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-grey">Contato</h3>
 			<div class="grid grid-cols-1 md:grid-cols-12 gap-4">
-				<Input label="Contato" name="contato_nome" value={v('contato_nome')} wrapperClass="md:col-span-3" />
-				<Input label="E-mail" type="email" name="contato_email" value={v('contato_email')} wrapperClass="md:col-span-3" />
-				<Input label="WhatsApp" name="contato_whatsapp" value={v('contato_whatsapp')} wrapperClass="md:col-span-3" />
-				<Input label="Contato financeiro" name="contato_financeiro" value={v('contato_financeiro')} placeholder="Nome / e-mail / tel." wrapperClass="md:col-span-3" />
+				<Input label="Contato" name="contato_nome" value={v('contato_nome')} wrapperClass="md:col-span-4" />
+				<Input label="E-mail" type="email" name="contato_email" value={v('contato_email')} wrapperClass="md:col-span-4" />
+				<Input label="WhatsApp" name="contato_whatsapp" value={v('contato_whatsapp')} wrapperClass="md:col-span-4" />
+
+				<Input label="Contato financeiro" name="contato_financeiro" value={v('contato_financeiro')} placeholder="Nome" wrapperClass="md:col-span-4" />
+				<Input label="E-mail financeiro" type="email" name="contato_financeiro_email" value={v('contato_financeiro_email')} wrapperClass="md:col-span-4" />
+				<Input label="WhatsApp financeiro" name="contato_financeiro_whatsapp" value={v('contato_financeiro_whatsapp')} wrapperClass="md:col-span-4" />
 			</div>
 		</section>
 

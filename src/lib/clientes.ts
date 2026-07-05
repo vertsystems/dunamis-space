@@ -59,6 +59,8 @@ export function clienteFromForm(fd: FormData) {
 		contato_email: str('contato_email'),
 		contato_whatsapp: str('contato_whatsapp'),
 		contato_financeiro: str('contato_financeiro'),
+		contato_financeiro_email: str('contato_financeiro_email'),
+		contato_financeiro_whatsapp: str('contato_financeiro_whatsapp'),
 		// Endereço
 		endereco: str('endereco'),
 		cidade: str('cidade'),
