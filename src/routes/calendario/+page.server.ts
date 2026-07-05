@@ -1,7 +1,10 @@
 import { fail } from '@sveltejs/kit';
 import { um } from '$lib/db';
 import { celulasMes, chaveDia, parseMes, mesAnterior, mesSeguinte } from '$lib/calendario';
+import { CONTEUDO_STATUS } from '$lib/conteudo';
 import type { PageServerLoad, Actions } from './$types';
+
+const STATUS_VALIDOS = new Set<string>(CONTEUDO_STATUS.map((s) => s.value));
 
 type View = 'mes' | 'semana' | 'lista';
 const VIEWS: View[] = ['mes', 'semana', 'lista'];
@@ -224,6 +227,25 @@ export const actions: Actions = {
 			.single();
 		if (e1 || !orig) return fail(404, { error: e1?.message ?? 'Conteúdo não encontrado.' });
 		const { error } = await supabase.from('conteudos').insert({ ...orig, data_publicacao: dp });
+		if (error) return fail(500, { error: error.message });
+		return { ok: true };
+	},
+	// Alterar status rápido pelo card (ex.: bolinha "Programar").
+	definirStatus: async ({ request, locals: { supabase } }) => {
+		const fd = await request.formData();
+		const id = String(fd.get('id') ?? '');
+		const status = String(fd.get('status') ?? '');
+		if (!UUID_RE.test(id) || !STATUS_VALIDOS.has(status)) return fail(400, { error: 'Dados inválidos.' });
+		const { error } = await supabase.from('conteudos').update({ status }).eq('id', id);
+		if (error) return fail(500, { error: error.message });
+		return { ok: true };
+	},
+	// Excluir conteúdo (botão no modal de edição do calendário).
+	excluir: async ({ request, locals: { supabase } }) => {
+		const fd = await request.formData();
+		const id = String(fd.get('id') ?? '');
+		if (!UUID_RE.test(id)) return fail(400, { error: 'ID inválido.' });
+		const { error } = await supabase.from('conteudos').delete().eq('id', id);
 		if (error) return fail(500, { error: error.message });
 		return { ok: true };
 	}

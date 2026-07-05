@@ -33,6 +33,24 @@
 		toast.success('Conteúdo salvo');
 		invalidateAll();
 	}
+	async function excluirConteudo() {
+		const c = editando;
+		if (!c || processando) return;
+		if (!confirm('Excluir este conteúdo? Esta ação não pode ser desfeita.')) return;
+		processando = true;
+		const fd = new FormData();
+		fd.set('id', c.id);
+		const resp = await fetch('?/excluir', { method: 'POST', body: fd });
+		const result = deserialize(await resp.text());
+		processando = false;
+		if (result.type === 'success') {
+			editando = null;
+			toast.success('Conteúdo excluído');
+			invalidateAll();
+		} else if (result.type === 'failure') {
+			toast.error((result.data?.error as string) ?? 'Falha ao excluir');
+		}
+	}
 
 	// --- Arrastar-e-soltar: mover/copiar post entre dias ---
 	let arrastando = $state<Record<string, any> | null>(null);
@@ -69,6 +87,23 @@
 			invalidateAll();
 		} else if (result.type === 'failure') {
 			toast.error((result.data?.error as string) ?? 'Falha na operação');
+		}
+	}
+
+	// Ação rápida: marcar o card como "Programar" (bolinha ao lado do status).
+	async function programar(c: Record<string, any>, e?: Event) {
+		e?.stopPropagation();
+		if (c.status === 'programar') return;
+		const fd = new FormData();
+		fd.set('id', c.id);
+		fd.set('status', 'programar');
+		const resp = await fetch('?/definirStatus', { method: 'POST', body: fd });
+		const result = deserialize(await resp.text());
+		if (result.type === 'success') {
+			toast.success('Status: Programar');
+			invalidateAll();
+		} else if (result.type === 'failure') {
+			toast.error((result.data?.error as string) ?? 'Falha ao alterar status');
 		}
 	}
 
@@ -227,8 +262,9 @@
 	{@const limite = cap && itens.length > cap ? cap - 1 : itens.length}
 	{#each itens.slice(0, limite) as a (a.k + (a.k === 'c' ? a.c.id : a.t.id))}
 		{#if a.k === 'c'}
-			<button
-				type="button"
+			<div
+				role="button"
+				tabindex="0"
 				draggable="true"
 				ondragstart={(e) => {
 					arrastando = a.c;
@@ -243,6 +279,12 @@
 					e.stopPropagation();
 					editando = a.c;
 				}}
+				onkeydown={(e) => {
+					if (e.key === 'Enter' || e.key === ' ') {
+						e.preventDefault();
+						editando = a.c;
+					}
+				}}
 				title={`${conteudoTipoLabel(a.c.tipo)} · ${conteudoStatusLabel(a.c.status)}${a.c.cliente_nome ? ' · ' + a.c.cliente_nome : ''}`}
 				class="flex w-full cursor-grab flex-col gap-0.5 rounded-[var(--radius-sm)] border border-grey-200/70 bg-surface px-1.5 py-1 text-left transition-colors hover:bg-bg active:cursor-grabbing"
 			>
@@ -250,8 +292,17 @@
 					<span class="truncate text-[0.68rem] font-semibold leading-tight text-navy-900">{a.c.titulo ?? conteudoTipoLabel(a.c.tipo)}</span>
 					<span class="ml-auto shrink-0 tabular-nums text-[0.6rem] text-brand">{a.c.hora}</span>
 				</span>
-				<span class="flex">
+				<span class="flex items-center gap-1">
 					<span class="inline-flex items-center rounded-full px-1 py-px text-[0.56rem] font-medium leading-tight {toneClasses[conteudoStatusTone(a.c.status)]}">{conteudoStatusLabel(a.c.status)}</span>
+					{#if a.c.status !== 'programar'}
+						<button
+							type="button"
+							onclick={(e) => programar(a.c, e)}
+							title="Marcar como Programar"
+							aria-label="Marcar como Programar"
+							class="size-3 shrink-0 rounded-full border border-brand-amber bg-brand-amber/30 transition-colors hover:bg-brand-amber"
+						></button>
+					{/if}
 				</span>
 				<span class="flex flex-wrap gap-0.5">
 					{#each tiposDe(a.c) as tp (tp)}
@@ -263,7 +314,7 @@
 						<Icon name="building" size={9} /><span class="truncate">{a.c.cliente_nome}</span>
 					</span>
 				{/if}
-			</button>
+			</div>
 		{:else}
 			<a
 				href="/tarefas"
@@ -528,6 +579,7 @@
 			error={res?.error ?? null}
 			onCancel={() => (editando = null)}
 			onDone={aposEditar}
+			onDelete={excluirConteudo}
 		/>
 	{/if}
 </Modal>
