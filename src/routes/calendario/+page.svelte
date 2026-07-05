@@ -178,12 +178,14 @@
 				title={`${conteudoTipoLabel(a.c.tipo)} · ${conteudoStatusLabel(a.c.status)}${a.c.cliente_nome ? ' · ' + a.c.cliente_nome : ''}`}
 				class="flex w-full flex-col gap-0.5 rounded-[var(--radius-sm)] border border-grey-200/70 bg-surface px-1.5 py-1 text-left transition-colors hover:bg-bg"
 			>
-				<span class="flex items-center gap-1">
-					<span class="shrink-0 tabular-nums text-[0.6rem] text-brand">{a.c.hora}</span>
+				<span class="flex items-baseline gap-1">
 					<span class="truncate text-[0.68rem] font-semibold leading-tight text-navy-900">{a.c.titulo ?? conteudoTipoLabel(a.c.tipo)}</span>
+					<span class="ml-auto shrink-0 tabular-nums text-[0.6rem] text-brand">{a.c.hora}</span>
 				</span>
-				<span class="flex flex-wrap items-center gap-0.5">
+				<span class="flex">
 					<span class="inline-flex items-center rounded-full px-1 py-px text-[0.56rem] font-medium leading-tight {toneClasses[conteudoStatusTone(a.c.status)]}">{conteudoStatusLabel(a.c.status)}</span>
+				</span>
+				<span class="flex">
 					<span class="inline-flex items-center rounded-full bg-bg px-1 py-px text-[0.56rem] font-medium leading-tight text-slate">{conteudoTipoLabel(a.c.tipo)}</span>
 				</span>
 				{#if a.c.cliente_nome}
