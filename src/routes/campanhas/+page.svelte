@@ -40,7 +40,7 @@
 
 <div class="flex items-end justify-between gap-3 mb-4">
 	<div>
-		<h1 class="text-xl font-bold text-navy">Campanhas</h1>
+		<h1 class="text-base font-semibold text-navy">Campanhas</h1>
 		<p class="text-sm text-grey">Campanhas e promoções por cliente.</p>
 	</div>
 	<Button onclick={() => (novoAberto = true)}>+ Nova campanha</Button>

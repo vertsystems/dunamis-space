@@ -8,7 +8,7 @@
 <Breadcrumb items={[{ label: 'Clientes', href: '/cadastro' }, { label: 'Novo' }]} />
 
 <Card>
-	<h1 class="text-lg font-semibold text-navy mb-4">Novo cliente</h1>
+	<h1 class="text-sm font-semibold text-navy mb-4">Novo cliente</h1>
 	<ClienteForm
 		cliente={form?.values ?? null}
 		colaboradores={data.colaboradores}

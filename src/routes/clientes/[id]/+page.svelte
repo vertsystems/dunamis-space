@@ -15,7 +15,7 @@
 <Breadcrumb items={[{ label: 'Clientes', href: '/cadastro' }, { label: data.cliente.nome }]} />
 
 <div class="flex items-center gap-3 mb-4">
-	<h1 class="text-lg font-semibold text-navy">{data.cliente.nome}</h1>
+	<h1 class="text-sm font-semibold text-navy">{data.cliente.nome}</h1>
 	<Badge tone={statusTone(data.cliente.status)}>{statusLabel(data.cliente.status)}</Badge>
 </div>
 
@@ -38,7 +38,7 @@
 <Comentarios entidadeTipo="cliente" entidadeId={data.cliente.id} />
 
 <Card class="mt-6">
-	<h2 class="text-base font-semibold text-brand-danger mb-3">Zona de perigo</h2>
+	<h2 class="text-sm font-semibold text-brand-danger mb-3">Zona de perigo</h2>
 	{#if confirmDelete}
 		<form method="POST" action="?/delete" use:enhance>
 			<p class="mb-3 text-sm text-slate">

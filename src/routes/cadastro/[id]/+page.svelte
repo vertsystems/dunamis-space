@@ -10,7 +10,7 @@
 <Breadcrumb items={[{ label: 'Clientes', href: '/cadastro' }, { label: data.cliente.nome }]} />
 
 <div class="mb-4">
-	<h1 class="text-xl font-bold text-navy">{data.cliente.nome}</h1>
+	<h1 class="text-base font-semibold text-navy">{data.cliente.nome}</h1>
 	<p class="text-sm text-grey">Ficha completa do cliente</p>
 </div>
 
@@ -31,7 +31,7 @@
 </Card>
 
 <Card class="mt-6">
-	<h2 class="text-base font-semibold text-brand-danger mb-3">Zona de perigo</h2>
+	<h2 class="text-sm font-semibold text-brand-danger mb-3">Zona de perigo</h2>
 	{#if confirmDelete}
 		<form method="POST" action="?/delete" use:enhance>
 			<p class="mb-3 text-sm text-slate">Excluir este cliente? Esta ação não pode ser desfeita.</p>

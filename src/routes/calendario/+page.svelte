@@ -353,7 +353,7 @@
 {/snippet}
 
 <div class="mb-4">
-	<h1 class="text-xl font-bold text-navy">Calendário</h1>
+	<h1 class="text-base font-semibold text-navy">Calendário</h1>
 	<p class="text-sm text-grey">Conteúdos, tarefas e campanhas do período.</p>
 </div>
 
@@ -390,7 +390,7 @@
 </div>
 
 <div class="mb-4 flex items-center justify-between gap-2">
-	<h2 class="text-lg font-semibold capitalize text-navy">{periodoLabel}</h2>
+	<h2 class="text-sm font-semibold capitalize text-navy">{periodoLabel}</h2>
 	<div class="flex gap-1">
 		<Button size="sm" variant="secondary" onclick={() => goto(navPrev)} aria-label="Período anterior">‹</Button>
 		<Button size="sm" variant="secondary" onclick={() => goto(navHoje)}>Hoje</Button>

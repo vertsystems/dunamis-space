@@ -46,7 +46,7 @@
 {#if showNew}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-navy-900/50 p-4">
 		<Card class="w-80 shadow-xl">
-			<h3 class="text-base font-semibold text-navy mb-1">Novo cliente</h3>
+			<h3 class="text-sm font-semibold text-navy mb-1">Novo cliente</h3>
 			<p class="text-sm text-grey mb-4">Adicione um cliente para organizar os pagamentos dele.</p>
 			<!-- svelte-ignore a11y_autofocus -->
 			<input

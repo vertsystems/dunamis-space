@@ -45,7 +45,7 @@
 
 		<!-- Solicitar ferramenta (CTA) -->
 		<Card>
-			<h3 class="text-base font-semibold text-navy mb-1">Precisa de uma ferramenta?</h3>
+			<h3 class="text-sm font-semibold text-navy mb-1">Precisa de uma ferramenta?</h3>
 			<p class="text-sm text-grey mb-4">
 				Tem uma ideia ou uma rotina que dá para automatizar? Solicite uma nova ferramenta para o
 				DTools.

@@ -51,7 +51,7 @@
 
 <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
 	<div>
-		<h1 class="flex items-center gap-2 text-xl font-bold text-navy">
+		<h1 class="flex items-center gap-2 text-base font-semibold text-navy">
 			<Icon name="lifebuoy" size={20} class="text-brand-danger" />
 			Central SOS
 		</h1>

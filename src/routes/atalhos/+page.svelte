@@ -46,7 +46,7 @@
 {/snippet}
 
 <div class="mb-4">
-	<h1 class="text-xl font-bold text-navy">Atalhos</h1>
+	<h1 class="text-base font-semibold text-navy">Atalhos</h1>
 	<p class="text-sm text-grey">Acesso rápido ao que você mais usa.</p>
 </div>
 

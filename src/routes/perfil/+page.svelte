@@ -130,7 +130,7 @@
 				</button>
 			</div>
 			<div class="min-w-0">
-				<h1 class="truncate text-xl font-bold text-white">{colab?.nome || 'Usuário'}</h1>
+				<h1 class="truncate text-base font-semibold text-white">{colab?.nome || 'Usuário'}</h1>
 				<p class="text-sm text-white/70">{funcaoLabel(colab?.funcao ?? '')}</p>
 				<p class="truncate text-sm text-white/50">{data.email}</p>
 			</div>
@@ -159,7 +159,7 @@
 		<Card class="lg:col-span-2" padding="lg">
 			<div class="mb-4 flex items-center gap-2">
 				<Icon name="contact" size={18} class="text-brand" />
-				<h2 class="text-base font-semibold text-navy">Informações Pessoais</h2>
+				<h2 class="text-sm font-semibold text-navy">Informações Pessoais</h2>
 			</div>
 
 			<form
@@ -220,7 +220,7 @@
 			<Card padding="lg">
 				<div class="mb-1 flex items-center gap-2">
 					<Icon name="palette" size={18} class="text-brand" />
-					<h2 class="text-base font-semibold text-navy">Personalização</h2>
+					<h2 class="text-sm font-semibold text-navy">Personalização</h2>
 				</div>
 				<p class="mb-4 text-sm text-grey">
 					Cor de destaque do sistema. Vale só para o seu login.
@@ -271,7 +271,7 @@
 			<Card padding="lg">
 				<div class="mb-4 flex items-center gap-2">
 					<Icon name="settings" size={18} class="text-brand" />
-					<h2 class="text-base font-semibold text-navy">Preferências</h2>
+					<h2 class="text-sm font-semibold text-navy">Preferências</h2>
 				</div>
 				<Select
 					label="Idioma"
@@ -309,7 +309,7 @@
 			transition:scale={{ start: 0.96, opacity: 0, duration: 200, easing: cubicOut }}
 		>
 			<div class="flex items-center justify-between gap-3 border-b border-grey-200 px-5 py-4">
-				<h2 class="text-base font-semibold text-navy">Escolher avatar</h2>
+				<h2 class="text-sm font-semibold text-navy">Escolher avatar</h2>
 				<button
 					type="button"
 					class="grid size-8 place-items-center rounded-[var(--radius)] text-grey transition-colors hover:bg-bg hover:text-navy"

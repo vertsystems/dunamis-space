@@ -42,7 +42,7 @@
 
 <Card>
 	<div class="flex items-center justify-between mb-4">
-		<h1 class="text-lg font-semibold text-navy">{MESES[data.mes]} {data.ano}</h1>
+		<h1 class="text-sm font-semibold text-navy">{MESES[data.mes]} {data.ano}</h1>
 		<div class="flex gap-1">
 			<Button size="sm" variant="secondary" onclick={() => goto(`/conteudo/calendario?mes=${data.prev}`)} aria-label="Mês anterior">‹</Button>
 			<Button size="sm" variant="secondary" onclick={() => goto('/conteudo/calendario')}>Hoje</Button>
@@ -82,7 +82,7 @@
 
 {#if data.semData.length}
 	<Card class="mt-6">
-		<h2 class="text-base font-semibold text-navy mb-3">Sem data agendada ({data.semData.length})</h2>
+		<h2 class="text-sm font-semibold text-navy mb-3">Sem data agendada ({data.semData.length})</h2>
 		<div class="flex flex-wrap gap-1.5">
 			{#each data.semData as c (c.id)}
 				<a

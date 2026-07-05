@@ -12,7 +12,7 @@
 	<!-- Motivos de perda -->
 	<Card>
 		<div class="mb-4 flex items-center justify-between gap-2">
-			<h2 class="text-base font-semibold text-navy">Por que perdemos</h2>
+			<h2 class="text-sm font-semibold text-navy">Por que perdemos</h2>
 			<span class="text-xs text-grey">{totalPerdidos} perdido{totalPerdidos === 1 ? '' : 's'}</span>
 		</div>
 		{#if motivos.length}
@@ -40,7 +40,7 @@
 	<!-- Origem dos leads -->
 	<Card padding="none" class="overflow-hidden">
 		<div class="border-b border-grey-200 px-5 py-4">
-			<h2 class="text-base font-semibold text-navy">Origem dos leads</h2>
+			<h2 class="text-sm font-semibold text-navy">Origem dos leads</h2>
 			<p class="text-xs text-grey">Conversão por canal de entrada</p>
 		</div>
 		{#if origens.length}

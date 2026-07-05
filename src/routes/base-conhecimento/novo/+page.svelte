@@ -7,6 +7,6 @@
 <Breadcrumb items={[{ label: 'Base de Conhecimento', href: '/base-conhecimento' }, { label: 'Novo' }]} />
 
 <Card>
-	<h1 class="text-lg font-semibold text-navy mb-4">Novo artigo</h1>
+	<h1 class="text-sm font-semibold text-navy mb-4">Novo artigo</h1>
 	<KbForm artigo={form?.values ?? null} clientes={data.clientes} error={form?.error ?? null} submitLabel="Criar artigo" />
 </Card>

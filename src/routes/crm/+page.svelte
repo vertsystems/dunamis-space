@@ -232,7 +232,7 @@
 
 <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
 	<div>
-		<h1 class="text-xl font-bold text-navy flex items-center gap-2">
+		<h1 class="text-base font-semibold text-navy flex items-center gap-2">
 			<Icon name="funnel" size={20} /> CRM Master
 		</h1>
 		<p class="text-sm text-grey">Leads, negócios, pipeline e atividades — tudo em um só lugar.</p>

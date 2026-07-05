@@ -14,7 +14,7 @@
 
 <div class="max-w-3xl">
 	<div class="mb-6">
-		<h2 class="text-xl font-bold text-navy tracking-tight">Configurações</h2>
+		<h2 class="text-base font-semibold text-navy tracking-tight">Configurações</h2>
 		<p class="text-sm text-grey mt-0.5">Gerencie as preferências e módulos do sistema.</p>
 	</div>
 
@@ -25,7 +25,7 @@
 					<Settings size={22} />
 				</span>
 				<div>
-					<h3 class="text-base font-semibold text-navy">Geral</h3>
+					<h3 class="text-sm font-semibold text-navy">Geral</h3>
 					<p class="text-sm text-grey mt-0.5">Configurações básicas do sistema e preferências.</p>
 				</div>
 			</div>
@@ -61,7 +61,7 @@
 					<Layers size={22} />
 				</span>
 				<div>
-					<h3 class="text-base font-semibold text-navy">Módulos do Sistema</h3>
+					<h3 class="text-sm font-semibold text-navy">Módulos do Sistema</h3>
 					<p class="text-sm text-grey mt-0.5">Ative ou desative módulos adicionais conforme a necessidade.</p>
 				</div>
 			</div>

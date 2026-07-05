@@ -41,7 +41,7 @@
 
 <div class="flex items-end justify-between gap-3 mb-4">
 	<div>
-		<h1 class="text-xl font-bold text-navy">Planos</h1>
+		<h1 class="text-base font-semibold text-navy">Planos</h1>
 		<p class="text-sm text-grey">Planos de serviço oferecidos aos clientes.</p>
 	</div>
 	<Button onclick={() => (novoAberto = true)}>+ Novo plano</Button>

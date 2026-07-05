@@ -59,7 +59,7 @@
 		<Input label="Prazo" type="date" name="prazo" value={v('prazo')} wrapperClass="md:col-span-3" />
 	</div>
 
-	<h2 class="text-base font-semibold text-navy mt-6 mb-3">Etapas</h2>
+	<h2 class="text-sm font-semibold text-navy mt-6 mb-3">Etapas</h2>
 	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 		{#each PROCESSO_ETAPAS as e (e.key)}
 			<Select label={e.label} name={`etapa_${e.key}`} value={etapaAtual(e.key)}>

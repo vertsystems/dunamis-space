@@ -39,7 +39,7 @@
 
 <div class="flex items-center justify-between gap-3 mb-4">
 	<div>
-		<h1 class="text-lg font-semibold text-navy">Cronograma de Processos</h1>
+		<h1 class="text-sm font-semibold text-navy">Cronograma de Processos</h1>
 		<p class="text-sm text-grey">Visão tabular dos processos e etapas</p>
 	</div>
 	<Button onclick={() => (novoAberto = true)}>+ Novo processo</Button>

@@ -23,7 +23,7 @@
 </script>
 
 <div class="mb-4">
-	<h1 class="text-xl font-bold text-navy">Desempenho</h1>
+	<h1 class="text-base font-semibold text-navy">Desempenho</h1>
 	<p class="text-sm text-grey">Indicadores dos últimos 30 dias e funil de vendas.</p>
 </div>
 
@@ -46,7 +46,7 @@
 <Card class="mt-6">
 	<div class="flex items-center justify-between gap-2 mb-4">
 		<div>
-			<h2 class="text-lg font-semibold text-navy">Funil de vendas</h2>
+			<h2 class="text-sm font-semibold text-navy">Funil de vendas</h2>
 			<p class="text-sm text-grey">Negócios em aberto por etapa</p>
 		</div>
 		<a class="text-sm text-brand hover:underline" href="/crm">Abrir CRM</a>

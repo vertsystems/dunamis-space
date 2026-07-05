@@ -40,7 +40,7 @@
 			<div class="text-xs uppercase tracking-wide text-grey font-semibold leading-tight">
 				{s.label}
 			</div>
-			<div class="text-xl font-bold mt-1 tabular-nums {s.accent}">{s.value}</div>
+			<div class="text-base font-semibold mt-1 tabular-nums {s.accent}">{s.value}</div>
 		</Card>
 	{/each}
 </div>

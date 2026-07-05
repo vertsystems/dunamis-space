@@ -15,7 +15,7 @@
 
 <Breadcrumb items={[{ label: 'Financeiro', href: '/financeiro' }, { label: 'Lucro por cliente' }]} />
 
-<h1 class="text-xl font-bold text-navy">Lucro por cliente</h1>
+<h1 class="text-base font-semibold text-navy">Lucro por cliente</h1>
 <p class="text-sm text-grey mb-4">Receitas menos despesas alocadas a cada cliente.</p>
 
 {#if data.loadError}

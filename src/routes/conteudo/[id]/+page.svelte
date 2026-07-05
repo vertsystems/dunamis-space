@@ -30,7 +30,7 @@
 {/if}
 
 <Card>
-	<h1 class="text-lg font-semibold text-navy mb-4">{data.conteudo.titulo ?? 'Conteúdo'}</h1>
+	<h1 class="text-sm font-semibold text-navy mb-4">{data.conteudo.titulo ?? 'Conteúdo'}</h1>
 	<ConteudoForm
 		{conteudo}
 		clientes={data.clientes}
@@ -45,7 +45,7 @@
 <Comentarios entidadeTipo="conteudo" entidadeId={data.conteudo.id} />
 
 <Card class="mt-6">
-	<h2 class="text-base font-semibold text-navy mb-3">Aprovação do cliente</h2>
+	<h2 class="text-sm font-semibold text-navy mb-3">Aprovação do cliente</h2>
 	{#if aprovacao && aprovacao.status === 'pendente'}
 		<p class="mb-2 flex items-center gap-2 text-sm">
 			Status:
@@ -75,7 +75,7 @@
 </Card>
 
 <Card class="mt-6">
-	<h2 class="text-base font-semibold text-brand-danger mb-3">Zona de perigo</h2>
+	<h2 class="text-sm font-semibold text-brand-danger mb-3">Zona de perigo</h2>
 	{#if confirmDelete}
 		<form method="POST" action="?/delete" use:enhance>
 			<p class="mb-3 text-sm text-slate">Excluir este conteúdo?</p>

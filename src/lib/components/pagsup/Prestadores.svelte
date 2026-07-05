@@ -89,7 +89,7 @@
 <div>
 	<div class="flex flex-wrap items-center justify-between gap-3 mb-6">
 		<div>
-			<h2 class="text-xl font-bold text-navy tracking-tight">Prestadores de Serviço</h2>
+			<h2 class="text-base font-semibold text-navy tracking-tight">Prestadores de Serviço</h2>
 			<p class="text-sm text-grey mt-0.5">Gerencie a equipe de prestadores de serviço.</p>
 		</div>
 		<div class="flex items-center gap-2.5">
@@ -102,7 +102,7 @@
 
 	{#if isAdding}
 		<Card class="mb-6">
-			<h3 class="text-base font-semibold text-navy mb-4">Adicionar Novo Prestador</h3>
+			<h3 class="text-sm font-semibold text-navy mb-4">Adicionar Novo Prestador</h3>
 			<form onsubmit={handleAdd} class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3 items-end">
 				<div class="xl:col-span-1">
 					<label for="np-nome" class="block text-xs font-medium text-slate mb-1">Nome</label>

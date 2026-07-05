@@ -113,7 +113,7 @@
 <div>
 	<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
 		<div>
-			<h2 class="text-xl font-bold text-navy tracking-tight">Cronograma de Negociações</h2>
+			<h2 class="text-base font-semibold text-navy tracking-tight">Cronograma de Negociações</h2>
 			<p class="text-sm text-grey mt-0.5">Selecione os serviços mensais fixos para o pagamento.</p>
 		</div>
 		<div class="flex flex-wrap items-center gap-2.5">
@@ -131,7 +131,7 @@
 	{#if isAdding}
 		<Card class="mb-6">
 			<div class="flex items-center justify-between mb-4">
-				<h3 class="text-base font-semibold text-navy">Escalar Negociação Fixa</h3>
+				<h3 class="text-sm font-semibold text-navy">Escalar Negociação Fixa</h3>
 				<button onclick={() => (isAdding = false)} class="p-1 text-grey hover:text-navy transition-colors"><X size={20} /></button>
 			</div>
 			{#if pagsup.filteredNegotiations.length === 0}
@@ -174,7 +174,7 @@
 		<Card class="mb-6">
 			<div class="flex items-start justify-between mb-5">
 				<div>
-					<h3 class="text-base font-semibold text-navy">Novo Fornecedor Extra</h3>
+					<h3 class="text-sm font-semibold text-navy">Novo Fornecedor Extra</h3>
 					<p class="text-sm text-grey">Adicione uma negociação que não está na lista padrão.</p>
 				</div>
 				<button onclick={() => (isAddingExtra = false)} class="p-1 text-grey hover:text-navy transition-colors"><X size={20} /></button>
@@ -295,7 +295,7 @@
 					{/each}
 					<div class="px-5 py-4 bg-bg/60 border-t border-grey-200 flex justify-between items-center">
 						<span class="text-sm font-bold text-grey uppercase tracking-wider">Subtotal</span>
-						<span class="text-lg font-bold text-navy tabular-nums">{formatBRL(grandTotal)}</span>
+						<span class="text-base font-semibold text-navy tabular-nums">{formatBRL(grandTotal)}</span>
 					</div>
 				</div>
 			</Card>
@@ -311,7 +311,7 @@
 {#if showResetModal}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-navy-900/50 p-4">
 		<Card class="max-w-md w-full shadow-xl">
-			<h3 class="text-lg font-semibold text-navy mb-2">Finalizar Cronograma</h3>
+			<h3 class="text-sm font-semibold text-navy mb-2">Finalizar Cronograma</h3>
 			<p class="text-slate mb-6">Tem certeza que deseja finalizar? Isso irá zerar a escalação atual para que você possa iniciar um novo mês.</p>
 			<div class="flex justify-end gap-3">
 				<Button variant="ghost" onclick={() => (showResetModal = false)}>Cancelar</Button>

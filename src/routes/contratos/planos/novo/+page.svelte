@@ -13,6 +13,6 @@
 />
 
 <Card>
-	<h1 class="text-lg font-semibold text-navy mb-4">Novo plano</h1>
+	<h1 class="text-sm font-semibold text-navy mb-4">Novo plano</h1>
 	<PlanoForm plano={form?.values ?? null} error={form?.error ?? null} submitLabel="Criar plano" />
 </Card>

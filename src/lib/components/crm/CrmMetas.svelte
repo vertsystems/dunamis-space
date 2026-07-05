@@ -42,11 +42,11 @@
 	<Card padding="none" class="overflow-hidden">
 		<div class="flex flex-wrap items-center justify-between gap-2 border-b border-grey-200 px-5 py-4">
 			<div>
-				<h2 class="text-base font-semibold text-navy">Ranking & metas</h2>
+				<h2 class="text-sm font-semibold text-navy">Ranking & metas</h2>
 				<p class="text-xs text-grey">Fechados no mês vs meta · {mesLabel}</p>
 			</div>
 			<div class="text-right">
-				<div class="text-lg font-bold text-brand-green tabular-nums">{formatBRL(totalGanho)}</div>
+				<div class="text-base font-semibold text-brand-green tabular-nums">{formatBRL(totalGanho)}</div>
 				<div class="text-xs text-grey">de {formatBRL(totalMeta)} em metas</div>
 			</div>
 		</div>

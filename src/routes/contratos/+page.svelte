@@ -54,7 +54,7 @@
 </script>
 
 <div class="mb-4">
-	<h1 class="text-xl font-bold text-navy">Contratos</h1>
+	<h1 class="text-base font-semibold text-navy">Contratos</h1>
 	<p class="text-sm text-grey">Contratos ativos, suspensos e encerrados dos clientes.</p>
 </div>
 

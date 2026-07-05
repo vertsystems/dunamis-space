@@ -7,7 +7,7 @@
 <Breadcrumb items={[{ label: 'Projetos', href: '/projetos' }, { label: 'Novo' }]} />
 
 <Card>
-	<h1 class="text-lg font-semibold text-navy mb-4">Novo projeto</h1>
+	<h1 class="text-sm font-semibold text-navy mb-4">Novo projeto</h1>
 	<ProjetoForm
 		projeto={form?.values ?? null}
 		clientes={data.clientes}

@@ -30,7 +30,7 @@
 				<Badge tone="neutral">{conteudoTipoLabel(a.tipo)}</Badge>
 				{#if a.data_publicacao}<span class="text-grey text-sm">📅 {fmt(a.data_publicacao)}</span>{/if}
 			</p>
-			{#if a.titulo}<h2 class="text-lg font-semibold text-navy">{a.titulo}</h2>{/if}
+			{#if a.titulo}<h2 class="text-sm font-semibold text-navy">{a.titulo}</h2>{/if}
 			{#if a.legenda}<p class="whitespace-pre-wrap text-slate">{a.legenda}</p>{/if}
 		</Card>
 

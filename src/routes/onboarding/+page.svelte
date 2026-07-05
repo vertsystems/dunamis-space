@@ -102,7 +102,7 @@
 
 <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
 	<div>
-		<h1 class="text-xl font-bold text-navy">Onboarding</h1>
+		<h1 class="text-base font-semibold text-navy">Onboarding</h1>
 		<p class="text-sm text-grey">Checklist de entrada de novos clientes</p>
 	</div>
 </div>
@@ -137,7 +137,7 @@
 		<Card>
 			<div class="flex flex-col items-start gap-3">
 				<div>
-					<h2 class="text-base font-semibold text-navy">{clienteSel.nome}</h2>
+					<h2 class="text-sm font-semibold text-navy">{clienteSel.nome}</h2>
 					<p class="text-sm text-grey">
 						Este cliente ainda não tem checklist. Inicie o onboarding com os itens padrão.
 					</p>
@@ -152,7 +152,7 @@
 		<Card padding="lg">
 			<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
 				<div class="flex items-center gap-2">
-					<h2 class="text-base font-semibold text-navy">{clienteSel.nome}</h2>
+					<h2 class="text-sm font-semibold text-navy">{clienteSel.nome}</h2>
 					<Badge tone="neutral">{statusLabel(clienteSel.status)}</Badge>
 				</div>
 				<span class="text-sm text-slate tabular-nums">{done}/{total} concluídos · {pct}%</span>

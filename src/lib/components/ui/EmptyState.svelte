@@ -20,7 +20,7 @@
 	<div class="grid size-14 place-items-center rounded-[var(--radius-xl)] bg-bg text-grey mb-4">
 		<Icon name={icon} size={26} />
 	</div>
-	<h3 class="text-base font-semibold text-navy">{title}</h3>
+	<h3 class="text-sm font-semibold text-navy">{title}</h3>
 	{#if description}
 		<p class="mt-1 text-sm text-grey max-w-sm">{description}</p>
 	{/if}

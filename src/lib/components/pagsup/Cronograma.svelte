@@ -121,7 +121,7 @@
 <div>
 	<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
 		<div>
-			<h2 class="text-xl font-bold text-navy tracking-tight">Cronograma da Semana</h2>
+			<h2 class="text-base font-semibold text-navy tracking-tight">Cronograma da Semana</h2>
 			<p class="text-sm text-grey mt-0.5">Selecione os prestadores e calcule os custos totais.</p>
 		</div>
 		<div class="flex flex-wrap items-center gap-2.5">
@@ -139,7 +139,7 @@
 	{#if isAdding}
 		<Card class="mb-6">
 			<div class="flex items-center justify-between mb-4">
-				<h3 class="text-base font-semibold text-navy">Escalar Prestador para a Semana</h3>
+				<h3 class="text-sm font-semibold text-navy">Escalar Prestador para a Semana</h3>
 				<button onclick={() => (isAdding = false)} class="p-1 text-grey hover:text-navy transition-colors"><X size={20} /></button>
 			</div>
 			{#if pagsup.filteredProviders.length === 0}
@@ -182,7 +182,7 @@
 	{#if isAddingExtra}
 		<Card class="mb-6">
 			<div class="flex items-center justify-between mb-5">
-				<h3 class="text-base font-semibold text-navy">Adicionar Novo Prestador</h3>
+				<h3 class="text-sm font-semibold text-navy">Adicionar Novo Prestador</h3>
 				<button onclick={() => (isAddingExtra = false)} class="p-1 text-grey hover:text-navy transition-colors"><X size={20} /></button>
 			</div>
 			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -323,7 +323,7 @@
 {#if showResetModal}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-navy-900/50 p-4">
 		<Card class="max-w-md w-full shadow-xl">
-			<h3 class="text-lg font-semibold text-navy mb-2">Finalizar Cronograma</h3>
+			<h3 class="text-sm font-semibold text-navy mb-2">Finalizar Cronograma</h3>
 			<p class="text-slate mb-6">Tem certeza que deseja finalizar? Isso irá zerar o cronograma atual para que você possa iniciar um novo.</p>
 			<div class="flex justify-end gap-3">
 				<Button variant="ghost" onclick={() => (showResetModal = false)}>Cancelar</Button>

@@ -72,7 +72,7 @@
 
 <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
 	<div>
-		<h1 class="text-xl font-bold text-navy">Tarefas</h1>
+		<h1 class="text-base font-semibold text-navy">Tarefas</h1>
 		<p class="text-sm text-grey">Arraste os cartões entre as colunas para mudar o status.</p>
 		{#if data.projetoNome}
 			<div class="mt-2 flex items-center gap-2 text-sm">

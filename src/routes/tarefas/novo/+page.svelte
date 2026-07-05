@@ -7,7 +7,7 @@
 <Breadcrumb items={[{ label: 'Tarefas', href: '/tarefas' }, { label: 'Nova' }]} />
 
 <Card>
-	<h1 class="text-lg font-semibold text-navy mb-4">Nova tarefa</h1>
+	<h1 class="text-sm font-semibold text-navy mb-4">Nova tarefa</h1>
 	<TarefaForm
 		tarefa={form?.values ?? null}
 		projetos={data.projetos}

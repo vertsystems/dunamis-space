@@ -135,7 +135,7 @@
 							</span>
 						{/if}
 					</div>
-					<h2 class="text-lg font-semibold text-navy mt-1 break-words">{negocio.titulo}</h2>
+					<h2 class="text-sm font-semibold text-navy mt-1 break-words">{negocio.titulo}</h2>
 					<div class="text-sm text-grey mt-0.5 tabular-nums">{formatBRL(negocio.valor)}</div>
 				</div>
 				<button type="button" class="text-grey hover:text-navy shrink-0" onclick={onClose} aria-label="Fechar">
@@ -228,7 +228,7 @@
 			<!-- ===================== CONTATO ===================== -->
 			<header class="flex items-start justify-between gap-3 px-5 py-4 border-b border-grey-200">
 				<div class="min-w-0">
-					<h2 class="text-lg font-semibold text-navy break-words">{contato.nome}</h2>
+					<h2 class="text-sm font-semibold text-navy break-words">{contato.nome}</h2>
 					<div class="text-sm text-grey mt-0.5">
 						{contato.empresa ?? ''}{contato.cargo ? ` · ${contato.cargo}` : ''}
 					</div>

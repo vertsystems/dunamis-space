@@ -8,7 +8,7 @@
 
 <div class="flex items-end justify-between gap-3 mb-4">
 	<div>
-		<h1 class="text-xl font-bold text-navy">Notificações</h1>
+		<h1 class="text-base font-semibold text-navy">Notificações</h1>
 		<p class="text-sm text-grey">Tudo que precisa de atenção, em um só lugar.</p>
 	</div>
 	<Badge tone={total ? 'danger' : 'success'}>

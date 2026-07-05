@@ -40,7 +40,7 @@
 			transition:scale={{ start: 0.96, opacity: 0, duration: 200, easing: cubicOut }}
 		>
 			<div class="flex items-center justify-between gap-3 border-b border-grey-200 px-5 py-4">
-				<h2 class="text-base font-semibold text-navy">{title}</h2>
+				<h2 class="text-sm font-semibold text-navy">{title}</h2>
 				<button
 					type="button"
 					class="grid size-8 place-items-center rounded-[var(--radius)] text-grey transition-colors hover:bg-bg hover:text-navy"

@@ -63,7 +63,7 @@
 </script>
 
 <Card class="mt-6">
-	<h2 class="text-base font-semibold text-navy mb-3">Comentários</h2>
+	<h2 class="text-sm font-semibold text-navy mb-3">Comentários</h2>
 
 	{#each comentarios as c (c.id)}
 		<div class="mb-3 pl-3 border-l-2 border-grey-200">

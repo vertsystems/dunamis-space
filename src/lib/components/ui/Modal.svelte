@@ -93,7 +93,7 @@
 		>
 			<div class="flex items-start justify-between gap-3 border-b border-grey-200 px-5 py-4">
 				<div class="min-w-0">
-					<h2 class="text-base font-semibold text-navy">{title}</h2>
+					<h2 class="text-sm font-semibold text-navy">{title}</h2>
 					{#if subtitle}<p class="mt-0.5 text-xs text-grey first-letter:uppercase">{subtitle}</p>{/if}
 				</div>
 				<button

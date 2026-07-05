@@ -66,7 +66,7 @@
 			{#if estado === 'checando'}
 				<p class="py-6 text-center text-sm text-grey">Verificando o link…</p>
 			{:else if estado === 'invalido'}
-				<h1 class="text-lg font-bold text-navy">Link inválido ou expirado</h1>
+				<h1 class="text-base font-semibold text-navy">Link inválido ou expirado</h1>
 				<p class="mt-1 text-sm text-grey">
 					Solicite um novo link de redefinição na tela de login.
 				</p>
@@ -77,10 +77,10 @@
 					Voltar ao login
 				</a>
 			{:else if estado === 'ok'}
-				<h1 class="text-lg font-bold text-navy">Senha atualizada!</h1>
+				<h1 class="text-base font-semibold text-navy">Senha atualizada!</h1>
 				<p class="mt-1 text-sm text-grey">Redirecionando para o sistema…</p>
 			{:else}
-				<h1 class="text-xl font-bold tracking-tight text-navy">Criar nova senha</h1>
+				<h1 class="text-base font-semibold tracking-tight text-navy">Criar nova senha</h1>
 				<p class="mt-1 mb-6 text-sm text-grey">Escolha uma nova senha para sua conta.</p>
 
 				<form onsubmit={salvar} class="space-y-4">

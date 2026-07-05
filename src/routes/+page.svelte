@@ -48,7 +48,7 @@
 </script>
 
 <div class="mb-4">
-	<h1 class="text-xl font-bold text-navy">Visão Geral</h1>
+	<h1 class="text-base font-semibold text-navy">Visão Geral</h1>
 	<p class="text-sm text-grey">Resumo rápido do que precisa da sua atenção.</p>
 </div>
 
@@ -72,7 +72,7 @@
 <!-- Clientes (bolinhas com iniciais) -->
 <Card class="mt-6">
 	<div class="flex items-center justify-between gap-2 mb-4">
-		<h2 class="text-lg font-semibold text-navy flex items-center gap-2">
+		<h2 class="text-sm font-semibold text-navy flex items-center gap-2">
 			<Icon name="contact" size={17} /> Clientes
 			<span class="text-sm font-normal text-grey">({data.clientes.length})</span>
 		</h2>
@@ -104,7 +104,7 @@
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6 items-start">
 	<!-- Pipeline de vendas -->
 	<Card>
-		<h2 class="text-lg font-semibold text-navy flex items-center gap-2 mb-4"><Icon name="funnel" size={17} /> Pipeline de vendas</h2>
+		<h2 class="text-sm font-semibold text-navy flex items-center gap-2 mb-4"><Icon name="funnel" size={17} /> Pipeline de vendas</h2>
 
 		{#if data.pipeline.crmPendente}
 			<div class="rounded-[var(--radius)] bg-brand-amber/15 px-4 py-3 text-sm text-brand-brown">
@@ -118,15 +118,15 @@
 			<div class="grid grid-cols-3 gap-2 mb-4">
 				<div class="rounded-[var(--radius)] bg-bg p-3">
 					<div class="text-xs uppercase tracking-wide text-grey font-semibold">Em aberto</div>
-					<div class="text-lg font-bold text-navy tabular-nums mt-0.5">{formatBRL(data.pipeline.valorAberto)}</div>
+					<div class="text-base font-semibold text-navy tabular-nums mt-0.5">{formatBRL(data.pipeline.valorAberto)}</div>
 				</div>
 				<div class="rounded-[var(--radius)] bg-bg p-3">
 					<div class="text-xs uppercase tracking-wide text-grey font-semibold">Ganhos no mês</div>
-					<div class="text-lg font-bold text-brand-green tabular-nums mt-0.5">{data.pipeline.ganhosMes}</div>
+					<div class="text-base font-semibold text-brand-green tabular-nums mt-0.5">{data.pipeline.ganhosMes}</div>
 				</div>
 				<div class="rounded-[var(--radius)] bg-bg p-3">
 					<div class="text-xs uppercase tracking-wide text-grey font-semibold">Conversão</div>
-					<div class="text-lg font-bold text-navy tabular-nums mt-0.5">{data.pipeline.taxaConversao}%</div>
+					<div class="text-base font-semibold text-navy tabular-nums mt-0.5">{data.pipeline.taxaConversao}%</div>
 				</div>
 			</div>
 
@@ -153,7 +153,7 @@
 
 	<!-- Operação -->
 	<Card>
-		<h2 class="text-lg font-semibold text-navy flex items-center gap-2 mb-4"><Icon name="check" size={17} /> Operação</h2>
+		<h2 class="text-sm font-semibold text-navy flex items-center gap-2 mb-4"><Icon name="check" size={17} /> Operação</h2>
 
 		<div class="flex items-center justify-between mb-2">
 			<h3 class="text-xs uppercase tracking-wide font-semibold text-grey">Tarefas</h3>
@@ -162,7 +162,7 @@
 		<div class="grid grid-cols-3 gap-2">
 			{#each TAREFA_TILES as t (t.chave)}
 				<div class="rounded-[var(--radius)] bg-bg p-3 text-center">
-					<div class="text-xl font-bold text-navy tabular-nums">{data.operacao.tarefas[t.chave]}</div>
+					<div class="text-base font-semibold text-navy tabular-nums">{data.operacao.tarefas[t.chave]}</div>
 					<div class="text-xs uppercase tracking-wide text-grey font-semibold mt-0.5">{t.label}</div>
 				</div>
 			{/each}
@@ -202,7 +202,7 @@
 <Card class="mt-6">
 	{#await data.alertas}
 		<div class="flex items-center justify-between mb-4">
-			<h2 class="text-lg font-semibold text-navy">Alertas inteligentes</h2>
+			<h2 class="text-sm font-semibold text-navy">Alertas inteligentes</h2>
 			<Skeleton class="h-5 w-20" rounded="full" />
 		</div>
 		<div class="grid md:grid-cols-3 gap-6">
@@ -218,7 +218,7 @@
 	{:then alertas}
 		{@const total = alertas.contratos.length + alertas.tarefas.length + alertas.semInteracao.length}
 		<div class="flex items-center justify-between mb-4">
-			<h2 class="text-lg font-semibold text-navy">Alertas inteligentes</h2>
+			<h2 class="text-sm font-semibold text-navy">Alertas inteligentes</h2>
 			<Badge tone={total ? 'danger' : 'success'}>
 				{total ? `${total} ${total === 1 ? 'alerta' : 'alertas'}` : 'Tudo em dia'}
 			</Badge>

@@ -69,7 +69,7 @@
 
 <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
 	<div>
-		<h1 class="text-xl font-bold text-navy">Fornecedores / Freelancers</h1>
+		<h1 class="text-base font-semibold text-navy">Fornecedores / Freelancers</h1>
 		<p class="text-sm text-grey">Parceiros, freelancers e fornecedores da agência.</p>
 	</div>
 	{#if !data.pendente}

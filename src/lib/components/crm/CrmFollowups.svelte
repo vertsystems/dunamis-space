@@ -11,7 +11,7 @@
 <Card padding="none" class="flex flex-col overflow-hidden">
 	<div class="flex items-center justify-between gap-2 border-b border-grey-200 px-5 py-3.5">
 		<div>
-			<h2 class="text-base font-semibold text-navy">Follow-ups pendentes</h2>
+			<h2 class="text-sm font-semibold text-navy">Follow-ups pendentes</h2>
 			<p class="text-xs text-grey">Negócios que precisam de atenção</p>
 		</div>
 		<Badge tone={followups.length ? 'danger' : 'success'}>

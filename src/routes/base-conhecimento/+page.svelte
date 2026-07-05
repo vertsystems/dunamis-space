@@ -39,7 +39,7 @@
 </script>
 
 <div class="mb-4">
-	<h1 class="text-xl font-bold text-navy">Base de Conhecimento</h1>
+	<h1 class="text-base font-semibold text-navy">Base de Conhecimento</h1>
 	<p class="text-sm text-grey">Processos e padrões da agência.</p>
 </div>
 

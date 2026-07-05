@@ -49,7 +49,7 @@
 </script>
 
 <div class="mb-4">
-	<h1 class="text-xl font-bold text-navy">Administrativo</h1>
+	<h1 class="text-base font-semibold text-navy">Administrativo</h1>
 	<p class="text-sm text-grey">Resumo dos módulos administrativos.</p>
 </div>
 
@@ -75,7 +75,7 @@
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6 items-start">
 	<Card>
 		<div class="flex items-center justify-between gap-2 mb-4">
-			<h2 class="text-lg font-semibold text-navy flex items-center gap-2">
+			<h2 class="text-sm font-semibold text-navy flex items-center gap-2">
 				<Icon name="key" size={17} /> Renovações próximas
 			</h2>
 			<a class="text-sm text-brand hover:underline" href="/ferramentas">Abrir Ferramentas</a>
@@ -104,7 +104,7 @@
 
 	<Card>
 		<div class="flex items-center justify-between gap-2 mb-4">
-			<h2 class="text-lg font-semibold text-navy flex items-center gap-2">
+			<h2 class="text-sm font-semibold text-navy flex items-center gap-2">
 				<Icon name="clipboard" size={17} /> Onboarding pendente
 			</h2>
 			<a class="text-sm text-brand hover:underline" href="/onboarding">Abrir Onboarding</a>

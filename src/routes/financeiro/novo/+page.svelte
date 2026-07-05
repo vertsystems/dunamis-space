@@ -7,7 +7,7 @@
 <Breadcrumb items={[{ label: 'Financeiro', href: '/financeiro' }, { label: 'Nova transação' }]} />
 
 <Card>
-	<h1 class="text-lg font-semibold text-navy mb-4">Nova transação</h1>
+	<h1 class="text-sm font-semibold text-navy mb-4">Nova transação</h1>
 	<TransacaoForm
 		transacao={form?.values ?? null}
 		clientes={data.clientes}

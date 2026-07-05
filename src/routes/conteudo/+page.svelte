@@ -59,7 +59,7 @@
 </script>
 
 <div class="mb-4">
-	<h1 class="text-xl font-bold text-navy">Conteúdo</h1>
+	<h1 class="text-base font-semibold text-navy">Conteúdo</h1>
 	<p class="text-sm text-grey">Planejamento e aprovação de publicações.</p>
 </div>
 

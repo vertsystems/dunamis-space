@@ -86,7 +86,7 @@
 
 <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
 	<div>
-		<h1 class="text-xl font-bold text-navy">Ferramentas &amp; Contas</h1>
+		<h1 class="text-base font-semibold text-navy">Ferramentas &amp; Contas</h1>
 		<p class="text-sm text-grey">Assinaturas, custos e registro de acessos da agência.</p>
 	</div>
 </div>
@@ -107,7 +107,7 @@
 	<section class="mb-6">
 		<div class="flex flex-wrap items-end justify-between gap-3 mb-3">
 			<div>
-				<h2 class="text-base font-semibold text-navy">Ferramentas &amp; Assinaturas</h2>
+				<h2 class="text-sm font-semibold text-navy">Ferramentas &amp; Assinaturas</h2>
 				<p class="text-sm text-grey">
 					{data.ferramentas.length} ferramenta{data.ferramentas.length === 1 ? '' : 's'} ·
 					<span class="tabular-nums">{formatBRL(totalMensal)}</span>/mês
@@ -146,7 +146,7 @@
 	<section class="mb-6">
 		<div class="flex flex-wrap items-end justify-between gap-3 mb-3">
 			<div>
-				<h2 class="text-base font-semibold text-navy">Acessos / Contas</h2>
+				<h2 class="text-sm font-semibold text-navy">Acessos / Contas</h2>
 				<p class="text-sm text-grey">Onde ficam os logins da agência e dos clientes.</p>
 			</div>
 			<Button size="sm" onclick={novoAcesso}>+ Novo acesso</Button>

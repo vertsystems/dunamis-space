@@ -11,7 +11,7 @@
 <Card>
 	<div class="mb-3 flex items-start justify-between gap-2">
 		<div>
-			<h2 class="text-base font-semibold text-navy">Previsão de receita</h2>
+			<h2 class="text-sm font-semibold text-navy">Previsão de receita</h2>
 			<p class="text-xs text-grey">Ponderada pela probabilidade das etapas</p>
 		</div>
 		<div class="text-right">

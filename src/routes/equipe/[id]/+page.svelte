@@ -15,12 +15,12 @@
 {/if}
 
 <Card>
-	<h1 class="text-lg font-semibold text-navy mb-4">{data.colaborador.nome}</h1>
+	<h1 class="text-sm font-semibold text-navy mb-4">{data.colaborador.nome}</h1>
 	<ColaboradorForm {colaborador} error={form?.error ?? null} submitLabel="Salvar alterações" action="?/update" />
 </Card>
 
 <Card class="mt-6">
-	<h2 class="text-base font-semibold text-brand-danger mb-3">Zona de perigo</h2>
+	<h2 class="text-sm font-semibold text-brand-danger mb-3">Zona de perigo</h2>
 	{#if confirmDelete}
 		<form method="POST" action="?/delete" use:enhance>
 			<p class="mb-3 text-sm text-slate">Excluir este colaborador? Ele será desvinculado dos clientes/projetos/tarefas.</p>

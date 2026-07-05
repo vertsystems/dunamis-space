@@ -20,7 +20,7 @@
 {/if}
 
 <Card>
-	<h1 class="text-lg font-semibold text-navy mb-4">Contrato — {data.contrato.cliente?.nome ?? ''}</h1>
+	<h1 class="text-sm font-semibold text-navy mb-4">Contrato — {data.contrato.cliente?.nome ?? ''}</h1>
 	<ContratoForm
 		{contrato}
 		clientes={data.clientes}
@@ -32,7 +32,7 @@
 </Card>
 
 <Card class="mt-6">
-	<h2 class="text-base font-semibold text-brand-danger mb-3">Zona de perigo</h2>
+	<h2 class="text-sm font-semibold text-brand-danger mb-3">Zona de perigo</h2>
 	{#if confirmDelete}
 		<form method="POST" action="?/delete" use:enhance>
 			<p class="mb-3 text-sm text-slate">Excluir este contrato?</p>

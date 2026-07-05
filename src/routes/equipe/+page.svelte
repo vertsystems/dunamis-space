@@ -38,7 +38,7 @@
 
 <div class="flex items-end justify-between gap-3 mb-4">
 	<div>
-		<h1 class="text-xl font-bold text-navy">Equipe</h1>
+		<h1 class="text-base font-semibold text-navy">Equipe</h1>
 		<p class="text-sm text-grey">Time da agência e custos por hora.</p>
 	</div>
 	<Button onclick={() => (novoAberto = true)}>+ Novo colaborador</Button>

@@ -58,7 +58,7 @@
 </script>
 
 <div class="mb-4">
-	<h1 class="text-xl font-bold text-navy">Financeiro</h1>
+	<h1 class="text-base font-semibold text-navy">Financeiro</h1>
 	<p class="text-sm text-grey">Receitas, despesas e saldo do período.</p>
 </div>
 

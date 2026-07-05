@@ -7,6 +7,6 @@
 <Breadcrumb items={[{ label: 'Equipe', href: '/equipe' }, { label: 'Novo' }]} />
 
 <Card>
-	<h1 class="text-lg font-semibold text-navy mb-4">Novo colaborador</h1>
+	<h1 class="text-sm font-semibold text-navy mb-4">Novo colaborador</h1>
 	<ColaboradorForm colaborador={form?.values ?? null} error={form?.error ?? null} submitLabel="Criar colaborador" />
 </Card>

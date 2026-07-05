@@ -85,7 +85,7 @@
 {/if}
 
 <Card>
-	<h1 class="text-lg font-semibold text-navy mb-4">{data.campanha.nome}</h1>
+	<h1 class="text-sm font-semibold text-navy mb-4">{data.campanha.nome}</h1>
 	<CampanhaForm {campanha} clientes={data.clientes} error={form?.error ?? null} submitLabel="Salvar alterações" action="?/update" />
 </Card>
 
@@ -93,7 +93,7 @@
 	<Card class="mt-6">
 		<div class="flex flex-wrap items-center justify-between gap-3 mb-4">
 			<div>
-				<h2 class="text-base font-semibold text-navy">Calendário de conteúdos</h2>
+				<h2 class="text-sm font-semibold text-navy">Calendário de conteúdos</h2>
 				<p class="text-xs text-grey">Dias da campanha em destaque — clique no + de um dia para agendar um conteúdo.</p>
 			</div>
 			<div class="flex items-center gap-2">
@@ -159,7 +159,7 @@
 {/if}
 
 <Card class="mt-6">
-	<h2 class="text-base font-semibold text-brand-danger mb-3">Zona de perigo</h2>
+	<h2 class="text-sm font-semibold text-brand-danger mb-3">Zona de perigo</h2>
 	{#if confirmDelete}
 		<form method="POST" action="?/delete" use:enhance>
 			<p class="mb-3 text-sm text-slate">Excluir esta campanha? Esta ação não pode ser desfeita.</p>
