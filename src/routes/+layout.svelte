@@ -96,9 +96,7 @@
 			label: 'Marketing',
 			icon: 'marketing',
 			areas: [
-				{ href: '/campanhas', label: 'Campanhas', icon: 'tag' },
 				{ href: '/calendario', label: 'Calendário', icon: 'calendar' },
-				{ href: '/projetos', label: 'Projetos', icon: 'folder' },
 				{ href: '/tarefas', label: 'Tarefas', icon: 'check' },
 				{ href: '/conteudo', label: 'Conteúdo', icon: 'edit' }
 			]
