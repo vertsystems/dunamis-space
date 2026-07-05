@@ -25,6 +25,12 @@ async function meuColab(supabase: App.Locals['supabase'], user: { id: string; em
 	return data ?? null;
 }
 
+/** Só CEO e Admin podem gerenciar a rotina (criar/editar/excluir) e trocar de cargo. */
+function ehGestor(colab: { funcao?: string | null; funcoes?: string[] | null } | null): boolean {
+	const fns = colab?.funcoes?.length ? colab.funcoes : colab?.funcao ? [colab.funcao] : [];
+	return fns.includes('ceo') || fns.includes('admin');
+}
+
 export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	const {
 		data: { user }
@@ -46,11 +52,12 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		.map((c) => ({ value: c, label: funcaoLabel(c) }))
 		.sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
 
+	const podeGerenciar = ehGestor(colab);
 	const cargoParam = url.searchParams.get('cargo');
-	// Padrão = cargo do próprio usuário logado (mesmo que ainda não tenha rotina);
-	// só cai para um cargo com rotina existente se o usuário não tiver cargo.
+	// Padrão = cargo do próprio usuário. Só gestores (CEO/Admin) podem trocar de
+	// cargo pelo seletor; os demais ficam sempre no próprio cargo.
 	const cargoSel =
-		(cargoParam && cargosOpcoes.some((c) => c.value === cargoParam) && cargoParam) ||
+		(podeGerenciar && cargoParam && cargosOpcoes.some((c) => c.value === cargoParam) && cargoParam) ||
 		meusCargos[0] ||
 		cargosComRotina[0] ||
 		'social_media';
@@ -120,6 +127,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		tarefas,
 		atividades,
 		rotina: {
+			podeGerenciar,
 			cargoSel,
 			cargoLabel: funcaoLabel(cargoSel),
 			cargos: cargosOpcoes,
@@ -169,6 +177,12 @@ export const actions: Actions = {
 	},
 
 	criarItem: async ({ request, locals: { supabase } }) => {
+		const {
+			data: { user }
+		} = await supabase.auth.getUser();
+		if (!ehGestor(await meuColab(supabase, user)))
+			return fail(403, { error: 'Apenas CEO e Admin podem editar a rotina.' });
+
 		const fd = await request.formData();
 		const cargo = ((fd.get('cargo') as string) ?? '').trim() || 'social_media';
 		const dia = Number(fd.get('dia_semana'));
@@ -194,6 +208,12 @@ export const actions: Actions = {
 	},
 
 	editarItem: async ({ request, locals: { supabase } }) => {
+		const {
+			data: { user }
+		} = await supabase.auth.getUser();
+		if (!ehGestor(await meuColab(supabase, user)))
+			return fail(403, { error: 'Apenas CEO e Admin podem editar a rotina.' });
+
 		const fd = await request.formData();
 		const id = (fd.get('id') as string) ?? '';
 		const titulo = ((fd.get('titulo') as string) ?? '').trim();
@@ -204,6 +224,12 @@ export const actions: Actions = {
 	},
 
 	excluirItem: async ({ request, locals: { supabase } }) => {
+		const {
+			data: { user }
+		} = await supabase.auth.getUser();
+		if (!ehGestor(await meuColab(supabase, user)))
+			return fail(403, { error: 'Apenas CEO e Admin podem editar a rotina.' });
+
 		const fd = await request.formData();
 		const id = (fd.get('id') as string) ?? '';
 		if (!id) return fail(400, { error: 'Item inválido.' });

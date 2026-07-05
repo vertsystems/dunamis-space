@@ -126,20 +126,22 @@
 			<Icon name="map" size={16} /> Mapa de Rotina
 			<span class="text-sm font-normal text-grey">· {data.rotina.cargoLabel}</span>
 		</h2>
-		<div class="flex items-center gap-2">
-			{#if data.rotina.cargos.length > 1}
-				<select
-					value={data.rotina.cargoSel}
-					onchange={trocarCargo}
-					class="rounded-[var(--radius)] border border-grey-200 bg-surface px-2.5 py-1.5 text-sm text-navy focus:border-brand focus:outline-none"
-				>
-					{#each data.rotina.cargos as c (c.value)}<option value={c.value}>{c.label}</option>{/each}
-				</select>
-			{/if}
-			<Button variant={editando ? 'primary' : 'secondary'} size="sm" onclick={() => (editando = !editando)}>
-				<Icon name={editando ? 'check' : 'edit'} size={14} /> {editando ? 'Concluir edição' : 'Editar'}
-			</Button>
-		</div>
+		{#if data.rotina.podeGerenciar}
+			<div class="flex items-center gap-2">
+				{#if data.rotina.cargos.length > 1}
+					<select
+						value={data.rotina.cargoSel}
+						onchange={trocarCargo}
+						class="rounded-[var(--radius)] border border-grey-200 bg-surface px-2.5 py-1.5 text-sm text-navy focus:border-brand focus:outline-none"
+					>
+						{#each data.rotina.cargos as c (c.value)}<option value={c.value}>{c.label}</option>{/each}
+					</select>
+				{/if}
+				<Button variant={editando ? 'primary' : 'secondary'} size="sm" onclick={() => (editando = !editando)}>
+					<Icon name={editando ? 'check' : 'edit'} size={14} /> {editando ? 'Concluir edição' : 'Editar'}
+				</Button>
+			</div>
+		{/if}
 	</div>
 
 	<div class="space-y-4">
@@ -202,7 +204,7 @@
 				<h3 class="text-sm font-semibold text-navy">A semana</h3>
 				<span class="text-xs text-grey">Domingo → Sábado</span>
 			</div>
-			<div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+			<div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:[grid-template-columns:0.58fr_repeat(6,minmax(0,1fr))]">
 				{#each DIAS as d (d.idx)}
 					{@const itens = itensPorDia[d.idx] ?? []}
 					{@const ehHoje = d.idx === data.rotina.dia}
