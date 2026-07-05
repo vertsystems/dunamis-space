@@ -4,7 +4,9 @@ export const FUNCAO = [
 	{ value: 'comercial', label: 'Comercial', sigla: 'SDR' },
 	{ value: 'social_media', label: 'Social Media', sigla: 'SM' },
 	{ value: 'digital_creator', label: 'Digital Creator', sigla: 'DC' },
-	{ value: 'growth_manager', label: 'Growth Manager', sigla: 'GM' }
+	{ value: 'growth_manager', label: 'Growth Manager', sigla: 'GM' },
+	{ value: 'financeiro', label: 'Financeiro', sigla: 'FIN' },
+	{ value: 'videomaker', label: 'Videomaker', sigla: 'VM' }
 ] as const;
 
 export function funcaoLabel(funcao: string): string {
