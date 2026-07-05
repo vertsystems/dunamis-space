@@ -33,8 +33,27 @@
 
 	let dragId: string | null = $state(null);
 	let overCol: string | null = $state(null);
+	let confirmandoExcluir: string | null = $state(null);
 
 	const byStatus = $derived((s: string) => cards.filter((c) => c.status === s));
+
+	async function excluir(id: string) {
+		const fd = new FormData();
+		fd.set('id', id);
+		try {
+			const res = await fetch('?/excluir', {
+				method: 'POST',
+				body: fd,
+				headers: { 'x-sveltekit-action': 'true' }
+			});
+			if (!res.ok) throw new Error();
+			cards = cards.filter((c) => c.id !== id);
+			confirmandoExcluir = null;
+			toast.success('Tarefa excluída');
+		} catch {
+			toast.error('Não foi possível excluir a tarefa.');
+		}
+	}
 
 	async function persist(id: string, status: string) {
 		const anterior = data.tarefas.find((t) => t.id === id)?.status;
@@ -122,7 +141,21 @@
 				>
 					<div class="flex items-start justify-between gap-2">
 						<span class="block font-medium text-navy">{t.titulo}</span>
-						<a class="shrink-0 text-xs text-brand hover:underline" href={`/tarefas/${t.id}`} onclick={(e) => e.stopPropagation()}>Abrir</a>
+						<div class="flex shrink-0 items-center gap-1.5">
+							<a class="text-xs text-brand hover:underline" href={`/tarefas/${t.id}`} onclick={(e) => e.stopPropagation()}>Abrir</a>
+							<button
+								type="button"
+								class="text-grey transition-colors hover:text-brand-danger"
+								title="Excluir tarefa"
+								aria-label="Excluir tarefa"
+								onclick={(e) => {
+									e.stopPropagation();
+									confirmandoExcluir = t.id;
+								}}
+							>
+								<Icon name="trash" size={13} />
+							</button>
+						</div>
 					</div>
 					{#if t.projeto?.nome}<div class="text-xs text-grey">{t.projeto.nome}</div>{/if}
 					<div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
@@ -130,6 +163,38 @@
 						{#if t.responsavel?.nome}<span class="text-xs text-grey">{t.responsavel.nome}</span>{/if}
 						{#if prazo}<span class="inline-flex items-center gap-1 text-xs text-grey"><Icon name="calendar" size={12} />{prazo}</span>{/if}
 					</div>
+
+					{#if confirmandoExcluir === t.id}
+						<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+						<div
+							class="mt-2 flex items-center justify-between gap-2 rounded-[var(--radius)] bg-brand-danger/10 px-2.5 py-1.5"
+							onclick={(e) => e.stopPropagation()}
+						>
+							<span class="text-xs font-medium text-brand-danger">Excluir esta tarefa?</span>
+							<div class="flex items-center gap-1.5">
+								<button
+									type="button"
+									class="text-xs font-semibold text-brand-danger hover:underline"
+									onclick={(e) => {
+										e.stopPropagation();
+										excluir(t.id);
+									}}
+								>
+									Sim
+								</button>
+								<button
+									type="button"
+									class="text-xs font-medium text-slate hover:text-navy"
+									onclick={(e) => {
+										e.stopPropagation();
+										confirmandoExcluir = null;
+									}}
+								>
+									Não
+								</button>
+							</div>
+						</div>
+					{/if}
 				</div>
 			{/each}
 		</div>

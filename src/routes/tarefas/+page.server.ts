@@ -51,5 +51,13 @@ export const actions: Actions = {
 		const { error } = await supabase.from('tarefas').update({ status }).eq('id', id);
 		if (error) return fail(500, { error: error.message });
 		return { ok: true };
+	},
+	excluir: async ({ request, locals: { supabase } }) => {
+		const fd = await request.formData();
+		const id = fd.get('id');
+		if (typeof id !== 'string') return fail(400, { error: 'Dados inválidos' });
+		const { error } = await supabase.from('tarefas').delete().eq('id', id);
+		if (error) return fail(500, { error: error.message });
+		return { ok: true };
 	}
 };
