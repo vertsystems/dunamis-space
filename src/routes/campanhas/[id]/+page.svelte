@@ -9,7 +9,7 @@
 		conteudoStatusLabel,
 		conteudoTipoLabel,
 		CONTEUDO_TIPO,
-		CONTEUDO_STATUS,
+		CONTEUDO_STATUS_GRUPOS,
 		CONTEUDO_REDE
 	} from '$lib/conteudo';
 	import { Card, Button, Breadcrumb, Modal, Input, Select, toneClasses } from '$lib/components/ui';
@@ -247,7 +247,11 @@
 				{#each CONTEUDO_TIPO as t (t.value)}<option value={t.value}>{t.label}</option>{/each}
 			</Select>
 			<Select label="Status" name="status" value="programado">
-				{#each CONTEUDO_STATUS as s (s.value)}<option value={s.value}>{s.label}</option>{/each}
+				{#each CONTEUDO_STATUS_GRUPOS as g (g.grupo)}
+					<optgroup label={g.grupo}>
+						{#each g.itens as s (s.value)}<option value={s.value}>{s.label}</option>{/each}
+					</optgroup>
+				{/each}
 			</Select>
 		</div>
 

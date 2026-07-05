@@ -1,6 +1,6 @@
 <script lang="ts">
 	import {
-		CONTEUDO_STATUS,
+		CONTEUDO_STATUS_GRUPOS,
 		CONTEUDO_TIPO,
 		conteudoStatusTone,
 		conteudoStatusLabel,
@@ -69,7 +69,11 @@
 		<form class="flex gap-2" method="GET">
 			<Select name="status" bind:value={status} wrapperClass="w-40">
 				<option value="">Todos os status</option>
-				{#each CONTEUDO_STATUS as s (s.value)}<option value={s.value}>{s.label}</option>{/each}
+				{#each CONTEUDO_STATUS_GRUPOS as g (g.grupo)}
+					<optgroup label={g.grupo}>
+						{#each g.itens as s (s.value)}<option value={s.value}>{s.label}</option>{/each}
+					</optgroup>
+				{/each}
 			</Select>
 			<Select name="tipo" bind:value={tipo} wrapperClass="w-40">
 				<option value="">Todos os tipos</option>

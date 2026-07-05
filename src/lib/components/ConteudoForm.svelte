@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
-	import { CONTEUDO_TIPO, CONTEUDO_STATUS, CONTEUDO_REDE } from '$lib/conteudo';
+	import { CONTEUDO_TIPO, CONTEUDO_STATUS_GRUPOS, CONTEUDO_STATUS_PADRAO, CONTEUDO_REDE } from '$lib/conteudo';
 	import { Button, Input, Select, Textarea, Checkbox } from '$lib/components/ui';
 
 	let {
@@ -30,26 +30,46 @@
 
 	let saving = $state(false);
 	const v = (k: string) => conteudo?.[k] ?? '';
-	// Renderiza o instante armazenado (UTC) como hora LOCAL no input datetime-local,
-	// reativo a `conteudo` (ex.: revalidação após erro). A conversão de volta p/ UTC
-	// acontece no cliente, dentro do use:enhance (o fuso do servidor Vercel é UTC).
-	const dataPub = $derived.by(() => {
+
+	// Grade de horários selecionáveis (30 em 30 min) — publicar é "só selecionar".
+	const HORAS = Array.from({ length: 48 }, (_, i) => {
+		const h = Math.floor(i / 2);
+		const m = i % 2 === 0 ? '00' : '30';
+		return `${String(h).padStart(2, '0')}:${m}`;
+	});
+
+	// Renderiza o instante armazenado (UTC) como data/hora LOCAL, reativo a `conteudo`
+	// (ex.: revalidação após erro). A recombinação p/ UTC acontece no cliente, dentro
+	// do use:enhance (o fuso do servidor Vercel é UTC).
+	const dataPubLocal = $derived.by(() => {
 		if (!conteudo?.data_publicacao) return '';
 		const d = new Date(conteudo.data_publicacao);
 		if (isNaN(d.getTime())) return '';
 		return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 	});
+	const dataParte = $derived(dataPubLocal ? dataPubLocal.slice(0, 10) : '');
+	const horaParte = $derived(dataPubLocal ? dataPubLocal.slice(11, 16) : '');
+	// Garante que um horário fora da grade (ex.: 09:17 de um post antigo) apareça na lista.
+	const horasOpcoes = $derived(
+		horaParte && !HORAS.includes(horaParte) ? [...HORAS, horaParte].sort() : HORAS
+	);
 </script>
 
 <form
 	method="POST"
 	{action}
 	use:enhance={({ formData }) => {
-		// datetime-local guarda hora local → converte para instante UTC antes de enviar.
-		const dp = formData.get('data_publicacao');
-		if (typeof dp === 'string' && dp) {
-			const d = new Date(dp);
-			if (!isNaN(d.getTime())) formData.set('data_publicacao', d.toISOString());
+		// Combina data + hora (local) em um instante UTC antes de enviar.
+		const d = formData.get('_data');
+		const h = formData.get('_hora');
+		formData.delete('_data');
+		formData.delete('_hora');
+		if (typeof d === 'string' && d) {
+			const hora = typeof h === 'string' && h ? h : '09:00';
+			const dt = new Date(`${d}T${hora}`);
+			formData.set('data_publicacao', isNaN(dt.getTime()) ? '' : dt.toISOString());
+		} else {
+			formData.set('data_publicacao', '');
 		}
 		saving = true;
 		return async ({ result, update }) => {
@@ -75,12 +95,20 @@
 		<Select label="Tipo" name="tipo" value={conteudo?.tipo ?? 'feed'} wrapperClass="md:col-span-3">
 			{#each CONTEUDO_TIPO as t (t.value)}<option value={t.value}>{t.label}</option>{/each}
 		</Select>
-		<Select label="Status" name="status" value={conteudo?.status ?? 'rascunho'} wrapperClass="md:col-span-3">
-			{#each CONTEUDO_STATUS as s (s.value)}<option value={s.value}>{s.label}</option>{/each}
+		<Select label="Status" name="status" value={conteudo?.status ?? CONTEUDO_STATUS_PADRAO} wrapperClass="md:col-span-3">
+			{#each CONTEUDO_STATUS_GRUPOS as g (g.grupo)}
+				<optgroup label={g.grupo}>
+					{#each g.itens as s (s.value)}<option value={s.value}>{s.label}</option>{/each}
+				</optgroup>
+			{/each}
 		</Select>
 
 		<Input label="Título" name="titulo" value={v('titulo')} wrapperClass="md:col-span-6" />
-		<Input label="Data de publicação" type="datetime-local" name="data_publicacao" value={dataPub} wrapperClass="md:col-span-6" />
+		<Input label="Data de publicação" type="date" name="_data" value={dataParte} wrapperClass="md:col-span-4" />
+		<Select label="Horário" name="_hora" value={horaParte} wrapperClass="md:col-span-2">
+			<option value="">--:--</option>
+			{#each horasOpcoes as hora (hora)}<option value={hora}>{hora}</option>{/each}
+		</Select>
 
 		<div class="md:col-span-12">
 			<span class="block text-sm font-medium text-navy mb-1.5">Redes sociais</span>

@@ -181,7 +181,7 @@ async function carregarOperacao(supabase: SupabaseClient) {
 		supabase.from('tarefas').select('id', { count: 'exact', head: true }).eq('status', 'backlog'),
 		supabase.from('tarefas').select('id', { count: 'exact', head: true }).eq('status', 'fazendo'),
 		supabase.from('tarefas').select('id', { count: 'exact', head: true }).eq('status', 'em_aprovacao'),
-		supabase.from('conteudos').select('id', { count: 'exact', head: true }).eq('status', 'em_aprovacao'),
+		supabase.from('conteudos').select('id', { count: 'exact', head: true }).eq('status', 'aprovar_conteudo'),
 		supabase
 			.from('conteudos')
 			.select('id, titulo, data_publicacao, cliente:clientes(nome)')
