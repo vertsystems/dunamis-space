@@ -186,11 +186,11 @@ body::before {
 			}
 		}
 
-		// Avatar 20% maior (30 → 36px) + bandeirinha do cargo no canto inferior direito.
+		// Avatar (30 → 42px, +20% e +15%) + bandeirinha do cargo no canto inferior direito.
 		.avatar {
 			position: relative;
-			width: 36px;
-			height: 36px;
+			width: 42px;
+			height: 42px;
 			flex-shrink: 0;
 			cursor: pointer;
 
@@ -206,7 +206,7 @@ body::before {
 				);
 				color: #fff;
 				font-weight: 700;
-				font-size: 0.68rem;
+				font-size: 0.78rem;
 				display: flex;
 				align-items: center;
 				justify-content: center;
@@ -219,12 +219,14 @@ body::before {
 				object-fit: cover;
 			}
 
-			// Bandeirinha (CargoBadge) sobreposta no canto, com anel branco.
+			// Bandeirinha (CargoBadge) menor, no canto inferior direito, com anel branco.
 			.avatar-cargo {
 				position: absolute;
-				right: -4px;
-				bottom: -4px;
-				line-height: 0;
+				right: -3px;
+				bottom: -3px;
+				display: inline-flex;
+				transform: scale(0.8);
+				transform-origin: bottom right;
 
 				span {
 					box-shadow: 0 0 0 1.5px #fff;
