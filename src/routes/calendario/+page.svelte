@@ -1,11 +1,29 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import { Card, Button, Select } from '$lib/components/ui';
+	import { goto, invalidateAll } from '$app/navigation';
+	import { Card, Button, Select, Modal } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
+	import ConteudoForm from '$lib/components/ConteudoForm.svelte';
 	import { SEMANA, MESES, chaveDia, celulasMes } from '$lib/calendario';
 	import { conteudoTipoLabel, conteudoStatusLabel } from '$lib/conteudo';
+	import { toast } from '$lib/toast.svelte';
 
-	let { data } = $props();
+	let { data, form } = $props();
+	// form vem da action /conteudo/novo (revalidação após erro) → tipagem solta.
+	const res = $derived(form as { values?: Record<string, any>; error?: string } | null);
+
+	// --- Novo post a partir de um dia do calendário ---
+	let novoConteudo = $state<Record<string, any> | null>(null);
+	function abrirNovo(key: string) {
+		const [a, m, d] = key.split('-').map(Number);
+		// 09:00 local como horário padrão do dia clicado.
+		const dt = new Date(a, m - 1, d, 9, 0, 0);
+		novoConteudo = { data_publicacao: dt.toISOString(), cliente_id: data.clienteFiltro || '' };
+	}
+	function aposCriar() {
+		novoConteudo = null;
+		toast.success('Conteúdo criado');
+		invalidateAll();
+	}
 
 	const VIEWS = [
 		{ key: 'semana', label: 'Semana', icon: 'calendar' },
@@ -235,7 +253,18 @@
 						? 'border-grey-200/60 bg-bg'
 						: 'border-grey-200 bg-surface'} {key === hojeKey ? 'ring-1 ring-brand' : ''}"
 				>
-					<div class="text-xs font-semibold leading-none {foraDoMes ? 'text-grey-200' : 'text-slate'}">{d.getDate()}</div>
+					<div class="flex items-center justify-between leading-none">
+						<span class="text-xs font-semibold {foraDoMes ? 'text-grey-200' : 'text-slate'}">{d.getDate()}</span>
+						{#if !foraDoMes}
+							<button
+								type="button"
+								onclick={() => abrirNovo(key)}
+								title="Adicionar post"
+								aria-label={`Adicionar post em ${key}`}
+								class="grid size-4 shrink-0 place-items-center rounded-[var(--radius-sm)] text-grey-200 transition-colors hover:bg-brand/10 hover:text-brand"
+							><Icon name="plus" size={12} /></button>
+						{/if}
+					</div>
 					{@render pills(key, MAX_CELULA)}
 				</div>
 			{/each}
@@ -254,7 +283,16 @@
 				>
 					<div class="mb-1 flex items-baseline justify-between border-b border-grey-200/60 pb-1">
 						<span class="text-xs font-semibold uppercase tracking-wide text-grey">{SEMANA[d.getDay()]}</span>
-						<span class="text-sm font-bold {key === hojeKey ? 'text-brand' : 'text-navy'}">{d.getDate()}</span>
+						<span class="flex items-center gap-1.5">
+							<button
+								type="button"
+								onclick={() => abrirNovo(key)}
+								title="Adicionar post"
+								aria-label={`Adicionar post em ${key}`}
+								class="grid size-5 shrink-0 place-items-center self-center rounded-[var(--radius-sm)] text-grey transition-colors hover:bg-brand/10 hover:text-brand"
+							><Icon name="plus" size={13} /></button>
+							<span class="text-sm font-bold {key === hojeKey ? 'text-brand' : 'text-navy'}">{d.getDate()}</span>
+						</span>
 					</div>
 					{@render pills(key, 0)}
 				</div>
@@ -321,6 +359,22 @@
 		{/if}
 	</Card>
 {/if}
+
+<Modal open={!!novoConteudo} title="Novo conteúdo" size="lg" onClose={() => (novoConteudo = null)}>
+	{#if novoConteudo}
+		<ConteudoForm
+			action="/conteudo/novo"
+			submitLabel="Criar conteúdo"
+			clientes={data.clientes}
+			projetos={data.projetos}
+			colaboradores={data.colaboradores}
+			conteudo={res?.values ?? novoConteudo}
+			error={res?.error ?? null}
+			onCancel={() => (novoConteudo = null)}
+			onDone={aposCriar}
+		/>
+	{/if}
+</Modal>
 
 <div class="mt-4 flex flex-wrap items-center gap-4 text-xs text-grey">
 	<span class="flex items-center gap-1.5"><span class="size-2.5 rounded-full bg-brand"></span> Conteúdo</span>

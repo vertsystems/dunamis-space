@@ -103,11 +103,15 @@ export const load: PageServerLoad = async ({ url, locals: { supabase } }) => {
 
 	const [
 		{ data: clientes, error: errCli },
+		{ data: projetos },
+		{ data: colaboradores },
 		{ data: conteudosRaw, error: errCon },
 		{ data: tarefasRaw, error: errTar },
 		{ data: campanhasRaw, error: errCamp }
 	] = await Promise.all([
 		supabase.from('clientes').select('id, nome').order('nome'),
+		supabase.from('projetos').select('id, nome').order('created_at', { ascending: false }),
+		supabase.from('colaboradores').select('id, nome').eq('ativo', true).order('nome'),
 		qConteudos,
 		qTarefas,
 		qCampanhas
@@ -159,6 +163,8 @@ export const load: PageServerLoad = async ({ url, locals: { supabase } }) => {
 		next: mesSeguinte(ano, mes),
 		clienteFiltro,
 		clientes: clientes ?? [],
+		projetos: projetos ?? [],
+		colaboradores: colaboradores ?? [],
 		conteudos,
 		tarefas,
 		campanhas,
