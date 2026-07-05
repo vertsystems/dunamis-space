@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
-	import { Card, Button, Select, Modal } from '$lib/components/ui';
+	import { Card, Button, Select, Modal, toneClasses } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
 	import ConteudoForm from '$lib/components/ConteudoForm.svelte';
 	import { SEMANA, MESES, chaveDia, celulasMes } from '$lib/calendario';
-	import { conteudoTipoLabel, conteudoStatusLabel } from '$lib/conteudo';
+	import { conteudoTipoLabel, conteudoStatusLabel, conteudoStatusTone } from '$lib/conteudo';
 	import { toast } from '$lib/toast.svelte';
 
 	let { data, form } = $props();
@@ -25,13 +25,21 @@
 		invalidateAll();
 	}
 
+	// --- Editar post direto pelo card do calendário ---
+	let editando = $state<Record<string, any> | null>(null);
+	function aposEditar() {
+		editando = null;
+		toast.success('Conteúdo salvo');
+		invalidateAll();
+	}
+
 	const VIEWS = [
 		{ key: 'semana', label: 'Semana', icon: 'calendar' },
 		{ key: 'lista', label: 'Conteúdos', icon: 'clipboard' },
 		{ key: 'mes', label: 'Calendário', icon: 'calendar' }
 	] as const;
 
-	const MAX_CELULA = 4; // itens por dia no grid do mês antes de "+N mais"
+	const MAX_CELULA = 3; // itens por dia no grid do mês antes de "+N mais"
 
 	// --- Ações por dia ---
 	const conteudosPorDia = $derived.by(() => {
@@ -164,21 +172,33 @@
 	{@const limite = cap && itens.length > cap ? cap - 1 : itens.length}
 	{#each itens.slice(0, limite) as a (a.k + (a.k === 'c' ? a.c.id : a.t.id))}
 		{#if a.k === 'c'}
-			<a
-				href={`/conteudo/${a.c.id}`}
-				title={`${conteudoTipoLabel(a.c.tipo)} · ${conteudoStatusLabel(a.c.status)}${semCliente && a.c.cliente_nome ? ' · ' + a.c.cliente_nome : ''}`}
-				class="flex items-center gap-1 truncate rounded-[var(--radius-sm)] bg-brand/10 px-1.5 py-0.5 text-[0.7rem] font-medium text-navy-900 no-underline transition-colors hover:bg-brand/20"
+			<button
+				type="button"
+				onclick={() => (editando = a.c)}
+				title={`${conteudoTipoLabel(a.c.tipo)} · ${conteudoStatusLabel(a.c.status)}${a.c.cliente_nome ? ' · ' + a.c.cliente_nome : ''}`}
+				class="flex w-full flex-col gap-0.5 rounded-[var(--radius-sm)] border border-grey-200/70 bg-surface px-1.5 py-1 text-left transition-colors hover:bg-bg"
 			>
-				<span class="shrink-0 tabular-nums text-brand">{a.c.hora}</span>
-				<span class="truncate">{a.c.titulo ?? conteudoTipoLabel(a.c.tipo)}</span>
-			</a>
+				<span class="flex items-center gap-1">
+					<span class="shrink-0 tabular-nums text-[0.6rem] text-brand">{a.c.hora}</span>
+					<span class="truncate text-[0.68rem] font-semibold leading-tight text-navy-900">{a.c.titulo ?? conteudoTipoLabel(a.c.tipo)}</span>
+				</span>
+				<span class="flex flex-wrap items-center gap-0.5">
+					<span class="inline-flex items-center rounded-full px-1 py-px text-[0.56rem] font-medium leading-tight {toneClasses[conteudoStatusTone(a.c.status)]}">{conteudoStatusLabel(a.c.status)}</span>
+					<span class="inline-flex items-center rounded-full bg-bg px-1 py-px text-[0.56rem] font-medium leading-tight text-slate">{conteudoTipoLabel(a.c.tipo)}</span>
+				</span>
+				{#if a.c.cliente_nome}
+					<span class="flex items-center gap-0.5 truncate text-[0.56rem] leading-tight text-grey">
+						<Icon name="building" size={9} /><span class="truncate">{a.c.cliente_nome}</span>
+					</span>
+				{/if}
+			</button>
 		{:else}
 			<a
 				href="/tarefas"
 				title={`Tarefa: ${a.t.titulo}${semCliente && a.t.cliente_nome ? ' · ' + a.t.cliente_nome : ''}`}
-				class="flex items-center gap-1 truncate rounded-[var(--radius-sm)] bg-brand-amber/15 px-1.5 py-0.5 text-[0.7rem] font-medium text-brand-brown no-underline transition-colors hover:bg-brand-amber/25"
+				class="flex items-center gap-1 truncate rounded-[var(--radius-sm)] bg-brand-amber/15 px-1.5 py-0.5 text-[0.64rem] font-medium text-brand-brown no-underline transition-colors hover:bg-brand-amber/25"
 			>
-				<Icon name="check" size={11} /><span class="truncate">{a.t.titulo}</span>
+				<Icon name="check" size={10} /><span class="truncate">{a.t.titulo}</span>
 			</a>
 		{/if}
 	{/each}
@@ -249,7 +269,7 @@
 				{@const key = chaveDia(d)}
 				{@const foraDoMes = d.getMonth() !== data.mes}
 				<div
-					class="flex min-h-24 flex-col gap-1 overflow-hidden rounded-[var(--radius-sm)] border p-1 {foraDoMes
+					class="flex min-h-40 flex-col gap-1 overflow-hidden rounded-[var(--radius-sm)] border p-1.5 {foraDoMes
 						? 'border-grey-200/60 bg-bg'
 						: 'border-grey-200 bg-surface'} {key === hojeKey ? 'ring-1 ring-brand' : ''}"
 				>
@@ -261,8 +281,8 @@
 								onclick={() => abrirNovo(key)}
 								title="Adicionar post"
 								aria-label={`Adicionar post em ${key}`}
-								class="grid size-4 shrink-0 place-items-center rounded-[var(--radius-sm)] text-grey-200 transition-colors hover:bg-brand/10 hover:text-brand"
-							><Icon name="plus" size={12} /></button>
+								class="grid size-5 shrink-0 place-items-center rounded-full bg-brand text-white shadow-sm transition-opacity hover:opacity-90"
+							><Icon name="plus" size={13} /></button>
 						{/if}
 					</div>
 					{@render pills(key, MAX_CELULA)}
@@ -289,7 +309,7 @@
 								onclick={() => abrirNovo(key)}
 								title="Adicionar post"
 								aria-label={`Adicionar post em ${key}`}
-								class="grid size-5 shrink-0 place-items-center self-center rounded-[var(--radius-sm)] text-grey transition-colors hover:bg-brand/10 hover:text-brand"
+								class="grid size-5 shrink-0 place-items-center self-center rounded-full bg-brand text-white shadow-sm transition-opacity hover:opacity-90"
 							><Icon name="plus" size={13} /></button>
 							<span class="text-sm font-bold {key === hojeKey ? 'text-brand' : 'text-navy'}">{d.getDate()}</span>
 						</span>
@@ -372,6 +392,22 @@
 			error={res?.error ?? null}
 			onCancel={() => (novoConteudo = null)}
 			onDone={aposCriar}
+		/>
+	{/if}
+</Modal>
+
+<Modal open={!!editando} title="Editar conteúdo" size="lg" onClose={() => (editando = null)}>
+	{#if editando}
+		<ConteudoForm
+			action={`/conteudo/${editando.id}?/update`}
+			submitLabel="Salvar alterações"
+			clientes={data.clientes}
+			projetos={data.projetos}
+			colaboradores={data.colaboradores}
+			conteudo={res?.values ?? editando}
+			error={res?.error ?? null}
+			onCancel={() => (editando = null)}
+			onDone={aposEditar}
 		/>
 	{/if}
 </Modal>

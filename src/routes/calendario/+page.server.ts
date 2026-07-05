@@ -76,7 +76,9 @@ export const load: PageServerLoad = async ({ url, locals: { supabase } }) => {
 
 	let qConteudos = supabase
 		.from('conteudos')
-		.select('id, titulo, tipo, status, data_publicacao, cliente:clientes(nome)')
+		.select(
+			'id, titulo, tipo, status, data_publicacao, legenda, arte_url, redes, publicado_manual, cliente_id, projeto_id, responsavel_id, cliente:clientes(nome)'
+		)
 		.not('data_publicacao', 'is', null)
 		.gte('data_publicacao', gteISO)
 		.lt('data_publicacao', ltISO)
@@ -125,7 +127,16 @@ export const load: PageServerLoad = async ({ url, locals: { supabase } }) => {
 		status: c.status as string,
 		dia: fmtDia.format(new Date(c.data_publicacao as string)),
 		hora: fmtHora.format(new Date(c.data_publicacao as string)),
-		cliente_nome: um<{ nome: string }>(c.cliente)?.nome ?? null
+		cliente_nome: um<{ nome: string }>(c.cliente)?.nome ?? null,
+		// Campos completos p/ editar direto no modal do calendário.
+		data_publicacao: c.data_publicacao as string,
+		legenda: (c.legenda as string | null) ?? null,
+		arte_url: (c.arte_url as string | null) ?? null,
+		redes: (c.redes as string[] | null) ?? [],
+		publicado_manual: !!c.publicado_manual,
+		cliente_id: (c.cliente_id as string | null) ?? null,
+		projeto_id: (c.projeto_id as string | null) ?? null,
+		responsavel_id: (c.responsavel_id as string | null) ?? null
 	}));
 
 	let tarefas = (tarefasRaw ?? []).map((t) => {
