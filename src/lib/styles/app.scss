@@ -65,36 +65,25 @@ body::before {
 	right: 0;
 	width: 100%;
 	z-index: 30;
-	display: grid;
-	grid-template-columns: 1fr auto 1fr;
+	display: flex;
+	justify-content: center;
 	align-items: center;
-	gap: 0.6rem;
+	gap: 5px;
 	padding: 0 var(--ds-topbar-gap);
-	// O topbar em si é transparente; só os 3 blocos são "pills". Cliques passam
-	// pelos vãos entre os pills para o conteúdo abaixo.
+	// O topbar é transparente; só o MENU é um pill de vidro. Logo e ações ficam
+	// sem fundo, colados ao menu. Cliques passam pelos vãos para o conteúdo abaixo.
 	pointer-events: none;
 
-	// Logo | Menu | Ações — cada um é um pill de vidro independente.
 	.brand,
 	.departments,
 	.actions {
 		pointer-events: auto;
-		min-height: var(--ds-topbar-h);
-		background: var(--ds-glass);
-		backdrop-filter: blur(20px) saturate(180%);
-		-webkit-backdrop-filter: blur(20px) saturate(180%);
-		border: 1px solid var(--ds-glass-border);
-		border-radius: 18px;
-		box-shadow:
-			0 8px 24px -6px rgba(16, 24, 40, 0.14),
-			0 2px 6px rgba(16, 24, 40, 0.05);
 	}
 
 	.brand {
-		justify-self: start;
 		display: inline-flex;
 		align-items: center;
-		padding: 0 0.9rem;
+		flex-shrink: 0;
 
 		.brand-logo {
 			height: 19px;
@@ -104,7 +93,15 @@ body::before {
 	}
 
 	.departments {
-		justify-self: center;
+		min-height: var(--ds-topbar-h);
+		background: var(--ds-glass);
+		backdrop-filter: blur(20px) saturate(180%);
+		-webkit-backdrop-filter: blur(20px) saturate(180%);
+		border: 1px solid var(--ds-glass-border);
+		border-radius: 18px;
+		box-shadow:
+			0 8px 24px -6px rgba(16, 24, 40, 0.14),
+			0 2px 6px rgba(16, 24, 40, 0.05);
 		display: flex;
 		flex-wrap: wrap;
 		justify-content: center;
@@ -159,11 +156,10 @@ body::before {
 	}
 
 	.actions {
-		justify-self: end;
 		display: flex;
 		align-items: center;
 		gap: 0.3rem;
-		padding: 0 0.5rem;
+		flex-shrink: 0;
 
 		.icon-btn {
 			width: 30px;
