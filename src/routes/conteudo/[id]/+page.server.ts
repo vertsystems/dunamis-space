@@ -13,7 +13,7 @@ export const load: PageServerLoad = async ({ params, locals: { supabase } }) => 
 		supabase.from('conteudos').select('*').eq('id', params.id).single(),
 		supabase.from('clientes').select('id, nome').order('nome'),
 		supabase.from('projetos').select('id, nome').order('created_at', { ascending: false }),
-		supabase.from('colaboradores').select('id, nome').eq('ativo', true).order('nome'),
+		supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').eq('ativo', true).order('nome'),
 		supabase
 			.from('aprovacoes')
 			.select('id, status, token_publico, data_envio, data_resposta, comentario_cliente')

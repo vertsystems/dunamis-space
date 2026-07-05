@@ -6,7 +6,7 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 	const [{ data: clientes }, { data: projetos }, { data: colaboradores }] = await Promise.all([
 		supabase.from('clientes').select('id, nome').order('nome'),
 		supabase.from('projetos').select('id, nome').order('created_at', { ascending: false }),
-		supabase.from('colaboradores').select('id, nome').eq('ativo', true).order('nome')
+		supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').eq('ativo', true).order('nome')
 	]);
 	return { clientes: clientes ?? [], projetos: projetos ?? [], colaboradores: colaboradores ?? [] };
 };

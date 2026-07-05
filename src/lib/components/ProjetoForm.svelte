@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { PROJETO_TIPO, PROJETO_STATUS } from '$lib/projetos';
 	import { Button, Input, Select, Textarea, Checkbox } from '$lib/components/ui';
+	import ResponsavelPicker from '$lib/components/ResponsavelPicker.svelte';
 
 	let {
 		projeto = null,
@@ -63,10 +64,7 @@
 		<Select label="Status" name="status" value={projeto?.status ?? 'em_andamento'} wrapperClass="md:col-span-4">
 			{#each PROJETO_STATUS as s (s.value)}<option value={s.value}>{s.label}</option>{/each}
 		</Select>
-		<Select label="Responsável" name="responsavel_id" value={projeto?.responsavel_id ?? ''} wrapperClass="md:col-span-4">
-			<option value="">—</option>
-			{#each colaboradores as col (col.id)}<option value={col.id}>{col.nome}</option>{/each}
-		</Select>
+		<ResponsavelPicker {colaboradores} value={projeto?.responsavel_id ?? null} wrapperClass="md:col-span-12" />
 
 		<Input label="Início" type="date" name="data_inicio" value={v('data_inicio')} wrapperClass="md:col-span-3" />
 		<Input label="Prazo" type="date" name="prazo" value={v('prazo')} wrapperClass="md:col-span-3" />

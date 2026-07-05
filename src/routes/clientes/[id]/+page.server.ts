@@ -5,7 +5,7 @@ import type { Actions, PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ params, locals: { supabase } }) => {
 	const [{ data: cliente, error: e }, { data: colaboradores }] = await Promise.all([
 		supabase.from('clientes').select('*').eq('id', params.id).single(),
-		supabase.from('colaboradores').select('id, nome').eq('ativo', true).order('nome')
+		supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').eq('ativo', true).order('nome')
 	]);
 
 	if (e || !cliente) throw error(404, 'Cliente não encontrado');

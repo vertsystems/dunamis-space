@@ -5,7 +5,7 @@ import type { Actions, PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 	const { data } = await supabase
 		.from('colaboradores')
-		.select('id, nome')
+		.select('id, nome, avatar_url, funcao, funcoes')
 		.eq('ativo', true)
 		.order('nome');
 	return { colaboradores: data ?? [] };

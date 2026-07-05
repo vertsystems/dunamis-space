@@ -1,7 +1,6 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { clienteFromForm } from '$lib/clientes';
 import { carregarCalendario } from '$lib/server/calendario';
-import { um } from '$lib/db';
 import type { Actions, PageServerLoad } from './$types';
 
 /** Erro de coluna inexistente → migration 0006 ainda não aplicada. */
@@ -9,28 +8,37 @@ const PENDENTE_RX = /does not exist|column|schema cache|relation/i;
 
 export const load: PageServerLoad = async ({ params, url, locals: { supabase } }) => {
 	const [{ data: cliente, error: e }, calendario] = await Promise.all([
-		supabase
-			.from('clientes')
-			.select('*, responsavel:colaboradores(nome, avatar_url, funcao, funcoes)')
-			.eq('id', params.id)
-			.single(),
+		supabase.from('clientes').select('*').eq('id', params.id).single(),
 		carregarCalendario(supabase, url, { clienteFixo: params.id })
 	]);
 
 	if (e || !cliente) throw error(404, 'Cliente não encontrado');
 
-	const resp = um<{ nome: string; avatar_url: string | null; funcao: string | null; funcoes: string[] | null }>(
-		cliente.responsavel
-	);
+	// Responsáveis (multi): busca os colaboradores preservando a ordem do array.
+	const ids: string[] = cliente.responsaveis_ids?.length
+		? cliente.responsaveis_ids
+		: cliente.responsavel_id
+			? [cliente.responsavel_id]
+			: [];
+	let responsaveis: { id: string; nome: string; avatar_url: string | null; funcoes: string[] }[] = [];
+	if (ids.length) {
+		const { data: rs } = await supabase
+			.from('colaboradores')
+			.select('id, nome, avatar_url, funcao, funcoes')
+			.in('id', ids);
+		responsaveis = ids
+			.map((id) => rs?.find((r) => r.id === id))
+			.filter((r): r is NonNullable<typeof r> => !!r)
+			.map((r) => ({
+				id: r.id,
+				nome: r.nome,
+				avatar_url: r.avatar_url ?? null,
+				funcoes: r.funcoes?.length ? r.funcoes : r.funcao ? [r.funcao] : []
+			}));
+	}
 
 	return {
-		cliente: {
-			...cliente,
-			responsavel_nome: resp?.nome ?? null,
-			responsavel_avatar: resp?.avatar_url ?? null,
-			responsavel_funcao: resp?.funcao ?? null,
-			responsavel_funcoes: resp?.funcoes?.length ? resp.funcoes : resp?.funcao ? [resp.funcao] : []
-		},
+		cliente: { ...cliente, responsaveis },
 		calendario
 	};
 };

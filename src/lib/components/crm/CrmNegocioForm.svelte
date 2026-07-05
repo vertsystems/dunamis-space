@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { Button, Input, Select, Textarea } from '$lib/components/ui';
+	import ResponsavelPicker from '$lib/components/ResponsavelPicker.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import { type Negocio, type Stage, type ContatoLite, type Colaborador } from '$lib/crm';
 
@@ -106,17 +107,7 @@
 		inputmode="decimal"
 	/>
 
-	<Select
-		label="Responsável"
-		name="responsavel_id"
-		value={negocio?.responsavel_id ?? ''}
-		wrapperClass="md:col-span-4"
-	>
-		<option value="">—</option>
-		{#each colaboradores as col (col.id)}
-			<option value={col.id}>{col.nome}</option>
-		{/each}
-	</Select>
+	<ResponsavelPicker {colaboradores} value={negocio?.responsavel_id ?? null} wrapperClass="md:col-span-12" />
 
 	<Input
 		label="Previsão de fechamento"

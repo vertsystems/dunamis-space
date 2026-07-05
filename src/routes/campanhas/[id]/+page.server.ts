@@ -8,7 +8,7 @@ export const load: PageServerLoad = async ({ params, url, locals: { supabase } }
 	const [{ data: campanha, error: e }, { data: clientes }, { data: colaboradores }] = await Promise.all([
 		supabase.from('campanhas').select('*, cliente:clientes(nome)').eq('id', params.id).single(),
 		supabase.from('clientes').select('id, nome').order('nome'),
-		supabase.from('colaboradores').select('id, nome').eq('ativo', true).order('nome')
+		supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').eq('ativo', true).order('nome')
 	]);
 	if (e || !campanha) throw error(404, 'Campanha não encontrada');
 

@@ -20,7 +20,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 			query,
 			supabase.from('clientes').select('id, nome').order('nome'),
 			supabase.from('projetos').select('id, nome').order('created_at', { ascending: false }),
-			supabase.from('colaboradores').select('id, nome').eq('ativo', true).order('nome')
+			supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').eq('ativo', true).order('nome')
 		]);
 
 	const conteudos = (data ?? []).map((c) => ({ ...c, cliente: um(c.cliente) }));

@@ -39,7 +39,15 @@
 			{ label: 'Cidade / UF', value: c.cidade ? `${c.cidade}${c.estado ? ' / ' + c.estado : ''}` : null }
 		].filter((d) => d.value != null && d.value !== '')
 	);
-	const temContato = $derived(!!(c.contato_nome || c.contato_email || c.contato_whatsapp || c.contato_financeiro));
+	// Grupos de contato (só os que têm algum dado).
+	const contatos = $derived(
+		[
+			{ titulo: 'Diretor', nome: c.contato_nome, email: c.contato_email, whatsapp: c.contato_whatsapp },
+			{ titulo: 'Financeiro', nome: c.contato_financeiro, email: c.contato_financeiro_email, whatsapp: c.contato_financeiro_whatsapp },
+			{ titulo: 'Operação', nome: c.contato_operacao, email: c.contato_operacao_email, whatsapp: c.contato_operacao_whatsapp }
+		].filter((g) => g.nome || g.email || g.whatsapp)
+	);
+	const temContato = $derived(contatos.length > 0);
 
 	// --- Edição em modal ---
 	let editAberto = $state(false);
@@ -68,16 +76,20 @@
 			{#if c.segmento}
 				<p class="mt-0.5 text-sm text-grey">{c.segmento}</p>
 			{/if}
-			{#if c.responsavel_nome}
-				<div class="mt-2 flex items-center gap-2">
+			{#if c.responsaveis?.length}
+				<div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
 					<span class="text-xs text-grey">Resp.:</span>
-					{#if c.responsavel_avatar}
-						<img src={c.responsavel_avatar} alt={c.responsavel_nome} class="size-6 shrink-0 rounded-full object-cover shadow-sm" />
-					{:else}
-						<span class="grid size-6 shrink-0 place-items-center rounded-full text-[0.6rem] font-semibold text-white {corAvatar(c.responsavel_nome)}">{iniciais(c.responsavel_nome)}</span>
-					{/if}
-					<span class="text-sm font-medium text-navy">{c.responsavel_nome}</span>
-					{#each c.responsavel_funcoes ?? [] as f (f)}<CargoBadge funcao={f} />{/each}
+					{#each c.responsaveis as r (r.id)}
+						<span class="flex items-center gap-1.5">
+							{#if r.avatar_url}
+								<img src={r.avatar_url} alt={r.nome} class="size-6 shrink-0 rounded-full object-cover shadow-sm" />
+							{:else}
+								<span class="grid size-6 shrink-0 place-items-center rounded-full text-[0.6rem] font-semibold text-white {corAvatar(r.nome)}">{iniciais(r.nome)}</span>
+							{/if}
+							<span class="text-sm font-medium text-navy">{r.nome}</span>
+							{#each r.funcoes as f (f)}<CargoBadge funcao={f} />{/each}
+						</span>
+					{/each}
 				</div>
 			{/if}
 		</div>
@@ -90,19 +102,23 @@
 {#if temContato}
 	<Card class="mt-4">
 		<h2 class="mb-3 text-sm font-semibold text-navy">Contato</h2>
-		<div class="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
-			{#if c.contato_nome}
-				<div class="flex items-center gap-2 text-sm"><Icon name="users" size={15} /><span class="text-navy">{c.contato_nome}</span></div>
-			{/if}
-			{#if c.contato_email}
-				<a href={`mailto:${c.contato_email}`} class="flex items-center gap-2 text-sm text-brand hover:underline"><Icon name="mail" size={15} />{c.contato_email}</a>
-			{/if}
-			{#if c.contato_whatsapp}
-				<a href={`https://wa.me/${c.contato_whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener" class="flex items-center gap-2 text-sm text-brand hover:underline"><Icon name="phone" size={15} />{c.contato_whatsapp}</a>
-			{/if}
-			{#if c.contato_financeiro}
-				<div class="flex items-center gap-2 text-sm"><Icon name="dollar" size={15} /><span class="text-navy">{c.contato_financeiro}</span></div>
-			{/if}
+		<div class="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+			{#each contatos as g (g.titulo)}
+				<div>
+					<p class="mb-1.5 text-xs font-semibold uppercase tracking-wide text-grey">{g.titulo}</p>
+					<div class="space-y-1.5">
+						{#if g.nome}
+							<div class="flex items-center gap-2 text-sm"><Icon name="users" size={15} /><span class="text-navy">{g.nome}</span></div>
+						{/if}
+						{#if g.email}
+							<a href={`mailto:${g.email}`} class="flex items-center gap-2 text-sm text-brand hover:underline"><Icon name="mail" size={15} />{g.email}</a>
+						{/if}
+						{#if g.whatsapp}
+							<a href={`https://wa.me/${g.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener" class="flex items-center gap-2 text-sm text-brand hover:underline"><Icon name="phone" size={15} />{g.whatsapp}</a>
+						{/if}
+					</div>
+				</div>
+			{/each}
 		</div>
 	</Card>
 {/if}

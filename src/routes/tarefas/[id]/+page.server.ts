@@ -6,7 +6,7 @@ export const load: PageServerLoad = async ({ params, locals: { supabase } }) => 
 	const [{ data: tarefa, error: e }, { data: projetos }, { data: colaboradores }] = await Promise.all([
 		supabase.from('tarefas').select('*').eq('id', params.id).single(),
 		supabase.from('projetos').select('id, nome').order('created_at', { ascending: false }),
-		supabase.from('colaboradores').select('id, nome').eq('ativo', true).order('nome')
+		supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').eq('ativo', true).order('nome')
 	]);
 	if (e || !tarefa) throw error(404, 'Tarefa não encontrada');
 	return { tarefa, projetos: projetos ?? [], colaboradores: colaboradores ?? [] };

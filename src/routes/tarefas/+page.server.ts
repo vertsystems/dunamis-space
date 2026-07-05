@@ -18,7 +18,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	const [{ data, error }, { data: projetos }, { data: colaboradores }] = await Promise.all([
 		query,
 		supabase.from('projetos').select('id, nome').order('created_at', { ascending: false }),
-		supabase.from('colaboradores').select('id, nome').eq('ativo', true).order('nome')
+		supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').eq('ativo', true).order('nome')
 	]);
 
 	let projetoNome: string | null = null;

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { Button, Input, Select, Textarea } from '$lib/components/ui';
+	import ResponsavelPicker from '$lib/components/ResponsavelPicker.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import { ORIGENS, type Contato, type Colaborador } from '$lib/crm';
 
@@ -83,17 +84,7 @@
 		wrapperClass="md:col-span-6"
 		placeholder="quente, indicação, e-commerce"
 	/>
-	<Select
-		label="Responsável"
-		name="responsavel_id"
-		value={contato?.responsavel_id ?? ''}
-		wrapperClass="md:col-span-6"
-	>
-		<option value="">—</option>
-		{#each colaboradores as col (col.id)}
-			<option value={col.id}>{col.nome}</option>
-		{/each}
-	</Select>
+	<ResponsavelPicker {colaboradores} value={contato?.responsavel_id ?? null} wrapperClass="md:col-span-6" />
 
 	<Select
 		label="Vincular a cliente (opcional)"

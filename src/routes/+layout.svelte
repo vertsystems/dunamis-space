@@ -14,6 +14,7 @@
 	import { DTOOLS_FERRAMENTAS } from '$lib/dtools';
 	import { temaCss } from '$lib/tema';
 	import Icon from '$lib/components/Icon.svelte';
+	import CargoBadge from '$lib/components/CargoBadge.svelte';
 	import SosWidget from '$lib/components/SosWidget.svelte';
 	import { Toaster } from '$lib/components/ui';
 	import { toast } from '$lib/toast.svelte';
@@ -23,7 +24,17 @@
 
 	// Perfil do usuário (nome/avatar no topo + cor de tema pessoal).
 	const perfil = $derived(
-		data.perfil as { nome?: string; avatar_url?: string; cor_tema?: string } | null
+		data.perfil as {
+			nome?: string;
+			avatar_url?: string;
+			cor_tema?: string;
+			funcao?: string;
+			funcoes?: string[];
+		} | null
+	);
+	// Cargo principal do usuário → bandeirinha no avatar.
+	const cargoUsuario = $derived(
+		perfil?.funcoes?.length ? perfil.funcoes[0] : (perfil?.funcao ?? null)
 	);
 	// CSS que sobrescreve a primária do sistema só para este login (SSR — sem flash).
 	const temaStyle = $derived(temaCss(perfil?.cor_tema));
@@ -213,10 +224,15 @@
 						title={perfil?.nome ?? session.user.email}
 						aria-label="Meu perfil"
 					>
-						{#if perfil?.avatar_url}
-							<img src={perfil.avatar_url} alt="" />
-						{:else}
-							{initials}
+						<span class="avatar-img">
+							{#if perfil?.avatar_url}
+								<img src={perfil.avatar_url} alt="" />
+							{:else}
+								{initials}
+							{/if}
+						</span>
+						{#if cargoUsuario}
+							<span class="avatar-cargo"><CargoBadge funcao={cargoUsuario} /></span>
 						{/if}
 					</a>
 					<button class="icon-btn" onclick={signOut} title="Sair" aria-label="Sair">

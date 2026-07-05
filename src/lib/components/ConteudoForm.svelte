@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { CONTEUDO_TIPO, CONTEUDO_STATUS_GRUPOS, CONTEUDO_STATUS_PADRAO, CONTEUDO_REDE } from '$lib/conteudo';
 	import { Button, Input, Select, Textarea, Checkbox } from '$lib/components/ui';
+	import ResponsavelPicker from '$lib/components/ResponsavelPicker.svelte';
 
 	let {
 		conteudo = null,
@@ -156,10 +157,7 @@
 			<option value="">—</option>
 			{#each projetos as p (p.id)}<option value={p.id}>{p.nome}</option>{/each}
 		</Select>
-		<Select label="Responsável" name="responsavel_id" value={conteudo?.responsavel_id ?? ''} wrapperClass="md:col-span-4">
-			<option value="">—</option>
-			{#each colaboradores as c (c.id)}<option value={c.id}>{c.nome}</option>{/each}
-		</Select>
+		<ResponsavelPicker {colaboradores} value={conteudo?.responsavel_id ?? null} wrapperClass="md:col-span-12" />
 		<Input label="URL da arte" name="arte_url" value={v('arte_url')} placeholder="link do Drive/imagem" wrapperClass="md:col-span-4" />
 
 		<Textarea label="Legenda" name="legenda" rows={4} value={v('legenda')} wrapperClass="md:col-span-12" />

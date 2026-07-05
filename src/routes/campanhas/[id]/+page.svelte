@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { toast } from '$lib/toast.svelte';
 	import CampanhaForm from '$lib/components/CampanhaForm.svelte';
+	import ResponsavelPicker from '$lib/components/ResponsavelPicker.svelte';
 	import { SEMANA, MESES, chaveDia, celulasMes } from '$lib/calendario';
 	import {
 		conteudoStatusTone,
@@ -255,10 +256,7 @@
 			</Select>
 		</div>
 
-		<Select label="Responsável" name="responsavel_id" value="">
-			<option value="">— Ninguém —</option>
-			{#each data.colaboradores as c (c.id)}<option value={c.id}>{c.nome}</option>{/each}
-		</Select>
+		<ResponsavelPicker colaboradores={data.colaboradores} value={null} />
 
 		<div class="flex justify-end gap-2 pt-1">
 			<Button type="button" variant="secondary" onclick={() => (modalAberto = false)}>Cancelar</Button>

@@ -6,7 +6,7 @@ export const load: PageServerLoad = async ({ params, locals: { supabase } }) => 
 	const [{ data: projeto, error: e }, { data: clientes }, { data: colaboradores }] = await Promise.all([
 		supabase.from('projetos').select('*, cliente:clientes(nome)').eq('id', params.id).single(),
 		supabase.from('clientes').select('id, nome').order('nome'),
-		supabase.from('colaboradores').select('id, nome').eq('ativo', true).order('nome')
+		supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').eq('ativo', true).order('nome')
 	]);
 	if (e || !projeto) throw error(404, 'Projeto não encontrado');
 	return { projeto, clientes: clientes ?? [], colaboradores: colaboradores ?? [] };

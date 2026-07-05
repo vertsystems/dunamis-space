@@ -61,30 +61,40 @@ body::before {
 .app-topbar {
 	position: fixed;
 	top: var(--ds-topbar-top);
-	left: 50%;
-	transform: translateX(-50%);
-	width: max-content;
-	max-width: calc(100% - 2 * var(--ds-topbar-gap));
+	left: 0;
+	right: 0;
+	width: 100%;
 	z-index: 30;
-	height: var(--ds-topbar-h);
-	background: var(--ds-glass);
-	backdrop-filter: blur(20px) saturate(180%);
-	-webkit-backdrop-filter: blur(20px) saturate(180%);
-	border: 1px solid var(--ds-glass-border);
-	border-radius: 18px;
-	box-shadow:
-		0 8px 24px -6px rgba(16, 24, 40, 0.14),
-		0 2px 6px rgba(16, 24, 40, 0.05);
-	display: flex;
+	display: grid;
+	grid-template-columns: 1fr auto 1fr;
 	align-items: center;
 	gap: 0.6rem;
-	padding: 0 0.6rem;
+	padding: 0 var(--ds-topbar-gap);
+	// O topbar em si é transparente; só os 3 blocos são "pills". Cliques passam
+	// pelos vãos entre os pills para o conteúdo abaixo.
+	pointer-events: none;
+
+	// Logo | Menu | Ações — cada um é um pill de vidro independente.
+	.brand,
+	.departments,
+	.actions {
+		pointer-events: auto;
+		min-height: var(--ds-topbar-h);
+		background: var(--ds-glass);
+		backdrop-filter: blur(20px) saturate(180%);
+		-webkit-backdrop-filter: blur(20px) saturate(180%);
+		border: 1px solid var(--ds-glass-border);
+		border-radius: 18px;
+		box-shadow:
+			0 8px 24px -6px rgba(16, 24, 40, 0.14),
+			0 2px 6px rgba(16, 24, 40, 0.05);
+	}
 
 	.brand {
-		display: flex;
+		justify-self: start;
+		display: inline-flex;
 		align-items: center;
-		flex-shrink: 0;
-		padding-right: 0.1rem;
+		padding: 0 0.9rem;
 
 		.brand-logo {
 			height: 19px;
@@ -94,9 +104,13 @@ body::before {
 	}
 
 	.departments {
+		justify-self: center;
 		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
 		align-items: center;
 		gap: 0.15rem;
+		padding: 0.28rem 0.45rem;
 
 		a {
 			position: relative;
@@ -145,10 +159,11 @@ body::before {
 	}
 
 	.actions {
+		justify-self: end;
 		display: flex;
 		align-items: center;
 		gap: 0.3rem;
-		flex-shrink: 0;
+		padding: 0 0.5rem;
 
 		.icon-btn {
 			width: 30px;
@@ -175,30 +190,49 @@ body::before {
 			}
 		}
 
+		// Avatar 20% maior (30 → 36px) + bandeirinha do cargo no canto inferior direito.
 		.avatar {
-			width: 30px;
-			height: 30px;
-			border-radius: 50%;
-			overflow: hidden;
-			background: linear-gradient(
-				135deg,
-				color-mix(in srgb, var(--ds-primary) 78%, #fff),
-				var(--ds-primary-600)
-			);
-			color: #fff;
-			font-weight: 700;
-			font-size: 0.62rem;
-			display: flex;
-			align-items: center;
-			justify-content: center;
+			position: relative;
+			width: 36px;
+			height: 36px;
 			flex-shrink: 0;
 			cursor: pointer;
-			box-shadow: 0 2px 8px -1px rgba(16, 24, 40, 0.28);
+
+			.avatar-img {
+				width: 100%;
+				height: 100%;
+				border-radius: 50%;
+				overflow: hidden;
+				background: linear-gradient(
+					135deg,
+					color-mix(in srgb, var(--ds-primary) 78%, #fff),
+					var(--ds-primary-600)
+				);
+				color: #fff;
+				font-weight: 700;
+				font-size: 0.68rem;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				box-shadow: 0 2px 8px -1px rgba(16, 24, 40, 0.28);
+			}
 
 			img {
 				width: 100%;
 				height: 100%;
 				object-fit: cover;
+			}
+
+			// Bandeirinha (CargoBadge) sobreposta no canto, com anel branco.
+			.avatar-cargo {
+				position: absolute;
+				right: -4px;
+				bottom: -4px;
+				line-height: 0;
+
+				span {
+					box-shadow: 0 0 0 1.5px #fff;
+				}
 			}
 		}
 	}

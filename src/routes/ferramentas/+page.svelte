@@ -3,6 +3,7 @@
 	import { Button, Card, Badge, Input, Select, Textarea, Checkbox, EmptyState, DataTable } from '$lib/components/ui';
 	import type { BadgeTone, ColumnDef } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
+	import ResponsavelPicker from '$lib/components/ResponsavelPicker.svelte';
 	import CrmModal from '$lib/components/crm/CrmModal.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import { formatBRL } from '$lib/clientes';
@@ -243,10 +244,7 @@
 		</Select>
 		<Input label="Próxima renovação" name="proxima_renovacao" type="date" value={f?.proxima_renovacao ?? ''} wrapperClass="md:col-span-4" />
 
-		<Select label="Responsável" name="responsavel_id" value={f?.responsavel_id ?? ''} wrapperClass="md:col-span-6">
-			<option value="">—</option>
-			{#each data.colaboradores as c (c.id)}<option value={c.id}>{c.nome}</option>{/each}
-		</Select>
+		<ResponsavelPicker colaboradores={data.colaboradores} value={f?.responsavel_id ?? null} wrapperClass="md:col-span-12" />
 		<div class="flex items-end pb-2 md:col-span-6">
 			<Checkbox label="Ativa" name="ativo" checked={f ? f.ativo : true} />
 		</div>
@@ -318,10 +316,7 @@
 		<Input label="URL" name="url" value={a?.url ?? ''} placeholder="https://" wrapperClass="md:col-span-6" />
 
 		<Input label="Onde está a senha" name="local_senha" value={a?.local_senha ?? ''} placeholder="Ex.: 1Password, com o João" wrapperClass="md:col-span-6" />
-		<Select label="Responsável" name="responsavel_id" value={a?.responsavel_id ?? ''} wrapperClass="md:col-span-6">
-			<option value="">—</option>
-			{#each data.colaboradores as c (c.id)}<option value={c.id}>{c.nome}</option>{/each}
-		</Select>
+		<ResponsavelPicker colaboradores={data.colaboradores} value={a?.responsavel_id ?? null} wrapperClass="md:col-span-12" />
 
 		<Textarea label="Observações" name="observacoes" value={a?.observacoes ?? ''} rows={2} wrapperClass="md:col-span-12" />
 

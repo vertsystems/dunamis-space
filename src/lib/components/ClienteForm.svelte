@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { CLIENTE_STATUS } from '$lib/clientes';
 	import { Button, Input, Select, Textarea } from '$lib/components/ui';
+	import ResponsavelPicker from '$lib/components/ResponsavelPicker.svelte';
 
 	let {
 		cliente = null,
@@ -14,7 +15,7 @@
 		onDone
 	}: {
 		cliente?: Record<string, any> | null;
-		colaboradores?: { id: string; nome: string }[];
+		colaboradores?: { id: string; nome: string; avatar_url?: string | null; funcao?: string | null; funcoes?: string[] | null }[];
 		error?: string | null;
 		submitLabel?: string;
 		action?: string;
@@ -61,24 +62,32 @@
 				<Input label="Razão social" name="razao_social" value={v('razao_social')} wrapperClass="md:col-span-6" />
 				<Input label="CNPJ / CPF" name="cnpj_cpf" value={v('cnpj_cpf')} wrapperClass="md:col-span-6" />
 				<Input label="Segmento" name="segmento" value={v('segmento')} wrapperClass="md:col-span-4" />
-				<Select label="Responsável" name="responsavel_id" value={cliente?.responsavel_id ?? ''} wrapperClass="md:col-span-4">
-					<option value="">—</option>
-					{#each colaboradores as col (col.id)}<option value={col.id}>{col.nome}</option>{/each}
-				</Select>
 				<Input label="Cliente desde" type="date" name="data_inicio" value={v('data_inicio')} wrapperClass="md:col-span-4" />
+				<ResponsavelPicker
+					{colaboradores}
+					name="responsaveis_ids"
+					multiple
+					values={cliente?.responsaveis_ids ?? null}
+					value={cliente?.responsavel_id ?? null}
+					wrapperClass="md:col-span-12"
+				/>
 			</div>
 		</section>
 
 		<section>
 			<h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-grey">Contato</h3>
 			<div class="grid grid-cols-1 md:grid-cols-12 gap-4">
-				<Input label="Contato" name="contato_nome" value={v('contato_nome')} wrapperClass="md:col-span-4" />
+				<Input label="Contato Diretor" name="contato_nome" value={v('contato_nome')} placeholder="Nome" wrapperClass="md:col-span-4" />
 				<Input label="E-mail" type="email" name="contato_email" value={v('contato_email')} wrapperClass="md:col-span-4" />
 				<Input label="WhatsApp" name="contato_whatsapp" value={v('contato_whatsapp')} wrapperClass="md:col-span-4" />
 
 				<Input label="Contato financeiro" name="contato_financeiro" value={v('contato_financeiro')} placeholder="Nome" wrapperClass="md:col-span-4" />
 				<Input label="E-mail financeiro" type="email" name="contato_financeiro_email" value={v('contato_financeiro_email')} wrapperClass="md:col-span-4" />
 				<Input label="WhatsApp financeiro" name="contato_financeiro_whatsapp" value={v('contato_financeiro_whatsapp')} wrapperClass="md:col-span-4" />
+
+				<Input label="Contato Operação" name="contato_operacao" value={v('contato_operacao')} placeholder="Nome" wrapperClass="md:col-span-4" />
+				<Input label="E-mail operação" type="email" name="contato_operacao_email" value={v('contato_operacao_email')} wrapperClass="md:col-span-4" />
+				<Input label="WhatsApp operação" name="contato_operacao_whatsapp" value={v('contato_operacao_whatsapp')} wrapperClass="md:col-span-4" />
 			</div>
 		</section>
 

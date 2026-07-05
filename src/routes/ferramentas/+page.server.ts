@@ -48,7 +48,7 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 			.order('plataforma', { ascending: true }),
 		// Sem filtro de ativo: um responsável desativado precisa continuar aparecendo
 		// no dropdown de itens existentes, senão a edição apagaria a atribuição.
-		supabase.from('colaboradores').select('id, nome').order('nome'),
+		supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').order('nome'),
 		supabase.from('clientes').select('id, nome').order('nome')
 	]);
 

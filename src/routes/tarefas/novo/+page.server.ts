@@ -5,7 +5,7 @@ import type { Actions, PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 	const [{ data: projetos }, { data: colaboradores }] = await Promise.all([
 		supabase.from('projetos').select('id, nome').order('created_at', { ascending: false }),
-		supabase.from('colaboradores').select('id, nome').eq('ativo', true).order('nome')
+		supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').eq('ativo', true).order('nome')
 	]);
 	return { projetos: projetos ?? [], colaboradores: colaboradores ?? [] };
 };

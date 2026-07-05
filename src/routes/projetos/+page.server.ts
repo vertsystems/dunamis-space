@@ -14,7 +14,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	const [{ data, error }, { data: clientes }, { data: colaboradores }] = await Promise.all([
 		query,
 		supabase.from('clientes').select('id, nome').order('nome'),
-		supabase.from('colaboradores').select('id, nome').eq('ativo', true).order('nome')
+		supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').eq('ativo', true).order('nome')
 	]);
 	const projetos = (data ?? []).map((p) => ({
 		...p,

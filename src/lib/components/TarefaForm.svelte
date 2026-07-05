@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { TAREFA_STATUS, PRIORIDADE } from '$lib/tarefas';
 	import { Button, Input, Select, Textarea } from '$lib/components/ui';
+	import ResponsavelPicker from '$lib/components/ResponsavelPicker.svelte';
 
 	let {
 		tarefa = null,
@@ -60,10 +61,7 @@
 			<option value="">—</option>
 			{#each projetos as p (p.id)}<option value={p.id}>{p.nome}</option>{/each}
 		</Select>
-		<Select label="Responsável" name="responsavel_id" value={tarefa?.responsavel_id ?? ''} wrapperClass="md:col-span-4">
-			<option value="">—</option>
-			{#each colaboradores as c (c.id)}<option value={c.id}>{c.nome}</option>{/each}
-		</Select>
+		<ResponsavelPicker {colaboradores} value={tarefa?.responsavel_id ?? null} wrapperClass="md:col-span-12" />
 		<Select label="Status" name="status" value={tarefa?.status ?? 'backlog'} wrapperClass="md:col-span-4">
 			{#each TAREFA_STATUS as s (s.value)}<option value={s.value}>{s.label}</option>{/each}
 		</Select>

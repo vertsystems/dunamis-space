@@ -6,7 +6,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	let query = supabase
 		.from('clientes')
 		.select(
-			'id, nome, status, razao_social, cnpj_cpf, segmento, responsavel_id, data_inicio, contato_nome, contato_email, contato_whatsapp, contato_financeiro, endereco, cidade, estado, cep, plano_ref, forma_pagamento, mrr, dia_vencimento, observacoes'
+			'id, nome, status, razao_social, cnpj_cpf, segmento, responsavel_id, responsaveis_ids, data_inicio, contato_nome, contato_email, contato_whatsapp, contato_financeiro, contato_financeiro_email, contato_financeiro_whatsapp, contato_operacao, contato_operacao_email, contato_operacao_whatsapp, endereco, cidade, estado, cep, plano_ref, forma_pagamento, mrr, dia_vencimento, observacoes'
 		)
 		.order('nome', { ascending: true });
 
@@ -14,7 +14,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 
 	const [{ data, error }, { data: colaboradores }] = await Promise.all([
 		query,
-		supabase.from('colaboradores').select('id, nome').eq('ativo', true).order('nome')
+		supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').eq('ativo', true).order('nome')
 	]);
 
 	// Degradação: a migration 0006 pode não ter sido aplicada (colunas novas).

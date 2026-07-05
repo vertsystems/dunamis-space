@@ -45,6 +45,11 @@ export function clienteFromForm(fd: FormData) {
 		const n = Number(s);
 		return Number.isNaN(n) ? null : n;
 	};
+	// Responsáveis (multi): checkboxes name="responsaveis_ids". O single
+	// responsavel_id espelha o primeiro, mantendo compat com as consultas.
+	const responsaveis_ids = fd
+		.getAll('responsaveis_ids')
+		.filter((v): v is string => typeof v === 'string' && v.trim() !== '');
 	return {
 		// Geral
 		nome: str('nome') ?? '',
@@ -52,7 +57,8 @@ export function clienteFromForm(fd: FormData) {
 		razao_social: str('razao_social'),
 		cnpj_cpf: str('cnpj_cpf'),
 		segmento: str('segmento'),
-		responsavel_id: str('responsavel_id'),
+		responsavel_id: responsaveis_ids[0] ?? null,
+		responsaveis_ids,
 		data_inicio: str('data_inicio'),
 		// Contato
 		contato_nome: str('contato_nome'),
@@ -61,6 +67,9 @@ export function clienteFromForm(fd: FormData) {
 		contato_financeiro: str('contato_financeiro'),
 		contato_financeiro_email: str('contato_financeiro_email'),
 		contato_financeiro_whatsapp: str('contato_financeiro_whatsapp'),
+		contato_operacao: str('contato_operacao'),
+		contato_operacao_email: str('contato_operacao_email'),
+		contato_operacao_whatsapp: str('contato_operacao_whatsapp'),
 		// Endereço
 		endereco: str('endereco'),
 		cidade: str('cidade'),
