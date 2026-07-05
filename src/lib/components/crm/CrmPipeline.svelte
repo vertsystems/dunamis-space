@@ -76,13 +76,16 @@
 		Nenhum funil configurado ainda. Aplique a migration <code class="font-mono">0005_crm.sql</code>.
 	</div>
 {:else}
-	<div class="flex gap-3 overflow-x-auto pb-2 items-start">
+	<div
+		class="grid gap-2 overflow-x-auto pt-1 pb-2 items-start"
+		style="grid-template-columns: repeat({stages.length}, minmax(160px, 1fr))"
+	>
 		{#each stages as col (col.id)}
 			{@const lista = daColuna(col.id)}
 			<div
-				class="w-72 shrink-0 rounded-[var(--radius-lg)] bg-bg p-2.5 transition-colors {overCol ===
+				class="min-w-0 rounded-[var(--radius-lg)] bg-bg p-2 transition-colors {overCol ===
 				col.id
-					? 'outline-2 outline-dashed outline-brand'
+					? 'outline-2 outline-dashed outline-brand [outline-offset:-2px]'
 					: ''}"
 				role="list"
 				ondragover={(e) => {
@@ -123,7 +126,7 @@
 				{#each lista as n (n.id)}
 					{@const venc = vencimentoDe(n.prox_atividade)}
 					<div
-						class="group bg-surface border border-grey-200 rounded-[var(--radius)] px-3 py-2.5 mb-2 cursor-grab active:cursor-grabbing hover:border-grey {dragId ===
+						class="group bg-surface border border-grey-200 rounded-[var(--radius)] px-2.5 py-2 mb-1.5 cursor-grab active:cursor-grabbing hover:border-grey {dragId ===
 						n.id
 							? 'opacity-40'
 							: ''} {overCol === col.id && overId === n.id
@@ -142,7 +145,7 @@
 					>
 						<button
 							type="button"
-							class="block w-full text-left font-medium text-navy hover:text-brand"
+							class="block w-full text-left text-sm font-medium text-navy hover:text-brand"
 							onclick={() => onOpen(n.id)}
 						>
 							{n.titulo}
