@@ -13,6 +13,7 @@
 		clientes={data.clientes}
 		projetos={data.projetos}
 		colaboradores={data.colaboradores}
+		campanhas={data.campanhas ?? []}
 		error={form?.error ?? null}
 		submitLabel="Criar conteúdo"
 	/>

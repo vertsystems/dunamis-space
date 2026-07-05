@@ -1,4 +1,5 @@
 import { um } from '$lib/db';
+import { nomesDeCampanha } from '$lib/server/conteudo';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
@@ -8,19 +9,20 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	let query = supabase
 		.from('conteudos')
 		.select(
-			'id, titulo, tipo, tipos, status, data_publicacao, cliente_id, projeto_id, responsavel_id, arte_url, legenda, redes, publicado_manual, cliente:clientes(nome)'
+			'id, titulo, tipo, tipos, status, data_publicacao, cliente_id, projeto_id, responsavel_id, campanha, arte_url, legenda, redes, publicado_manual, cliente:clientes(nome)'
 		)
 		.order('data_publicacao', { ascending: false, nullsFirst: false });
 
 	if (status) query = query.eq('status', status);
 	if (tipo) query = query.eq('tipo', tipo);
 
-	const [{ data, error }, { data: clientes }, { data: projetos }, { data: colaboradores }] =
+	const [{ data, error }, { data: clientes }, { data: projetos }, { data: colaboradores }, campanhas] =
 		await Promise.all([
 			query,
 			supabase.from('clientes').select('id, nome').order('nome'),
 			supabase.from('projetos').select('id, nome').order('created_at', { ascending: false }),
-			supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').eq('ativo', true).order('nome')
+			supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').eq('ativo', true).order('nome'),
+			nomesDeCampanha(supabase)
 		]);
 
 	const conteudos = (data ?? []).map((c) => ({ ...c, cliente: um(c.cliente) }));
@@ -29,6 +31,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		clientes: clientes ?? [],
 		projetos: projetos ?? [],
 		colaboradores: colaboradores ?? [],
+		campanhas,
 		status,
 		tipo,
 		loadError: error?.message ?? null

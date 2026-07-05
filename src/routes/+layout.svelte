@@ -109,7 +109,8 @@
 			areas: [
 				{ href: '/calendario', label: 'Calendário', icon: 'calendar' },
 				{ href: '/tarefas', label: 'Tarefas', icon: 'check' },
-				{ href: '/conteudo', label: 'Conteúdo', icon: 'edit' }
+				{ href: '/conteudo', label: 'Conteúdo', icon: 'edit' },
+				{ href: '/campanhas', label: 'Campanhas', icon: 'tag' }
 			]
 		},
 		{

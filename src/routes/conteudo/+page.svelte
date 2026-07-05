@@ -115,6 +115,7 @@
 		clientes={data.clientes}
 		projetos={data.projetos}
 		colaboradores={data.colaboradores}
+		campanhas={data.campanhas ?? []}
 		conteudo={res?.values ?? null}
 		error={res?.error ?? null}
 		onCancel={() => (novoAberto = false)}
@@ -130,6 +131,7 @@
 			clientes={data.clientes}
 			projetos={data.projetos}
 			colaboradores={data.colaboradores}
+			campanhas={data.campanhas ?? []}
 			conteudo={res?.values ?? editando}
 			error={res?.error ?? null}
 			onCancel={() => (editando = null)}

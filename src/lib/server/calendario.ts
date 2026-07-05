@@ -1,5 +1,6 @@
 import { um } from '$lib/db';
 import { celulasMes, chaveDia, parseMes, mesAnterior, mesSeguinte } from '$lib/calendario';
+import { nomesDeCampanha } from '$lib/server/conteudo';
 
 export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -93,7 +94,7 @@ export async function carregarCalendario(
 	let qConteudos = supabase
 		.from('conteudos')
 		.select(
-			'id, titulo, tipo, tipos, status, data_publicacao, legenda, arte_url, redes, publicado_manual, cliente_id, projeto_id, responsavel_id, cliente:clientes(nome)'
+			'id, titulo, tipo, tipos, status, data_publicacao, legenda, arte_url, redes, publicado_manual, cliente_id, projeto_id, responsavel_id, campanha, cliente:clientes(nome)'
 		)
 		.not('data_publicacao', 'is', null)
 		.gte('data_publicacao', gteISO)
@@ -152,8 +153,12 @@ export async function carregarCalendario(
 		publicado_manual: !!c.publicado_manual,
 		cliente_id: (c.cliente_id as string | null) ?? null,
 		projeto_id: (c.projeto_id as string | null) ?? null,
-		responsavel_id: (c.responsavel_id as string | null) ?? null
+		responsavel_id: (c.responsavel_id as string | null) ?? null,
+		campanha: (c.campanha as string | null) ?? null
 	}));
+
+	// Nomes de campanha já usados (todas, não só do mês) p/ autocomplete no form.
+	const campanhasNomes = await nomesDeCampanha(supabase);
 
 	let tarefas = (tarefasRaw ?? []).map((t) => {
 		const projeto = um<{
@@ -195,6 +200,7 @@ export async function carregarCalendario(
 		conteudos,
 		tarefas,
 		campanhas,
+		campanhasNomes,
 		loadError: (errCli ?? errCon ?? errTar ?? errCamp)?.message ?? null
 	};
 }

@@ -1,5 +1,6 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { conteudoFromForm } from '$lib/conteudo';
+import { nomesDeCampanha } from '$lib/server/conteudo';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals: { supabase } }) => {
@@ -8,7 +9,8 @@ export const load: PageServerLoad = async ({ params, locals: { supabase } }) => 
 		{ data: clientes },
 		{ data: projetos },
 		{ data: colaboradores },
-		{ data: aprovacoes }
+		{ data: aprovacoes },
+		campanhas
 	] = await Promise.all([
 		supabase.from('conteudos').select('*').eq('id', params.id).single(),
 		supabase.from('clientes').select('id, nome').order('nome'),
@@ -19,7 +21,8 @@ export const load: PageServerLoad = async ({ params, locals: { supabase } }) => 
 			.select('id, status, token_publico, data_envio, data_resposta, comentario_cliente')
 			.eq('conteudo_id', params.id)
 			.order('created_at', { ascending: false })
-			.limit(1)
+			.limit(1),
+		nomesDeCampanha(supabase)
 	]);
 	if (e || !conteudo) throw error(404, 'Conteúdo não encontrado');
 	return {
@@ -27,6 +30,7 @@ export const load: PageServerLoad = async ({ params, locals: { supabase } }) => 
 		clientes: clientes ?? [],
 		projetos: projetos ?? [],
 		colaboradores: colaboradores ?? [],
+		campanhas,
 		aprovacao: aprovacoes?.[0] ?? null
 	};
 };

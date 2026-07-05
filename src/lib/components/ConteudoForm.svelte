@@ -10,6 +10,7 @@
 		clientes = [],
 		projetos = [],
 		colaboradores = [],
+		campanhas = [],
 		error = null,
 		submitLabel = 'Salvar',
 		action = '',
@@ -21,6 +22,8 @@
 		clientes?: { id: string; nome: string }[];
 		projetos?: { id: string; nome: string }[];
 		colaboradores?: { id: string; nome: string }[];
+		/** Nomes de campanha já usados, para o autocomplete. */
+		campanhas?: string[];
 		error?: string | null;
 		submitLabel?: string;
 		action?: string;
@@ -92,11 +95,23 @@
 	{/if}
 
 	<div class="grid grid-cols-1 md:grid-cols-12 gap-4">
-		<Select label="Cliente *" name="cliente_id" required value={conteudo?.cliente_id ?? ''} wrapperClass="md:col-span-6">
+		<Select label="Cliente *" name="cliente_id" required value={conteudo?.cliente_id ?? ''} wrapperClass="md:col-span-4">
 			<option value="" disabled>Selecione um cliente</option>
 			{#each clientes as c (c.id)}<option value={c.id}>{c.nome}</option>{/each}
 		</Select>
-		<Select label="Status" name="status" value={conteudo?.status ?? CONTEUDO_STATUS_PADRAO} wrapperClass="md:col-span-6">
+		<Input
+			label="Campanha"
+			name="campanha"
+			value={v('campanha')}
+			list="lista-campanhas"
+			autocomplete="off"
+			placeholder="Nome da campanha"
+			wrapperClass="md:col-span-4"
+		/>
+		<datalist id="lista-campanhas">
+			{#each campanhas as nome (nome)}<option value={nome}></option>{/each}
+		</datalist>
+		<Select label="Status" name="status" value={conteudo?.status ?? CONTEUDO_STATUS_PADRAO} wrapperClass="md:col-span-4">
 			{#each CONTEUDO_STATUS_GRUPOS as g (g.grupo)}
 				<optgroup label={g.grupo}>
 					{#each g.itens as s (s.value)}<option value={s.value}>{s.label}</option>{/each}

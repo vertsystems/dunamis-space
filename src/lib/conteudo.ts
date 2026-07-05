@@ -143,6 +143,7 @@ export function conteudoFromForm(fd: FormData) {
 	if (tipos.length === 0 && tipoUnico) tipos = [tipoUnico];
 	return {
 		cliente_id: str(fd, 'cliente_id'),
+		campanha: str(fd, 'campanha'),
 		projeto_id: str(fd, 'projeto_id'),
 		responsavel_id: str(fd, 'responsavel_id'),
 		tipo: tipos[0] ?? 'feed', // enum single = primeiro tipo (compat)
