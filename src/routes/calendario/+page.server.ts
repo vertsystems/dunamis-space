@@ -1,6 +1,7 @@
+import { fail } from '@sveltejs/kit';
 import { um } from '$lib/db';
 import { celulasMes, chaveDia, parseMes, mesAnterior, mesSeguinte } from '$lib/calendario';
-import type { PageServerLoad } from './$types';
+import type { PageServerLoad, Actions } from './$types';
 
 type View = 'mes' | 'semana' | 'lista';
 const VIEWS: View[] = ['mes', 'semana', 'lista'];
@@ -42,13 +43,22 @@ export const load: PageServerLoad = async ({ url, locals: { supabase } }) => {
 	let semanaInicio = '';
 
 	if (view === 'semana') {
-		const ref = parseData(url.searchParams.get('semana')) ?? hojeSP();
-		const dom = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate() - ref.getDay());
-		janelaIni = dom;
-		janelaFim = new Date(dom.getFullYear(), dom.getMonth(), dom.getDate() + 6);
-		semanaInicio = chaveDia(dom);
-		ano = dom.getFullYear();
-		mes = dom.getMonth();
+		// Janela rolante de 7 dias começando 1 dia antes da referência, para que
+		// "hoje" apareça na 2ª coluna (melhor visão da semana à frente). O ?semana=
+		// guarda o início da janela e é usado diretamente na navegação.
+		const semParam = parseData(url.searchParams.get('semana'));
+		let inicio: Date;
+		if (semParam) {
+			inicio = semParam;
+		} else {
+			const h = hojeSP();
+			inicio = new Date(h.getFullYear(), h.getMonth(), h.getDate() - 1);
+		}
+		janelaIni = inicio;
+		janelaFim = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate() + 6);
+		semanaInicio = chaveDia(inicio);
+		ano = inicio.getFullYear();
+		mes = inicio.getMonth();
 	} else {
 		const h = hojeSP();
 		const base = parseMes(url.searchParams.get('mes')) ?? { ano: h.getFullYear(), mes: h.getMonth() };
@@ -182,4 +192,39 @@ export const load: PageServerLoad = async ({ url, locals: { supabase } }) => {
 		campanhas,
 		loadError: (errCli ?? errCon ?? errTar ?? errCamp)?.message ?? null
 	};
+};
+
+const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+
+/** Campos duplicáveis de um conteúdo (exclui id/timestamps). */
+const COPIAVEIS =
+	'cliente_id, projeto_id, responsavel_id, tipo, tipos, titulo, status, legenda, arte_url, redes, publicado_manual';
+
+export const actions: Actions = {
+	// Arrastar-e-soltar: mover o post para outra data (mantém a hora enviada).
+	mover: async ({ request, locals: { supabase } }) => {
+		const fd = await request.formData();
+		const id = String(fd.get('id') ?? '');
+		const dp = String(fd.get('data_publicacao') ?? '');
+		if (!UUID_RE.test(id) || !ISO_RE.test(dp)) return fail(400, { error: 'Dados inválidos.' });
+		const { error } = await supabase.from('conteudos').update({ data_publicacao: dp }).eq('id', id);
+		if (error) return fail(500, { error: error.message });
+		return { ok: true };
+	},
+	// Arrastar-e-soltar: copiar o post para outra data (duplica na nova data).
+	copiar: async ({ request, locals: { supabase } }) => {
+		const fd = await request.formData();
+		const id = String(fd.get('id') ?? '');
+		const dp = String(fd.get('data_publicacao') ?? '');
+		if (!UUID_RE.test(id) || !ISO_RE.test(dp)) return fail(400, { error: 'Dados inválidos.' });
+		const { data: orig, error: e1 } = await supabase
+			.from('conteudos')
+			.select(COPIAVEIS)
+			.eq('id', id)
+			.single();
+		if (e1 || !orig) return fail(404, { error: e1?.message ?? 'Conteúdo não encontrado.' });
+		const { error } = await supabase.from('conteudos').insert({ ...orig, data_publicacao: dp });
+		if (error) return fail(500, { error: error.message });
+		return { ok: true };
+	}
 };

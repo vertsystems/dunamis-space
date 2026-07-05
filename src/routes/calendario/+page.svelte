@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
+	import { deserialize } from '$app/forms';
 	import { Card, Button, Select, Modal, toneClasses } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
 	import ConteudoForm from '$lib/components/ConteudoForm.svelte';
@@ -31,6 +32,44 @@
 		editando = null;
 		toast.success('Conteúdo salvo');
 		invalidateAll();
+	}
+
+	// --- Arrastar-e-soltar: mover/copiar post entre dias ---
+	let arrastando = $state<Record<string, any> | null>(null);
+	let sobreDia = $state<string | null>(null);
+	// Alvo do drop: o post + a nova data/instante; abre o chooser Copiar/Mover.
+	let moverCopiar = $state<{ c: Record<string, any>; novaData: string; novaISO: string } | null>(null);
+	let processando = $state(false);
+
+	function soltarEm(novaData: string) {
+		const c = arrastando;
+		arrastando = null;
+		sobreDia = null;
+		if (!c || c.dia === novaData) return; // sem alvo ou mesma data
+		// Mantém a hora exibida (SP) do post na nova data (fuso local do usuário).
+		const [hh, mm] = String(c.hora ?? '09:00').split(':').map(Number);
+		const [y, mo, d] = novaData.split('-').map(Number);
+		const nova = new Date(y, mo - 1, d, hh || 0, mm || 0, 0, 0);
+		moverCopiar = { c, novaData, novaISO: nova.toISOString() };
+	}
+
+	async function executar(acao: 'mover' | 'copiar') {
+		const alvo = moverCopiar;
+		if (!alvo || processando) return;
+		processando = true;
+		const fd = new FormData();
+		fd.set('id', alvo.c.id);
+		fd.set('data_publicacao', alvo.novaISO);
+		const resp = await fetch(`?/${acao}`, { method: 'POST', body: fd });
+		const result = deserialize(await resp.text());
+		processando = false;
+		moverCopiar = null;
+		if (result.type === 'success') {
+			toast.success(acao === 'mover' ? 'Post movido' : 'Post copiado');
+			invalidateAll();
+		} else if (result.type === 'failure') {
+			toast.error((result.data?.error as string) ?? 'Falha na operação');
+		}
 	}
 
 	// --- Agenda do dia (clique no quadrado) ---
@@ -116,11 +155,12 @@
 		const [a, m, d] = k.split('-').map(Number);
 		return chaveDia(new Date(a, m - 1, d + n));
 	}
-	// Ao trocar p/ Semana, mantém o período: semana de hoje se hoje ∈ mês exibido, senão a do dia 1.
+	// Ao trocar p/ Semana, começa 1 dia antes da base (hoje na 2ª coluna). Base = hoje
+	// se hoje ∈ mês exibido, senão o dia 1 do mês.
 	const semanaSwitch = $derived.by(() => {
 		if (data.view === 'semana') return data.semanaInicio;
 		const base = hojeKey.startsWith(mesAtual + '-') ? parseKey(hojeKey) : new Date(data.ano, data.mes, 1);
-		return chaveDia(new Date(base.getFullYear(), base.getMonth(), base.getDate() - base.getDay()));
+		return chaveDia(new Date(base.getFullYear(), base.getMonth(), base.getDate() - 1));
 	});
 	const navPrev = $derived(
 		data.view === 'semana' ? href({ semana: addDias(data.semanaInicio, -7) }) : href({ mes: data.prev })
@@ -189,12 +229,22 @@
 		{#if a.k === 'c'}
 			<button
 				type="button"
+				draggable="true"
+				ondragstart={(e) => {
+					arrastando = a.c;
+					e.dataTransfer?.setData('text/plain', a.c.id);
+					if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copyMove';
+				}}
+				ondragend={() => {
+					arrastando = null;
+					sobreDia = null;
+				}}
 				onclick={(e) => {
 					e.stopPropagation();
 					editando = a.c;
 				}}
 				title={`${conteudoTipoLabel(a.c.tipo)} · ${conteudoStatusLabel(a.c.status)}${a.c.cliente_nome ? ' · ' + a.c.cliente_nome : ''}`}
-				class="flex w-full flex-col gap-0.5 rounded-[var(--radius-sm)] border border-grey-200/70 bg-surface px-1.5 py-1 text-left transition-colors hover:bg-bg"
+				class="flex w-full cursor-grab flex-col gap-0.5 rounded-[var(--radius-sm)] border border-grey-200/70 bg-surface px-1.5 py-1 text-left transition-colors hover:bg-bg active:cursor-grabbing"
 			>
 				<span class="flex items-baseline gap-1">
 					<span class="truncate text-[0.68rem] font-semibold leading-tight text-navy-900">{a.c.titulo ?? conteudoTipoLabel(a.c.tipo)}</span>
@@ -306,9 +356,24 @@
 							diaAberto = key;
 						}
 					}}
+					ondragover={(e) => {
+						if (!arrastando) return;
+						e.preventDefault();
+						sobreDia = key;
+					}}
+					ondragleave={() => {
+						if (sobreDia === key) sobreDia = null;
+					}}
+					ondrop={(e) => {
+						e.preventDefault();
+						soltarEm(key);
+					}}
 					class="flex min-h-40 cursor-pointer flex-col gap-1 overflow-hidden rounded-[var(--radius-sm)] border p-1.5 text-left transition-colors hover:border-brand/50 {foraDoMes
 						? 'border-grey-200/60 bg-bg'
-						: 'border-grey-200 bg-surface'} {key === hojeKey ? 'ring-1 ring-brand' : ''}"
+						: 'border-grey-200 bg-surface'} {key === hojeKey ? 'ring-1 ring-brand' : ''} {arrastando &&
+					sobreDia === key
+						? 'border-brand ring-2 ring-brand/40'
+						: ''}"
 				>
 					<div class="flex items-center justify-between leading-none">
 						<span class="text-xs font-semibold {foraDoMes ? 'text-grey-200' : 'text-slate'}">{d.getDate()}</span>
@@ -337,9 +402,24 @@
 			{#each diasDaSemana as d (chaveDia(d))}
 				{@const key = chaveDia(d)}
 				<div
-					class="flex min-h-20 flex-col gap-1 rounded-[var(--radius-sm)] border bg-surface p-2 md:min-h-40 {key === hojeKey
-						? 'border-brand ring-1 ring-brand'
-						: 'border-grey-200'}"
+					ondragover={(e) => {
+						if (!arrastando) return;
+						e.preventDefault();
+						sobreDia = key;
+					}}
+					ondragleave={() => {
+						if (sobreDia === key) sobreDia = null;
+					}}
+					ondrop={(e) => {
+						e.preventDefault();
+						soltarEm(key);
+					}}
+					class="flex min-h-20 flex-col gap-1 rounded-[var(--radius-sm)] border bg-surface p-2 md:min-h-40 {arrastando &&
+					sobreDia === key
+						? 'border-brand ring-2 ring-brand/40'
+						: key === hojeKey
+							? 'border-brand ring-1 ring-brand'
+							: 'border-grey-200'}"
 				>
 					<div class="mb-1 flex items-baseline justify-between border-b border-grey-200/60 pb-1">
 						<span class="text-xs font-semibold uppercase tracking-wide text-grey">{SEMANA[d.getDay()]}</span>
@@ -492,6 +572,25 @@
 				</div>
 			{/if}
 			<Button onclick={novoNoDia}><Icon name="plus" size={15} /> Novo post</Button>
+		</div>
+	{/if}
+</Modal>
+
+<Modal
+	open={!!moverCopiar}
+	title="Mover ou copiar?"
+	size="sm"
+	onClose={() => !processando && (moverCopiar = null)}
+>
+	{#if moverCopiar}
+		<p class="text-sm text-grey">
+			<span class="font-medium text-navy">{moverCopiar.c.titulo ?? conteudoTipoLabel(moverCopiar.c.tipo)}</span>
+			para <span class="font-medium text-navy">{diaLongo(moverCopiar.novaData)}</span> às {moverCopiar.c.hora}.
+		</p>
+		<div class="mt-4 flex flex-wrap gap-2">
+			<Button variant="primary" loading={processando} onclick={() => executar('mover')}>Mover</Button>
+			<Button variant="secondary" loading={processando} onclick={() => executar('copiar')}>Copiar</Button>
+			<Button variant="ghost" onclick={() => (moverCopiar = null)}>Cancelar</Button>
 		</div>
 	{/if}
 </Modal>
