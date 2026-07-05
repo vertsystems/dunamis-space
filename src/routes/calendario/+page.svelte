@@ -90,17 +90,17 @@
 		}
 	}
 
-	// Ação rápida: marcar o card como "Programar" (bolinha ao lado do status).
-	async function programar(c: Record<string, any>, e?: Event) {
+	// Ação rápida: mudar o status pelo card (bolinhas ao lado do status).
+	async function definirStatusRapido(c: Record<string, any>, status: string, e?: Event) {
 		e?.stopPropagation();
-		if (c.status === 'programar') return;
+		if (c.status === status) return;
 		const fd = new FormData();
 		fd.set('id', c.id);
-		fd.set('status', 'programar');
+		fd.set('status', status);
 		const resp = await fetch('?/definirStatus', { method: 'POST', body: fd });
 		const result = deserialize(await resp.text());
 		if (result.type === 'success') {
-			toast.success('Status: Programar');
+			toast.success(`Status: ${conteudoStatusLabel(status)}`);
 			invalidateAll();
 		} else if (result.type === 'failure') {
 			toast.error((result.data?.error as string) ?? 'Falha ao alterar status');
@@ -294,13 +294,21 @@
 				</span>
 				<span class="flex items-center gap-1">
 					<span class="inline-flex items-center rounded-full px-1 py-px text-[0.56rem] font-medium leading-tight {toneClasses[conteudoStatusTone(a.c.status)]}">{conteudoStatusLabel(a.c.status)}</span>
-					{#if a.c.status !== 'programar'}
+					{#if a.c.status !== 'programar' && a.c.status !== 'publicado'}
 						<button
 							type="button"
-							onclick={(e) => programar(a.c, e)}
+							onclick={(e) => definirStatusRapido(a.c, 'programar', e)}
 							title="Marcar como Programar"
 							aria-label="Marcar como Programar"
 							class="size-3 shrink-0 rounded-full border border-brand-amber bg-brand-amber/30 transition-colors hover:bg-brand-amber"
+						></button>
+					{:else if a.c.status === 'programar'}
+						<button
+							type="button"
+							onclick={(e) => definirStatusRapido(a.c, 'publicado', e)}
+							title="Marcar como Publicado"
+							aria-label="Marcar como Publicado"
+							class="size-3 shrink-0 rounded-full border border-brand-green bg-brand-green/30 transition-colors hover:bg-brand-green"
 						></button>
 					{/if}
 				</span>
