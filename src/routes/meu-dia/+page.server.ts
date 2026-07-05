@@ -47,11 +47,12 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		.sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
 
 	const cargoParam = url.searchParams.get('cargo');
+	// Padrão = cargo do próprio usuário logado (mesmo que ainda não tenha rotina);
+	// só cai para um cargo com rotina existente se o usuário não tiver cargo.
 	const cargoSel =
 		(cargoParam && cargosOpcoes.some((c) => c.value === cargoParam) && cargoParam) ||
-		meusCargos.find((c) => cargosComRotina.includes(c)) ||
-		cargosComRotina[0] ||
 		meusCargos[0] ||
+		cargosComRotina[0] ||
 		'social_media';
 
 	const { data: rotinaItens } = await supabase

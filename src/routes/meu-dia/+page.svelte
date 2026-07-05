@@ -142,8 +142,8 @@
 		</div>
 	</div>
 
-	<div class="grid gap-4 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] items-start">
-		<!-- HERO: Hoje (checklist) -->
+	<div class="space-y-4">
+		<!-- HERO: Hoje (checklist) — largura inteira -->
 		<Card padding="none" class="overflow-hidden">
 			<div class="bg-gradient-to-br from-brand to-brand-600 px-5 py-4 text-white">
 				<div class="flex items-center justify-between">
@@ -163,7 +163,7 @@
 
 			<div class="p-3">
 				{#if hojeItens.length}
-					<ul class="space-y-1">
+					<ul class="grid gap-1 sm:grid-cols-2 xl:grid-cols-3">
 						{#each hojeItens as it (it.id)}
 							{@const feito = feitos.has(it.id)}
 							<li>
