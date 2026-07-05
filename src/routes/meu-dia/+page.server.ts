@@ -1,24 +1,78 @@
-import type { PageServerLoad } from './$types';
+import { fail } from '@sveltejs/kit';
+import { hojeSP } from '$lib/rotina';
+import { funcaoLabel } from '$lib/equipe';
+import type { Actions, PageServerLoad } from './$types';
 
 function um<T>(v: T | T[] | null | undefined): T | null {
 	return Array.isArray(v) ? (v[0] ?? null) : (v ?? null);
 }
 
-export const load: PageServerLoad = async ({ locals: { supabase } }) => {
+/** Colaborador do usuário logado (por auth_user_id, com fallback por e-mail). */
+async function meuColab(supabase: App.Locals['supabase'], user: { id: string; email?: string } | null) {
+	if (!user) return null;
+	let { data } = await supabase
+		.from('colaboradores')
+		.select('id, nome, funcao, funcoes')
+		.eq('auth_user_id', user.id)
+		.maybeSingle();
+	if (!data && user.email) {
+		({ data } = await supabase
+			.from('colaboradores')
+			.select('id, nome, funcao, funcoes')
+			.eq('email', user.email)
+			.maybeSingle());
+	}
+	return data ?? null;
+}
+
+export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	const {
 		data: { user }
 	} = await supabase.auth.getUser();
 
-	const { data: colab } = user
-		? await supabase
-				.from('colaboradores')
-				.select('id, nome')
-				.eq('auth_user_id', user.id)
-				.maybeSingle()
-		: { data: null };
+	const colab = await meuColab(supabase, user);
 	const meuId = (colab?.id as string | undefined) ?? null;
+	const meusCargos: string[] = colab?.funcoes?.length
+		? colab.funcoes
+		: colab?.funcao
+			? [colab.funcao]
+			: [];
 
-	// Minhas tarefas em aberto (todas da equipe se o login não estiver vinculado).
+	// --- Mapa de Rotina ---
+	const { data: cargosRaw } = await supabase.from('rotina_itens').select('cargo');
+	const cargosComRotina = [...new Set((cargosRaw ?? []).map((r) => r.cargo as string))];
+	// União: cargos do usuário + os que já têm rotina cadastrada (para o seletor).
+	const cargosOpcoes = [...new Set([...meusCargos, ...cargosComRotina])]
+		.map((c) => ({ value: c, label: funcaoLabel(c) }))
+		.sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
+
+	const cargoParam = url.searchParams.get('cargo');
+	const cargoSel =
+		(cargoParam && cargosOpcoes.some((c) => c.value === cargoParam) && cargoParam) ||
+		meusCargos.find((c) => cargosComRotina.includes(c)) ||
+		cargosComRotina[0] ||
+		meusCargos[0] ||
+		'social_media';
+
+	const { data: rotinaItens } = await supabase
+		.from('rotina_itens')
+		.select('id, cargo, dia_semana, titulo, ordem')
+		.eq('cargo', cargoSel)
+		.order('dia_semana', { ascending: true })
+		.order('ordem', { ascending: true });
+
+	const { data: hoje } = { data: hojeSP() };
+	let feitos: string[] = [];
+	if (meuId) {
+		const { data: concl } = await supabase
+			.from('rotina_conclusoes')
+			.select('item_id')
+			.eq('colaborador_id', meuId)
+			.eq('data', hoje.data);
+		feitos = (concl ?? []).map((c) => c.item_id as string);
+	}
+
+	// --- Tarefas em aberto ---
 	let tq = supabase
 		.from('tarefas')
 		.select('id, titulo, prazo, prioridade, projeto:projetos(nome)')
@@ -28,7 +82,7 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 	if (meuId) tq = tq.eq('responsavel_id', meuId);
 	const { data: tarefasRaw } = await tq;
 
-	// Minhas atividades do CRM pendentes (degrada se a migration 0005 não existir).
+	// --- Atividades do CRM pendentes ---
 	let aq = supabase
 		.from('crm_atividades')
 		.select(
@@ -63,6 +117,97 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 		nome: (colab?.nome as string | undefined) ?? null,
 		semColaborador: !meuId,
 		tarefas,
-		atividades
+		atividades,
+		rotina: {
+			cargoSel,
+			cargoLabel: funcaoLabel(cargoSel),
+			cargos: cargosOpcoes,
+			itens: (rotinaItens ?? []) as {
+				id: string;
+				cargo: string;
+				dia_semana: number;
+				titulo: string;
+				ordem: number;
+			}[],
+			feitos,
+			dia: hoje.dia,
+			dataHoje: hoje.data
+		}
 	};
+};
+
+export const actions: Actions = {
+	// Marca/desmarca um item da rotina como feito hoje (por pessoa/dia).
+	toggleRotina: async ({ request, locals: { supabase } }) => {
+		const {
+			data: { user }
+		} = await supabase.auth.getUser();
+		const colab = await meuColab(supabase, user);
+		if (!colab) return fail(401, { error: 'Vincule seu login a um colaborador em Equipe.' });
+
+		const fd = await request.formData();
+		const itemId = (fd.get('item_id') as string) ?? '';
+		if (!itemId) return fail(400, { error: 'Item inválido.' });
+		const { data: hoje } = { data: hojeSP() };
+
+		const { data: existente } = await supabase
+			.from('rotina_conclusoes')
+			.select('id')
+			.eq('item_id', itemId)
+			.eq('colaborador_id', colab.id)
+			.eq('data', hoje.data)
+			.maybeSingle();
+
+		const { error } = existente
+			? await supabase.from('rotina_conclusoes').delete().eq('id', existente.id)
+			: await supabase
+					.from('rotina_conclusoes')
+					.insert({ item_id: itemId, colaborador_id: colab.id, data: hoje.data });
+		if (error) return fail(500, { error: error.message });
+		return { ok: true, feito: !existente };
+	},
+
+	criarItem: async ({ request, locals: { supabase } }) => {
+		const fd = await request.formData();
+		const cargo = ((fd.get('cargo') as string) ?? '').trim() || 'social_media';
+		const dia = Number(fd.get('dia_semana'));
+		const titulo = ((fd.get('titulo') as string) ?? '').trim();
+		if (!titulo || !Number.isInteger(dia) || dia < 0 || dia > 6)
+			return fail(400, { error: 'Dados inválidos.' });
+
+		const { data: ultimo } = await supabase
+			.from('rotina_itens')
+			.select('ordem')
+			.eq('cargo', cargo)
+			.eq('dia_semana', dia)
+			.order('ordem', { ascending: false })
+			.limit(1)
+			.maybeSingle();
+		const ordem = (ultimo?.ordem ?? -1) + 1;
+
+		const { error } = await supabase
+			.from('rotina_itens')
+			.insert({ cargo, dia_semana: dia, titulo, ordem });
+		if (error) return fail(500, { error: error.message });
+		return { ok: true };
+	},
+
+	editarItem: async ({ request, locals: { supabase } }) => {
+		const fd = await request.formData();
+		const id = (fd.get('id') as string) ?? '';
+		const titulo = ((fd.get('titulo') as string) ?? '').trim();
+		if (!id || !titulo) return fail(400, { error: 'Dados inválidos.' });
+		const { error } = await supabase.from('rotina_itens').update({ titulo }).eq('id', id);
+		if (error) return fail(500, { error: error.message });
+		return { ok: true };
+	},
+
+	excluirItem: async ({ request, locals: { supabase } }) => {
+		const fd = await request.formData();
+		const id = (fd.get('id') as string) ?? '';
+		if (!id) return fail(400, { error: 'Item inválido.' });
+		const { error } = await supabase.from('rotina_itens').delete().eq('id', id);
+		if (error) return fail(500, { error: error.message });
+		return { ok: true };
+	}
 };
