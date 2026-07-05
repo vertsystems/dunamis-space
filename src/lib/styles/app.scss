@@ -68,7 +68,7 @@ body::before {
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	gap: 5px;
+	gap: 10px;
 	padding: 0 var(--ds-topbar-gap);
 	// O topbar é transparente; só o MENU é um pill de vidro. Logo e ações ficam
 	// sem fundo, colados ao menu. Cliques passam pelos vãos para o conteúdo abaixo.
