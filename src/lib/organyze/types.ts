@@ -37,7 +37,7 @@ export const STATUS_LABEL: Record<Status, string> = {
 
 export const PRIORIDADES: { valor: Prioridade; label: string; cor: string }[] = [
 	{ valor: 'baixa', label: 'Baixa', cor: '#98a2b3' },
-	{ valor: 'media', label: 'Média', cor: '#f5a524' },
+	{ valor: 'media', label: 'Média', cor: '#facc15' },
 	{ valor: 'alta', label: 'Alta', cor: '#f04438' }
 ];
 
