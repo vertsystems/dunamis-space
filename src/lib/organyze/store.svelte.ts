@@ -25,6 +25,33 @@ function hoje(): string {
 	return toISODate(new Date());
 }
 
+export type Modo = 'dia' | 'semana' | 'mes';
+
+function parseISO(iso: string): Date {
+	const [y, m, d] = iso.split('-').map(Number);
+	return new Date(y, m - 1, d);
+}
+/** Início da semana (segunda-feira) do dia informado. */
+export function inicioSemana(iso: string): string {
+	const d = parseISO(iso);
+	const off = (d.getDay() + 6) % 7; // 0=segunda
+	d.setDate(d.getDate() - off);
+	return toISODate(d);
+}
+export function fimSemana(iso: string): string {
+	const d = parseISO(inicioSemana(iso));
+	d.setDate(d.getDate() + 6);
+	return toISODate(d);
+}
+export function inicioMes(iso: string): string {
+	const [y, m] = iso.split('-').map(Number);
+	return toISODate(new Date(y, m - 1, 1));
+}
+export function fimMes(iso: string): string {
+	const [y, m] = iso.split('-').map(Number);
+	return toISODate(new Date(y, m, 0));
+}
+
 class OrganyzeStore {
 	supabase: SupabaseClient | null = null;
 	#ready = false;
@@ -37,11 +64,14 @@ class OrganyzeStore {
 	colaboradorId = $state<string | null>(null);
 
 	dia = $state<string>(hoje());
-	tarefas = $state<Tarefa[]>([]);
+	modo = $state<Modo>('dia');
+	tarefas = $state<Tarefa[]>([]); // conjunto carregado (dia/semana/mês)
 
 	// ---- Derivados ---------------------------------------------------------
-	total = $derived(this.tarefas.length);
-	concluidas = $derived(this.tarefas.filter((t) => t.status === 'concluida').length);
+	// Tarefas do dia em foco (usadas no quadro do modo "Dia" e no progresso).
+	tarefasDia = $derived(this.tarefas.filter((t) => t.data === this.dia));
+	total = $derived(this.tarefasDia.length);
+	concluidas = $derived(this.tarefasDia.filter((t) => t.status === 'concluida').length);
 	pendentes = $derived(this.total - this.concluidas);
 	tudoFeito = $derived(this.total > 0 && this.pendentes === 0);
 
@@ -88,16 +118,28 @@ class OrganyzeStore {
 		if (typeof localStorage !== 'undefined') localStorage.removeItem(K_PERFIL);
 	}
 
+	#range(): [string, string] {
+		if (this.modo === 'semana') return [inicioSemana(this.dia), fimSemana(this.dia)];
+		if (this.modo === 'mes') return [inicioMes(this.dia), fimMes(this.dia)];
+		return [this.dia, this.dia];
+	}
+
 	async carregarTarefas() {
 		if (!this.supabase || !this.colaboradorId) return;
 		this.loadingTarefas = true;
 		this.error = null;
 		try {
-			// Ao abrir HOJE, joga as pendentes de dias anteriores para hoje (rollover).
+			// Rollover: ao focar HOJE, joga pendentes de dias anteriores para hoje.
 			if (this.dia === hoje()) {
-				await db.rolarPendentesParaHoje(this.supabase, this.colaboradorId, this.dia);
+				await db.rolarPendentesParaHoje(this.supabase, this.colaboradorId, hoje());
 			}
-			this.tarefas = await db.fetchByColaboradorDia(this.supabase, this.colaboradorId, this.dia);
+			const [start, end] = this.#range();
+			this.tarefas = await db.fetchByColaboradorRange(
+				this.supabase,
+				this.colaboradorId,
+				start,
+				end
+			);
 		} catch (e) {
 			console.error('[organyze] carregarTarefas', e);
 			this.error = 'Não foi possível carregar as tarefas.';
@@ -106,6 +148,11 @@ class OrganyzeStore {
 		}
 	}
 
+	async setModo(modo: Modo) {
+		if (this.modo === modo) return;
+		this.modo = modo;
+		await this.carregarTarefas();
+	}
 	async setDia(dia: string) {
 		this.dia = dia;
 		await this.carregarTarefas();
@@ -113,11 +160,17 @@ class OrganyzeStore {
 	async irParaHoje() {
 		if (!this.ehHoje) await this.setDia(hoje());
 	}
-	async passarDia(delta: number) {
+	/** Navega pela unidade do modo atual (dia/semana/mês). */
+	async passar(delta: number) {
 		const [y, m, d] = this.dia.split('-').map(Number);
-		const base = new Date(y, m - 1, d);
-		base.setDate(base.getDate() + delta);
-		await this.setDia(toISODate(base));
+		if (this.modo === 'mes') {
+			await this.setDia(toISODate(new Date(y, m - 1 + delta, d)));
+		} else {
+			const step = this.modo === 'semana' ? 7 : 1;
+			const base = new Date(y, m - 1, d);
+			base.setDate(base.getDate() + delta * step);
+			await this.setDia(toISODate(base));
+		}
 	}
 
 	/** Executa a persistência em segundo plano; reverte + avisa se falhar. */

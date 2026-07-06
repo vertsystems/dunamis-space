@@ -70,19 +70,32 @@ export async function rolarPendentesParaHoje(
 	if (error) throw error;
 }
 
+const COLUNAS =
+	'id, colaborador_id, titulo, status, concluida, data, posicao, prioridade, prazo, descricao, subtarefas';
+
 /** Tarefas de um colaborador num dia (yyyy-mm-dd), ordenadas por posição. */
 export async function fetchByColaboradorDia(
 	supabase: SupabaseClient,
 	colaboradorId: string,
 	data: string
 ): Promise<Tarefa[]> {
+	return fetchByColaboradorRange(supabase, colaboradorId, data, data);
+}
+
+/** Tarefas de um colaborador num intervalo de datas [start, end] (inclusive). */
+export async function fetchByColaboradorRange(
+	supabase: SupabaseClient,
+	colaboradorId: string,
+	start: string,
+	end: string
+): Promise<Tarefa[]> {
 	const { data: rows, error } = await supabase
 		.from('organyze_tarefas')
-		.select(
-			'id, colaborador_id, titulo, status, concluida, data, posicao, prioridade, prazo, descricao, subtarefas'
-		)
+		.select(COLUNAS)
 		.eq('colaborador_id', colaboradorId)
-		.eq('data', data)
+		.gte('data', start)
+		.lte('data', end)
+		.order('data', { ascending: true })
 		.order('posicao', { ascending: true });
 	if (error) throw error;
 	return (rows ?? []).map(toTarefa);

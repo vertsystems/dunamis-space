@@ -1,5 +1,11 @@
 <script lang="ts">
-	import { organyze, toISODate } from '$lib/organyze/store.svelte';
+	import {
+		organyze,
+		toISODate,
+		inicioSemana,
+		fimSemana,
+		inicioMes
+	} from '$lib/organyze/store.svelte';
 	import {
 		corPrioridade,
 		proximaPrioridade,
@@ -8,6 +14,7 @@
 		STATUS_ORDEM,
 		PRIORIDADES
 	} from '$lib/organyze/types';
+	import type { Modo } from '$lib/organyze/store.svelte';
 	import type { Status, Tarefa } from '$lib/organyze/types';
 	import { Button, Modal } from '$lib/components/ui';
 	import CargoBadge from '$lib/components/CargoBadge.svelte';
@@ -20,6 +27,9 @@
 		Check,
 		GripVertical,
 		CalendarClock,
+		CalendarDays,
+		CalendarRange,
+		LayoutGrid,
 		LogOut
 	} from '@lucide/svelte';
 	import type { PageData } from './$types';
@@ -80,10 +90,78 @@
 		organyze.total ? Math.round((organyze.concluidas / organyze.total) * 100) : 0
 	);
 
+	// ---- Modos de visualização (Dia / Semana / Mês) ----
+	const MODOS = [
+		{ v: 'dia' as Modo, label: 'Dia', icon: CalendarDays },
+		{ v: 'semana' as Modo, label: 'Semana', icon: CalendarRange },
+		{ v: 'mes' as Modo, label: 'Mês', icon: LayoutGrid }
+	];
+
+	function fmtDiaMes(iso: string): string {
+		const [, m, d] = iso.split('-');
+		return `${d}/${m}`;
+	}
+	function parseISO(iso: string): Date {
+		const [y, m, d] = iso.split('-').map(Number);
+		return new Date(y, m - 1, d);
+	}
+
+	const periodoLabel = $derived.by(() => {
+		if (organyze.modo === 'semana') {
+			return `${fmtDiaMes(inicioSemana(organyze.dia))} – ${fmtDiaMes(fimSemana(organyze.dia))}`;
+		}
+		if (organyze.modo === 'mes') {
+			return parseISO(organyze.dia).toLocaleDateString('pt-BR', {
+				month: 'long',
+				year: 'numeric'
+			});
+		}
+		return rotuloDia.rel ?? rotuloDia.ext;
+	});
+
+	const ordAtivas = (arr: Tarefa[]) =>
+		[...arr].sort((a, b) => prazoOrdem(a) - prazoOrdem(b) || a.posicao - b.posicao);
+
+	// Semana: 7 dias com suas tarefas.
+	const diasSemana = $derived.by(() => {
+		const [y, m, d] = inicioSemana(organyze.dia).split('-').map(Number);
+		return Array.from({ length: 7 }, (_, i) => {
+			const dt = new Date(y, m - 1, d + i);
+			const iso = toISODate(dt);
+			return { iso, dt, tarefas: ordAtivas(organyze.tarefas.filter((t) => t.data === iso)) };
+		});
+	});
+
+	// Mês: grade de semanas (segunda a domingo) cobrindo o mês.
+	const semanasMes = $derived.by(() => {
+		const mesFoco = Number(organyze.dia.split('-')[1]);
+		const [y, m, d] = inicioSemana(inicioMes(organyze.dia)).split('-').map(Number);
+		const cells = Array.from({ length: 42 }, (_, i) => {
+			const dt = new Date(y, m - 1, d + i);
+			const iso = toISODate(dt);
+			return {
+				iso,
+				dia: dt.getDate(),
+				noMes: dt.getMonth() + 1 === mesFoco,
+				tarefas: organyze.tarefas.filter((t) => t.data === iso)
+			};
+		});
+		const semanas = [];
+		for (let i = 0; i < 42; i += 7) semanas.push(cells.slice(i, i + 7));
+		return semanas.filter((w) => w.some((c) => c.noMes));
+	});
+
+	const DOW = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+
+	function abrirDia(iso: string) {
+		organyze.dia = iso;
+		organyze.setModo('dia');
+	}
+
 	// Agrupa por status. Ativas (em execução / não iniciado) ordenadas por urgência;
 	// concluídas por posição.
 	const grupos = $derived.by(() => {
-		const by = (s: Status) => organyze.tarefas.filter((t) => t.status === s);
+		const by = (s: Status) => organyze.tarefasDia.filter((t) => t.status === s);
 		const urg = (arr: Tarefa[]) =>
 			[...arr].sort((a, b) => prazoOrdem(a) - prazoOrdem(b) || a.posicao - b.posicao);
 		return {
@@ -235,37 +313,49 @@
 			</Button>
 		</div>
 
-		<!-- Dia + progresso -->
+		<!-- Período + modos de visualização -->
 		<div class="rounded-[var(--radius-lg)] border border-grey-200 bg-surface p-5 shadow-xs">
-			<div class="flex items-center justify-between gap-3">
-				<div class="text-sm font-semibold text-grey">Agenda do dia</div>
+			<div class="flex flex-wrap items-center justify-between gap-3">
+				<!-- Seletor de modo -->
+				<div class="inline-flex rounded-[var(--radius)] bg-bg p-0.5">
+					{#each MODOS as mo (mo.v)}
+						{@const Ico = mo.icon}
+						<button
+							class="inline-flex items-center gap-1.5 rounded-[calc(var(--radius)-0.15rem)] px-3 py-1.5 text-xs font-semibold transition-colors"
+							class:bg-surface={organyze.modo === mo.v}
+							class:text-navy={organyze.modo === mo.v}
+							class:shadow-xs={organyze.modo === mo.v}
+							class:text-grey={organyze.modo !== mo.v}
+							onclick={() => organyze.setModo(mo.v)}
+						>
+							<Ico size={15} />
+							{mo.label}
+						</button>
+					{/each}
+				</div>
+				<!-- Navegação do período -->
 				<div class="flex items-center gap-1">
 					<button
 						class="grid size-8 place-items-center rounded-full text-grey hover:bg-bg hover:text-navy transition-colors"
-						aria-label="Dia anterior"
-						onclick={() => organyze.passarDia(-1)}
+						aria-label="Anterior"
+						onclick={() => organyze.passar(-1)}
 					>
 						<ChevronLeft size={18} />
 					</button>
-					<div class="min-w-[8.5rem] text-center">
-						<div class="text-sm font-semibold text-navy leading-tight capitalize">
-							{rotuloDia.rel ?? rotuloDia.ext}
-						</div>
-						{#if rotuloDia.rel}
-							<div class="text-[11px] text-grey capitalize">{rotuloDia.ext}</div>
-						{/if}
+					<div class="min-w-[9rem] text-center text-sm font-semibold text-navy capitalize">
+						{periodoLabel}
 					</div>
 					<button
 						class="grid size-8 place-items-center rounded-full text-grey hover:bg-bg hover:text-navy transition-colors"
-						aria-label="Próximo dia"
-						onclick={() => organyze.passarDia(1)}
+						aria-label="Próximo"
+						onclick={() => organyze.passar(1)}
 					>
 						<ChevronRight size={18} />
 					</button>
 				</div>
 			</div>
 
-			{#if !organyze.ehHoje}
+			{#if organyze.dia !== hojeStr}
 				<button
 					class="mt-3 text-xs font-semibold text-brand hover:underline"
 					onclick={() => organyze.irParaHoje()}
@@ -274,7 +364,7 @@
 				</button>
 			{/if}
 
-			{#if organyze.total > 0}
+			{#if organyze.modo === 'dia' && organyze.total > 0}
 				<div class="mt-4">
 					<div class="flex items-center justify-between text-xs text-grey mb-1.5">
 						<span class="font-medium">
@@ -293,7 +383,8 @@
 			{/if}
 		</div>
 
-		<!-- Adicionar tarefa (com opção de prazo) -->
+		<!-- Adicionar tarefa (com opção de prazo) — só no modo Dia -->
+		{#if organyze.modo === 'dia'}
 		<div class="space-y-2">
 			<div class="flex gap-2">
 				<input
@@ -336,6 +427,7 @@
 				</div>
 			{/if}
 		</div>
+		{/if}
 
 		<!-- Snippet de card de tarefa -->
 		{#snippet taskRow(t: Tarefa)}
@@ -429,13 +521,122 @@
 			</li>
 		{/snippet}
 
+		<!-- Snippet: dia da semana (modo Semana) -->
+		{#snippet diaSemana(d: { iso: string; dt: Date; tarefas: Tarefa[] })}
+			<div class="overflow-hidden rounded-[var(--radius-lg)] border border-grey-200 bg-surface shadow-xs">
+				<button
+					class="flex w-full items-center justify-between px-4 py-2.5 hover:bg-bg transition-colors"
+					onclick={() => abrirDia(d.iso)}
+				>
+					<span class="flex items-baseline gap-2">
+						<span
+							class="text-sm font-semibold capitalize"
+							class:text-brand={d.iso === hojeStr}
+							class:text-navy={d.iso !== hojeStr}
+						>
+							{d.dt.toLocaleDateString('pt-BR', { weekday: 'long' })}
+						</span>
+						<span class="text-xs text-grey">{fmtDiaMes(d.iso)}</span>
+					</span>
+					<span class="text-xs text-grey tabular-nums">
+						{d.tarefas.filter((t) => t.status === 'concluida').length}/{d.tarefas.length}
+					</span>
+				</button>
+				{#if d.tarefas.length}
+					<ul class="divide-y divide-grey-200 border-t border-grey-200">
+						{#each d.tarefas as t (t.id)}
+							{@const u = urgencia(t.prazo, hojeStr)}
+							<li>
+								<button
+									class="flex w-full items-center gap-2.5 px-4 py-2 text-left hover:bg-bg transition-colors"
+									onclick={() => abrirModal(t)}
+								>
+									<span
+										class="size-2 shrink-0 rounded-full"
+										style="background: {corPrioridade(t.prioridade)}"
+									></span>
+									<span
+										class="flex-1 truncate text-sm"
+										class:text-grey={t.status === 'concluida'}
+										class:line-through={t.status === 'concluida'}
+										class:text-navy={t.status !== 'concluida'}>{t.titulo}</span
+									>
+									{#if u && u.status !== 'futura'}
+										<span class="shrink-0 text-[11px] font-semibold" style="color: {u.cor}"
+											>{u.label}</span
+										>
+									{/if}
+								</button>
+							</li>
+						{/each}
+					</ul>
+				{:else}
+					<div class="border-t border-grey-200 px-4 py-3 text-xs text-grey/70">Sem tarefas</div>
+				{/if}
+			</div>
+		{/snippet}
+
+		<!-- Snippet: grade do mês (modo Mês) -->
+		{#snippet mesGrid()}
+			<div class="overflow-hidden rounded-[var(--radius-lg)] border border-grey-200 bg-surface shadow-xs">
+				<div class="grid grid-cols-7 border-b border-grey-200 bg-bg">
+					{#each DOW as d (d)}
+						<div class="px-1 py-2 text-center text-[11px] font-semibold uppercase text-grey">
+							{d}
+						</div>
+					{/each}
+				</div>
+				{#each semanasMes as semana, i (i)}
+					<div class="grid grid-cols-7">
+						{#each semana as cell (cell.iso)}
+							<button
+								class="min-h-[68px] border-b border-grey-200 p-1.5 text-left align-top transition-colors hover:bg-bg [&:not(:nth-child(7n))]:border-r"
+								class:bg-bg={!cell.noMes}
+								onclick={() => abrirDia(cell.iso)}
+							>
+								<div class="flex items-center justify-between">
+									<span
+										class="text-[11px] font-semibold"
+										class:grid={cell.iso === hojeStr}
+										class:size-5={cell.iso === hojeStr}
+										class:place-items-center={cell.iso === hojeStr}
+										class:rounded-full={cell.iso === hojeStr}
+										class:bg-brand={cell.iso === hojeStr}
+										class:text-white={cell.iso === hojeStr}
+										class:text-navy={cell.iso !== hojeStr && cell.noMes}
+										class:text-grey={cell.iso !== hojeStr && !cell.noMes}
+									>
+										{cell.dia}
+									</span>
+									{#if cell.tarefas.length}
+										<span class="text-[10px] text-grey tabular-nums">{cell.tarefas.length}</span>
+									{/if}
+								</div>
+								<div class="mt-1 flex flex-wrap gap-0.5">
+									{#each cell.tarefas.slice(0, 5) as t (t.id)}
+										<span
+											class="size-1.5 rounded-full"
+											style="background: {t.status === 'concluida'
+												? 'var(--color-brand-green)'
+												: corPrioridade(t.prioridade)}"
+										></span>
+									{/each}
+								</div>
+							</button>
+						{/each}
+					</div>
+				{/each}
+			</div>
+		{/snippet}
+
 		<!-- Lista / quadro -->
 		{#if organyze.loadingTarefas}
 			<div class="flex justify-center py-16 text-grey">
 				<span class="size-7 rounded-full border-2 border-grey-200 border-t-brand animate-spin"
 				></span>
 			</div>
-		{:else if organyze.total === 0}
+		{:else if organyze.modo === 'dia'}
+			{#if organyze.total === 0}
 			<div
 				class="flex flex-col items-center justify-center rounded-[var(--radius-lg)] border border-dashed border-grey-200 py-16 text-center"
 			>
@@ -447,7 +648,7 @@
 				</p>
 				<p class="text-xs text-grey mt-1">Adicione a primeira tarefa acima.</p>
 			</div>
-		{:else}
+			{:else}
 			{#each STATUS_ORDEM as s (s)}
 				<section
 					class="space-y-2 rounded-[var(--radius-lg)] p-1 transition-colors"
@@ -492,6 +693,15 @@
 					{/if}
 				</section>
 			{/each}
+			{/if}
+		{:else if organyze.modo === 'semana'}
+			<div class="space-y-2">
+				{#each diasSemana as d (d.iso)}
+					{@render diaSemana(d)}
+				{/each}
+			</div>
+		{:else}
+			{@render mesGrid()}
 		{/if}
 	</div>
 {/if}
