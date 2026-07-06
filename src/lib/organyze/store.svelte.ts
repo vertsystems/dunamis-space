@@ -3,7 +3,8 @@
 // daquele colaborador no dia selecionado. Mutations otimistas (rollback + toast).
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Colaborador, Prioridade, Status, Tarefa } from './types';
+import type { Colaborador, Meta, Prioridade, Status, Tarefa } from './types';
+import { metaConcluida } from './types';
 import { toast } from '$lib/toast.svelte';
 import * as db from './db';
 
@@ -23,6 +24,12 @@ export function toISODate(d: Date): string {
 
 function hoje(): string {
 	return toISODate(new Date());
+}
+
+/** Mês atual no formato yyyy-mm. */
+function mesAtual(): string {
+	const d = new Date();
+	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
 export type Modo = 'dia' | 'semana' | 'mes';
@@ -66,6 +73,11 @@ class OrganyzeStore {
 	dia = $state<string>(hoje());
 	modo = $state<Modo>('dia');
 	tarefas = $state<Tarefa[]>([]); // conjunto carregado (dia/semana/mês)
+
+	// Metas do Mês (por colaborador)
+	mesMeta = $state<string>(mesAtual());
+	metas = $state<Meta[]>([]);
+	loadingMetas = $state(false);
 
 	// ---- Derivados ---------------------------------------------------------
 	// Tarefas do dia em foco (usadas no quadro do modo "Dia" e no progresso).
@@ -317,6 +329,115 @@ class OrganyzeStore {
 			},
 			() => (this.tarefas = snapshot),
 			'Falha ao limpar concluídas.'
+		);
+	}
+
+	// ---- Metas do Mês ------------------------------------------------------
+	get mesMetaLabel(): string {
+		const [y, m] = this.mesMeta.split('-').map(Number);
+		return new Date(y, m - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+	}
+
+	async carregarMetas() {
+		if (!this.supabase || !this.colaboradorId) {
+			this.metas = [];
+			return;
+		}
+		this.loadingMetas = true;
+		try {
+			this.metas = await db.fetchMetas(this.supabase, this.colaboradorId, this.mesMeta);
+		} catch (e) {
+			console.error('[organyze] carregarMetas', e);
+			toast.error('Não foi possível carregar as metas.');
+		} finally {
+			this.loadingMetas = false;
+		}
+	}
+
+	/** Seleciona um perfil (a página de Metas recarrega via $effect). */
+	selecionarParaMetas(id: string) {
+		this.colaboradorId = id;
+		if (typeof localStorage !== 'undefined') localStorage.setItem(K_PERFIL, id);
+	}
+
+	setMesMeta(mes: string) {
+		this.mesMeta = mes;
+	}
+	passarMes(delta: number) {
+		const [y, m] = this.mesMeta.split('-').map(Number);
+		const d = new Date(y, m - 1 + delta, 1);
+		this.mesMeta = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+	}
+
+	#persistMeta(action: () => Promise<void>, rollback: () => void, errMsg: string) {
+		if (!this.supabase) return;
+		action().catch((e) => {
+			console.error('[organyze]', errMsg, e);
+			rollback();
+			toast.error(errMsg);
+		});
+	}
+
+	addMeta(titulo: string, alvo = 1, unidade = ''): Meta | null {
+		const nome = titulo.trim();
+		if (!nome || !this.colaboradorId) return null;
+		const posicao = this.metas.length ? Math.max(...this.metas.map((m) => m.posicao)) + 1 : 0;
+		const meta: Meta = {
+			id: uid(),
+			colaboradorId: this.colaboradorId,
+			mes: this.mesMeta,
+			titulo: nome,
+			alvo: Math.max(1, Math.round(alvo)),
+			atual: 0,
+			unidade: unidade.trim(),
+			posicao
+		};
+		this.metas = [...this.metas, meta];
+		this.#persistMeta(
+			() => db.insertMeta(this.supabase!, meta),
+			() => (this.metas = this.metas.filter((m) => m.id !== meta.id)),
+			'Falha ao adicionar meta.'
+		);
+		return meta;
+	}
+
+	#updateMeta(id: string, patch: Partial<Meta>, errMsg: string) {
+		const snapshot = this.metas;
+		this.metas = this.metas.map((m) => (m.id === id ? { ...m, ...patch } : m));
+		this.#persistMeta(
+			() => db.updateMeta(this.supabase!, id, patch),
+			() => (this.metas = snapshot),
+			errMsg
+		);
+	}
+
+	/** Soma delta ao progresso atual (limitado entre 0 e alvo). */
+	incMeta(id: string, delta: number) {
+		const m = this.metas.find((x) => x.id === id);
+		if (!m) return;
+		const atual = Math.max(0, Math.min(m.alvo, m.atual + delta));
+		if (atual !== m.atual) this.#updateMeta(id, { atual }, 'Falha ao atualizar meta.');
+	}
+	/** Alterna concluída: cheia ↔ zerada. */
+	toggleMeta(id: string) {
+		const m = this.metas.find((x) => x.id === id);
+		if (!m) return;
+		this.#updateMeta(id, { atual: metaConcluida(m) ? 0 : m.alvo }, 'Falha ao atualizar meta.');
+	}
+	editMeta(id: string, patch: { titulo?: string; alvo?: number; unidade?: string }) {
+		const clean: Partial<Meta> = {};
+		if (patch.titulo !== undefined && patch.titulo.trim()) clean.titulo = patch.titulo.trim();
+		if (patch.alvo !== undefined) clean.alvo = Math.max(1, Math.round(patch.alvo));
+		if (patch.unidade !== undefined) clean.unidade = patch.unidade.trim();
+		if (Object.keys(clean).length) this.#updateMeta(id, clean, 'Falha ao salvar meta.');
+	}
+	removeMeta(id: string) {
+		const snapshot = this.metas;
+		this.metas = this.metas.filter((m) => m.id !== id);
+		this.#persistMeta(
+			() => db.deleteMeta(this.supabase!, id),
+			() => (this.metas = snapshot),
+			'Falha ao excluir meta.'
 		);
 	}
 }

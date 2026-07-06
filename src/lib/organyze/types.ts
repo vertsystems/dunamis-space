@@ -43,6 +43,25 @@ export const STATUS_LABEL: Record<Status, string> = {
 	concluida: 'Concluídas'
 };
 
+// Metas do Mês (por colaborador).
+export interface Meta {
+	id: string;
+	colaboradorId: string;
+	mes: string; // yyyy-mm
+	titulo: string;
+	alvo: number;
+	atual: number;
+	unidade: string;
+	posicao: number;
+}
+
+/** Percentual de progresso (0–100). */
+export const metaPct = (m: Meta): number =>
+	m.alvo > 0 ? Math.min(100, Math.round((m.atual / m.alvo) * 100)) : 0;
+
+/** Meta concluída quando atinge (ou passa) o alvo. */
+export const metaConcluida = (m: Meta): boolean => m.alvo > 0 && m.atual >= m.alvo;
+
 export const PRIORIDADES: { valor: Prioridade; label: string; cor: string }[] = [
 	{ valor: 'baixa', label: 'Baixa', cor: '#98a2b3' },
 	{ valor: 'media', label: 'Média', cor: '#facc15' },

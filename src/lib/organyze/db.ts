@@ -4,7 +4,7 @@
 // (quadro de equipe compartilhado).
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Colaborador, Prioridade, Status, Subtarefa, Tarefa } from './types';
+import type { Colaborador, Meta, Prioridade, Status, Subtarefa, Tarefa } from './types';
 
 function toTarefa(r: {
 	id: string;
@@ -163,5 +163,72 @@ export async function updatePosicoes(
 
 export async function deleteTarefa(supabase: SupabaseClient, id: string): Promise<void> {
 	const { error } = await supabase.from('organyze_tarefas').delete().eq('id', id);
+	if (error) throw error;
+}
+
+// ---- Metas do Mês --------------------------------------------------------
+
+function toMeta(r: {
+	id: string;
+	colaborador_id: string;
+	mes: string;
+	titulo: string;
+	alvo: number;
+	atual: number;
+	unidade: string | null;
+	posicao: number;
+}): Meta {
+	return {
+		id: r.id,
+		colaboradorId: r.colaborador_id,
+		mes: r.mes,
+		titulo: r.titulo,
+		alvo: r.alvo,
+		atual: r.atual,
+		unidade: r.unidade ?? '',
+		posicao: r.posicao
+	};
+}
+
+export async function fetchMetas(
+	supabase: SupabaseClient,
+	colaboradorId: string,
+	mes: string
+): Promise<Meta[]> {
+	const { data, error } = await supabase
+		.from('organyze_metas')
+		.select('id, colaborador_id, mes, titulo, alvo, atual, unidade, posicao')
+		.eq('colaborador_id', colaboradorId)
+		.eq('mes', mes)
+		.order('posicao', { ascending: true });
+	if (error) throw error;
+	return (data ?? []).map(toMeta);
+}
+
+export async function insertMeta(supabase: SupabaseClient, m: Meta): Promise<void> {
+	const { error } = await supabase.from('organyze_metas').insert({
+		id: m.id,
+		colaborador_id: m.colaboradorId,
+		mes: m.mes,
+		titulo: m.titulo,
+		alvo: m.alvo,
+		atual: m.atual,
+		unidade: m.unidade,
+		posicao: m.posicao
+	});
+	if (error) throw error;
+}
+
+export async function updateMeta(
+	supabase: SupabaseClient,
+	id: string,
+	patch: Partial<Pick<Meta, 'titulo' | 'alvo' | 'atual' | 'unidade' | 'posicao'>>
+): Promise<void> {
+	const { error } = await supabase.from('organyze_metas').update(patch).eq('id', id);
+	if (error) throw error;
+}
+
+export async function deleteMeta(supabase: SupabaseClient, id: string): Promise<void> {
+	const { error } = await supabase.from('organyze_metas').delete().eq('id', id);
 	if (error) throw error;
 }
