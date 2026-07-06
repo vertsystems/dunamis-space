@@ -19,6 +19,12 @@ export const DTOOLS_FERRAMENTAS: Ferramenta[] = [
 		label: "Pag's Up",
 		icon: 'pagsup',
 		descricao: 'Gestão de pagamentos de marketing: cronograma, prestadores e negociações.'
+	},
+	{
+		href: '/dtools/organyze',
+		label: 'Organyze',
+		icon: 'organyze',
+		descricao: 'Lista de tarefas do dia: adicione o que precisa fazer e vá marcando o que concluiu.'
 	}
 ];
 

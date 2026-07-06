@@ -43,6 +43,7 @@
 		Globe,
 		Camera,
 		LifeBuoy,
+		ListChecks,
 		type IconProps
 	} from '@lucide/svelte';
 	import type { Component } from 'svelte';
@@ -87,7 +88,8 @@
 		map: MapPin,
 		globe: Globe,
 		camera: Camera,
-		lifebuoy: LifeBuoy
+		lifebuoy: LifeBuoy,
+		organyze: ListChecks
 	};
 </script>
 
