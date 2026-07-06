@@ -30,7 +30,6 @@ export const DTOOLS_FERRAMENTAS: Ferramenta[] = [
 		descricao: 'Lista de tarefas do dia: adicione o que precisa fazer e vá marcando o que concluiu.',
 		subitens: [
 			{ href: '/dtools/organyze', label: 'Tarefas' },
-			{ href: '/dtools/organyze/habit-tracker', label: 'Habit Tracker' },
 			{ href: '/dtools/organyze/metas', label: 'Metas do Mês' }
 		]
 	}
