@@ -589,14 +589,13 @@
 				{#each semanasMes as semana, i (i)}
 					<div class="grid grid-cols-7">
 						{#each semana as cell (cell.iso)}
-							<button
-								class="min-h-[68px] border-b border-grey-200 p-1.5 text-left align-top transition-colors hover:bg-bg [&:not(:nth-child(7n))]:border-r"
+							<div
+								class="flex min-h-[132px] flex-col gap-1 border-b border-grey-200 p-1.5 [&:not(:nth-child(7n))]:border-r"
 								class:bg-bg={!cell.noMes}
-								onclick={() => abrirDia(cell.iso)}
 							>
 								<div class="flex items-center justify-between">
-									<span
-										class="text-[11px] font-semibold"
+									<button
+										class="text-xs font-semibold"
 										class:grid={cell.iso === hojeStr}
 										class:size-5={cell.iso === hojeStr}
 										class:place-items-center={cell.iso === hojeStr}
@@ -605,24 +604,43 @@
 										class:text-white={cell.iso === hojeStr}
 										class:text-navy={cell.iso !== hojeStr && cell.noMes}
 										class:text-grey={cell.iso !== hojeStr && !cell.noMes}
+										title="Abrir dia"
+										onclick={() => abrirDia(cell.iso)}
 									>
 										{cell.dia}
-									</span>
-									{#if cell.tarefas.length}
-										<span class="text-[10px] text-grey tabular-nums">{cell.tarefas.length}</span>
+									</button>
+								</div>
+								<div class="flex flex-col gap-0.5">
+									{#each cell.tarefas.slice(0, 4) as t (t.id)}
+										<button
+											class="flex items-center gap-1 rounded px-1 py-0.5 text-left transition-colors hover:bg-surface"
+											title={t.titulo}
+											onclick={() => abrirModal(t)}
+										>
+											<span
+												class="size-1.5 shrink-0 rounded-full"
+												style="background: {t.status === 'concluida'
+													? 'var(--color-brand-green)'
+													: corPrioridade(t.prioridade)}"
+											></span>
+											<span
+												class="truncate text-[11px] leading-tight"
+												class:text-grey={t.status === 'concluida'}
+												class:line-through={t.status === 'concluida'}
+												class:text-navy={t.status !== 'concluida'}>{t.titulo}</span
+											>
+										</button>
+									{/each}
+									{#if cell.tarefas.length > 4}
+										<button
+											class="px-1 text-left text-[10px] font-medium text-grey hover:text-brand"
+											onclick={() => abrirDia(cell.iso)}
+										>
+											+{cell.tarefas.length - 4} mais
+										</button>
 									{/if}
 								</div>
-								<div class="mt-1 flex flex-wrap gap-0.5">
-									{#each cell.tarefas.slice(0, 5) as t (t.id)}
-										<span
-											class="size-1.5 rounded-full"
-											style="background: {t.status === 'concluida'
-												? 'var(--color-brand-green)'
-												: corPrioridade(t.prioridade)}"
-										></span>
-									{/each}
-								</div>
-							</button>
+							</div>
 						{/each}
 					</div>
 				{/each}
