@@ -36,9 +36,9 @@ export const STATUS_LABEL: Record<Status, string> = {
 };
 
 export const PRIORIDADES: { valor: Prioridade; label: string; cor: string }[] = [
-	{ valor: 'alta', label: 'Alta', cor: '#f04438' },
+	{ valor: 'baixa', label: 'Baixa', cor: '#98a2b3' },
 	{ valor: 'media', label: 'Média', cor: '#f5a524' },
-	{ valor: 'baixa', label: 'Baixa', cor: '#98a2b3' }
+	{ valor: 'alta', label: 'Alta', cor: '#f04438' }
 ];
 
 export const proximaPrioridade = (p: Prioridade): Prioridade =>
