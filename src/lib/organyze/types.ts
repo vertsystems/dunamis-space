@@ -27,7 +27,7 @@ export interface Tarefa {
 }
 
 // Ordem de exibição das seções (topo → base).
-export const STATUS_ORDEM: Status[] = ['em_execucao', 'nao_iniciado', 'concluida'];
+export const STATUS_ORDEM: Status[] = ['nao_iniciado', 'em_execucao', 'concluida'];
 
 export const STATUS_LABEL: Record<Status, string> = {
 	em_execucao: 'Em execução',
