@@ -284,7 +284,7 @@
 {:else}
 	<!-- ===== Tela 2: tarefas do colaborador ===== -->
 	{@const c = organyze.colaborador}
-	<div class="max-w-2xl space-y-4">
+	<div class="max-w-4xl space-y-4">
 		<!-- Cabeçalho: perfil + trocar -->
 		<div class="flex items-center gap-3">
 			<span class="relative inline-block">
