@@ -11,6 +11,7 @@
 	import type { Status, Tarefa } from '$lib/organyze/types';
 	import { Button, Modal } from '$lib/components/ui';
 	import CargoBadge from '$lib/components/CargoBadge.svelte';
+	import RichText from '$lib/components/organyze/RichText.svelte';
 	import {
 		ChevronLeft,
 		ChevronRight,
@@ -34,6 +35,7 @@
 	// Modal de edição
 	let modalId = $state<string | null>(null);
 	let mTitulo = $state('');
+	let novaSub = $state('');
 	const modalTarefa = $derived(organyze.tarefas.find((t) => t.id === modalId) ?? null);
 
 	$effect(() => {
@@ -204,7 +206,7 @@
 {:else}
 	<!-- ===== Tela 2: tarefas do colaborador ===== -->
 	{@const c = organyze.colaborador}
-	<div class="mx-auto max-w-2xl space-y-4">
+	<div class="max-w-2xl space-y-4">
 		<!-- Cabeçalho: perfil + trocar -->
 		<div class="flex items-center gap-3">
 			<span class="relative inline-block">
@@ -391,15 +393,27 @@
 					>
 						{t.titulo}
 					</span>
-					{#if t.prazo}
-						<span
-							class="mt-1.5 inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium"
-							style="border-color: {u ? u.cor + '66' : 'var(--color-grey-200)'}; color: {u
-								? u.cor
-								: 'var(--color-grey)'}"
-						>
-							<CalendarClock size={12} />
-							{u ? u.label : t.prazo}
+					{#if t.prazo || t.subtarefas.length}
+						<span class="mt-1.5 flex flex-wrap items-center gap-1.5">
+							{#if t.prazo}
+								<span
+									class="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium"
+									style="border-color: {u ? u.cor + '66' : 'var(--color-grey-200)'}; color: {u
+										? u.cor
+										: 'var(--color-grey)'}"
+								>
+									<CalendarClock size={12} />
+									{u ? u.label : t.prazo}
+								</span>
+							{/if}
+							{#if t.subtarefas.length}
+								<span
+									class="inline-flex items-center gap-1 rounded-full border border-grey-200 px-2 py-0.5 text-[11px] font-medium text-grey"
+								>
+									<Check size={11} />
+									{t.subtarefas.filter((s) => s.feita).length}/{t.subtarefas.length}
+								</span>
+							{/if}
 						</span>
 					{/if}
 				</button>
@@ -566,6 +580,94 @@
 							onclick={() => modalId && organyze.setPrazo(modalId, null)}>remover</button
 						>
 					{/if}
+				</div>
+			</div>
+
+			<!-- Descrição (editor leve) -->
+			<div>
+				<span class="mb-1.5 block text-sm font-medium text-navy">Descrição</span>
+				{#key modalTarefa.id}
+					<RichText
+						value={modalTarefa.descricao}
+						onSave={(html) => modalId && organyze.setDescricao(modalId, html)}
+					/>
+				{/key}
+			</div>
+
+			<!-- Subtarefas -->
+			<div>
+				<div class="mb-1.5 flex items-center justify-between">
+					<span class="text-sm font-medium text-navy">Subtarefas</span>
+					{#if modalTarefa.subtarefas.length}
+						<span class="text-xs text-grey tabular-nums">
+							{modalTarefa.subtarefas.filter((s) => s.feita).length}/{modalTarefa.subtarefas.length}
+						</span>
+					{/if}
+				</div>
+
+				{#if modalTarefa.subtarefas.length}
+					<ul class="mb-2 space-y-1.5">
+						{#each modalTarefa.subtarefas as s (s.id)}
+							<li
+								class="group/sub flex items-center gap-2.5 rounded-[var(--radius)] border border-grey-200 bg-surface px-3 py-2"
+							>
+								<button
+									class="grid size-4 shrink-0 place-items-center rounded border-2 transition-colors"
+									class:border-grey-200={!s.feita}
+									class:border-brand={s.feita}
+									class:bg-brand={s.feita}
+									class:text-white={s.feita}
+									aria-label={s.feita ? 'Desmarcar subtarefa' : 'Concluir subtarefa'}
+									onclick={() => modalId && organyze.toggleSubtarefa(modalId, s.id)}
+								>
+									{#if s.feita}<Check size={10} strokeWidth={3} />{/if}
+								</button>
+								<input
+									class="flex-1 bg-transparent text-sm outline-none"
+									class:text-grey={s.feita}
+									class:line-through={s.feita}
+									class:text-navy={!s.feita}
+									value={s.titulo}
+									onchange={(e) =>
+										modalId && organyze.editSubtarefa(modalId, s.id, e.currentTarget.value)}
+								/>
+								<button
+									class="grid size-7 shrink-0 place-items-center rounded-md text-grey opacity-0 transition-all hover:bg-brand-danger/10 hover:text-brand-danger group-hover/sub:opacity-100"
+									aria-label="Excluir subtarefa"
+									onclick={() => modalId && organyze.removeSubtarefa(modalId, s.id)}
+								>
+									<Trash2 size={14} />
+								</button>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+
+				<div class="flex gap-2">
+					<input
+						class="h-9 w-full rounded-[var(--radius)] border border-grey-200 bg-surface px-3 text-sm text-navy-900 outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/20"
+						placeholder="Adicionar subtarefa…"
+						bind:value={novaSub}
+						onkeydown={(e) => {
+							if (e.key === 'Enter' && modalId && novaSub.trim()) {
+								organyze.addSubtarefa(modalId, novaSub);
+								novaSub = '';
+							}
+						}}
+					/>
+					<button
+						class="grid size-9 shrink-0 place-items-center rounded-[var(--radius)] bg-brand text-white transition-all hover:brightness-105 active:scale-95 disabled:opacity-50"
+						aria-label="Adicionar subtarefa"
+						disabled={!novaSub.trim()}
+						onclick={() => {
+							if (modalId && novaSub.trim()) {
+								organyze.addSubtarefa(modalId, novaSub);
+								novaSub = '';
+							}
+						}}
+					>
+						<Plus size={16} />
+					</button>
 				</div>
 			</div>
 

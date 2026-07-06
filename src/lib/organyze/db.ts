@@ -4,7 +4,7 @@
 // (quadro de equipe compartilhado).
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Colaborador, Prioridade, Status, Tarefa } from './types';
+import type { Colaborador, Prioridade, Status, Subtarefa, Tarefa } from './types';
 
 function toTarefa(r: {
 	id: string;
@@ -16,6 +16,8 @@ function toTarefa(r: {
 	posicao: number;
 	prioridade: string;
 	prazo: string | null;
+	descricao: string | null;
+	subtarefas: Subtarefa[] | null;
 }): Tarefa {
 	// Fallback: se `status` ainda estiver nulo, deriva do antigo `concluida`.
 	const status = (r.status as Status) ?? (r.concluida ? 'concluida' : 'em_execucao');
@@ -27,7 +29,9 @@ function toTarefa(r: {
 		data: r.data,
 		posicao: r.posicao,
 		prioridade: (r.prioridade as Prioridade) ?? 'media',
-		prazo: r.prazo ?? null
+		prazo: r.prazo ?? null,
+		descricao: r.descricao ?? '',
+		subtarefas: Array.isArray(r.subtarefas) ? r.subtarefas : []
 	};
 }
 
@@ -74,7 +78,9 @@ export async function fetchByColaboradorDia(
 ): Promise<Tarefa[]> {
 	const { data: rows, error } = await supabase
 		.from('organyze_tarefas')
-		.select('id, colaborador_id, titulo, status, concluida, data, posicao, prioridade, prazo')
+		.select(
+			'id, colaborador_id, titulo, status, concluida, data, posicao, prioridade, prazo, descricao, subtarefas'
+		)
 		.eq('colaborador_id', colaboradorId)
 		.eq('data', data)
 		.order('posicao', { ascending: true });
@@ -94,7 +100,9 @@ export async function insertTarefa(supabase: SupabaseClient, t: Tarefa): Promise
 		data: t.data,
 		posicao: t.posicao,
 		prioridade: t.prioridade,
-		prazo: t.prazo
+		prazo: t.prazo,
+		descricao: t.descricao,
+		subtarefas: t.subtarefas
 	});
 	if (error) throw error;
 }
@@ -102,7 +110,9 @@ export async function insertTarefa(supabase: SupabaseClient, t: Tarefa): Promise
 export async function updateTarefa(
 	supabase: SupabaseClient,
 	id: string,
-	patch: Partial<Pick<Tarefa, 'titulo' | 'status' | 'posicao' | 'prioridade' | 'prazo'>>
+	patch: Partial<
+		Pick<Tarefa, 'titulo' | 'status' | 'posicao' | 'prioridade' | 'prazo' | 'descricao' | 'subtarefas'>
+	>
 ): Promise<void> {
 	const row: Record<string, unknown> = {};
 	if (patch.titulo !== undefined) row.titulo = patch.titulo;
@@ -113,6 +123,8 @@ export async function updateTarefa(
 	if (patch.posicao !== undefined) row.posicao = patch.posicao;
 	if (patch.prioridade !== undefined) row.prioridade = patch.prioridade;
 	if (patch.prazo !== undefined) row.prazo = patch.prazo;
+	if (patch.descricao !== undefined) row.descricao = patch.descricao;
+	if (patch.subtarefas !== undefined) row.subtarefas = patch.subtarefas;
 	const { error } = await supabase.from('organyze_tarefas').update(row).eq('id', id);
 	if (error) throw error;
 }

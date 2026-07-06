@@ -15,6 +15,12 @@ export interface Colaborador {
 	funcao: string | null;
 }
 
+export interface Subtarefa {
+	id: string;
+	titulo: string;
+	feita: boolean;
+}
+
 export interface Tarefa {
 	id: string;
 	colaboradorId: string;
@@ -24,6 +30,8 @@ export interface Tarefa {
 	posicao: number; // ordem manual dentro do status (desempate)
 	prioridade: Prioridade;
 	prazo: string | null; // yyyy-mm-dd (prazo de entrega) ou null
+	descricao: string; // HTML enxuto (editor leve)
+	subtarefas: Subtarefa[];
 }
 
 // Ordem de exibição das seções (topo → base).

@@ -145,7 +145,9 @@ class OrganyzeStore {
 			data: this.dia,
 			posicao,
 			prioridade: 'media',
-			prazo: prazo || null
+			prazo: prazo || null,
+			descricao: '',
+			subtarefas: []
 		};
 		this.tarefas = [...this.tarefas, tarefa];
 		this.#persist(
@@ -188,6 +190,38 @@ class OrganyzeStore {
 
 	setPrazo(id: string, prazo: string | null) {
 		this.#update(id, { prazo }, 'Falha ao salvar prazo.');
+	}
+
+	setDescricao(id: string, descricao: string) {
+		this.#update(id, { descricao }, 'Falha ao salvar descrição.');
+	}
+
+	// ---- Subtarefas --------------------------------------------------------
+	addSubtarefa(id: string, titulo: string) {
+		const t = this.tarefas.find((x) => x.id === id);
+		const nome = titulo.trim();
+		if (!t || !nome) return;
+		const subtarefas = [...t.subtarefas, { id: uid(), titulo: nome, feita: false }];
+		this.#update(id, { subtarefas }, 'Falha ao salvar subtarefa.');
+	}
+	toggleSubtarefa(id: string, subId: string) {
+		const t = this.tarefas.find((x) => x.id === id);
+		if (!t) return;
+		const subtarefas = t.subtarefas.map((s) => (s.id === subId ? { ...s, feita: !s.feita } : s));
+		this.#update(id, { subtarefas }, 'Falha ao atualizar subtarefa.');
+	}
+	editSubtarefa(id: string, subId: string, titulo: string) {
+		const t = this.tarefas.find((x) => x.id === id);
+		const nome = titulo.trim();
+		if (!t || !nome) return;
+		const subtarefas = t.subtarefas.map((s) => (s.id === subId ? { ...s, titulo: nome } : s));
+		this.#update(id, { subtarefas }, 'Falha ao salvar subtarefa.');
+	}
+	removeSubtarefa(id: string, subId: string) {
+		const t = this.tarefas.find((x) => x.id === id);
+		if (!t) return;
+		const subtarefas = t.subtarefas.filter((s) => s.id !== subId);
+		this.#update(id, { subtarefas }, 'Falha ao excluir subtarefa.');
 	}
 
 	removeTarefa(id: string) {
