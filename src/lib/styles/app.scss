@@ -346,6 +346,30 @@ body::before {
 		color: #8a94a6;
 	}
 
+	// Submenus de uma ferramenta (ex.: Organyze → Tarefas / Habit Tracker / Metas)
+	.area-subs {
+		display: flex;
+		flex-direction: column;
+		margin: 1px 0 6px 1.35rem;
+		padding-left: 0.55rem;
+		border-left: 1.5px solid rgba(16, 24, 40, 0.09);
+	}
+
+	.area-sub {
+		padding: 0.4rem 0.75rem;
+		font-size: 0.82rem;
+		font-weight: 500;
+		color: #6b7686;
+		border-radius: 10px;
+		margin-bottom: 1px;
+
+		&.is-active {
+			background-color: rgba(59, 110, 246, 0.1);
+			color: var(--ds-primary);
+			font-weight: 600;
+		}
+	}
+
 	// Item de submenu ainda não definido (placeholder "em breve")
 	.area-soon {
 		display: flex;

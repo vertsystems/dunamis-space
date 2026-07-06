@@ -51,7 +51,13 @@
 		return () => sub.subscription.unsubscribe();
 	});
 
-	type Area = { href?: string; label: string; icon: string; soon?: boolean };
+	type Area = {
+		href?: string;
+		label: string;
+		icon: string;
+		soon?: boolean;
+		subitens?: { href: string; label: string }[];
+	};
 	type Departamento = {
 		id: string;
 		label: string;
@@ -119,7 +125,12 @@
 			icon: 'dtools',
 			href: '/dtools',
 			base: '/dtools',
-			areas: DTOOLS_FERRAMENTAS.map((f) => ({ href: f.href, label: f.label, icon: f.icon }))
+			areas: DTOOLS_FERRAMENTAS.map((f) => ({
+				href: f.href,
+				label: f.label,
+				icon: f.icon,
+				subitens: f.subitens
+			}))
 		}
 	];
 
@@ -265,6 +276,19 @@
 										<span class="area-badge">{sosAbertos}</span>
 									{/if}
 								</a>
+							{/if}
+							{#if a.subitens?.length && areaAtiva(a.href)}
+								<div class="area-subs">
+									{#each a.subitens as sub (sub.href)}
+										<a
+											href={sub.href}
+											class="area-sub"
+											class:is-active={page.url.pathname === sub.href}
+										>
+											{sub.label}
+										</a>
+									{/each}
+								</div>
 							{/if}
 						{/each}
 					</nav>
