@@ -93,6 +93,10 @@ class OrganyzeStore {
 		this.loadingTarefas = true;
 		this.error = null;
 		try {
+			// Ao abrir HOJE, joga as pendentes de dias anteriores para hoje (rollover).
+			if (this.dia === hoje()) {
+				await db.rolarPendentesParaHoje(this.supabase, this.colaboradorId, this.dia);
+			}
 			this.tarefas = await db.fetchByColaboradorDia(this.supabase, this.colaboradorId, this.dia);
 		} catch (e) {
 			console.error('[organyze] carregarTarefas', e);
@@ -141,7 +145,7 @@ class OrganyzeStore {
 			data: this.dia,
 			posicao,
 			prioridade: 'media',
-			etiquetas: []
+			prazo: null
 		};
 		this.tarefas = [...this.tarefas, tarefa];
 		this.#persist(
@@ -177,8 +181,8 @@ class OrganyzeStore {
 		this.#update(id, { prioridade }, 'Falha ao alterar prioridade.');
 	}
 
-	setEtiquetas(id: string, etiquetas: string[]) {
-		this.#update(id, { etiquetas }, 'Falha ao salvar etiquetas.');
+	setPrazo(id: string, prazo: string | null) {
+		this.#update(id, { prazo }, 'Falha ao salvar prazo.');
 	}
 
 	removeTarefa(id: string) {

@@ -18,9 +18,9 @@ export interface Tarefa {
 	titulo: string;
 	concluida: boolean;
 	data: string; // yyyy-mm-dd (dia da tarefa)
-	posicao: number; // ordem dentro do dia
+	posicao: number; // ordem manual dentro do dia (desempate)
 	prioridade: Prioridade;
-	etiquetas: string[];
+	prazo: string | null; // yyyy-mm-dd (prazo de entrega) ou null
 }
 
 export const PRIORIDADES: { valor: Prioridade; label: string; cor: string }[] = [
@@ -34,3 +34,19 @@ export const proximaPrioridade = (p: Prioridade): Prioridade =>
 
 export const corPrioridade = (p: Prioridade): string =>
 	PRIORIDADES.find((x) => x.valor === p)?.cor ?? '#98a2b3';
+
+/** Chave numérica do prazo p/ ordenar por urgência (sem prazo vai por último). */
+export const prazoOrdem = (t: Tarefa): number =>
+	t.prazo ? Number(t.prazo.replaceAll('-', '')) : Number.POSITIVE_INFINITY;
+
+export type Urgencia = { status: 'atrasada' | 'hoje' | 'futura'; label: string; cor: string };
+
+/** Classifica o prazo em relação a hoje (yyyy-mm-dd). */
+export function urgencia(prazo: string | null, hoje: string): Urgencia | null {
+	if (!prazo) return null;
+	if (prazo < hoje) return { status: 'atrasada', label: 'Atrasada', cor: '#f04438' };
+	if (prazo === hoje) return { status: 'hoje', label: 'Hoje', cor: '#f5a524' };
+	// Data futura: formata dd/mm.
+	const [, m, d] = prazo.split('-');
+	return { status: 'futura', label: `${d}/${m}`, cor: '#98a2b3' };
+}

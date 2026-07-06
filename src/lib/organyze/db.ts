@@ -14,7 +14,7 @@ function toTarefa(r: {
 	data: string;
 	posicao: number;
 	prioridade: string;
-	etiquetas: string[] | null;
+	prazo: string | null;
 }): Tarefa {
 	return {
 		id: r.id,
@@ -24,7 +24,7 @@ function toTarefa(r: {
 		data: r.data,
 		posicao: r.posicao,
 		prioridade: (r.prioridade as Prioridade) ?? 'media',
-		etiquetas: r.etiquetas ?? []
+		prazo: r.prazo ?? null
 	};
 }
 
@@ -44,6 +44,25 @@ export async function fetchColaboradores(supabase: SupabaseClient): Promise<Cola
 	}));
 }
 
+/**
+ * Rollover: joga tarefas NÃO concluídas de dias anteriores para `hoje`.
+ * Assim, o que não foi feito "cai" automaticamente para o dia seguinte (acumulando
+ * até hoje). Chamado antes de carregar as tarefas de hoje.
+ */
+export async function rolarPendentesParaHoje(
+	supabase: SupabaseClient,
+	colaboradorId: string,
+	hoje: string
+): Promise<void> {
+	const { error } = await supabase
+		.from('organyze_tarefas')
+		.update({ data: hoje })
+		.eq('colaborador_id', colaboradorId)
+		.eq('concluida', false)
+		.lt('data', hoje);
+	if (error) throw error;
+}
+
 /** Tarefas de um colaborador num dia (yyyy-mm-dd), ordenadas por posição. */
 export async function fetchByColaboradorDia(
 	supabase: SupabaseClient,
@@ -52,7 +71,7 @@ export async function fetchByColaboradorDia(
 ): Promise<Tarefa[]> {
 	const { data: rows, error } = await supabase
 		.from('organyze_tarefas')
-		.select('id, colaborador_id, titulo, concluida, data, posicao, prioridade, etiquetas')
+		.select('id, colaborador_id, titulo, concluida, data, posicao, prioridade, prazo')
 		.eq('colaborador_id', colaboradorId)
 		.eq('data', data)
 		.order('posicao', { ascending: true });
@@ -70,7 +89,7 @@ export async function insertTarefa(supabase: SupabaseClient, t: Tarefa): Promise
 		data: t.data,
 		posicao: t.posicao,
 		prioridade: t.prioridade,
-		etiquetas: t.etiquetas
+		prazo: t.prazo
 	});
 	if (error) throw error;
 }
@@ -78,14 +97,14 @@ export async function insertTarefa(supabase: SupabaseClient, t: Tarefa): Promise
 export async function updateTarefa(
 	supabase: SupabaseClient,
 	id: string,
-	patch: Partial<Pick<Tarefa, 'titulo' | 'concluida' | 'posicao' | 'prioridade' | 'etiquetas'>>
+	patch: Partial<Pick<Tarefa, 'titulo' | 'concluida' | 'posicao' | 'prioridade' | 'prazo'>>
 ): Promise<void> {
 	const row: Record<string, unknown> = {};
 	if (patch.titulo !== undefined) row.titulo = patch.titulo;
 	if (patch.concluida !== undefined) row.concluida = patch.concluida;
 	if (patch.posicao !== undefined) row.posicao = patch.posicao;
 	if (patch.prioridade !== undefined) row.prioridade = patch.prioridade;
-	if (patch.etiquetas !== undefined) row.etiquetas = patch.etiquetas;
+	if (patch.prazo !== undefined) row.prazo = patch.prazo;
 	const { error } = await supabase.from('organyze_tarefas').update(row).eq('id', id);
 	if (error) throw error;
 }
@@ -95,14 +114,13 @@ export async function updatePosicoes(
 	supabase: SupabaseClient,
 	ordem: { id: string; posicao: number }[]
 ): Promise<void> {
-	await Promise.all(
+	const results = await Promise.all(
 		ordem.map(({ id, posicao }) =>
 			supabase.from('organyze_tarefas').update({ posicao }).eq('id', id)
 		)
-	).then((results) => {
-		const err = results.find((r) => r.error)?.error;
-		if (err) throw err;
-	});
+	);
+	const err = results.find((r) => r.error)?.error;
+	if (err) throw err;
 }
 
 export async function deleteTarefa(supabase: SupabaseClient, id: string): Promise<void> {
