@@ -1,8 +1,15 @@
 <script lang="ts">
 	import { organyze, toISODate } from '$lib/organyze/store.svelte';
-	import { corPrioridade, proximaPrioridade, prazoOrdem, urgencia } from '$lib/organyze/types';
-	import type { Tarefa } from '$lib/organyze/types';
-	import { Button } from '$lib/components/ui';
+	import {
+		corPrioridade,
+		proximaPrioridade,
+		prazoOrdem,
+		urgencia,
+		STATUS_ORDEM,
+		PRIORIDADES
+	} from '$lib/organyze/types';
+	import type { Status, Tarefa } from '$lib/organyze/types';
+	import { Button, Modal } from '$lib/components/ui';
 	import CargoBadge from '$lib/components/CargoBadge.svelte';
 	import {
 		ChevronLeft,
@@ -19,9 +26,15 @@
 	let { data }: { data: PageData } = $props();
 
 	let novoTitulo = $state('');
-	let editandoId = $state<string | null>(null);
-	let editTexto = $state('');
+	let novoPrazo = $state('');
+	let mostrarPrazoNovo = $state(false);
 	let dragId = $state<string | null>(null);
+	let dragOver = $state<Status | null>(null);
+
+	// Modal de edição
+	let modalId = $state<string | null>(null);
+	let mTitulo = $state('');
+	const modalTarefa = $derived(organyze.tarefas.find((t) => t.id === modalId) ?? null);
 
 	$effect(() => {
 		if (data.supabase) organyze.init(data.supabase);
@@ -33,13 +46,18 @@
 		const p = nome.trim().split(/\s+/);
 		return ((p[0]?.[0] ?? '') + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase();
 	}
-
 	const CORES = ['#3b6ef6', '#17b26a', '#f5a524', '#f04438', '#8b5cf6', '#ec4899', '#0ea5e9'];
 	function corAvatar(id: string): string {
 		let h = 0;
 		for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
 		return CORES[h % CORES.length];
 	}
+
+	const SECAO_META: Record<Status, { label: string; cor: string }> = {
+		em_execucao: { label: 'Em execução', cor: 'var(--color-brand)' },
+		nao_iniciado: { label: 'Não iniciado', cor: 'var(--color-grey)' },
+		concluida: { label: 'Concluídas', cor: 'var(--color-brand-green)' }
+	};
 
 	const rotuloDia = $derived.by(() => {
 		const [y, m, d] = organyze.dia.split('-').map(Number);
@@ -60,41 +78,74 @@
 		organyze.total ? Math.round((organyze.concluidas / organyze.total) * 100) : 0
 	);
 
-	// Em execução: ordenadas por urgência (prazo mais próximo primeiro; sem prazo por
-	// último), com a ordem manual (posição) como desempate. Concluídas: por posição.
-	const pendentes = $derived(
-		organyze.tarefas
-			.filter((t) => !t.concluida)
-			.sort((a, b) => prazoOrdem(a) - prazoOrdem(b) || a.posicao - b.posicao)
-	);
-	const feitas = $derived(organyze.tarefas.filter((t) => t.concluida));
+	// Agrupa por status. Ativas (em execução / não iniciado) ordenadas por urgência;
+	// concluídas por posição.
+	const grupos = $derived.by(() => {
+		const by = (s: Status) => organyze.tarefas.filter((t) => t.status === s);
+		const urg = (arr: Tarefa[]) =>
+			[...arr].sort((a, b) => prazoOrdem(a) - prazoOrdem(b) || a.posicao - b.posicao);
+		return {
+			em_execucao: urg(by('em_execucao')),
+			nao_iniciado: urg(by('nao_iniciado')),
+			concluida: [...by('concluida')].sort((a, b) => a.posicao - b.posicao)
+		} as Record<Status, Tarefa[]>;
+	});
 
 	function adicionar() {
-		if (organyze.addTarefa(novoTitulo)) novoTitulo = '';
-	}
-	function confirmarEdicao() {
-		if (editandoId) {
-			organyze.editTarefa(editandoId, editTexto);
-			editandoId = null;
+		if (organyze.addTarefa(novoTitulo, novoPrazo || null)) {
+			novoTitulo = '';
+			novoPrazo = '';
+			mostrarPrazoNovo = false;
 		}
 	}
-	function focar(node: HTMLInputElement) {
-		node.focus();
-		node.select();
+
+	// ---- Modal ----
+	function abrirModal(t: Tarefa) {
+		modalId = t.id;
+		mTitulo = t.titulo;
+	}
+	function fecharModal() {
+		if (modalId && mTitulo.trim() && mTitulo.trim() !== modalTarefa?.titulo) {
+			organyze.editTarefa(modalId, mTitulo);
+		}
+		modalId = null;
+	}
+	function excluirDoModal() {
+		if (modalId) organyze.removeTarefa(modalId);
+		modalId = null;
 	}
 
-	function onDrop(alvoId: string) {
+	// ---- Drag & drop entre seções ----
+	function moverPara(alvoStatus: Status, alvoId: string | null) {
 		const from = dragId;
 		dragId = null;
-		if (!from || from === alvoId) return;
-		// Reordena manualmente dentro das em execução (desempate); concluídas ao final.
-		const pend = pendentes.map((t) => t.id);
-		const done = feitas.map((t) => t.id);
-		const fromIdx = pend.indexOf(from);
-		const toIdx = pend.indexOf(alvoId);
-		if (fromIdx < 0 || toIdx < 0) return;
-		pend.splice(toIdx, 0, pend.splice(fromIdx, 1)[0]);
-		organyze.reordenar([...pend, ...done]);
+		dragOver = null;
+		if (!from) return;
+		// Lista completa (todas as seções, na ordem visível) sem a tarefa arrastada.
+		const lista = STATUS_ORDEM.flatMap((s) =>
+			grupos[s].filter((t) => t.id !== from).map((t) => ({ id: t.id, status: s }))
+		);
+		const item = { id: from, status: alvoStatus };
+		if (alvoId && alvoId !== from) {
+			const idx = lista.findIndex((x) => x.id === alvoId);
+			lista.splice(idx < 0 ? lista.length : idx, 0, item);
+		} else {
+			// Soltou na seção (sem tarefa específica): coloca ao final do grupo.
+			const last = lista.map((x) => x.status).lastIndexOf(alvoStatus);
+			if (last >= 0) lista.splice(last + 1, 0, item);
+			else {
+				const oi = STATUS_ORDEM.indexOf(alvoStatus);
+				let at = lista.length;
+				for (let i = 0; i < lista.length; i++) {
+					if (STATUS_ORDEM.indexOf(lista[i].status) > oi) {
+						at = i;
+						break;
+					}
+				}
+				lista.splice(at, 0, item);
+			}
+		}
+		organyze.aplicarQuadro(lista);
 	}
 </script>
 
@@ -140,7 +191,6 @@
 									{iniciais(c.nome)}
 								</span>
 							{/if}
-							<!-- Bandeira do cargo (CEO = selo dourado) -->
 							<span class="absolute -bottom-1.5 left-1/2 -translate-x-1/2">
 								<CargoBadge funcao={c.funcao} />
 							</span>
@@ -241,40 +291,73 @@
 			{/if}
 		</div>
 
-		<!-- Adicionar tarefa -->
-		<div class="flex gap-2">
-			<input
-				class="h-11 w-full rounded-[var(--radius)] border border-grey-200 bg-surface px-4 text-sm text-navy-900 shadow-xs placeholder:text-grey/90 transition-colors hover:border-grey focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25"
-				placeholder="O que precisa ser feito?"
-				bind:value={novoTitulo}
-				onkeydown={(e) => e.key === 'Enter' && adicionar()}
-			/>
-			<Button onclick={adicionar} disabled={!novoTitulo.trim()}>
-				<Plus size={18} /> Adicionar
-			</Button>
+		<!-- Adicionar tarefa (com opção de prazo) -->
+		<div class="space-y-2">
+			<div class="flex gap-2">
+				<input
+					class="h-11 w-full rounded-[var(--radius)] border border-grey-200 bg-surface px-4 text-sm text-navy-900 shadow-xs placeholder:text-grey/90 transition-colors hover:border-grey focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25"
+					placeholder="O que precisa ser feito?"
+					bind:value={novoTitulo}
+					onkeydown={(e) => e.key === 'Enter' && adicionar()}
+				/>
+				<button
+					class="grid size-11 shrink-0 place-items-center rounded-[var(--radius)] border transition-colors"
+					class:border-grey-200={!mostrarPrazoNovo && !novoPrazo}
+					class:text-grey={!mostrarPrazoNovo && !novoPrazo}
+					class:border-brand={mostrarPrazoNovo || novoPrazo}
+					class:text-brand={mostrarPrazoNovo || novoPrazo}
+					class:bg-brand={false}
+					title="Definir prazo de entrega (opcional)"
+					aria-label="Definir prazo de entrega"
+					onclick={() => (mostrarPrazoNovo = !mostrarPrazoNovo)}
+				>
+					<CalendarClock size={18} />
+				</button>
+				<Button onclick={adicionar} disabled={!novoTitulo.trim()}>
+					<Plus size={18} /> Adicionar
+				</Button>
+			</div>
+			{#if mostrarPrazoNovo}
+				<div class="flex items-center gap-2 px-1">
+					<span class="text-xs font-medium text-grey">Prazo de entrega:</span>
+					<input
+						type="date"
+						bind:value={novoPrazo}
+						class="h-8 rounded-[var(--radius)] border border-grey-200 bg-surface px-2 text-xs text-navy outline-none focus-visible:border-brand [color-scheme:light]"
+					/>
+					{#if novoPrazo}
+						<button
+							class="text-xs font-medium text-grey hover:text-brand-danger"
+							onclick={() => (novoPrazo = '')}>limpar</button
+						>
+					{/if}
+				</div>
+			{/if}
 		</div>
 
-		<!-- Snippet de linha de tarefa -->
-		{#snippet taskRow(t: Tarefa, arrastar: boolean)}
+		<!-- Snippet de card de tarefa -->
+		{#snippet taskRow(t: Tarefa)}
 			{@const u = urgencia(t.prazo, hojeStr)}
 			<li
-				draggable={arrastar}
-				ondragstart={() => arrastar && (dragId = t.id)}
-				ondragover={(e) => arrastar && e.preventDefault()}
-				ondrop={() => arrastar && onDrop(t.id)}
+				draggable="true"
+				ondragstart={() => (dragId = t.id)}
+				ondragover={(e) => {
+					e.preventDefault();
+					e.stopPropagation();
+				}}
+				ondrop={(e) => {
+					e.stopPropagation();
+					moverPara(t.status, t.id);
+				}}
 				class="group flex items-start gap-2.5 rounded-[var(--radius)] border border-grey-200 bg-surface px-3 py-3 shadow-xs transition-colors hover:border-grey"
-				class:opacity-60={t.concluida}
+				class:opacity-60={t.status === 'concluida'}
 			>
-				{#if arrastar}
-					<span
-						class="mt-0.5 cursor-grab text-grey/50 hover:text-grey active:cursor-grabbing"
-						aria-hidden="true"
-					>
-						<GripVertical size={18} />
-					</span>
-				{:else}
-					<span class="mt-0.5 w-[18px] shrink-0" aria-hidden="true"></span>
-				{/if}
+				<span
+					class="mt-0.5 cursor-grab text-grey/50 hover:text-grey active:cursor-grabbing"
+					aria-hidden="true"
+				>
+					<GripVertical size={18} />
+				</span>
 
 				<!-- Prioridade (clique cicla) -->
 				<button
@@ -288,67 +371,40 @@
 				<!-- Checkbox -->
 				<button
 					class="mt-0.5 grid size-5 shrink-0 place-items-center rounded-md border-2 transition-colors"
-					class:border-grey-200={!t.concluida}
-					class:border-brand={t.concluida}
-					class:bg-brand={t.concluida}
-					class:text-white={t.concluida}
-					aria-label={t.concluida ? 'Desmarcar tarefa' : 'Concluir tarefa'}
+					class:border-grey-200={t.status !== 'concluida'}
+					class:border-brand={t.status === 'concluida'}
+					class:bg-brand={t.status === 'concluida'}
+					class:text-white={t.status === 'concluida'}
+					aria-label={t.status === 'concluida' ? 'Reabrir tarefa' : 'Concluir tarefa'}
 					onclick={() => organyze.toggle(t.id)}
 				>
-					{#if t.concluida}<Check size={13} strokeWidth={3} />{/if}
+					{#if t.status === 'concluida'}<Check size={13} strokeWidth={3} />{/if}
 				</button>
 
-				<!-- Conteúdo -->
-				<div class="min-w-0 flex-1">
-					{#if editandoId === t.id}
-						<input
-							class="h-8 w-full rounded-md border border-brand bg-surface px-2 text-sm text-navy-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/25"
-							bind:value={editTexto}
-							onkeydown={(e) => {
-								if (e.key === 'Enter') confirmarEdicao();
-								if (e.key === 'Escape') editandoId = null;
-							}}
-							onblur={confirmarEdicao}
-							use:focar
-						/>
-					{:else}
-						<button
-							class="block w-full text-left text-sm transition-colors"
-							class:text-navy={!t.concluida}
-							class:text-grey={t.concluida}
-							class:line-through={t.concluida}
-							ondblclick={() => {
-								editandoId = t.id;
-								editTexto = t.titulo;
-							}}
-							onclick={() => organyze.toggle(t.id)}
-						>
-							{t.titulo}
-						</button>
-					{/if}
-
-					<!-- Prazo de entrega -->
-					<div class="mt-1.5 flex flex-wrap items-center gap-2">
+				<!-- Conteúdo (clique abre modal) -->
+				<button class="min-w-0 flex-1 text-left" onclick={() => abrirModal(t)}>
+					<span
+						class="block text-sm transition-colors"
+						class:text-navy={t.status !== 'concluida'}
+						class:text-grey={t.status === 'concluida'}
+						class:line-through={t.status === 'concluida'}
+					>
+						{t.titulo}
+					</span>
+					{#if t.prazo}
 						<span
-							class="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 transition-colors"
-							style="border-color: {u ? u.cor + '66' : 'var(--color-grey-200)'}"
+							class="mt-1.5 inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium"
+							style="border-color: {u ? u.cor + '66' : 'var(--color-grey-200)'}; color: {u
+								? u.cor
+								: 'var(--color-grey)'}"
 						>
-							<CalendarClock size={12} style="color: {u ? u.cor : 'var(--color-grey)'}" />
-							<input
-								type="date"
-								value={t.prazo ?? ''}
-								onchange={(e) => organyze.setPrazo(t.id, e.currentTarget.value || null)}
-								class="bg-transparent text-[11px] font-medium text-navy outline-none [color-scheme:light]"
-								aria-label="Prazo de entrega"
-							/>
+							<CalendarClock size={12} />
+							{u ? u.label : t.prazo}
 						</span>
-						{#if u && u.status !== 'futura'}
-							<span class="text-[11px] font-semibold" style="color: {u.cor}">{u.label}</span>
-						{/if}
-					</div>
-				</div>
+					{/if}
+				</button>
 
-				<!-- Excluir -->
+				<!-- Excluir rápido -->
 				<button
 					class="grid size-8 shrink-0 place-items-center rounded-md text-grey opacity-0 transition-all hover:bg-brand-danger/10 hover:text-brand-danger group-hover:opacity-100"
 					aria-label="Excluir tarefa"
@@ -359,7 +415,7 @@
 			</li>
 		{/snippet}
 
-		<!-- Lista -->
+		<!-- Lista / quadro -->
 		{#if organyze.loadingTarefas}
 			<div class="flex justify-center py-16 text-grey">
 				<span class="size-7 rounded-full border-2 border-grey-200 border-t-brand animate-spin"
@@ -378,42 +434,151 @@
 				<p class="text-xs text-grey mt-1">Adicione a primeira tarefa acima.</p>
 			</div>
 		{:else}
-			{#if pendentes.length}
-				<section class="space-y-2">
-					<h2 class="px-1 text-xs font-semibold uppercase tracking-wider text-grey">
-						Em execução <span class="text-grey/70 tabular-nums">({pendentes.length})</span>
-					</h2>
-					<ul class="space-y-2">
-						{#each pendentes as t (t.id)}
-							{@render taskRow(t, true)}
-						{/each}
-					</ul>
-				</section>
-			{/if}
-
-			{#if feitas.length}
-				<section class="space-y-2 pt-3">
-					<div class="flex items-center justify-between px-1">
+			{#each STATUS_ORDEM as s (s)}
+				<section
+					class="space-y-2 rounded-[var(--radius-lg)] p-1 transition-colors"
+					class:bg-brand-50={dragOver === s}
+					style={dragOver === s ? 'background: rgba(59,110,246,0.06)' : ''}
+					ondragover={(e) => {
+						e.preventDefault();
+						dragOver = s;
+					}}
+					ondragleave={() => dragOver === s && (dragOver = null)}
+					ondrop={() => moverPara(s, null)}
+					role="list"
+				>
+					<div class="flex items-center gap-2 px-2 pt-1">
+						<span class="size-2 rounded-full" style="background: {SECAO_META[s].cor}"></span>
 						<h2 class="text-xs font-semibold uppercase tracking-wider text-grey">
-							Concluídas <span class="text-grey/70 tabular-nums">({feitas.length})</span>
+							{SECAO_META[s].label}
+							<span class="text-grey/70 tabular-nums">({grupos[s].length})</span>
 						</h2>
-						<button
-							class="text-xs font-semibold text-grey hover:text-brand-danger transition-colors"
-							onclick={() => organyze.limparConcluidas()}
-						>
-							Limpar
-						</button>
+						{#if s === 'concluida' && grupos[s].length}
+							<button
+								class="ml-auto text-xs font-semibold text-grey hover:text-brand-danger transition-colors"
+								onclick={() => organyze.limparConcluidas()}
+							>
+								Limpar
+							</button>
+						{/if}
 					</div>
-					<ul class="space-y-2">
-						{#each feitas as t (t.id)}
-							{@render taskRow(t, false)}
-						{/each}
-					</ul>
+
+					{#if grupos[s].length}
+						<ul class="space-y-2">
+							{#each grupos[s] as t (t.id)}
+								{@render taskRow(t)}
+							{/each}
+						</ul>
+					{:else}
+						<div
+							class="rounded-[var(--radius)] border border-dashed border-grey-200 py-4 text-center text-[11px] text-grey/80"
+						>
+							Arraste tarefas para cá
+						</div>
+					{/if}
 				</section>
-			{/if}
+			{/each}
 		{/if}
 	</div>
 {/if}
+
+<!-- ===== Modal de edição da tarefa ===== -->
+<Modal open={modalId !== null} title="Editar tarefa" size="md" onClose={fecharModal}>
+	{#if modalTarefa}
+		{@const u = urgencia(modalTarefa.prazo, hojeStr)}
+		<div class="space-y-5">
+			<!-- Título -->
+			<div>
+				<label for="m-titulo" class="mb-1.5 block text-sm font-medium text-navy">Título</label>
+				<input
+					id="m-titulo"
+					class="h-11 w-full rounded-[var(--radius)] border border-grey-200 bg-surface px-3.5 text-sm text-navy-900 outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25"
+					bind:value={mTitulo}
+					onblur={() => modalId && mTitulo.trim() && organyze.editTarefa(modalId, mTitulo)}
+				/>
+			</div>
+
+			<!-- Situação -->
+			<div>
+				<span class="mb-1.5 block text-sm font-medium text-navy">Situação</span>
+				<div class="grid grid-cols-3 gap-2">
+					{#each STATUS_ORDEM as s (s)}
+						<button
+							class="rounded-[var(--radius)] border px-2 py-2 text-xs font-semibold transition-colors"
+							class:border-grey-200={modalTarefa.status !== s}
+							class:text-slate={modalTarefa.status !== s}
+							class:bg-bg={modalTarefa.status !== s}
+							style={modalTarefa.status === s
+								? `border-color:${SECAO_META[s].cor}; color:${SECAO_META[s].cor}; background:${SECAO_META[s].cor}14`
+								: ''}
+							onclick={() => modalId && organyze.setStatus(modalId, s)}
+						>
+							{SECAO_META[s].label}
+						</button>
+					{/each}
+				</div>
+			</div>
+
+			<!-- Prioridade -->
+			<div>
+				<span class="mb-1.5 block text-sm font-medium text-navy">Prioridade</span>
+				<div class="grid grid-cols-3 gap-2">
+					{#each PRIORIDADES as p (p.valor)}
+						<button
+							class="flex items-center justify-center gap-2 rounded-[var(--radius)] border px-2 py-2 text-xs font-semibold transition-colors"
+							class:border-grey-200={modalTarefa.prioridade !== p.valor}
+							class:text-slate={modalTarefa.prioridade !== p.valor}
+							class:bg-bg={modalTarefa.prioridade !== p.valor}
+							style={modalTarefa.prioridade === p.valor
+								? `border-color:${p.cor}; color:${p.cor}; background:${p.cor}14`
+								: ''}
+							onclick={() => modalId && organyze.setPrioridade(modalId, p.valor)}
+						>
+							<span class="size-2.5 rounded-full" style="background: {p.cor}"></span>
+							{p.label}
+						</button>
+					{/each}
+				</div>
+			</div>
+
+			<!-- Prazo -->
+			<div>
+				<span class="mb-1.5 block text-sm font-medium text-navy">Prazo de entrega</span>
+				<div class="flex items-center gap-2">
+					<div
+						class="inline-flex items-center gap-2 rounded-[var(--radius)] border px-3 py-2"
+						style="border-color: {u ? u.cor + '66' : 'var(--color-grey-200)'}"
+					>
+						<CalendarClock size={16} style="color: {u ? u.cor : 'var(--color-grey)'}" />
+						<input
+							type="date"
+							value={modalTarefa.prazo ?? ''}
+							onchange={(e) => modalId && organyze.setPrazo(modalId, e.currentTarget.value || null)}
+							class="bg-transparent text-sm text-navy outline-none [color-scheme:light]"
+						/>
+					</div>
+					{#if u && u.status !== 'futura'}
+						<span class="text-xs font-semibold" style="color: {u.cor}">{u.label}</span>
+					{/if}
+					{#if modalTarefa.prazo}
+						<button
+							class="text-xs font-medium text-grey hover:text-brand-danger"
+							onclick={() => modalId && organyze.setPrazo(modalId, null)}>remover</button
+						>
+					{/if}
+				</div>
+			</div>
+
+			<!-- Ações -->
+			<div class="flex items-center justify-between border-t border-grey-200 pt-4">
+				<Button variant="danger" size="sm" onclick={excluirDoModal}>
+					<Trash2 size={15} /> Excluir
+				</Button>
+				<Button variant="secondary" size="sm" onclick={fecharModal}>Concluir edição</Button>
+			</div>
+		</div>
+	{/if}
+</Modal>
 
 <style>
 	/* Hover no perfil: cresce 15% e volta ao sair. */

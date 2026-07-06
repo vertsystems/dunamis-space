@@ -3,7 +3,7 @@
 // daquele colaborador no dia selecionado. Mutations otimistas (rollback + toast).
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Colaborador, Prioridade, Tarefa } from './types';
+import type { Colaborador, Prioridade, Status, Tarefa } from './types';
 import { toast } from '$lib/toast.svelte';
 import * as db from './db';
 
@@ -41,7 +41,7 @@ class OrganyzeStore {
 
 	// ---- Derivados ---------------------------------------------------------
 	total = $derived(this.tarefas.length);
-	concluidas = $derived(this.tarefas.filter((t) => t.concluida).length);
+	concluidas = $derived(this.tarefas.filter((t) => t.status === 'concluida').length);
 	pendentes = $derived(this.total - this.concluidas);
 	tudoFeito = $derived(this.total > 0 && this.pendentes === 0);
 
@@ -131,7 +131,7 @@ class OrganyzeStore {
 	}
 
 	// ---- Tarefas -----------------------------------------------------------
-	addTarefa(titulo: string): Tarefa | null {
+	addTarefa(titulo: string, prazo: string | null = null): Tarefa | null {
 		const trimmed = titulo.trim();
 		if (!trimmed || !this.colaboradorId) return null;
 		const posicao = this.tarefas.length
@@ -141,11 +141,11 @@ class OrganyzeStore {
 			id: uid(),
 			colaboradorId: this.colaboradorId,
 			titulo: trimmed,
-			concluida: false,
+			status: 'em_execucao',
 			data: this.dia,
 			posicao,
 			prioridade: 'media',
-			prazo: null
+			prazo: prazo || null
 		};
 		this.tarefas = [...this.tarefas, tarefa];
 		this.#persist(
@@ -169,7 +169,12 @@ class OrganyzeStore {
 	toggle(id: string) {
 		const alvo = this.tarefas.find((t) => t.id === id);
 		if (!alvo) return;
-		this.#update(id, { concluida: !alvo.concluida }, 'Falha ao atualizar tarefa.');
+		const status: Status = alvo.status === 'concluida' ? 'em_execucao' : 'concluida';
+		this.#update(id, { status }, 'Falha ao atualizar tarefa.');
+	}
+
+	setStatus(id: string, status: Status) {
+		this.#update(id, { status }, 'Falha ao mover tarefa.');
 	}
 
 	editTarefa(id: string, titulo: string) {
@@ -195,26 +200,30 @@ class OrganyzeStore {
 		);
 	}
 
-	/** Reordena as tarefas visíveis para a nova ordem de ids e persiste posições. */
-	reordenar(orderedIds: string[]) {
+	/**
+	 * Aplica a ordem/estado do quadro após um arrasto: `items` é a lista completa das
+	 * tarefas visíveis já na ordem final (topo→base, em todas as seções). posicao = índice
+	 * e status vem da seção onde cada tarefa parou.
+	 */
+	aplicarQuadro(items: { id: string; status: Status }[]) {
 		const snapshot = this.tarefas;
-		const pos = new Map(orderedIds.map((id, i) => [id, i]));
+		const meta = new Map(items.map((it, i) => [it.id, { posicao: i, status: it.status }]));
 		this.tarefas = [...this.tarefas]
-			.map((t) => (pos.has(t.id) ? { ...t, posicao: pos.get(t.id)! } : t))
+			.map((t) => (meta.has(t.id) ? { ...t, ...meta.get(t.id)! } : t))
 			.sort((a, b) => a.posicao - b.posicao);
-		const ordem = orderedIds.map((id, i) => ({ id, posicao: i }));
+		const ordem = items.map((it, i) => ({ id: it.id, posicao: i, status: it.status }));
 		this.#persist(
 			() => db.updatePosicoes(this.supabase!, ordem),
 			() => (this.tarefas = snapshot),
-			'Falha ao reordenar.'
+			'Falha ao mover tarefa.'
 		);
 	}
 
 	limparConcluidas() {
-		const concluidas = this.tarefas.filter((t) => t.concluida);
+		const concluidas = this.tarefas.filter((t) => t.status === 'concluida');
 		if (!concluidas.length) return;
 		const snapshot = this.tarefas;
-		this.tarefas = this.tarefas.filter((t) => !t.concluida);
+		this.tarefas = this.tarefas.filter((t) => t.status !== 'concluida');
 		this.#persist(
 			async () => {
 				for (const t of concluidas) await db.deleteTarefa(this.supabase!, t.id);

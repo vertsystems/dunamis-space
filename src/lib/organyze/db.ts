@@ -4,23 +4,26 @@
 // (quadro de equipe compartilhado).
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Colaborador, Prioridade, Tarefa } from './types';
+import type { Colaborador, Prioridade, Status, Tarefa } from './types';
 
 function toTarefa(r: {
 	id: string;
 	colaborador_id: string;
 	titulo: string;
-	concluida: boolean;
+	status: string | null;
+	concluida: boolean | null;
 	data: string;
 	posicao: number;
 	prioridade: string;
 	prazo: string | null;
 }): Tarefa {
+	// Fallback: se `status` ainda estiver nulo, deriva do antigo `concluida`.
+	const status = (r.status as Status) ?? (r.concluida ? 'concluida' : 'em_execucao');
 	return {
 		id: r.id,
 		colaboradorId: r.colaborador_id,
 		titulo: r.titulo,
-		concluida: r.concluida,
+		status,
 		data: r.data,
 		posicao: r.posicao,
 		prioridade: (r.prioridade as Prioridade) ?? 'media',
@@ -45,7 +48,7 @@ export async function fetchColaboradores(supabase: SupabaseClient): Promise<Cola
 }
 
 /**
- * Rollover: joga tarefas NÃO concluídas de dias anteriores para `hoje`.
+ * Rollover: joga tarefas ainda não concluídas de dias anteriores para `hoje`.
  * Assim, o que não foi feito "cai" automaticamente para o dia seguinte (acumulando
  * até hoje). Chamado antes de carregar as tarefas de hoje.
  */
@@ -58,7 +61,7 @@ export async function rolarPendentesParaHoje(
 		.from('organyze_tarefas')
 		.update({ data: hoje })
 		.eq('colaborador_id', colaboradorId)
-		.eq('concluida', false)
+		.neq('status', 'concluida')
 		.lt('data', hoje);
 	if (error) throw error;
 }
@@ -71,7 +74,7 @@ export async function fetchByColaboradorDia(
 ): Promise<Tarefa[]> {
 	const { data: rows, error } = await supabase
 		.from('organyze_tarefas')
-		.select('id, colaborador_id, titulo, concluida, data, posicao, prioridade, prazo')
+		.select('id, colaborador_id, titulo, status, concluida, data, posicao, prioridade, prazo')
 		.eq('colaborador_id', colaboradorId)
 		.eq('data', data)
 		.order('posicao', { ascending: true });
@@ -81,11 +84,13 @@ export async function fetchByColaboradorDia(
 
 export async function insertTarefa(supabase: SupabaseClient, t: Tarefa): Promise<void> {
 	// user_id não é enviado — tem default auth.uid() no banco (auditoria).
+	// concluida é mantido em sincronia com status por compatibilidade.
 	const { error } = await supabase.from('organyze_tarefas').insert({
 		id: t.id,
 		colaborador_id: t.colaboradorId,
 		titulo: t.titulo,
-		concluida: t.concluida,
+		status: t.status,
+		concluida: t.status === 'concluida',
 		data: t.data,
 		posicao: t.posicao,
 		prioridade: t.prioridade,
@@ -97,11 +102,14 @@ export async function insertTarefa(supabase: SupabaseClient, t: Tarefa): Promise
 export async function updateTarefa(
 	supabase: SupabaseClient,
 	id: string,
-	patch: Partial<Pick<Tarefa, 'titulo' | 'concluida' | 'posicao' | 'prioridade' | 'prazo'>>
+	patch: Partial<Pick<Tarefa, 'titulo' | 'status' | 'posicao' | 'prioridade' | 'prazo'>>
 ): Promise<void> {
 	const row: Record<string, unknown> = {};
 	if (patch.titulo !== undefined) row.titulo = patch.titulo;
-	if (patch.concluida !== undefined) row.concluida = patch.concluida;
+	if (patch.status !== undefined) {
+		row.status = patch.status;
+		row.concluida = patch.status === 'concluida';
+	}
 	if (patch.posicao !== undefined) row.posicao = patch.posicao;
 	if (patch.prioridade !== undefined) row.prioridade = patch.prioridade;
 	if (patch.prazo !== undefined) row.prazo = patch.prazo;
@@ -109,15 +117,20 @@ export async function updateTarefa(
 	if (error) throw error;
 }
 
-/** Atualiza a posição de várias tarefas (reordenação). */
+/** Atualiza a posição (e opcionalmente o status) de várias tarefas. */
 export async function updatePosicoes(
 	supabase: SupabaseClient,
-	ordem: { id: string; posicao: number }[]
+	ordem: { id: string; posicao: number; status?: Status }[]
 ): Promise<void> {
 	const results = await Promise.all(
-		ordem.map(({ id, posicao }) =>
-			supabase.from('organyze_tarefas').update({ posicao }).eq('id', id)
-		)
+		ordem.map(({ id, posicao, status }) => {
+			const row: Record<string, unknown> = { posicao };
+			if (status !== undefined) {
+				row.status = status;
+				row.concluida = status === 'concluida';
+			}
+			return supabase.from('organyze_tarefas').update(row).eq('id', id);
+		})
 	);
 	const err = results.find((r) => r.error)?.error;
 	if (err) throw err;
