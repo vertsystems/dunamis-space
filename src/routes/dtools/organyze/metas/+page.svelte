@@ -340,22 +340,26 @@
 
 								<!-- Controles -->
 								<div class="flex shrink-0 items-center gap-1">
-									<button
-										class="grid size-7 place-items-center rounded-md border border-grey-200 text-grey hover:bg-bg hover:text-navy transition-colors disabled:opacity-40"
-										aria-label="Diminuir"
-										disabled={m.atual <= 0}
-										onclick={() => organyze.incMeta(m.id, -1)}
-									>
-										<Minus size={14} />
-									</button>
-									<button
-										class="grid size-7 place-items-center rounded-md border border-grey-200 text-grey hover:bg-bg hover:text-navy transition-colors disabled:opacity-40"
-										aria-label="Aumentar"
-										disabled={m.atual >= m.alvo}
-										onclick={() => organyze.incMeta(m.id, 1)}
-									>
-										<Plus size={14} />
-									</button>
+									<!-- +/- de progresso só quando o alvo é maior que 1 (senão o
+									     círculo de concluir já resolve a meta binária). -->
+									{#if m.alvo > 1}
+										<button
+											class="grid size-7 place-items-center rounded-md border border-grey-200 text-grey hover:bg-bg hover:text-navy transition-colors disabled:opacity-40"
+											aria-label="Diminuir"
+											disabled={m.atual <= 0}
+											onclick={() => organyze.incMeta(m.id, -1)}
+										>
+											<Minus size={14} />
+										</button>
+										<button
+											class="grid size-7 place-items-center rounded-md border border-grey-200 text-grey hover:bg-bg hover:text-navy transition-colors disabled:opacity-40"
+											aria-label="Aumentar"
+											disabled={m.atual >= m.alvo}
+											onclick={() => organyze.incMeta(m.id, 1)}
+										>
+											<Plus size={14} />
+										</button>
+									{/if}
 									<button
 										class="grid size-7 place-items-center rounded-md text-grey opacity-0 transition-all hover:bg-bg hover:text-navy group-hover:opacity-100"
 										aria-label="Editar meta"
