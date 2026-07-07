@@ -1,11 +1,20 @@
 <script lang="ts">
 	import { organyze } from '$lib/organyze/store.svelte';
-	import { metaPct, metaConcluida } from '$lib/organyze/types';
+	import { metaPct, metaConcluida, diasNoMes } from '$lib/organyze/types';
 	import type { Meta } from '$lib/organyze/types';
-	import { Button, Card } from '$lib/components/ui';
+	import { Button } from '$lib/components/ui';
 	import CargoBadge from '$lib/components/CargoBadge.svelte';
 	import Icon from '$lib/components/Icon.svelte';
-	import { ChevronLeft, ChevronRight, Plus, Minus, Trash2, Check, Pencil, LogOut } from '@lucide/svelte';
+	import {
+		ChevronLeft,
+		ChevronRight,
+		Plus,
+		Minus,
+		Trash2,
+		Check,
+		Pencil,
+		LogOut
+	} from '@lucide/svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -17,6 +26,11 @@
 	let eAlvo = $state(1);
 	let eUnidade = $state('');
 
+	// Habit Tracker
+	let novoHabito = $state('');
+	let editHabId = $state<string | null>(null);
+	let eHabNome = $state('');
+
 	// Inicializa (colaboradores) e recarrega metas quando muda perfil ou mês.
 	$effect(() => {
 		if (data.supabase) organyze.init(data.supabase);
@@ -25,8 +39,33 @@
 		// deps: perfil + mês
 		void organyze.colaboradorId;
 		void organyze.mesMeta;
-		if (organyze.supabase && organyze.colaboradorId) organyze.carregarMetas();
+		if (organyze.supabase && organyze.colaboradorId) {
+			organyze.carregarMetas();
+			organyze.carregarHabitos();
+		}
 	});
+
+	// Dias do mês selecionado + destaque do dia de hoje (se for o mês atual).
+	const diasDoMes = $derived(
+		Array.from({ length: diasNoMes(organyze.mesMeta) }, (_, i) => i + 1)
+	);
+	const hojeDia = $derived.by(() => {
+		const d = new Date();
+		const mesHoje = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+		return organyze.mesMeta === mesHoje ? d.getDate() : null;
+	});
+
+	function adicionarHabito() {
+		if (organyze.addHabito(novoHabito)) novoHabito = '';
+	}
+	function abrirEdHabito(id: string, nome: string) {
+		editHabId = id;
+		eHabNome = nome;
+	}
+	function salvarHabito() {
+		if (editHabId) organyze.editHabito(editHabId, eHabNome);
+		editHabId = null;
+	}
 
 	function iniciais(nome: string): string {
 		const p = nome.trim().split(/\s+/);
@@ -340,22 +379,124 @@
 		{/if}
 
 		<!-- Habit Tracker (embutido) -->
-		<Card>
-			<div class="mb-1 flex items-center gap-2">
-				<Icon name="clipboard" size={16} class="text-brand" />
-				<h2 class="text-sm font-semibold text-navy">Habit Tracker</h2>
+		<div class="pt-2">
+			<div class="mb-3 flex items-center gap-2 border-t border-grey-200 pt-5">
+				<Icon name="clipboard" size={18} class="text-brand" />
+				<h2 class="text-base font-bold text-navy">Habit Tracker</h2>
+				<span class="text-xs text-grey capitalize">— {organyze.mesMetaLabel}</span>
 			</div>
-			<p class="mb-1 text-xs text-grey">Acompanhe a constância dos seus hábitos ao longo do mês.</p>
-			<div class="flex flex-col items-center justify-center py-10 text-center">
-				<span class="grid size-12 place-items-center rounded-full bg-bg text-grey mb-3">
-					<Icon name="check" size={22} />
-				</span>
-				<p class="text-sm font-medium text-navy">Em construção</p>
-				<p class="mt-1 max-w-md text-sm text-grey">
-					Em breve: cadastre hábitos, marque cada dia e veja sua sequência (streak) no mês.
+
+			<!-- Adicionar hábito -->
+			<div class="mb-3 flex gap-2">
+				<input
+					class="h-10 w-full max-w-sm rounded-[var(--radius)] border border-grey-200 bg-surface px-3.5 text-sm text-navy-900 shadow-xs placeholder:text-grey/90 transition-colors hover:border-grey focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25"
+					placeholder="Novo hábito (ex.: Bíblia, Água, Treino)…"
+					bind:value={novoHabito}
+					onkeydown={(e) => e.key === 'Enter' && adicionarHabito()}
+				/>
+				<Button onclick={adicionarHabito} disabled={!novoHabito.trim()}>
+					<Plus size={18} /> Adicionar
+				</Button>
+			</div>
+
+			{#if organyze.loadingHabitos}
+				<div class="flex justify-center py-12 text-grey">
+					<span class="size-7 rounded-full border-2 border-grey-200 border-t-brand animate-spin"
+					></span>
+				</div>
+			{:else if organyze.habitos.length === 0}
+				<div
+					class="flex flex-col items-center justify-center rounded-[var(--radius-lg)] border border-dashed border-grey-200 py-12 text-center"
+				>
+					<div class="grid size-11 place-items-center rounded-full bg-bg text-grey mb-3">
+						<Icon name="check" size={20} />
+					</div>
+					<p class="text-sm font-medium text-navy">Nenhum hábito neste mês</p>
+					<p class="text-xs text-grey mt-1">Adicione o primeiro hábito acima.</p>
+				</div>
+			{:else}
+				<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+					{#each organyze.habitos as h (h.id)}
+						{@const feitos = Object.values(h.dias).filter((v) => v === 'feito').length}
+						<div class="rounded-[var(--radius-lg)] border border-grey-200 bg-surface p-3 shadow-xs">
+							<!-- Cabeçalho do hábito -->
+							<div class="mb-2 flex items-center gap-1.5">
+								{#if editHabId === h.id}
+									<input
+										class="h-7 min-w-0 flex-1 rounded-md border border-brand bg-surface px-2 text-sm font-semibold text-navy outline-none"
+										bind:value={eHabNome}
+										onkeydown={(e) => {
+											if (e.key === 'Enter') salvarHabito();
+											if (e.key === 'Escape') editHabId = null;
+										}}
+										onblur={salvarHabito}
+									/>
+								{:else}
+									<h3 class="min-w-0 flex-1 truncate text-sm font-bold uppercase tracking-wide text-navy">
+										{h.nome}
+									</h3>
+									<span
+										class="shrink-0 rounded-full bg-brand-green/12 px-1.5 py-0.5 text-[10px] font-semibold text-brand-green tabular-nums"
+										title="Dias feitos"
+									>
+										{feitos}
+									</span>
+									<button
+										class="grid size-6 shrink-0 place-items-center rounded text-grey hover:bg-bg hover:text-navy transition-colors"
+										aria-label="Renomear hábito"
+										onclick={() => abrirEdHabito(h.id, h.nome)}
+									>
+										<Pencil size={13} />
+									</button>
+									<button
+										class="grid size-6 shrink-0 place-items-center rounded text-grey hover:bg-brand-danger/10 hover:text-brand-danger transition-colors"
+										aria-label="Excluir hábito"
+										onclick={() => organyze.removeHabito(h.id)}
+									>
+										<Trash2 size={13} />
+									</button>
+								{/if}
+							</div>
+
+							<!-- Grade de dias -->
+							<div class="grid grid-cols-7 gap-1">
+								{#each diasDoMes as d (d)}
+									{@const st = h.dias[String(d)]}
+									<button
+										class="relative grid aspect-square place-items-center rounded-md border text-[11px] font-semibold tabular-nums transition-colors"
+										class:border-grey-200={!st}
+										class:bg-surface={!st}
+										class:text-slate={!st}
+										class:hover:bg-bg={!st}
+										class:border-transparent={!!st}
+										class:bg-brand-green={st === 'feito'}
+										class:bg-brand-danger={st === 'falhou'}
+										class:text-white={!!st}
+										class:ring-2={hojeDia === d}
+										class:ring-brand={hojeDia === d}
+										class:ring-offset-1={hojeDia === d}
+										title={`Dia ${d}${st ? ` — ${st === 'feito' ? 'feito' : 'não feito'}` : ''}`}
+										onclick={() => organyze.marcarDia(h.id, d)}
+									>
+										{d}
+									</button>
+								{/each}
+							</div>
+						</div>
+					{/each}
+				</div>
+
+				<p class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-grey">
+					<span class="inline-flex items-center gap-1.5">
+						<span class="size-3 rounded bg-brand-green"></span> Feito
+					</span>
+					<span class="inline-flex items-center gap-1.5">
+						<span class="size-3 rounded bg-brand-danger"></span> Não feito
+					</span>
+					<span>Clique num dia para alternar (vazio → feito → não feito).</span>
 				</p>
-			</div>
-		</Card>
+			{/if}
+		</div>
 	</div>
 {/if}
 

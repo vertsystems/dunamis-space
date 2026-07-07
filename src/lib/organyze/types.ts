@@ -55,6 +55,28 @@ export interface Meta {
 	posicao: number;
 }
 
+// Habit Tracker (por colaborador, por mês).
+export type DiaStatus = 'feito' | 'falhou';
+
+export interface Habito {
+	id: string;
+	colaboradorId: string;
+	mes: string; // yyyy-mm
+	nome: string;
+	dias: Record<string, DiaStatus>; // { "1": "feito", "5": "falhou" }
+	posicao: number;
+}
+
+/** Nº de dias do mês (yyyy-mm). */
+export const diasNoMes = (mes: string): number => {
+	const [y, m] = mes.split('-').map(Number);
+	return new Date(y, m, 0).getDate();
+};
+
+/** Próximo estado ao clicar num dia: vazio → feito → falhou → vazio. */
+export const proximoDia = (atual: DiaStatus | undefined): DiaStatus | undefined =>
+	atual === undefined ? 'feito' : atual === 'feito' ? 'falhou' : undefined;
+
 /** Percentual de progresso (0–100). */
 export const metaPct = (m: Meta): number =>
 	m.alvo > 0 ? Math.min(100, Math.round((m.atual / m.alvo) * 100)) : 0;

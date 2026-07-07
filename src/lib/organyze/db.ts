@@ -4,7 +4,16 @@
 // (quadro de equipe compartilhado).
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Colaborador, Meta, Prioridade, Status, Subtarefa, Tarefa } from './types';
+import type {
+	Colaborador,
+	DiaStatus,
+	Habito,
+	Meta,
+	Prioridade,
+	Status,
+	Subtarefa,
+	Tarefa
+} from './types';
 
 function toTarefa(r: {
 	id: string;
@@ -230,5 +239,66 @@ export async function updateMeta(
 
 export async function deleteMeta(supabase: SupabaseClient, id: string): Promise<void> {
 	const { error } = await supabase.from('organyze_metas').delete().eq('id', id);
+	if (error) throw error;
+}
+
+// ---- Habit Tracker -------------------------------------------------------
+
+function toHabito(r: {
+	id: string;
+	colaborador_id: string;
+	mes: string;
+	nome: string;
+	dias: Record<string, DiaStatus> | null;
+	posicao: number;
+}): Habito {
+	return {
+		id: r.id,
+		colaboradorId: r.colaborador_id,
+		mes: r.mes,
+		nome: r.nome,
+		dias: r.dias ?? {},
+		posicao: r.posicao
+	};
+}
+
+export async function fetchHabitos(
+	supabase: SupabaseClient,
+	colaboradorId: string,
+	mes: string
+): Promise<Habito[]> {
+	const { data, error } = await supabase
+		.from('organyze_habitos')
+		.select('id, colaborador_id, mes, nome, dias, posicao')
+		.eq('colaborador_id', colaboradorId)
+		.eq('mes', mes)
+		.order('posicao', { ascending: true });
+	if (error) throw error;
+	return (data ?? []).map(toHabito);
+}
+
+export async function insertHabito(supabase: SupabaseClient, h: Habito): Promise<void> {
+	const { error } = await supabase.from('organyze_habitos').insert({
+		id: h.id,
+		colaborador_id: h.colaboradorId,
+		mes: h.mes,
+		nome: h.nome,
+		dias: h.dias,
+		posicao: h.posicao
+	});
+	if (error) throw error;
+}
+
+export async function updateHabito(
+	supabase: SupabaseClient,
+	id: string,
+	patch: Partial<Pick<Habito, 'nome' | 'dias' | 'posicao'>>
+): Promise<void> {
+	const { error } = await supabase.from('organyze_habitos').update(patch).eq('id', id);
+	if (error) throw error;
+}
+
+export async function deleteHabito(supabase: SupabaseClient, id: string): Promise<void> {
+	const { error } = await supabase.from('organyze_habitos').delete().eq('id', id);
 	if (error) throw error;
 }

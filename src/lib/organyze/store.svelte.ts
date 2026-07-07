@@ -3,8 +3,8 @@
 // daquele colaborador no dia selecionado. Mutations otimistas (rollback + toast).
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Colaborador, Meta, Prioridade, Status, Tarefa } from './types';
-import { metaConcluida } from './types';
+import type { Colaborador, DiaStatus, Habito, Meta, Prioridade, Status, Tarefa } from './types';
+import { metaConcluida, proximoDia } from './types';
 import { toast } from '$lib/toast.svelte';
 import * as db from './db';
 
@@ -78,6 +78,10 @@ class OrganyzeStore {
 	mesMeta = $state<string>(mesAtual());
 	metas = $state<Meta[]>([]);
 	loadingMetas = $state(false);
+
+	// Habit Tracker (por colaborador, mesmo mês das metas)
+	habitos = $state<Habito[]>([]);
+	loadingHabitos = $state(false);
 
 	// ---- Derivados ---------------------------------------------------------
 	// Tarefas do dia em foco (usadas no quadro do modo "Dia" e no progresso).
@@ -438,6 +442,81 @@ class OrganyzeStore {
 			() => db.deleteMeta(this.supabase!, id),
 			() => (this.metas = snapshot),
 			'Falha ao excluir meta.'
+		);
+	}
+
+	// ---- Habit Tracker -----------------------------------------------------
+	async carregarHabitos() {
+		if (!this.supabase || !this.colaboradorId) {
+			this.habitos = [];
+			return;
+		}
+		this.loadingHabitos = true;
+		try {
+			this.habitos = await db.fetchHabitos(this.supabase, this.colaboradorId, this.mesMeta);
+		} catch (e) {
+			console.error('[organyze] carregarHabitos', e);
+			toast.error('Não foi possível carregar os hábitos.');
+		} finally {
+			this.loadingHabitos = false;
+		}
+	}
+
+	addHabito(nome: string): Habito | null {
+		const n = nome.trim();
+		if (!n || !this.colaboradorId) return null;
+		const posicao = this.habitos.length ? Math.max(...this.habitos.map((h) => h.posicao)) + 1 : 0;
+		const habito: Habito = {
+			id: uid(),
+			colaboradorId: this.colaboradorId,
+			mes: this.mesMeta,
+			nome: n,
+			dias: {},
+			posicao
+		};
+		this.habitos = [...this.habitos, habito];
+		this.#persistMeta(
+			() => db.insertHabito(this.supabase!, habito),
+			() => (this.habitos = this.habitos.filter((h) => h.id !== habito.id)),
+			'Falha ao adicionar hábito.'
+		);
+		return habito;
+	}
+
+	#updateHabito(id: string, patch: Partial<Habito>, errMsg: string) {
+		const snapshot = this.habitos;
+		this.habitos = this.habitos.map((h) => (h.id === id ? { ...h, ...patch } : h));
+		this.#persistMeta(
+			() => db.updateHabito(this.supabase!, id, patch),
+			() => (this.habitos = snapshot),
+			errMsg
+		);
+	}
+
+	/** Alterna a marcação de um dia: vazio → feito → falhou → vazio. */
+	marcarDia(id: string, dia: number) {
+		const h = this.habitos.find((x) => x.id === id);
+		if (!h) return;
+		const chave = String(dia);
+		const prox = proximoDia(h.dias[chave]);
+		const dias: Record<string, DiaStatus> = { ...h.dias };
+		if (prox === undefined) delete dias[chave];
+		else dias[chave] = prox;
+		this.#updateHabito(id, { dias }, 'Falha ao marcar dia.');
+	}
+
+	editHabito(id: string, nome: string) {
+		const n = nome.trim();
+		if (n) this.#updateHabito(id, { nome: n }, 'Falha ao salvar hábito.');
+	}
+
+	removeHabito(id: string) {
+		const snapshot = this.habitos;
+		this.habitos = this.habitos.filter((h) => h.id !== id);
+		this.#persistMeta(
+			() => db.deleteHabito(this.supabase!, id),
+			() => (this.habitos = snapshot),
+			'Falha ao excluir hábito.'
 		);
 	}
 }
