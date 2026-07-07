@@ -95,6 +95,7 @@
 				{ href: '/fornecedores', label: 'Fornecedores', icon: 'building' },
 				{ href: '/onboarding', label: 'Onboarding', icon: 'clipboard' },
 				{ href: '/equipe', label: 'Equipe', icon: 'users' },
+				{ href: '/administrativo/permissoes', label: 'Permissões', icon: 'shield' },
 				{ href: '/ferramentas', label: 'Ferramentas & Contas', icon: 'key' },
 				{ href: '/base-conhecimento', label: 'Base de Conhecimento', icon: 'book' },
 				{ href: '/sos', label: 'Central SOS', icon: 'lifebuoy' }

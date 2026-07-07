@@ -44,6 +44,7 @@
 		Camera,
 		LifeBuoy,
 		ListChecks,
+		ShieldCheck,
 		type IconProps
 	} from '@lucide/svelte';
 	import type { Component } from 'svelte';
@@ -89,7 +90,8 @@
 		globe: Globe,
 		camera: Camera,
 		lifebuoy: LifeBuoy,
-		organyze: ListChecks
+		organyze: ListChecks,
+		shield: ShieldCheck
 	};
 </script>
 
