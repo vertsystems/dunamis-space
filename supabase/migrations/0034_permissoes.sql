@@ -41,6 +41,13 @@ create table if not exists public.permissoes_colaborador (
 	primary key (colaborador_id, modulo)
 );
 
+-- RLS: sem policies (deny-all para authenticated/anon). O app só lê/escreve
+-- estas tabelas via funções security definer (que ignoram RLS). Impede que um
+-- usuário se auto-conceda permissões pela API REST. As policies de escrita
+-- para a tela de administração entram na Fase 4/5.
+alter table public.permissoes_cargo enable row level security;
+alter table public.permissoes_colaborador enable row level security;
+
 -- ---------- Funções (security definer: leem as tabelas de permissão sem RLS) ----------
 
 -- id do colaborador do usuário logado (auth.uid()); fallback pelo e-mail do JWT.

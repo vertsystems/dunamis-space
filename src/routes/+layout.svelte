@@ -12,6 +12,7 @@
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { DTOOLS_FERRAMENTAS } from '$lib/dtools';
+	import { podeAcessarRota, type Permissoes } from '$lib/permissoes';
 	import { temaCss } from '$lib/tema';
 	import Icon from '$lib/components/Icon.svelte';
 	import CargoBadge from '$lib/components/CargoBadge.svelte';
@@ -141,19 +142,28 @@
 		return p === href || p.startsWith(href + '/');
 	}
 
+	// Menu filtrado por permissão: esconde áreas sem acesso (rotas pessoais sempre
+	// visíveis) e departamentos que ficaram sem nenhuma área.
+	const perms = $derived((data.permissoes ?? {}) as Permissoes);
+	const departamentosVisiveis = $derived(
+		departamentos
+			.map((d) => ({ ...d, areas: d.areas.filter((a) => !a.href || podeAcessarRota(perms, a.href)) }))
+			.filter((d) => d.areas.length > 0)
+	);
+
 	// Departamento ativo a partir da rota atual.
 	const deptAtivo = $derived.by(() => {
 		const p = page.url.pathname;
-		const byArea = departamentos.find((dep) => dep.areas.some((a) => areaAtiva(a.href)));
+		const byArea = departamentosVisiveis.find((dep) => dep.areas.some((a) => areaAtiva(a.href)));
 		if (byArea) return byArea.id;
-		const byBase = departamentos.find(
+		const byBase = departamentosVisiveis.find(
 			(dep) => dep.base && (p === dep.base || p.startsWith(dep.base + '/'))
 		);
 		if (byBase) return byBase.id;
-		return 'home';
+		return departamentosVisiveis[0]?.id ?? 'home';
 	});
 
-	const areas = $derived(departamentos.find((d) => d.id === deptAtivo)?.areas ?? []);
+	const areas = $derived(departamentosVisiveis.find((d) => d.id === deptAtivo)?.areas ?? []);
 
 	const deptHref = (d: Departamento) => d.href ?? d.areas[0]?.href ?? '/';
 
@@ -209,7 +219,7 @@
 			</a>
 
 			<nav class="departments">
-				{#each departamentos as d (d.id)}
+				{#each departamentosVisiveis as d (d.id)}
 					{@const badge = badgeDe(d.id)}
 					<a href={deptHref(d)} class:is-active={deptAtivo === d.id} title={d.label}>
 						<Icon name={d.icon} size={14} />
@@ -258,7 +268,7 @@
 			{#if areas.length}
 				<aside class="app-sidebar">
 					<div class="sidebar-title">
-						{departamentos.find((d) => d.id === deptAtivo)?.label}
+						{departamentosVisiveis.find((d) => d.id === deptAtivo)?.label}
 					</div>
 					<nav>
 						{#each areas as a (a.label)}

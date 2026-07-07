@@ -1,6 +1,9 @@
 import type { LayoutServerLoad } from './$types';
 
-export const load: LayoutServerLoad = async ({ locals: { session, user, supabase }, cookies }) => {
+export const load: LayoutServerLoad = async ({
+	locals: { session, user, supabase, permissoes },
+	cookies
+}) => {
 	let aprovacoesPendentes = 0;
 	let sosAbertos = 0;
 	// Perfil do usuário logado (nome/avatar p/ o topo + cor de tema pessoal).
@@ -29,6 +32,7 @@ export const load: LayoutServerLoad = async ({ locals: { session, user, supabase
 		cookies: cookies.getAll(),
 		aprovacoesPendentes,
 		sosAbertos,
-		perfil
+		perfil,
+		permissoes
 	};
 };

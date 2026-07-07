@@ -36,6 +36,7 @@ export const load: LayoutLoad = async ({ data, depends, fetch }) => {
 		user,
 		aprovacoesPendentes: data.aprovacoesPendentes,
 		sosAbertos: data.sosAbertos,
-		perfil: data.perfil
+		perfil: data.perfil,
+		permissoes: data.permissoes
 	};
 };
