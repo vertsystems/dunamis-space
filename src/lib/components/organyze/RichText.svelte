@@ -60,22 +60,48 @@
 	// Cores de texto: primeira é o padrão (reseta para a cor base).
 	const CORES_TEXTO = [
 		{ cor: '#101828', label: 'Padrão' },
-		{ cor: '#3b6ef6', label: 'Azul' },
-		{ cor: '#17b26a', label: 'Verde' },
-		{ cor: '#f5a524', label: 'Âmbar' },
+		{ cor: '#667085', label: 'Cinza' },
+		{ cor: '#94a3b8', label: 'Cinza claro' },
 		{ cor: '#f04438', label: 'Vermelho' },
+		{ cor: '#f97316', label: 'Laranja' },
+		{ cor: '#f5a524', label: 'Âmbar' },
+		{ cor: '#eab308', label: 'Amarelo' },
+		{ cor: '#84cc16', label: 'Lima' },
+		{ cor: '#17b26a', label: 'Verde' },
+		{ cor: '#14b8a6', label: 'Teal' },
+		{ cor: '#06b6d4', label: 'Ciano' },
+		{ cor: '#0ea5e9', label: 'Azul-céu' },
+		{ cor: '#3b6ef6', label: 'Azul' },
+		{ cor: '#6366f1', label: 'Índigo' },
 		{ cor: '#8b5cf6', label: 'Roxo' },
-		{ cor: '#667085', label: 'Cinza' }
+		{ cor: '#d946ef', label: 'Fúcsia' },
+		{ cor: '#ec4899', label: 'Rosa' },
+		{ cor: '#f43f5e', label: 'Rosa-forte' },
+		{ cor: '#a16207', label: 'Marrom' },
+		{ cor: '#ffffff', label: 'Branco' }
 	];
 	// Cores de fundo (marca-texto): primeira remove o realce.
 	const CORES_FUNDO = [
 		{ cor: 'transparent', label: 'Nenhum' },
-		{ cor: '#fef08a', label: 'Amarelo' },
-		{ cor: '#bbf7d0', label: 'Verde' },
-		{ cor: '#bfdbfe', label: 'Azul' },
-		{ cor: '#fbcfe8', label: 'Rosa' },
+		{ cor: '#e5e7eb', label: 'Cinza' },
+		{ cor: '#fecaca', label: 'Vermelho' },
 		{ cor: '#fed7aa', label: 'Laranja' },
-		{ cor: '#e5e7eb', label: 'Cinza' }
+		{ cor: '#fde68a', label: 'Âmbar' },
+		{ cor: '#fef08a', label: 'Amarelo' },
+		{ cor: '#d9f99d', label: 'Lima' },
+		{ cor: '#bbf7d0', label: 'Verde' },
+		{ cor: '#99f6e4', label: 'Teal' },
+		{ cor: '#a5f3fc', label: 'Ciano' },
+		{ cor: '#bae6fd', label: 'Azul-céu' },
+		{ cor: '#bfdbfe', label: 'Azul' },
+		{ cor: '#c7d2fe', label: 'Índigo' },
+		{ cor: '#ddd6fe', label: 'Roxo' },
+		{ cor: '#f5d0fe', label: 'Fúcsia' },
+		{ cor: '#fbcfe8', label: 'Rosa' },
+		{ cor: '#fecdd3', label: 'Rosa-claro' },
+		{ cor: '#e7e5e4', label: 'Pedra' },
+		{ cor: '#fef3c7', label: 'Creme' },
+		{ cor: '#f0abfc', label: 'Lavanda' }
 	];
 </script>
 
@@ -112,14 +138,14 @@
 			</button>
 			{#if paleta === 'texto'}
 				<div
-					class="absolute left-0 top-8 z-20 flex gap-1 rounded-[var(--radius)] border border-grey-200 bg-surface p-1.5 shadow-lg"
+					class="absolute left-0 top-8 z-20 grid w-max grid-cols-10 gap-1.5 rounded-[var(--radius)] border border-grey-200 bg-surface p-2 shadow-lg"
 				>
 					{#each CORES_TEXTO as c (c.cor)}
 						<button
 							type="button"
 							title={c.label}
 							aria-label={c.label}
-							class="size-6 rounded-full border border-grey-200 transition-transform hover:scale-110"
+							class="size-5 rounded-full border border-grey-200 transition-transform hover:scale-125"
 							style="background: {c.cor}"
 							onmousedown={(e) => e.preventDefault()}
 							onclick={() => aplicarCor('texto', c.cor)}
@@ -144,20 +170,20 @@
 			</button>
 			{#if paleta === 'fundo'}
 				<div
-					class="absolute left-0 top-8 z-20 flex gap-1 rounded-[var(--radius)] border border-grey-200 bg-surface p-1.5 shadow-lg"
+					class="absolute right-0 top-8 z-20 grid w-max grid-cols-10 gap-1.5 rounded-[var(--radius)] border border-grey-200 bg-surface p-2 shadow-lg"
 				>
 					{#each CORES_FUNDO as c (c.cor)}
 						<button
 							type="button"
 							title={c.label}
 							aria-label={c.label}
-							class="grid size-6 place-items-center rounded-full border border-grey-200 transition-transform hover:scale-110"
+							class="grid size-5 place-items-center rounded-full border border-grey-200 transition-transform hover:scale-125"
 							class:bg-surface={c.cor === 'transparent'}
 							style={c.cor === 'transparent' ? '' : `background: ${c.cor}`}
 							onmousedown={(e) => e.preventDefault()}
 							onclick={() => aplicarCor('fundo', c.cor)}
 						>
-							{#if c.cor === 'transparent'}<span class="text-[10px] text-grey">✕</span>{/if}
+							{#if c.cor === 'transparent'}<span class="text-[9px] text-grey">✕</span>{/if}
 						</button>
 					{/each}
 				</div>
