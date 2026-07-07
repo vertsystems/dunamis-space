@@ -228,7 +228,8 @@ class OrganyzeStore {
 			prioridade: 'media',
 			prazo: prazo || null,
 			descricao: '',
-			subtarefas: []
+			subtarefas: [],
+			responsaveis: []
 		};
 		this.tarefas = [...this.tarefas, tarefa];
 		this.#persist(
@@ -275,6 +276,21 @@ class OrganyzeStore {
 
 	setDescricao(id: string, descricao: string) {
 		this.#update(id, { descricao }, 'Falha ao salvar descrição.');
+	}
+
+	/** Compartilha (ou descompartilha) a tarefa com outros colaboradores. */
+	setResponsaveis(id: string, responsaveis: string[]) {
+		this.#update(id, { responsaveis }, 'Falha ao salvar responsáveis.');
+	}
+	/** Alterna um colaborador na lista de responsáveis (não inclui o dono). */
+	toggleResponsavel(id: string, colaboradorId: string) {
+		const t = this.tarefas.find((x) => x.id === id);
+		if (!t || colaboradorId === t.colaboradorId) return;
+		const has = t.responsaveis.includes(colaboradorId);
+		const responsaveis = has
+			? t.responsaveis.filter((c) => c !== colaboradorId)
+			: [...t.responsaveis, colaboradorId];
+		this.setResponsaveis(id, responsaveis);
 	}
 
 	// ---- Subtarefas --------------------------------------------------------

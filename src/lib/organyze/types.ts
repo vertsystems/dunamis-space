@@ -32,6 +32,7 @@ export interface Tarefa {
 	prazo: string | null; // yyyy-mm-dd (prazo de entrega) ou null
 	descricao: string; // HTML enxuto (editor leve)
 	subtarefas: Subtarefa[];
+	responsaveis: string[]; // colaboradores com quem a tarefa é compartilhada (além do dono)
 }
 
 // Ordem de exibição das seções (topo → base).

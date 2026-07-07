@@ -27,6 +27,7 @@ function toTarefa(r: {
 	prazo: string | null;
 	descricao: string | null;
 	subtarefas: Subtarefa[] | null;
+	responsaveis: string[] | null;
 }): Tarefa {
 	// Fallback: se `status` ainda estiver nulo, deriva do antigo `concluida`.
 	const status = (r.status as Status) ?? (r.concluida ? 'concluida' : 'em_execucao');
@@ -40,7 +41,8 @@ function toTarefa(r: {
 		prioridade: (r.prioridade as Prioridade) ?? 'media',
 		prazo: r.prazo ?? null,
 		descricao: r.descricao ?? '',
-		subtarefas: Array.isArray(r.subtarefas) ? r.subtarefas : []
+		subtarefas: Array.isArray(r.subtarefas) ? r.subtarefas : [],
+		responsaveis: Array.isArray(r.responsaveis) ? r.responsaveis : []
 	};
 }
 
@@ -73,14 +75,19 @@ export async function rolarPendentesParaHoje(
 	const { error } = await supabase
 		.from('organyze_tarefas')
 		.update({ data: hoje })
-		.eq('colaborador_id', colaboradorId)
+		.or(donoOuResponsavel(colaboradorId))
 		.neq('status', 'concluida')
 		.lt('data', hoje);
 	if (error) throw error;
 }
 
 const COLUNAS =
-	'id, colaborador_id, titulo, status, concluida, data, posicao, prioridade, prazo, descricao, subtarefas';
+	'id, colaborador_id, titulo, status, concluida, data, posicao, prioridade, prazo, descricao, subtarefas, responsaveis';
+
+/** Filtro PostgREST: tarefas do colaborador (dono) OU onde ele é responsável. */
+function donoOuResponsavel(id: string): string {
+	return `colaborador_id.eq.${id},responsaveis.cs.{${id}}`;
+}
 
 /** Tarefas de um colaborador num dia (yyyy-mm-dd), ordenadas por posição. */
 export async function fetchByColaboradorDia(
@@ -101,7 +108,7 @@ export async function fetchByColaboradorRange(
 	const { data: rows, error } = await supabase
 		.from('organyze_tarefas')
 		.select(COLUNAS)
-		.eq('colaborador_id', colaboradorId)
+		.or(donoOuResponsavel(colaboradorId))
 		.gte('data', start)
 		.lte('data', end)
 		.order('data', { ascending: true })
@@ -124,7 +131,8 @@ export async function insertTarefa(supabase: SupabaseClient, t: Tarefa): Promise
 		prioridade: t.prioridade,
 		prazo: t.prazo,
 		descricao: t.descricao,
-		subtarefas: t.subtarefas
+		subtarefas: t.subtarefas,
+		responsaveis: t.responsaveis
 	});
 	if (error) throw error;
 }
@@ -133,7 +141,17 @@ export async function updateTarefa(
 	supabase: SupabaseClient,
 	id: string,
 	patch: Partial<
-		Pick<Tarefa, 'titulo' | 'status' | 'posicao' | 'prioridade' | 'prazo' | 'descricao' | 'subtarefas'>
+		Pick<
+			Tarefa,
+			| 'titulo'
+			| 'status'
+			| 'posicao'
+			| 'prioridade'
+			| 'prazo'
+			| 'descricao'
+			| 'subtarefas'
+			| 'responsaveis'
+		>
 	>
 ): Promise<void> {
 	const row: Record<string, unknown> = {};
@@ -147,6 +165,7 @@ export async function updateTarefa(
 	if (patch.prazo !== undefined) row.prazo = patch.prazo;
 	if (patch.descricao !== undefined) row.descricao = patch.descricao;
 	if (patch.subtarefas !== undefined) row.subtarefas = patch.subtarefas;
+	if (patch.responsaveis !== undefined) row.responsaveis = patch.responsaveis;
 	const { error } = await supabase.from('organyze_tarefas').update(row).eq('id', id);
 	if (error) throw error;
 }

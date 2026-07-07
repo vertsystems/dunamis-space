@@ -64,6 +64,9 @@
 		for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
 		return CORES[h % CORES.length];
 	}
+	function colabById(id: string) {
+		return organyze.colaboradores.find((c) => c.id === id) ?? null;
+	}
 
 	const SECAO_META: Record<Status, { label: string; cor: string }> = {
 		em_execucao: { label: 'Em execução', cor: 'var(--color-brand)' },
@@ -485,8 +488,33 @@
 					>
 						{t.titulo}
 					</span>
-					{#if t.prazo || t.subtarefas.length}
+					{#if t.prazo || t.subtarefas.length || t.responsaveis.length}
 						<span class="mt-1.5 flex flex-wrap items-center gap-1.5">
+							{#if t.responsaveis.length}
+								<span class="mr-0.5 flex items-center -space-x-1.5">
+									{#each t.responsaveis as rid (rid)}
+										{@const rc = colabById(rid)}
+										{#if rc}
+											{#if rc.avatarUrl}
+												<img
+													src={rc.avatarUrl}
+													alt={rc.nome}
+													title={rc.nome}
+													class="size-5 rounded-full object-cover ring-2 ring-surface"
+												/>
+											{:else}
+												<span
+													title={rc.nome}
+													class="grid size-5 place-items-center rounded-full text-[9px] font-semibold text-white ring-2 ring-surface"
+													style="background: {corAvatar(rc.id)}"
+												>
+													{iniciais(rc.nome)}
+												</span>
+											{/if}
+										{/if}
+									{/each}
+								</span>
+							{/if}
 							{#if t.prazo}
 								<span
 									class="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium"
@@ -728,6 +756,7 @@
 <Modal open={modalId !== null} title="Editar tarefa" size="md" onClose={fecharModal}>
 	{#if modalTarefa}
 		{@const u = urgencia(modalTarefa.prazo, hojeStr)}
+		{@const dono = colabById(modalTarefa.colaboradorId)}
 		<div class="space-y-5">
 			<!-- Título -->
 			<div>
@@ -756,6 +785,63 @@
 							onclick={() => modalId && organyze.setStatus(modalId, s)}
 						>
 							{SECAO_META[s].label}
+						</button>
+					{/each}
+				</div>
+			</div>
+
+			<!-- Responsáveis -->
+			<div>
+				<span class="mb-1.5 block text-sm font-medium text-navy">Responsáveis</span>
+				<p class="mb-2 text-xs text-grey">
+					A tarefa aparece no perfil de todos os marcados, além do dono.
+				</p>
+				<div class="flex flex-wrap gap-2">
+					<!-- Dono (fixo) -->
+					{#if dono}
+						<span
+							class="inline-flex items-center gap-2 rounded-full border border-brand/40 bg-brand/5 py-1 pl-1 pr-3 text-xs font-semibold text-navy"
+							title="Dono da tarefa"
+						>
+							{#if dono.avatarUrl}
+								<img src={dono.avatarUrl} alt={dono.nome} class="size-6 rounded-full object-cover" />
+							{:else}
+								<span
+									class="grid size-6 place-items-center rounded-full text-[10px] font-semibold text-white"
+									style="background: {corAvatar(dono.id)}"
+								>
+									{iniciais(dono.nome)}
+								</span>
+							{/if}
+							{dono.nome.split(' ')[0]}
+							<span class="text-[10px] font-medium text-grey">dono</span>
+						</span>
+					{/if}
+					<!-- Demais colaboradores (clique alterna) -->
+					{#each organyze.colaboradores.filter((c) => c.id !== modalTarefa.colaboradorId) as c (c.id)}
+						{@const sel = modalTarefa.responsaveis.includes(c.id)}
+						<button
+							class="inline-flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-xs font-semibold transition-colors"
+							class:border-brand={sel}
+							class:bg-brand={sel}
+							class:text-white={sel}
+							class:border-grey-200={!sel}
+							class:text-slate={!sel}
+							class:bg-surface={!sel}
+							onclick={() => modalId && organyze.toggleResponsavel(modalId, c.id)}
+						>
+							{#if c.avatarUrl}
+								<img src={c.avatarUrl} alt={c.nome} class="size-6 rounded-full object-cover" />
+							{:else}
+								<span
+									class="grid size-6 place-items-center rounded-full text-[10px] font-semibold text-white"
+									style="background: {corAvatar(c.id)}"
+								>
+									{iniciais(c.nome)}
+								</span>
+							{/if}
+							{c.nome.split(' ')[0]}
+							{#if sel}<Check size={13} strokeWidth={3} />{/if}
 						</button>
 					{/each}
 				</div>
