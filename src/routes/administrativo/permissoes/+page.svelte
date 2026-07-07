@@ -22,7 +22,7 @@
 		nenhum: 'Sem acesso',
 		ver: 'Ver',
 		editar: 'Editar',
-		excluir: 'Excluir'
+		excluir: 'Acesso Total'
 	};
 
 	// ---- Estado reativo (inicializado a partir do banco) ----
@@ -119,11 +119,12 @@
 	}
 </script>
 
+<div class="perm-page">
 <div class="mb-4">
 	<h1 class="text-base font-semibold text-navy">Permissões</h1>
 	<p class="text-sm text-grey">
 		Controle o que cada cargo e cada pessoa acessa. Níveis: <b>Ver</b> (abre e lê),
-		<b>Editar</b> (cria/edita) e <b>Excluir</b> (apaga).
+		<b>Editar</b> (cria/edita) e <b>Acesso Total</b> (edita e exclui).
 	</p>
 </div>
 
@@ -152,7 +153,7 @@
 
 {#if aba === 'cargos'}
 	<Card padding="none" class="overflow-x-auto">
-		<table class="w-full min-w-[720px] text-sm">
+		<table class="perm-matriz w-full min-w-[860px] text-sm">
 			<thead>
 				<tr class="border-b border-grey-200 bg-bg">
 					<th class="sticky left-0 z-10 bg-bg px-4 py-3 text-left font-semibold text-navy">Módulo</th>
@@ -160,7 +161,7 @@
 						<th class="px-3 py-3 text-center font-medium">
 							<div class="flex flex-col items-center gap-1">
 								<CargoBadge funcao={f.value} />
-								<span class="text-[11px] text-grey">{f.label}</span>
+								<span class="whitespace-nowrap text-[11px] text-grey">{f.label}</span>
 							</div>
 						</th>
 					{/each}
@@ -272,7 +273,7 @@
 												<option value="nenhum">Bloquear</option>
 												<option value="ver">Ver</option>
 												<option value="editar">Editar</option>
-												<option value="excluir">Excluir</option>
+												<option value="excluir">Acesso Total</option>
 											</select>
 										{/if}
 									</td>
@@ -285,11 +286,18 @@
 		</Card>
 	{/if}
 {/if}
+</div>
 
 <style>
+	/* A matriz é larga (9 colunas): nas telas grandes ela "estoura" para a direita,
+	   proporcional à sobra lateral (o app é centralizado com max-width 1440px), para
+	   os nomes dos cargos não quebrarem. Nunca invade a esquerda (min(0px, …)). */
+	.perm-page {
+		margin-right: min(0px, calc(736px - 50vw));
+	}
 	.nivel-sel {
 		width: 100%;
-		min-width: 92px;
+		min-width: 108px;
 		border: 1px solid var(--grey-200, #e5e7eb);
 		border-radius: 8px;
 		padding: 4px 8px;
