@@ -44,6 +44,9 @@
 	// Card sobre o qual estamos passando e se a solta será abaixo (true) ou acima (false).
 	let dragOverId = $state<string | null>(null);
 	let dragBelow = $state(false);
+	// Espaço (px) aberto no card-alvo para encaixar a tarefa arrastada.
+	const GAP_ARRASTE = 44;
+	const PAD_BASE = 12; // padding vertical base do card (equivale a py-3)
 
 	// Modal de edição
 	let modalId = $state<string | null>(null);
@@ -441,6 +444,7 @@
 		{#snippet taskRow(t: Tarefa)}
 			{@const u = urgencia(t.prazo, hojeStr)}
 			{@const alvo = dragOverId === t.id && dragId !== null && dragId !== t.id}
+			{@const sendo = dragId === t.id}
 			<li
 				draggable="true"
 				ondragstart={() => (dragId = t.id)}
@@ -453,21 +457,27 @@
 					e.stopPropagation();
 					if (!dragId || dragId === t.id) return;
 					const r = e.currentTarget.getBoundingClientRect();
+					// Altura "natural" (descontando o vão já aberto) mantém o ponto médio
+					// estável: o card cresce sob o cursor sem ficar tremendo.
+					const natural = r.height - (dragOverId === t.id ? GAP_ARRASTE : 0);
 					dragOverId = t.id;
-					dragBelow = e.clientY > r.top + r.height / 2;
+					dragBelow = e.clientY > r.top + natural / 2;
 				}}
 				ondrop={(e) => {
 					e.stopPropagation();
 					moverPara(t.status, t.id, dragBelow);
 				}}
-				style="transform: translateY({alvo ? (dragBelow ? -16 : 16) : 0}px)"
-				class="group relative flex items-start gap-2.5 rounded-[var(--radius)] border bg-surface px-3 py-3 shadow-xs transition-[transform,border-color,background-color,box-shadow] duration-150 ease-out hover:border-grey"
+				style="padding-top: {PAD_BASE + (alvo && !dragBelow ? GAP_ARRASTE : 0)}px; padding-bottom: {PAD_BASE +
+					(alvo && dragBelow ? GAP_ARRASTE : 0)}px;{sendo ? ' transform: scale(1.05);' : ''}"
+				class="group relative flex items-start gap-2.5 rounded-[var(--radius)] border bg-surface px-3 shadow-xs transition-[padding,transform,border-color,background-color,box-shadow] duration-150 ease-out hover:border-grey"
 				class:border-grey-200={!alvo}
 				class:border-brand={alvo}
 				class:bg-brand-50={alvo}
 				class:shadow-md={alvo}
+				class:shadow-lg={sendo}
+				class:z-10={sendo}
 				class:opacity-60={t.status === 'concluida'}
-				class:opacity-40={dragId === t.id}
+				class:opacity-50={sendo}
 			>
 				<span
 					class="mt-0.5 cursor-grab text-grey/50 hover:text-grey active:cursor-grabbing"
