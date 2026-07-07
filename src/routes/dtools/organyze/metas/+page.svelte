@@ -33,7 +33,7 @@
 
 	// Inicializa (colaboradores) e recarrega metas quando muda perfil ou mês.
 	$effect(() => {
-		if (data.supabase) organyze.init(data.supabase);
+		if (data.supabase) organyze.init(data.supabase, (data.perfil?.id as string | undefined) ?? null);
 	});
 	$effect(() => {
 		// deps: perfil + mês
@@ -117,15 +117,15 @@
 	</div>
 {:else if !organyze.colaboradorId}
 	<!-- Seleção de perfil (compartilhada com Tarefas) -->
-	<div class="mx-auto flex max-w-3xl flex-col items-center px-4 py-10">
-		<div class="mb-10 text-center">
+	<div class="flex max-w-3xl flex-col items-start px-4 py-10">
+		<div class="mb-10 text-left">
 			<h1 class="text-3xl font-bold text-navy">Quem é você?</h1>
 			<p class="mt-2 text-slate">Escolha seu perfil para ver as metas do mês.</p>
 		</div>
 		{#if organyze.colaboradores.length === 0}
 			<p class="text-sm text-grey">Nenhum colaborador ativo encontrado.</p>
 		{:else}
-			<div class="flex flex-wrap items-start justify-center gap-x-6 gap-y-8">
+			<div class="flex flex-wrap items-start justify-start gap-x-6 gap-y-8">
 				{#each organyze.colaboradores as c (c.id)}
 					<button
 						class="avatar-btn flex w-24 flex-col items-center gap-2.5"

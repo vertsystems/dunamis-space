@@ -69,6 +69,9 @@ class OrganyzeStore {
 
 	colaboradores = $state<Colaborador[]>([]);
 	colaboradorId = $state<string | null>(null);
+	// Colaborador do usuário logado (casado por e-mail no layout). Usado para
+	// entrar direto no próprio perfil, sem passar pela tela de seleção.
+	autoColaboradorId: string | null = null;
 
 	dia = $state<string>(hoje());
 	modo = $state<Modo>('dia');
@@ -99,7 +102,8 @@ class OrganyzeStore {
 	}
 
 	// ---- Ciclo de vida -----------------------------------------------------
-	async init(supabase: SupabaseClient) {
+	async init(supabase: SupabaseClient, autoColaboradorId: string | null = null) {
+		this.autoColaboradorId = autoColaboradorId;
 		if (this.#ready) return;
 		this.#ready = true;
 		this.supabase = supabase;
@@ -117,6 +121,14 @@ class OrganyzeStore {
 			this.error = 'Não foi possível carregar os perfis. Tente atualizar a página.';
 		} finally {
 			this.loading = false;
+		}
+		// Usuário logado: entra direto no próprio perfil (se casar com um colaborador ativo).
+		if (
+			!this.colaboradorId &&
+			this.autoColaboradorId &&
+			this.colaboradores.some((c) => c.id === this.autoColaboradorId)
+		) {
+			await this.selecionarColaborador(this.autoColaboradorId);
 		}
 	}
 
