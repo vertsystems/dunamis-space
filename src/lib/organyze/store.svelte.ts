@@ -222,7 +222,7 @@ class OrganyzeStore {
 			id: uid(),
 			colaboradorId: this.colaboradorId,
 			titulo: trimmed,
-			status: 'em_execucao',
+			status: 'nao_iniciado',
 			data: this.dia,
 			posicao,
 			prioridade: 'media',
