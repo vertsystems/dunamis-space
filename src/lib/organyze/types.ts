@@ -8,6 +8,19 @@ export type Prioridade = 'alta' | 'media' | 'baixa';
 // Status = colunas/seções do quadro (arrastar entre elas muda o status).
 export type Status = 'em_execucao' | 'nao_iniciado' | 'concluida';
 
+// Lado da tarefa: Empresa x Vida Pessoal (colunas do quadro no modo Dia).
+export type Categoria = 'empresa' | 'pessoal';
+export const CATEGORIAS: Categoria[] = ['empresa', 'pessoal'];
+export const CATEGORIA_LABEL: Record<Categoria, string> = {
+	empresa: 'Empresa',
+	pessoal: 'Vida Pessoal'
+};
+// Cor de destaque por lado (borda/etiqueta em Semana e Mês).
+export const CATEGORIA_COR: Record<Categoria, string> = {
+	empresa: '#5b8def',
+	pessoal: '#12b886'
+};
+
 export interface Colaborador {
 	id: string;
 	nome: string;
@@ -26,6 +39,7 @@ export interface Tarefa {
 	colaboradorId: string;
 	titulo: string;
 	status: Status;
+	categoria: Categoria; // lado: empresa | pessoal
 	data: string; // yyyy-mm-dd (dia da tarefa)
 	posicao: number; // ordem manual dentro do status (desempate)
 	prioridade: Prioridade;

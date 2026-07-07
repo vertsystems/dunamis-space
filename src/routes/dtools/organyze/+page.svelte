@@ -12,10 +12,13 @@
 		prazoOrdem,
 		urgencia,
 		STATUS_ORDEM,
-		PRIORIDADES
+		PRIORIDADES,
+		CATEGORIAS,
+		CATEGORIA_LABEL,
+		CATEGORIA_COR
 	} from '$lib/organyze/types';
 	import type { Modo } from '$lib/organyze/store.svelte';
-	import type { Status, Tarefa } from '$lib/organyze/types';
+	import type { Categoria, Status, Tarefa } from '$lib/organyze/types';
 	import { Button, Modal } from '$lib/components/ui';
 	import CargoBadge from '$lib/components/CargoBadge.svelte';
 	import RichText from '$lib/components/organyze/RichText.svelte';
@@ -38,9 +41,11 @@
 
 	let novoTitulo = $state('');
 	let novoPrazo = $state('');
+	let novoLado = $state<Categoria>('empresa');
 	let mostrarPrazoNovo = $state(false);
 	let dragId = $state<string | null>(null);
-	// Destino da solta: seção + índice de inserção dentro do grupo (onde o slot abre).
+	// Destino da solta: lado (coluna) + seção + índice de inserção (onde o slot abre).
+	let dropCat = $state<Categoria | null>(null);
 	let dropStatus = $state<Status | null>(null);
 	let dropIndex = $state<number | null>(null);
 
@@ -180,10 +185,11 @@
 		organyze.setModo('dia');
 	}
 
-	// Agrupa por status. Ativas (em execução / não iniciado) ordenadas por urgência;
-	// concluídas por posição.
-	const grupos = $derived.by(() => {
-		const by = (s: Status) => organyze.tarefasDia.filter((t) => t.status === s);
+	// Agrupa por lado (categoria) e status. Ativas ordenadas por urgência; concluídas
+	// por posição. Usado nas duas colunas (Empresa / Vida Pessoal) do modo Dia.
+	function gruposLado(cat: Categoria): Record<Status, Tarefa[]> {
+		const by = (s: Status) =>
+			organyze.tarefasDia.filter((t) => t.status === s && t.categoria === cat);
 		const urg = (arr: Tarefa[]) =>
 			[...arr].sort((a, b) => prazoOrdem(a) - prazoOrdem(b) || a.posicao - b.posicao);
 		return {
@@ -191,10 +197,12 @@
 			nao_iniciado: urg(by('nao_iniciado')),
 			concluida: [...by('concluida')].sort((a, b) => a.posicao - b.posicao)
 		} as Record<Status, Tarefa[]>;
-	});
+	}
+	const totalLado = (cat: Categoria) =>
+		organyze.tarefasDia.filter((t) => t.categoria === cat).length;
 
 	function adicionar() {
-		if (organyze.addTarefa(novoTitulo, novoPrazo || null)) {
+		if (organyze.addTarefa(novoTitulo, novoPrazo || null, novoLado)) {
 			novoTitulo = '';
 			novoPrazo = '';
 			mostrarPrazoNovo = false;
@@ -217,20 +225,21 @@
 		modalId = null;
 	}
 
-	// ---- Drag & drop entre seções ----
+	// ---- Drag & drop entre lados/seções ----
 	function limparDrag() {
 		dragId = null;
+		dropCat = null;
 		dropStatus = null;
 		dropIndex = null;
 	}
 
 	/**
-	 * Calcula onde o slot deve abrir na seção `s`: percorre os cards reais
-	 * (`[data-card]`, que exclui o card arrastado) e acha o índice de inserção pelo
-	 * ponto médio de cada um. Como o placeholder tem pointer-events:none e não conta
-	 * como card, o ponteiro nunca "escapa" e não há tremor.
+	 * Calcula onde o slot deve abrir na seção (lado `cat`, status `s`): percorre os
+	 * cards reais (`[data-card]`, que exclui o arrastado) e acha o índice de inserção
+	 * pelo ponto médio de cada um. O placeholder tem pointer-events:none e não conta
+	 * como card, então o ponteiro nunca "escapa" e não há tremor.
 	 */
-	function calcDrop(e: DragEvent, s: Status) {
+	function calcDrop(e: DragEvent, cat: Categoria, s: Status) {
 		e.preventDefault();
 		if (!dragId) return;
 		const alvo = e.currentTarget as HTMLElement;
@@ -243,38 +252,44 @@
 				break;
 			}
 		}
+		dropCat = cat;
 		dropStatus = s;
 		dropIndex = idx;
 	}
 
 	/** Some com o indicador ao sair de fato da seção (não ao trocar de card interno). */
-	function aoSairSecao(e: DragEvent, s: Status) {
-		if (dropStatus !== s) return;
+	function aoSairSecao(e: DragEvent, cat: Categoria, s: Status) {
+		if (dropCat !== cat || dropStatus !== s) return;
 		const para = e.relatedTarget;
 		if (para instanceof Node && (e.currentTarget as HTMLElement).contains(para)) return;
+		dropCat = null;
 		dropStatus = null;
 		dropIndex = null;
 	}
 
-	function soltar(s: Status) {
+	function soltar(cat: Categoria, s: Status) {
 		const from = dragId;
-		const idx = dropStatus === s ? dropIndex : null;
+		const idx = dropCat === cat && dropStatus === s ? dropIndex : null;
 		limparDrag();
 		if (!from) return;
-		// Lista completa (todas as seções, na ordem visível) reinserindo o arrastado
-		// na posição `idx` do grupo de destino.
-		const lista: { id: string; status: Status }[] = [];
-		for (const st of STATUS_ORDEM) {
-			const cards = grupos[st].filter((t) => t.id !== from);
-			if (st === s) {
-				const at = idx == null ? cards.length : Math.min(idx, cards.length);
-				cards.forEach((t, i) => {
-					if (i === at) lista.push({ id: from, status: s });
-					lista.push({ id: t.id, status: st });
-				});
-				if (at >= cards.length) lista.push({ id: from, status: s });
-			} else {
-				cards.forEach((t) => lista.push({ id: t.id, status: st }));
+		// Lista completa (todos os lados/seções, na ordem visível) reinserindo o
+		// arrastado na posição `idx` do grupo de destino. O lado do arrastado passa a
+		// ser `cat` (arrastar entre colunas troca de lado).
+		const lista: { id: string; status: Status; categoria: Categoria }[] = [];
+		for (const c of CATEGORIAS) {
+			const g = gruposLado(c);
+			for (const st of STATUS_ORDEM) {
+				const cards = g[st].filter((t) => t.id !== from);
+				if (c === cat && st === s) {
+					const at = idx == null ? cards.length : Math.min(idx, cards.length);
+					cards.forEach((t, i) => {
+						if (i === at) lista.push({ id: from, status: s, categoria: cat });
+						lista.push({ id: t.id, status: st, categoria: c });
+					});
+					if (at >= cards.length) lista.push({ id: from, status: s, categoria: cat });
+				} else {
+					cards.forEach((t) => lista.push({ id: t.id, status: st, categoria: c }));
+				}
 			}
 		}
 		organyze.aplicarQuadro(lista);
@@ -438,6 +453,20 @@
 		<!-- Adicionar tarefa (com opção de prazo) — só no modo Dia -->
 		{#if organyze.modo === 'dia'}
 		<div class="space-y-2">
+			<!-- Lado da nova tarefa: Empresa | Vida Pessoal -->
+			<div class="inline-flex rounded-[var(--radius)] border border-grey-200 bg-surface p-0.5">
+				{#each CATEGORIAS as cat (cat)}
+					<button
+						class="rounded-[calc(var(--radius)-3px)] px-3 py-1 text-xs font-semibold transition-colors"
+						class:text-white={novoLado === cat}
+						class:text-grey={novoLado !== cat}
+						style:background={novoLado === cat ? CATEGORIA_COR[cat] : 'transparent'}
+						onclick={() => (novoLado = cat)}
+					>
+						{CATEGORIA_LABEL[cat]}
+					</button>
+				{/each}
+			</div>
 			<div class="flex gap-2">
 				<input
 					class="h-11 w-full rounded-[var(--radius)] border border-grey-200 bg-surface px-4 text-sm text-navy-900 shadow-xs placeholder:text-grey/90 transition-colors hover:border-grey focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25"
@@ -610,6 +639,43 @@
 		{/snippet}
 
 		<!-- Snippet: dia da semana (modo Semana) -->
+		<!-- Snippet: linha de tarefa (modo Semana) -->
+		{#snippet linhaSemana(t: Tarefa)}
+			{@const u = urgencia(t.prazo, hojeStr)}
+			<li class="flex items-center gap-2.5 px-4 py-2 hover:bg-bg transition-colors">
+				<!-- Bolinha de concluído -->
+				<button
+					class="grid size-4 shrink-0 place-items-center rounded-md border-2 transition-colors"
+					class:border-grey-200={t.status !== 'concluida'}
+					class:border-brand={t.status === 'concluida'}
+					class:bg-brand={t.status === 'concluida'}
+					class:text-white={t.status === 'concluida'}
+					aria-label={t.status === 'concluida' ? 'Reabrir tarefa' : 'Concluir tarefa'}
+					onclick={() => organyze.toggle(t.id)}
+				>
+					{#if t.status === 'concluida'}<Check size={11} strokeWidth={3} />{/if}
+				</button>
+				<button
+					class="flex min-w-0 flex-1 items-center gap-2.5 text-left"
+					onclick={() => abrirModal(t)}
+				>
+					<span
+						class="size-2 shrink-0 rounded-full"
+						style="background: {corPrioridade(t.prioridade)}"
+					></span>
+					<span
+						class="flex-1 truncate text-sm"
+						class:text-grey={t.status === 'concluida'}
+						class:line-through={t.status === 'concluida'}
+						class:text-navy={t.status !== 'concluida'}>{t.titulo}</span
+					>
+					{#if u && u.status !== 'futura'}
+						<span class="shrink-0 text-[11px] font-semibold" style="color: {u.cor}">{u.label}</span>
+					{/if}
+				</button>
+			</li>
+		{/snippet}
+
 		{#snippet diaSemana(d: { iso: string; dt: Date; tarefas: Tarefa[] })}
 			<div class="overflow-hidden rounded-[var(--radius-lg)] border border-grey-200 bg-surface shadow-xs">
 				<button
@@ -631,45 +697,25 @@
 					</span>
 				</button>
 				{#if d.tarefas.length}
-					<ul class="divide-y divide-grey-200 border-t border-grey-200">
-						{#each d.tarefas as t (t.id)}
-							{@const u = urgencia(t.prazo, hojeStr)}
-							<li class="flex items-center gap-2.5 px-4 py-2 hover:bg-bg transition-colors">
-								<!-- Bolinha de concluído -->
-								<button
-									class="grid size-4 shrink-0 place-items-center rounded-md border-2 transition-colors"
-									class:border-grey-200={t.status !== 'concluida'}
-									class:border-brand={t.status === 'concluida'}
-									class:bg-brand={t.status === 'concluida'}
-									class:text-white={t.status === 'concluida'}
-									aria-label={t.status === 'concluida' ? 'Reabrir tarefa' : 'Concluir tarefa'}
-									onclick={() => organyze.toggle(t.id)}
-								>
-									{#if t.status === 'concluida'}<Check size={11} strokeWidth={3} />{/if}
-								</button>
-								<button
-									class="flex min-w-0 flex-1 items-center gap-2.5 text-left"
-									onclick={() => abrirModal(t)}
-								>
+					<div class="border-t border-grey-200">
+						{#each CATEGORIAS as cat (cat)}
+							{@const lista = d.tarefas.filter((t) => t.categoria === cat)}
+							{#if lista.length}
+								<div class="flex items-center gap-1.5 bg-bg/40 px-4 pb-1 pt-2">
+									<span class="size-1.5 rounded-full" style:background={CATEGORIA_COR[cat]}></span>
 									<span
-										class="size-2 shrink-0 rounded-full"
-										style="background: {corPrioridade(t.prioridade)}"
-									></span>
-									<span
-										class="flex-1 truncate text-sm"
-										class:text-grey={t.status === 'concluida'}
-										class:line-through={t.status === 'concluida'}
-										class:text-navy={t.status !== 'concluida'}>{t.titulo}</span
+										class="text-[10px] font-bold uppercase tracking-wide"
+										style:color={CATEGORIA_COR[cat]}>{CATEGORIA_LABEL[cat]}</span
 									>
-									{#if u && u.status !== 'futura'}
-										<span class="shrink-0 text-[11px] font-semibold" style="color: {u.cor}"
-											>{u.label}</span
-										>
-									{/if}
-								</button>
-							</li>
+								</div>
+								<ul class="divide-y divide-grey-200">
+									{#each lista as t (t.id)}
+										{@render linhaSemana(t)}
+									{/each}
+								</ul>
+							{/if}
 						{/each}
-					</ul>
+					</div>
 				{:else}
 					<div class="border-t border-grey-200 px-4 py-3 text-xs text-grey/70">Sem tarefas</div>
 				{/if}
@@ -713,7 +759,9 @@
 								<div class="flex flex-col gap-0.5">
 									{#each cell.tarefas.slice(0, 4) as t (t.id)}
 										<div
-											class="flex items-center gap-1 rounded px-1 py-0.5 transition-colors hover:bg-surface"
+											class="flex items-center gap-1 rounded border-l-2 pl-1 pr-1 py-0.5 transition-colors hover:bg-surface"
+											style:border-left-color={CATEGORIA_COR[t.categoria]}
+											title={CATEGORIA_LABEL[t.categoria]}
 										>
 											<!-- Bolinha de concluído -->
 											<button
@@ -777,56 +825,75 @@
 				<p class="text-xs text-grey mt-1">Adicione a primeira tarefa acima.</p>
 			</div>
 			{:else}
-			{#each STATUS_ORDEM as s (s)}
-				<section
-					class="space-y-2 rounded-[var(--radius-lg)] p-1 transition-colors"
-					class:bg-brand-50={dropStatus === s}
-					ondragover={(e) => calcDrop(e, s)}
-					ondragleave={(e) => aoSairSecao(e, s)}
-					ondrop={() => soltar(s)}
-					role="list"
-				>
-					<div class="flex items-center gap-2 px-2 pt-1">
-						<span class="size-2 rounded-full" style="background: {SECAO_META[s].cor}"></span>
-						<h2 class="text-xs font-semibold uppercase tracking-wider text-grey">
-							{SECAO_META[s].label}
-							<span class="text-grey/70 tabular-nums">({grupos[s].length})</span>
-						</h2>
-						{#if s === 'concluida' && grupos[s].length}
-							<button
-								class="ml-auto text-xs font-semibold text-grey hover:text-brand-danger transition-colors"
-								onclick={() => organyze.limparConcluidas()}
-							>
-								Limpar
-							</button>
-						{/if}
-					</div>
-
-					{#if grupos[s].length}
-						<ul class="space-y-2">
-							{#each grupos[s] as t, i (t.id)}
-								{#if dropStatus === s && dropIndex === i}
-									{@render slot()}
-								{/if}
-								{@render taskRow(t)}
-							{/each}
-							{#if dropStatus === s && (dropIndex ?? -1) >= grupos[s].length}
-								{@render slot()}
-							{/if}
-						</ul>
-					{:else}
+			<div class="grid gap-4 md:grid-cols-2">
+				{#each CATEGORIAS as cat (cat)}
+					{@const g = gruposLado(cat)}
+					<div class="space-y-2">
+						<!-- Cabeçalho do lado (Empresa / Vida Pessoal) -->
 						<div
-							class="rounded-[var(--radius)] border border-dashed py-4 text-center text-[11px] transition-colors"
-							class:border-brand={dropStatus === s}
-							class:text-brand={dropStatus === s}
-							class:border-grey-200={dropStatus !== s}
-							class:text-grey={dropStatus !== s}
+							class="flex items-center gap-2 rounded-[var(--radius)] px-3 py-2"
+							style:background="color-mix(in srgb, {CATEGORIA_COR[cat]} 10%, transparent)"
 						>
-							{dropStatus === s ? 'Solte aqui' : 'Arraste tarefas para cá'}
+							<span class="size-2.5 rounded-full" style:background={CATEGORIA_COR[cat]}></span>
+							<h2 class="text-sm font-bold" style:color={CATEGORIA_COR[cat]}>
+								{CATEGORIA_LABEL[cat]}
+							</h2>
+							<span class="text-xs tabular-nums text-grey">({totalLado(cat)})</span>
 						</div>
-					{/if}
-				</section>
-			{/each}
+
+						{#each STATUS_ORDEM as s (s)}
+							<section
+								class="space-y-2 rounded-[var(--radius-lg)] p-1 transition-colors"
+								class:bg-brand-50={dropCat === cat && dropStatus === s}
+								ondragover={(e) => calcDrop(e, cat, s)}
+								ondragleave={(e) => aoSairSecao(e, cat, s)}
+								ondrop={() => soltar(cat, s)}
+								role="list"
+							>
+								<div class="flex items-center gap-2 px-2 pt-1">
+									<span class="size-2 rounded-full" style="background: {SECAO_META[s].cor}"></span>
+									<h3 class="text-xs font-semibold uppercase tracking-wider text-grey">
+										{SECAO_META[s].label}
+										<span class="text-grey/70 tabular-nums">({g[s].length})</span>
+									</h3>
+									{#if s === 'concluida' && g[s].length}
+										<button
+											class="ml-auto text-xs font-semibold text-grey hover:text-brand-danger transition-colors"
+											onclick={() => organyze.limparConcluidas(cat)}
+										>
+											Limpar
+										</button>
+									{/if}
+								</div>
+
+								{#if g[s].length}
+									<ul class="space-y-2">
+										{#each g[s] as t, i (t.id)}
+											{#if dropCat === cat && dropStatus === s && dropIndex === i}
+												{@render slot()}
+											{/if}
+											{@render taskRow(t)}
+										{/each}
+										{#if dropCat === cat && dropStatus === s && (dropIndex ?? -1) >= g[s].length}
+											{@render slot()}
+										{/if}
+									</ul>
+								{:else}
+									<div
+										class="rounded-[var(--radius)] border border-dashed py-4 text-center text-[11px] transition-colors"
+										class:border-brand={dropCat === cat && dropStatus === s}
+										class:text-brand={dropCat === cat && dropStatus === s}
+										class:border-grey-200={!(dropCat === cat && dropStatus === s)}
+										class:text-grey={!(dropCat === cat && dropStatus === s)}
+									>
+										{dropCat === cat && dropStatus === s ? 'Solte aqui' : 'Arraste tarefas para cá'}
+									</div>
+								{/if}
+							</section>
+						{/each}
+					</div>
+				{/each}
+			</div>
 			{/if}
 		{:else if organyze.modo === 'semana'}
 			<div class="space-y-2">

@@ -5,6 +5,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
+	Categoria,
 	Colaborador,
 	DiaStatus,
 	Habito,
@@ -20,6 +21,7 @@ function toTarefa(r: {
 	colaborador_id: string;
 	titulo: string;
 	status: string | null;
+	categoria: string | null;
 	concluida: boolean | null;
 	data: string;
 	posicao: number;
@@ -37,6 +39,7 @@ function toTarefa(r: {
 		colaboradorId: r.colaborador_id,
 		titulo: r.titulo,
 		status,
+		categoria: (r.categoria as Categoria) ?? 'empresa',
 		data: r.data,
 		posicao: r.posicao,
 		prioridade: (r.prioridade as Prioridade) ?? 'media',
@@ -85,7 +88,7 @@ export async function rolarPendentesParaHoje(
 }
 
 const COLUNAS =
-	'id, colaborador_id, titulo, status, concluida, data, posicao, prioridade, prazo, descricao, subtarefas, responsaveis, deleted_at';
+	'id, colaborador_id, titulo, status, categoria, concluida, data, posicao, prioridade, prazo, descricao, subtarefas, responsaveis, deleted_at';
 
 /** Filtro PostgREST: tarefas do colaborador (dono) OU onde ele é responsável. */
 function donoOuResponsavel(id: string): string {
@@ -162,6 +165,7 @@ export async function insertTarefa(supabase: SupabaseClient, t: Tarefa): Promise
 		colaborador_id: t.colaboradorId,
 		titulo: t.titulo,
 		status: t.status,
+		categoria: t.categoria,
 		concluida: t.status === 'concluida',
 		data: t.data,
 		posicao: t.posicao,
@@ -182,6 +186,7 @@ export async function updateTarefa(
 			Tarefa,
 			| 'titulo'
 			| 'status'
+			| 'categoria'
 			| 'posicao'
 			| 'prioridade'
 			| 'prazo'
@@ -197,6 +202,7 @@ export async function updateTarefa(
 		row.status = patch.status;
 		row.concluida = patch.status === 'concluida';
 	}
+	if (patch.categoria !== undefined) row.categoria = patch.categoria;
 	if (patch.posicao !== undefined) row.posicao = patch.posicao;
 	if (patch.prioridade !== undefined) row.prioridade = patch.prioridade;
 	if (patch.prazo !== undefined) row.prazo = patch.prazo;
@@ -210,15 +216,16 @@ export async function updateTarefa(
 /** Atualiza a posição (e opcionalmente o status) de várias tarefas. */
 export async function updatePosicoes(
 	supabase: SupabaseClient,
-	ordem: { id: string; posicao: number; status?: Status }[]
+	ordem: { id: string; posicao: number; status?: Status; categoria?: Categoria }[]
 ): Promise<void> {
 	const results = await Promise.all(
-		ordem.map(({ id, posicao, status }) => {
+		ordem.map(({ id, posicao, status, categoria }) => {
 			const row: Record<string, unknown> = { posicao };
 			if (status !== undefined) {
 				row.status = status;
 				row.concluida = status === 'concluida';
 			}
+			if (categoria !== undefined) row.categoria = categoria;
 			return supabase.from('organyze_tarefas').update(row).eq('id', id);
 		})
 	);

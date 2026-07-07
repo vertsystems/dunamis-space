@@ -3,7 +3,16 @@
 // daquele colaborador no dia selecionado. Mutations otimistas (rollback + toast).
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Colaborador, DiaStatus, Habito, Meta, Prioridade, Status, Tarefa } from './types';
+import type {
+	Categoria,
+	Colaborador,
+	DiaStatus,
+	Habito,
+	Meta,
+	Prioridade,
+	Status,
+	Tarefa
+} from './types';
 import { metaConcluida, proximoDia } from './types';
 import { toast } from '$lib/toast.svelte';
 import * as db from './db';
@@ -216,7 +225,11 @@ class OrganyzeStore {
 	}
 
 	// ---- Tarefas -----------------------------------------------------------
-	addTarefa(titulo: string, prazo: string | null = null): Tarefa | null {
+	addTarefa(
+		titulo: string,
+		prazo: string | null = null,
+		categoria: Categoria = 'empresa'
+	): Tarefa | null {
 		const trimmed = titulo.trim();
 		if (!trimmed || !this.colaboradorId) return null;
 		const posicao = this.tarefas.length
@@ -227,6 +240,7 @@ class OrganyzeStore {
 			colaboradorId: this.colaboradorId,
 			titulo: trimmed,
 			status: 'nao_iniciado',
+			categoria,
 			data: this.dia,
 			posicao,
 			prioridade: 'media',
@@ -263,6 +277,10 @@ class OrganyzeStore {
 
 	setStatus(id: string, status: Status) {
 		this.#update(id, { status }, 'Falha ao mover tarefa.');
+	}
+
+	setCategoria(id: string, categoria: Categoria) {
+		this.#update(id, { categoria }, 'Falha ao mover tarefa de lado.');
 	}
 
 	editTarefa(id: string, titulo: string) {
@@ -359,13 +377,20 @@ class OrganyzeStore {
 	 * tarefas visíveis já na ordem final (topo→base, em todas as seções). posicao = índice
 	 * e status vem da seção onde cada tarefa parou.
 	 */
-	aplicarQuadro(items: { id: string; status: Status }[]) {
+	aplicarQuadro(items: { id: string; status: Status; categoria: Categoria }[]) {
 		const snapshot = this.tarefas;
-		const meta = new Map(items.map((it, i) => [it.id, { posicao: i, status: it.status }]));
+		const meta = new Map(
+			items.map((it, i) => [it.id, { posicao: i, status: it.status, categoria: it.categoria }])
+		);
 		this.tarefas = [...this.tarefas]
 			.map((t) => (meta.has(t.id) ? { ...t, ...meta.get(t.id)! } : t))
 			.sort((a, b) => a.posicao - b.posicao);
-		const ordem = items.map((it, i) => ({ id: it.id, posicao: i, status: it.status }));
+		const ordem = items.map((it, i) => ({
+			id: it.id,
+			posicao: i,
+			status: it.status,
+			categoria: it.categoria
+		}));
 		this.#persist(
 			() => db.updatePosicoes(this.supabase!, ordem),
 			() => (this.tarefas = snapshot),
@@ -373,12 +398,15 @@ class OrganyzeStore {
 		);
 	}
 
-	/** Move todas as concluídas do quadro para a Lixeira (soft delete). */
-	limparConcluidas() {
-		const concluidas = this.tarefas.filter((t) => t.status === 'concluida');
+	/** Move as concluídas para a Lixeira (soft delete). Opcionalmente só de um lado. */
+	limparConcluidas(categoria?: Categoria) {
+		const concluidas = this.tarefas.filter(
+			(t) => t.status === 'concluida' && (categoria === undefined || t.categoria === categoria)
+		);
 		if (!concluidas.length) return;
+		const ids = new Set(concluidas.map((t) => t.id));
 		const snapshot = this.tarefas;
-		this.tarefas = this.tarefas.filter((t) => t.status !== 'concluida');
+		this.tarefas = this.tarefas.filter((t) => !ids.has(t.id));
 		this.#persist(
 			async () => {
 				for (const t of concluidas) await db.softDeleteTarefa(this.supabase!, t.id);
