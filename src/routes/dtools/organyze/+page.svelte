@@ -634,9 +634,21 @@
 					<ul class="divide-y divide-grey-200 border-t border-grey-200">
 						{#each d.tarefas as t (t.id)}
 							{@const u = urgencia(t.prazo, hojeStr)}
-							<li>
+							<li class="flex items-center gap-2.5 px-4 py-2 hover:bg-bg transition-colors">
+								<!-- Bolinha de concluído -->
 								<button
-									class="flex w-full items-center gap-2.5 px-4 py-2 text-left hover:bg-bg transition-colors"
+									class="grid size-4 shrink-0 place-items-center rounded-md border-2 transition-colors"
+									class:border-grey-200={t.status !== 'concluida'}
+									class:border-brand={t.status === 'concluida'}
+									class:bg-brand={t.status === 'concluida'}
+									class:text-white={t.status === 'concluida'}
+									aria-label={t.status === 'concluida' ? 'Reabrir tarefa' : 'Concluir tarefa'}
+									onclick={() => organyze.toggle(t.id)}
+								>
+									{#if t.status === 'concluida'}<Check size={11} strokeWidth={3} />{/if}
+								</button>
+								<button
+									class="flex min-w-0 flex-1 items-center gap-2.5 text-left"
 									onclick={() => abrirModal(t)}
 								>
 									<span
@@ -700,24 +712,34 @@
 								</div>
 								<div class="flex flex-col gap-0.5">
 									{#each cell.tarefas.slice(0, 4) as t (t.id)}
-										<button
-											class="flex items-center gap-1 rounded px-1 py-0.5 text-left transition-colors hover:bg-surface"
-											title={t.titulo}
-											onclick={() => abrirModal(t)}
+										<div
+											class="flex items-center gap-1 rounded px-1 py-0.5 transition-colors hover:bg-surface"
 										>
-											<span
-												class="size-1.5 shrink-0 rounded-full"
-												style="background: {t.status === 'concluida'
-													? 'var(--color-brand-green)'
-													: corPrioridade(t.prioridade)}"
-											></span>
-											<span
-												class="truncate text-[11px] leading-tight"
-												class:text-grey={t.status === 'concluida'}
-												class:line-through={t.status === 'concluida'}
-												class:text-navy={t.status !== 'concluida'}>{t.titulo}</span
+											<!-- Bolinha de concluído -->
+											<button
+												class="grid size-3 shrink-0 place-items-center rounded-[4px] border transition-colors"
+												class:border-grey-200={t.status !== 'concluida'}
+												class:border-brand={t.status === 'concluida'}
+												class:bg-brand={t.status === 'concluida'}
+												class:text-white={t.status === 'concluida'}
+												aria-label={t.status === 'concluida' ? 'Reabrir tarefa' : 'Concluir tarefa'}
+												onclick={() => organyze.toggle(t.id)}
 											>
-										</button>
+												{#if t.status === 'concluida'}<Check size={8} strokeWidth={3} />{/if}
+											</button>
+											<button
+												class="flex min-w-0 flex-1 items-center text-left"
+												title={t.titulo}
+												onclick={() => abrirModal(t)}
+											>
+												<span
+													class="truncate text-[11px] leading-tight"
+													class:text-grey={t.status === 'concluida'}
+													class:line-through={t.status === 'concluida'}
+													class:text-navy={t.status !== 'concluida'}>{t.titulo}</span
+												>
+											</button>
+										</div>
 									{/each}
 									{#if cell.tarefas.length > 4}
 										<button
