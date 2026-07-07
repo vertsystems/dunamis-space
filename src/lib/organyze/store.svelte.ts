@@ -77,6 +77,10 @@ class OrganyzeStore {
 	modo = $state<Modo>('dia');
 	tarefas = $state<Tarefa[]>([]); // conjunto carregado (dia/semana/mês)
 
+	// Lixeira (tarefas com soft delete do colaborador atual)
+	lixeira = $state<Tarefa[]>([]);
+	loadingLixeira = $state(false);
+
 	// Metas do Mês (por colaborador)
 	mesMeta = $state<string>(mesAtual());
 	metas = $state<Meta[]>([]);
@@ -321,13 +325,32 @@ class OrganyzeStore {
 		this.#update(id, { subtarefas }, 'Falha ao excluir subtarefa.');
 	}
 
+	/** Move a tarefa para a Lixeira (soft delete) com opção de desfazer. */
 	removeTarefa(id: string) {
+		const tarefa = this.tarefas.find((t) => t.id === id);
+		if (!tarefa) return;
 		const snapshot = this.tarefas;
 		this.tarefas = this.tarefas.filter((t) => t.id !== id);
 		this.#persist(
-			() => db.deleteTarefa(this.supabase!, id),
+			() => db.softDeleteTarefa(this.supabase!, id),
 			() => (this.tarefas = snapshot),
 			'Falha ao excluir tarefa.'
+		);
+		toast.action('Tarefa movida para a lixeira.', 'Desfazer', () =>
+			this.#desfazerRemocao(tarefa)
+		);
+	}
+
+	/** Desfaz uma remoção recente: recoloca no quadro e restaura no banco. */
+	#desfazerRemocao(tarefa: Tarefa) {
+		if (!this.tarefas.some((t) => t.id === tarefa.id)) {
+			this.tarefas = [...this.tarefas, tarefa].sort((a, b) => a.posicao - b.posicao);
+		}
+		this.lixeira = this.lixeira.filter((t) => t.id !== tarefa.id);
+		this.#persist(
+			() => db.restoreTarefa(this.supabase!, tarefa.id),
+			() => (this.tarefas = this.tarefas.filter((t) => t.id !== tarefa.id)),
+			'Falha ao restaurar tarefa.'
 		);
 	}
 
@@ -350,6 +373,7 @@ class OrganyzeStore {
 		);
 	}
 
+	/** Move todas as concluídas do quadro para a Lixeira (soft delete). */
 	limparConcluidas() {
 		const concluidas = this.tarefas.filter((t) => t.status === 'concluida');
 		if (!concluidas.length) return;
@@ -357,10 +381,64 @@ class OrganyzeStore {
 		this.tarefas = this.tarefas.filter((t) => t.status !== 'concluida');
 		this.#persist(
 			async () => {
-				for (const t of concluidas) await db.deleteTarefa(this.supabase!, t.id);
+				for (const t of concluidas) await db.softDeleteTarefa(this.supabase!, t.id);
 			},
 			() => (this.tarefas = snapshot),
 			'Falha ao limpar concluídas.'
+		);
+	}
+
+	// ---- Lixeira -----------------------------------------------------------
+	async carregarLixeira() {
+		if (!this.supabase || !this.colaboradorId) {
+			this.lixeira = [];
+			return;
+		}
+		this.loadingLixeira = true;
+		try {
+			this.lixeira = await db.fetchLixeira(this.supabase, this.colaboradorId);
+		} catch (e) {
+			console.error('[organyze] carregarLixeira', e);
+			toast.error('Não foi possível carregar a lixeira.');
+		} finally {
+			this.loadingLixeira = false;
+		}
+	}
+
+	/** Restaura uma tarefa da Lixeira (some da lista de excluídas). */
+	restaurarTarefa(id: string) {
+		const snapshot = this.lixeira;
+		this.lixeira = this.lixeira.filter((t) => t.id !== id);
+		this.#persist(
+			() => db.restoreTarefa(this.supabase!, id),
+			() => (this.lixeira = snapshot),
+			'Falha ao restaurar tarefa.'
+		);
+	}
+
+	/** Exclui em definitivo (apaga a linha) uma tarefa da Lixeira. */
+	excluirDefinitivo(id: string) {
+		const snapshot = this.lixeira;
+		this.lixeira = this.lixeira.filter((t) => t.id !== id);
+		this.#persist(
+			() => db.deleteTarefa(this.supabase!, id),
+			() => (this.lixeira = snapshot),
+			'Falha ao excluir tarefa.'
+		);
+	}
+
+	/** Esvazia a Lixeira: apaga em definitivo todas as tarefas excluídas. */
+	esvaziarLixeira() {
+		if (!this.lixeira.length) return;
+		const snapshot = this.lixeira;
+		const ids = this.lixeira.map((t) => t.id);
+		this.lixeira = [];
+		this.#persist(
+			async () => {
+				for (const id of ids) await db.deleteTarefa(this.supabase!, id);
+			},
+			() => (this.lixeira = snapshot),
+			'Falha ao esvaziar a lixeira.'
 		);
 	}
 

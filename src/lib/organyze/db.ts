@@ -28,6 +28,7 @@ function toTarefa(r: {
 	descricao: string | null;
 	subtarefas: Subtarefa[] | null;
 	responsaveis: string[] | null;
+	deleted_at?: string | null;
 }): Tarefa {
 	// Fallback: se `status` ainda estiver nulo, deriva do antigo `concluida`.
 	const status = (r.status as Status) ?? (r.concluida ? 'concluida' : 'em_execucao');
@@ -42,7 +43,8 @@ function toTarefa(r: {
 		prazo: r.prazo ?? null,
 		descricao: r.descricao ?? '',
 		subtarefas: Array.isArray(r.subtarefas) ? r.subtarefas : [],
-		responsaveis: Array.isArray(r.responsaveis) ? r.responsaveis : []
+		responsaveis: Array.isArray(r.responsaveis) ? r.responsaveis : [],
+		deletedAt: r.deleted_at ?? null
 	};
 }
 
@@ -76,13 +78,14 @@ export async function rolarPendentesParaHoje(
 		.from('organyze_tarefas')
 		.update({ data: hoje })
 		.or(donoOuResponsavel(colaboradorId))
+		.is('deleted_at', null)
 		.neq('status', 'concluida')
 		.lt('data', hoje);
 	if (error) throw error;
 }
 
 const COLUNAS =
-	'id, colaborador_id, titulo, status, concluida, data, posicao, prioridade, prazo, descricao, subtarefas, responsaveis';
+	'id, colaborador_id, titulo, status, concluida, data, posicao, prioridade, prazo, descricao, subtarefas, responsaveis, deleted_at';
 
 /** Filtro PostgREST: tarefas do colaborador (dono) OU onde ele é responsável. */
 function donoOuResponsavel(id: string): string {
@@ -109,12 +112,46 @@ export async function fetchByColaboradorRange(
 		.from('organyze_tarefas')
 		.select(COLUNAS)
 		.or(donoOuResponsavel(colaboradorId))
+		.is('deleted_at', null)
 		.gte('data', start)
 		.lte('data', end)
 		.order('data', { ascending: true })
 		.order('posicao', { ascending: true });
 	if (error) throw error;
 	return (rows ?? []).map(toTarefa);
+}
+
+/** Tarefas na Lixeira (soft delete) do colaborador — mais recentes primeiro. */
+export async function fetchLixeira(
+	supabase: SupabaseClient,
+	colaboradorId: string
+): Promise<Tarefa[]> {
+	const { data: rows, error } = await supabase
+		.from('organyze_tarefas')
+		.select(COLUNAS)
+		.or(donoOuResponsavel(colaboradorId))
+		.not('deleted_at', 'is', null)
+		.order('deleted_at', { ascending: false });
+	if (error) throw error;
+	return (rows ?? []).map(toTarefa);
+}
+
+/** Move a tarefa para a Lixeira (soft delete). */
+export async function softDeleteTarefa(supabase: SupabaseClient, id: string): Promise<void> {
+	const { error } = await supabase
+		.from('organyze_tarefas')
+		.update({ deleted_at: new Date().toISOString() })
+		.eq('id', id);
+	if (error) throw error;
+}
+
+/** Restaura uma tarefa da Lixeira (volta a ser ativa). */
+export async function restoreTarefa(supabase: SupabaseClient, id: string): Promise<void> {
+	const { error } = await supabase
+		.from('organyze_tarefas')
+		.update({ deleted_at: null })
+		.eq('id', id);
+	if (error) throw error;
 }
 
 export async function insertTarefa(supabase: SupabaseClient, t: Tarefa): Promise<void> {

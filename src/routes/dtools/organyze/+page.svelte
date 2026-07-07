@@ -440,6 +440,7 @@
 		<!-- Snippet de card de tarefa -->
 		{#snippet taskRow(t: Tarefa)}
 			{@const u = urgencia(t.prazo, hojeStr)}
+			{@const alvo = dragOverId === t.id && dragId !== null && dragId !== t.id}
 			<li
 				draggable="true"
 				ondragstart={() => (dragId = t.id)}
@@ -459,12 +460,12 @@
 					e.stopPropagation();
 					moverPara(t.status, t.id, dragBelow);
 				}}
-				style="transform: translateY({dragOverId === t.id && dragId !== t.id
-					? dragBelow
-						? -6
-						: 6
-					: 0}px)"
-				class="group flex items-start gap-2.5 rounded-[var(--radius)] border border-grey-200 bg-surface px-3 py-3 shadow-xs transition-[transform,border-color] duration-150 ease-out hover:border-grey"
+				style="transform: translateY({alvo ? (dragBelow ? -16 : 16) : 0}px)"
+				class="group relative flex items-start gap-2.5 rounded-[var(--radius)] border bg-surface px-3 py-3 shadow-xs transition-[transform,border-color,background-color,box-shadow] duration-150 ease-out hover:border-grey"
+				class:border-grey-200={!alvo}
+				class:border-brand={alvo}
+				class:bg-brand-50={alvo}
+				class:shadow-md={alvo}
 				class:opacity-60={t.status === 'concluida'}
 				class:opacity-40={dragId === t.id}
 			>

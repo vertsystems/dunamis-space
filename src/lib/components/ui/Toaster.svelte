@@ -27,6 +27,15 @@
 				>{icon[t.tone]}</span
 			>
 			<span class="flex-1 text-navy-900">{t.message}</span>
+			{#if t.action}
+				<button
+					class="shrink-0 rounded-[var(--radius)] px-2.5 py-1 text-xs font-semibold text-brand transition-colors hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35"
+					onclick={() => {
+						t.action?.run();
+						dismiss(t.id);
+					}}>{t.action.label}</button
+				>
+			{/if}
 			<button
 				class="rounded text-grey transition-colors hover:text-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35"
 				aria-label="Fechar"

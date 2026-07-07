@@ -33,6 +33,7 @@ export interface Tarefa {
 	descricao: string; // HTML enxuto (editor leve)
 	subtarefas: Subtarefa[];
 	responsaveis: string[]; // colaboradores com quem a tarefa é compartilhada (além do dono)
+	deletedAt?: string | null; // preenchido só nas tarefas vindas da Lixeira (soft delete)
 }
 
 // Ordem de exibição das seções (topo → base).
