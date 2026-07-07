@@ -41,6 +41,9 @@
 	let mostrarPrazoNovo = $state(false);
 	let dragId = $state<string | null>(null);
 	let dragOver = $state<Status | null>(null);
+	// Card sobre o qual estamos passando e se a solta será abaixo (true) ou acima (false).
+	let dragOverId = $state<string | null>(null);
+	let dragBelow = $state(false);
 
 	// Modal de edição
 	let modalId = $state<string | null>(null);
@@ -199,10 +202,11 @@
 	}
 
 	// ---- Drag & drop entre seções ----
-	function moverPara(alvoStatus: Status, alvoId: string | null) {
+	function moverPara(alvoStatus: Status, alvoId: string | null, below = false) {
 		const from = dragId;
 		dragId = null;
 		dragOver = null;
+		dragOverId = null;
 		if (!from) return;
 		// Lista completa (todas as seções, na ordem visível) sem a tarefa arrastada.
 		const lista = STATUS_ORDEM.flatMap((s) =>
@@ -211,7 +215,8 @@
 		const item = { id: from, status: alvoStatus };
 		if (alvoId && alvoId !== from) {
 			const idx = lista.findIndex((x) => x.id === alvoId);
-			lista.splice(idx < 0 ? lista.length : idx, 0, item);
+			if (idx < 0) lista.push(item);
+			else lista.splice(idx + (below ? 1 : 0), 0, item);
 		} else {
 			// Soltou na seção (sem tarefa específica): coloca ao final do grupo.
 			const last = lista.map((x) => x.status).lastIndexOf(alvoStatus);
@@ -438,16 +443,30 @@
 			<li
 				draggable="true"
 				ondragstart={() => (dragId = t.id)}
+				ondragend={() => {
+					dragId = null;
+					dragOverId = null;
+				}}
 				ondragover={(e) => {
 					e.preventDefault();
 					e.stopPropagation();
+					if (!dragId || dragId === t.id) return;
+					const r = e.currentTarget.getBoundingClientRect();
+					dragOverId = t.id;
+					dragBelow = e.clientY > r.top + r.height / 2;
 				}}
 				ondrop={(e) => {
 					e.stopPropagation();
-					moverPara(t.status, t.id);
+					moverPara(t.status, t.id, dragBelow);
 				}}
-				class="group flex items-start gap-2.5 rounded-[var(--radius)] border border-grey-200 bg-surface px-3 py-3 shadow-xs transition-colors hover:border-grey"
+				style="transform: translateY({dragOverId === t.id && dragId !== t.id
+					? dragBelow
+						? -6
+						: 6
+					: 0}px)"
+				class="group flex items-start gap-2.5 rounded-[var(--radius)] border border-grey-200 bg-surface px-3 py-3 shadow-xs transition-[transform,border-color] duration-150 ease-out hover:border-grey"
 				class:opacity-60={t.status === 'concluida'}
+				class:opacity-40={dragId === t.id}
 			>
 				<span
 					class="mt-0.5 cursor-grab text-grey/50 hover:text-grey active:cursor-grabbing"
@@ -703,6 +722,7 @@
 					ondragover={(e) => {
 						e.preventDefault();
 						dragOver = s;
+						dragOverId = null;
 					}}
 					ondragleave={() => dragOver === s && (dragOver = null)}
 					ondrop={() => moverPara(s, null)}
