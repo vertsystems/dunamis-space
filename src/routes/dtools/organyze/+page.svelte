@@ -40,13 +40,9 @@
 	let novoPrazo = $state('');
 	let mostrarPrazoNovo = $state(false);
 	let dragId = $state<string | null>(null);
-	let dragOver = $state<Status | null>(null);
-	// Card sobre o qual estamos passando e se a solta será abaixo (true) ou acima (false).
-	let dragOverId = $state<string | null>(null);
-	let dragBelow = $state(false);
-	// Espaço (px) aberto no card-alvo para encaixar a tarefa arrastada.
-	const GAP_ARRASTE = 44;
-	const PAD_BASE = 12; // padding vertical base do card (equivale a py-3)
+	// Destino da solta: seção + índice de inserção dentro do grupo (onde o slot abre).
+	let dropStatus = $state<Status | null>(null);
+	let dropIndex = $state<number | null>(null);
 
 	// Modal de edição
 	let modalId = $state<string | null>(null);
@@ -79,6 +75,23 @@
 		nao_iniciado: { label: 'Não iniciado', cor: 'var(--color-grey)' },
 		concluida: { label: 'Concluídas', cor: 'var(--color-brand-green)' }
 	};
+
+	// Atalhos de prazo (dias a partir de hoje).
+	const PRAZO_ATALHOS = [3, 5, 7, 10];
+	function prazoEmDias(n: number): string {
+		const d = new Date();
+		d.setDate(d.getDate() + n);
+		return toISODate(d);
+	}
+
+	/** Estilo do botão de situação: tom leve sempre; destaque forte quando selecionado. */
+	function situacaoStyle(s: Status, sel: boolean): string {
+		const c = SECAO_META[s].cor;
+		const mix = (pct: number) => `color-mix(in srgb, ${c} ${pct}%, transparent)`;
+		return sel
+			? `border-color:${c}; color:${c}; background:${mix(18)}; box-shadow: inset 0 0 0 1px ${c}`
+			: `border-color:${mix(40)}; color:${c}; background:${mix(10)}`;
+	}
 
 	const rotuloDia = $derived.by(() => {
 		const [y, m, d] = organyze.dia.split('-').map(Number);
@@ -205,35 +218,63 @@
 	}
 
 	// ---- Drag & drop entre seções ----
-	function moverPara(alvoStatus: Status, alvoId: string | null, below = false) {
-		const from = dragId;
+	function limparDrag() {
 		dragId = null;
-		dragOver = null;
-		dragOverId = null;
+		dropStatus = null;
+		dropIndex = null;
+	}
+
+	/**
+	 * Calcula onde o slot deve abrir na seção `s`: percorre os cards reais
+	 * (`[data-card]`, que exclui o card arrastado) e acha o índice de inserção pelo
+	 * ponto médio de cada um. Como o placeholder tem pointer-events:none e não conta
+	 * como card, o ponteiro nunca "escapa" e não há tremor.
+	 */
+	function calcDrop(e: DragEvent, s: Status) {
+		e.preventDefault();
+		if (!dragId) return;
+		const alvo = e.currentTarget as HTMLElement;
+		const cards = [...alvo.querySelectorAll<HTMLElement>('[data-card]')];
+		let idx = cards.length;
+		for (let i = 0; i < cards.length; i++) {
+			const r = cards[i].getBoundingClientRect();
+			if (e.clientY < r.top + r.height / 2) {
+				idx = i;
+				break;
+			}
+		}
+		dropStatus = s;
+		dropIndex = idx;
+	}
+
+	/** Some com o indicador ao sair de fato da seção (não ao trocar de card interno). */
+	function aoSairSecao(e: DragEvent, s: Status) {
+		if (dropStatus !== s) return;
+		const para = e.relatedTarget;
+		if (para instanceof Node && (e.currentTarget as HTMLElement).contains(para)) return;
+		dropStatus = null;
+		dropIndex = null;
+	}
+
+	function soltar(s: Status) {
+		const from = dragId;
+		const idx = dropStatus === s ? dropIndex : null;
+		limparDrag();
 		if (!from) return;
-		// Lista completa (todas as seções, na ordem visível) sem a tarefa arrastada.
-		const lista = STATUS_ORDEM.flatMap((s) =>
-			grupos[s].filter((t) => t.id !== from).map((t) => ({ id: t.id, status: s }))
-		);
-		const item = { id: from, status: alvoStatus };
-		if (alvoId && alvoId !== from) {
-			const idx = lista.findIndex((x) => x.id === alvoId);
-			if (idx < 0) lista.push(item);
-			else lista.splice(idx + (below ? 1 : 0), 0, item);
-		} else {
-			// Soltou na seção (sem tarefa específica): coloca ao final do grupo.
-			const last = lista.map((x) => x.status).lastIndexOf(alvoStatus);
-			if (last >= 0) lista.splice(last + 1, 0, item);
-			else {
-				const oi = STATUS_ORDEM.indexOf(alvoStatus);
-				let at = lista.length;
-				for (let i = 0; i < lista.length; i++) {
-					if (STATUS_ORDEM.indexOf(lista[i].status) > oi) {
-						at = i;
-						break;
-					}
-				}
-				lista.splice(at, 0, item);
+		// Lista completa (todas as seções, na ordem visível) reinserindo o arrastado
+		// na posição `idx` do grupo de destino.
+		const lista: { id: string; status: Status }[] = [];
+		for (const st of STATUS_ORDEM) {
+			const cards = grupos[st].filter((t) => t.id !== from);
+			if (st === s) {
+				const at = idx == null ? cards.length : Math.min(idx, cards.length);
+				cards.forEach((t, i) => {
+					if (i === at) lista.push({ id: from, status: s });
+					lista.push({ id: t.id, status: st });
+				});
+				if (at >= cards.length) lista.push({ id: from, status: s });
+			} else {
+				cards.forEach((t) => lista.push({ id: t.id, status: st }));
 			}
 		}
 		organyze.aplicarQuadro(lista);
@@ -440,44 +481,33 @@
 		</div>
 		{/if}
 
+		<!-- Slot de encaixe (placeholder) exibido no destino da solta. -->
+		{#snippet slot()}
+			<li
+				class="pointer-events-none flex h-14 items-center justify-center rounded-[var(--radius)] border-2 border-dashed border-brand bg-brand-50 text-xs font-semibold text-brand"
+				style="animation: slotIn 160ms ease-out"
+			>
+				Soltar aqui
+			</li>
+		{/snippet}
+
 		<!-- Snippet de card de tarefa -->
 		{#snippet taskRow(t: Tarefa)}
 			{@const u = urgencia(t.prazo, hojeStr)}
-			{@const alvo = dragOverId === t.id && dragId !== null && dragId !== t.id}
 			{@const sendo = dragId === t.id}
+			{@const fundo = dragId !== null && !sendo}
 			<li
+				data-card={sendo ? undefined : ''}
 				draggable="true"
 				ondragstart={() => (dragId = t.id)}
-				ondragend={() => {
-					dragId = null;
-					dragOverId = null;
-				}}
-				ondragover={(e) => {
-					e.preventDefault();
-					e.stopPropagation();
-					if (!dragId || dragId === t.id) return;
-					const r = e.currentTarget.getBoundingClientRect();
-					// Altura "natural" (descontando o vão já aberto) mantém o ponto médio
-					// estável: o card cresce sob o cursor sem ficar tremendo.
-					const natural = r.height - (dragOverId === t.id ? GAP_ARRASTE : 0);
-					dragOverId = t.id;
-					dragBelow = e.clientY > r.top + natural / 2;
-				}}
-				ondrop={(e) => {
-					e.stopPropagation();
-					moverPara(t.status, t.id, dragBelow);
-				}}
-				style="padding-top: {PAD_BASE + (alvo && !dragBelow ? GAP_ARRASTE : 0)}px; padding-bottom: {PAD_BASE +
-					(alvo && dragBelow ? GAP_ARRASTE : 0)}px;{sendo ? ' transform: scale(1.05);' : ''}"
-				class="group relative flex items-start gap-2.5 rounded-[var(--radius)] border bg-surface px-3 shadow-xs transition-[padding,transform,border-color,background-color,box-shadow] duration-150 ease-out hover:border-grey"
-				class:border-grey-200={!alvo}
-				class:border-brand={alvo}
-				class:bg-brand-50={alvo}
-				class:shadow-md={alvo}
-				class:shadow-lg={sendo}
-				class:z-10={sendo}
-				class:opacity-60={t.status === 'concluida'}
-				class:opacity-50={sendo}
+				ondragend={limparDrag}
+				class="group relative flex items-start gap-2.5 rounded-[var(--radius)] border border-grey-200 bg-surface px-3 py-3 shadow-xs transition-[transform,filter,opacity,box-shadow] duration-200 ease-out hover:border-grey"
+				class:z-20={sendo}
+				class:shadow-xl={sendo}
+				class:opacity-60={t.status === 'concluida' && !sendo}
+				style:transform={sendo ? 'scale(1.05)' : undefined}
+				style:filter={fundo ? 'blur(2px)' : undefined}
+				style:opacity={sendo ? '0.45' : fundo ? '0.55' : undefined}
 			>
 				<span
 					class="mt-0.5 cursor-grab text-grey/50 hover:text-grey active:cursor-grabbing"
@@ -728,15 +758,10 @@
 			{#each STATUS_ORDEM as s (s)}
 				<section
 					class="space-y-2 rounded-[var(--radius-lg)] p-1 transition-colors"
-					class:bg-brand-50={dragOver === s}
-					style={dragOver === s ? 'background: rgba(59,110,246,0.06)' : ''}
-					ondragover={(e) => {
-						e.preventDefault();
-						dragOver = s;
-						dragOverId = null;
-					}}
-					ondragleave={() => dragOver === s && (dragOver = null)}
-					ondrop={() => moverPara(s, null)}
+					class:bg-brand-50={dropStatus === s}
+					ondragover={(e) => calcDrop(e, s)}
+					ondragleave={(e) => aoSairSecao(e, s)}
+					ondrop={() => soltar(s)}
 					role="list"
 				>
 					<div class="flex items-center gap-2 px-2 pt-1">
@@ -757,15 +782,25 @@
 
 					{#if grupos[s].length}
 						<ul class="space-y-2">
-							{#each grupos[s] as t (t.id)}
+							{#each grupos[s] as t, i (t.id)}
+								{#if dropStatus === s && dropIndex === i}
+									{@render slot()}
+								{/if}
 								{@render taskRow(t)}
 							{/each}
+							{#if dropStatus === s && (dropIndex ?? -1) >= grupos[s].length}
+								{@render slot()}
+							{/if}
 						</ul>
 					{:else}
 						<div
-							class="rounded-[var(--radius)] border border-dashed border-grey-200 py-4 text-center text-[11px] text-grey/80"
+							class="rounded-[var(--radius)] border border-dashed py-4 text-center text-[11px] transition-colors"
+							class:border-brand={dropStatus === s}
+							class:text-brand={dropStatus === s}
+							class:border-grey-200={dropStatus !== s}
+							class:text-grey={dropStatus !== s}
 						>
-							Arraste tarefas para cá
+							{dropStatus === s ? 'Solte aqui' : 'Arraste tarefas para cá'}
 						</div>
 					{/if}
 				</section>
@@ -807,15 +842,32 @@
 					{#each STATUS_ORDEM as s (s)}
 						<button
 							class="rounded-[var(--radius)] border px-2 py-2 text-xs font-semibold transition-colors"
-							class:border-grey-200={modalTarefa.status !== s}
-							class:text-slate={modalTarefa.status !== s}
-							class:bg-bg={modalTarefa.status !== s}
-							style={modalTarefa.status === s
-								? `border-color:${SECAO_META[s].cor}; color:${SECAO_META[s].cor}; background:${SECAO_META[s].cor}14`
-								: ''}
+							style={situacaoStyle(s, modalTarefa.status === s)}
 							onclick={() => modalId && organyze.setStatus(modalId, s)}
 						>
 							{SECAO_META[s].label}
+						</button>
+					{/each}
+				</div>
+			</div>
+
+			<!-- Prioridade -->
+			<div>
+				<span class="mb-1.5 block text-sm font-medium text-navy">Prioridade</span>
+				<div class="grid grid-cols-3 gap-2">
+					{#each PRIORIDADES as p (p.valor)}
+						<button
+							class="flex items-center justify-center gap-2 rounded-[var(--radius)] border px-2 py-2 text-xs font-semibold transition-colors"
+							class:border-grey-200={modalTarefa.prioridade !== p.valor}
+							class:text-slate={modalTarefa.prioridade !== p.valor}
+							class:bg-bg={modalTarefa.prioridade !== p.valor}
+							style={modalTarefa.prioridade === p.valor
+								? `border-color:${p.cor}; color:${p.cor}; background:${p.cor}14`
+								: ''}
+							onclick={() => modalId && organyze.setPrioridade(modalId, p.valor)}
+						>
+							<span class="size-2.5 rounded-full" style="background: {p.cor}"></span>
+							{p.label}
 						</button>
 					{/each}
 				</div>
@@ -878,28 +930,6 @@
 				</div>
 			</div>
 
-			<!-- Prioridade -->
-			<div>
-				<span class="mb-1.5 block text-sm font-medium text-navy">Prioridade</span>
-				<div class="grid grid-cols-3 gap-2">
-					{#each PRIORIDADES as p (p.valor)}
-						<button
-							class="flex items-center justify-center gap-2 rounded-[var(--radius)] border px-2 py-2 text-xs font-semibold transition-colors"
-							class:border-grey-200={modalTarefa.prioridade !== p.valor}
-							class:text-slate={modalTarefa.prioridade !== p.valor}
-							class:bg-bg={modalTarefa.prioridade !== p.valor}
-							style={modalTarefa.prioridade === p.valor
-								? `border-color:${p.cor}; color:${p.cor}; background:${p.cor}14`
-								: ''}
-							onclick={() => modalId && organyze.setPrioridade(modalId, p.valor)}
-						>
-							<span class="size-2.5 rounded-full" style="background: {p.cor}"></span>
-							{p.label}
-						</button>
-					{/each}
-				</div>
-			</div>
-
 			<!-- Prazo -->
 			<div>
 				<span class="mb-1.5 block text-sm font-medium text-navy">Prazo de entrega</span>
@@ -925,6 +955,25 @@
 							onclick={() => modalId && organyze.setPrazo(modalId, null)}>remover</button
 						>
 					{/if}
+				</div>
+				<!-- Atalhos rápidos de prazo -->
+				<div class="mt-2 flex flex-wrap items-center gap-1.5">
+					<span class="mr-0.5 text-xs text-grey">Em:</span>
+					{#each PRAZO_ATALHOS as n (n)}
+						{@const iso = prazoEmDias(n)}
+						{@const ativo = modalTarefa.prazo === iso}
+						<button
+							class="rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors"
+							class:border-brand={ativo}
+							class:text-brand={ativo}
+							class:bg-brand-50={ativo}
+							class:border-grey-200={!ativo}
+							class:text-grey={!ativo}
+							onclick={() => modalId && organyze.setPrazo(modalId, iso)}
+						>
+							{n} dias
+						</button>
+					{/each}
 				</div>
 			</div>
 
@@ -1045,5 +1094,17 @@
 	.avatar-btn:hover .avatar-ring {
 		transform: scale(1.15);
 		outline-color: var(--color-brand);
+	}
+	/* Slot de encaixe surge abrindo o espaço no destino da solta. */
+	@keyframes slotIn {
+		from {
+			opacity: 0;
+			height: 0;
+			margin-top: -0.5rem;
+		}
+		to {
+			opacity: 1;
+			height: 3.5rem;
+		}
 	}
 </style>

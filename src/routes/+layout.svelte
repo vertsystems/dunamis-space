@@ -56,7 +56,7 @@
 		label: string;
 		icon: string;
 		soon?: boolean;
-		subitens?: { href: string; label: string }[];
+		subitens?: { href: string; label: string; letra?: string }[];
 	};
 	type Departamento = {
 		id: string;
@@ -284,8 +284,10 @@
 											href={sub.href}
 											class="area-sub"
 											class:is-active={page.url.pathname === sub.href}
+											title={sub.label}
 										>
-											{sub.label}
+											{#if sub.letra}<span class="area-sub-ico">{sub.letra}</span>{/if}
+											<span class="area-label">{sub.label}</span>
 										</a>
 									{/each}
 								</div>

@@ -356,6 +356,9 @@ body::before {
 	}
 
 	.area-sub {
+		display: flex;
+		align-items: center;
+		gap: 0.55rem;
 		padding: 0.4rem 0.75rem;
 		font-size: 0.82rem;
 		font-weight: 500;
@@ -368,6 +371,26 @@ body::before {
 			color: var(--ds-primary);
 			font-weight: 600;
 		}
+	}
+
+	// Badge (letra) do subitem — vira o "ícone" quando a sidebar recolhe no mobile.
+	.area-sub-ico {
+		display: grid;
+		place-items: center;
+		flex-shrink: 0;
+		width: 1.4rem;
+		height: 1.4rem;
+		border-radius: 7px;
+		background: rgba(59, 110, 246, 0.12);
+		color: var(--ds-primary);
+		font-size: 0.72rem;
+		font-weight: 700;
+		line-height: 1;
+	}
+
+	.area-sub.is-active .area-sub-ico {
+		background: var(--ds-primary);
+		color: #fff;
 	}
 
 	// Item de submenu ainda não definido (placeholder "em breve")
@@ -456,6 +479,20 @@ body::before {
 				font-size: 1.15rem;
 				opacity: 0.9;
 			}
+		}
+
+		// Submenus recolhidos: sem árvore/recuo, só o badge centralizado.
+		.area-subs {
+			margin-left: 0;
+			padding-left: 0;
+			border-left: none;
+			align-items: center;
+		}
+
+		.area-sub {
+			justify-content: center;
+			gap: 0;
+			padding: 0.4rem 0;
 		}
 
 		// Sidebar recolhida: badge vira um ponto no canto do ícone.

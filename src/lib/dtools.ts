@@ -6,7 +6,7 @@
 // A sidebar do departamento DTools e a página inicial (/dtools) são geradas
 // automaticamente a partir desta lista.
 
-export type Subferramenta = { href: string; label: string };
+export type Subferramenta = { href: string; label: string; letra?: string };
 
 export type Ferramenta = {
 	href: string; // ex.: '/dtools/pagsup'
@@ -29,9 +29,9 @@ export const DTOOLS_FERRAMENTAS: Ferramenta[] = [
 		icon: 'organyze',
 		descricao: 'Lista de tarefas do dia: adicione o que precisa fazer e vá marcando o que concluiu.',
 		subitens: [
-			{ href: '/dtools/organyze', label: 'Tarefas' },
-			{ href: '/dtools/organyze/metas', label: 'Metas do Mês' },
-			{ href: '/dtools/organyze/lixeira', label: 'Lixeira' }
+			{ href: '/dtools/organyze', label: 'Tarefas', letra: 'T' },
+			{ href: '/dtools/organyze/metas', label: 'Metas do Mês', letra: 'M' },
+			{ href: '/dtools/organyze/lixeira', label: 'Lixeira', letra: 'L' }
 		]
 	}
 ];
