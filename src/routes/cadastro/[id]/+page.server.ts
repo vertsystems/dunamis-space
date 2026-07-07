@@ -1,6 +1,7 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { clienteFromForm } from '$lib/clientes';
 import { carregarCalendario } from '$lib/server/calendario';
+import { exigirPermissao } from '$lib/server/permissao';
 import type { Actions, PageServerLoad } from './$types';
 
 /** Erro de coluna inexistente → migration 0006 ainda não aplicada. */
@@ -44,7 +45,9 @@ export const load: PageServerLoad = async ({ params, url, locals: { supabase } }
 };
 
 export const actions: Actions = {
-	update: async ({ request, params, locals: { supabase } }) => {
+	update: async ({ request, params, locals }) => {
+		exigirPermissao(locals, 'clientes', 'editar');
+		const { supabase } = locals;
 		const values = clienteFromForm(await request.formData());
 		if (!values.nome) return fail(400, { error: 'O nome é obrigatório.', values });
 		const { error: e } = await supabase
@@ -59,7 +62,9 @@ export const actions: Actions = {
 		}
 		return { saved: true };
 	},
-	delete: async ({ params, locals: { supabase } }) => {
+	delete: async ({ params, locals }) => {
+		exigirPermissao(locals, 'clientes', 'excluir');
+		const { supabase } = locals;
 		const { error: e } = await supabase.from('clientes').delete().eq('id', params.id);
 		if (e) return fail(500, { error: e.message });
 		throw redirect(303, '/cadastro');

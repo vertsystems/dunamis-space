@@ -1,5 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import { ONBOARDING_PADRAO } from '$lib/adm';
+import { exigirPermissao } from '$lib/server/permissao';
 import type { Actions, PageServerLoad } from './$types';
 
 const str = (fd: FormData, k: string): string | null => {
@@ -32,7 +33,9 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 };
 
 export const actions: Actions = {
-	iniciar: async ({ request, locals: { supabase } }) => {
+	iniciar: async ({ request, locals }) => {
+		exigirPermissao(locals, 'onboarding', 'editar');
+		const { supabase } = locals;
 		const fd = await request.formData();
 		const cliente_id = str(fd, 'cliente_id');
 		if (!cliente_id) return fail(400, { error: 'Cliente obrigatório.' });
@@ -56,7 +59,9 @@ export const actions: Actions = {
 		return { saved: true };
 	},
 
-	item_toggle: async ({ request, locals: { supabase } }) => {
+	item_toggle: async ({ request, locals }) => {
+		exigirPermissao(locals, 'onboarding', 'editar');
+		const { supabase } = locals;
 		const fd = await request.formData();
 		const id = str(fd, 'id');
 		if (!id) return fail(400, { error: 'Item inválido.' });
@@ -74,7 +79,9 @@ export const actions: Actions = {
 		return { saved: true };
 	},
 
-	item_add: async ({ request, locals: { supabase } }) => {
+	item_add: async ({ request, locals }) => {
+		exigirPermissao(locals, 'onboarding', 'editar');
+		const { supabase } = locals;
 		const fd = await request.formData();
 		const cliente_id = str(fd, 'cliente_id');
 		const texto = str(fd, 'texto');
@@ -97,11 +104,12 @@ export const actions: Actions = {
 		return { saved: true };
 	},
 
-	item_excluir: async ({ request, locals: { supabase } }) => {
+	item_excluir: async ({ request, locals }) => {
+		exigirPermissao(locals, 'onboarding', 'excluir');
 		const fd = await request.formData();
 		const id = str(fd, 'id');
 		if (!id) return fail(400, { error: 'Item inválido.' });
-		const { error } = await supabase.from('adm_onboarding_itens').delete().eq('id', id);
+		const { error } = await locals.supabase.from('adm_onboarding_itens').delete().eq('id', id);
 		if (error) return fail(500, { error: error.message });
 		return { deleted: true };
 	}

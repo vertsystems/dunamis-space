@@ -1,6 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import { carregarCalendario, UUID_RE } from '$lib/server/calendario';
 import { CONTEUDO_STATUS } from '$lib/conteudo';
+import { exigirPermissao } from '$lib/server/permissao';
 import type { PageServerLoad, Actions } from './$types';
 
 const STATUS_VALIDOS = new Set<string>(CONTEUDO_STATUS.map((s) => s.value));
@@ -16,7 +17,9 @@ const COPIAVEIS =
 
 export const actions: Actions = {
 	// Arrastar-e-soltar: mover o post para outra data (mantém a hora enviada).
-	mover: async ({ request, locals: { supabase } }) => {
+	mover: async ({ request, locals }) => {
+		exigirPermissao(locals, 'conteudo', 'editar');
+		const { supabase } = locals;
 		const fd = await request.formData();
 		const id = String(fd.get('id') ?? '');
 		const dp = String(fd.get('data_publicacao') ?? '');
@@ -26,7 +29,9 @@ export const actions: Actions = {
 		return { ok: true };
 	},
 	// Arrastar-e-soltar: copiar o post para outra data (duplica na nova data).
-	copiar: async ({ request, locals: { supabase } }) => {
+	copiar: async ({ request, locals }) => {
+		exigirPermissao(locals, 'conteudo', 'editar');
+		const { supabase } = locals;
 		const fd = await request.formData();
 		const id = String(fd.get('id') ?? '');
 		const dp = String(fd.get('data_publicacao') ?? '');
@@ -42,7 +47,9 @@ export const actions: Actions = {
 		return { ok: true };
 	},
 	// Alterar status rápido pelo card (ex.: bolinha "Programar").
-	definirStatus: async ({ request, locals: { supabase } }) => {
+	definirStatus: async ({ request, locals }) => {
+		exigirPermissao(locals, 'conteudo', 'editar');
+		const { supabase } = locals;
 		const fd = await request.formData();
 		const id = String(fd.get('id') ?? '');
 		const status = String(fd.get('status') ?? '');
@@ -52,7 +59,9 @@ export const actions: Actions = {
 		return { ok: true };
 	},
 	// Excluir conteúdo (botão no modal de edição do calendário).
-	excluir: async ({ request, locals: { supabase } }) => {
+	excluir: async ({ request, locals }) => {
+		exigirPermissao(locals, 'conteudo', 'excluir');
+		const { supabase } = locals;
 		const fd = await request.formData();
 		const id = String(fd.get('id') ?? '');
 		if (!UUID_RE.test(id)) return fail(400, { error: 'ID inválido.' });

@@ -6,9 +6,11 @@
 		aprovacaoStatusLabel,
 		conteudoTipoLabel
 	} from '$lib/conteudo';
+	import { podeEditar } from '$lib/permissoes';
 	import { Card, Badge, Button, Select, SegmentedNav, EmptyState } from '$lib/components/ui';
 
 	let { data } = $props();
+	const perms = $derived(page.data.permissoes);
 	let status = $state(data.status);
 	// Re-sincroniza o filtro com a URL (back/forward do navegador).
 	$effect(() => {
@@ -51,7 +53,9 @@
 			<noscript><Button variant="secondary" type="submit">Filtrar</Button></noscript>
 		</form>
 	</div>
-	<Button onclick={() => location.assign('/conteudo/novo')}>+ Novo conteúdo</Button>
+	{#if podeEditar(perms, 'conteudo')}
+		<Button onclick={() => location.assign('/conteudo/novo')}>+ Novo conteúdo</Button>
+	{/if}
 </div>
 
 {#if data.loadError}<div class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">Erro ao carregar: {data.loadError}</div>{/if}

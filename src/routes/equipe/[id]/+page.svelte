@@ -1,9 +1,12 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { page } from '$app/state';
+	import { podeEditar, podeExcluir } from '$lib/permissoes';
 	import ColaboradorForm from '$lib/components/ColaboradorForm.svelte';
 	import { Card, Button, Breadcrumb } from '$lib/components/ui';
 
 	let { data, form } = $props();
+	const perms = $derived(page.data.permissoes);
 	let colaborador = $derived(form?.values ?? data.colaborador);
 	let confirmDelete = $state(false);
 </script>
@@ -16,9 +19,14 @@
 
 <Card>
 	<h1 class="text-sm font-semibold text-navy mb-4">{data.colaborador.nome}</h1>
-	<ColaboradorForm {colaborador} error={form?.error ?? null} submitLabel="Salvar alterações" action="?/update" />
+	{#if podeEditar(perms, 'equipe')}
+		<ColaboradorForm {colaborador} error={form?.error ?? null} submitLabel="Salvar alterações" action="?/update" />
+	{:else}
+		<p class="text-sm text-grey">Você não tem permissão para editar colaboradores.</p>
+	{/if}
 </Card>
 
+{#if podeExcluir(perms, 'equipe')}
 <Card class="mt-6">
 	<h2 class="text-sm font-semibold text-brand-danger mb-3">Zona de perigo</h2>
 	{#if confirmDelete}
@@ -33,3 +41,4 @@
 		<Button variant="danger" onclick={() => (confirmDelete = true)}>Excluir colaborador</Button>
 	{/if}
 </Card>
+{/if}

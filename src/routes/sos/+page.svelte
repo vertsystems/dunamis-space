@@ -1,12 +1,16 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { page } from '$app/state';
 	import { Card, Badge, EmptyState } from '$lib/components/ui';
 	import type { BadgeTone } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
 	import { toast } from '$lib/toast.svelte';
+	import { podeEditar, podeExcluir } from '$lib/permissoes';
 	import type { SosChamado } from './+page.server';
 
 	let { data } = $props();
+
+	const perms = $derived(page.data.permissoes);
 
 	const STATUS_META: Record<string, { label: string; tone: BadgeTone }> = {
 		aberto: { label: 'Aberto', tone: 'danger' },
@@ -129,35 +133,39 @@
 					</div>
 
 					<div class="flex shrink-0 items-center gap-2">
-						<form method="POST" action="?/status" use:enhance={onStatus}>
-							<input type="hidden" name="id" value={c.id} />
-							<select
-								name="status"
-								value={c.status}
-								onchange={(e) => e.currentTarget.form?.requestSubmit()}
-								class="h-8 rounded-[var(--radius)] border border-grey-200 bg-surface px-2 text-xs text-navy-900 shadow-xs transition-colors hover:border-grey focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25 focus-visible:outline-none"
-								aria-label="Alterar status"
-							>
-								<option value="aberto">Aberto</option>
-								<option value="em_andamento">Em andamento</option>
-								<option value="resolvido">Resolvido</option>
-							</select>
-						</form>
+						{#if podeEditar(perms, 'sos')}
+							<form method="POST" action="?/status" use:enhance={onStatus}>
+								<input type="hidden" name="id" value={c.id} />
+								<select
+									name="status"
+									value={c.status}
+									onchange={(e) => e.currentTarget.form?.requestSubmit()}
+									class="h-8 rounded-[var(--radius)] border border-grey-200 bg-surface px-2 text-xs text-navy-900 shadow-xs transition-colors hover:border-grey focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25 focus-visible:outline-none"
+									aria-label="Alterar status"
+								>
+									<option value="aberto">Aberto</option>
+									<option value="em_andamento">Em andamento</option>
+									<option value="resolvido">Resolvido</option>
+								</select>
+							</form>
+						{/if}
 
-						<form method="POST" action="?/excluir" use:enhance={onExcluir}>
-							<input type="hidden" name="id" value={c.id} />
-							<button
-								type="submit"
-								onclick={(e) => {
-									if (!confirm('Excluir este chamado?')) e.preventDefault();
-								}}
-								class="grid size-8 place-items-center rounded-[var(--radius)] text-grey transition-colors hover:bg-brand-danger/10 hover:text-brand-danger"
-								title="Excluir"
-								aria-label="Excluir chamado"
-							>
-								<Icon name="trash" size={16} />
-							</button>
-						</form>
+						{#if podeExcluir(perms, 'sos')}
+							<form method="POST" action="?/excluir" use:enhance={onExcluir}>
+								<input type="hidden" name="id" value={c.id} />
+								<button
+									type="submit"
+									onclick={(e) => {
+										if (!confirm('Excluir este chamado?')) e.preventDefault();
+									}}
+									class="grid size-8 place-items-center rounded-[var(--radius)] text-grey transition-colors hover:bg-brand-danger/10 hover:text-brand-danger"
+									title="Excluir"
+									aria-label="Excluir chamado"
+								>
+									<Icon name="trash" size={16} />
+								</button>
+							</form>
+						{/if}
 					</div>
 				</div>
 			</Card>

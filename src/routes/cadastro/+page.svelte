@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
+	import { page } from '$app/state';
+	import { podeEditar } from '$lib/permissoes';
 	import { formatBRL } from '$lib/clientes';
 	import { Button, Card, Input, EmptyState, DataTable, Modal } from '$lib/components/ui';
 	import type { ColumnDef } from '$lib/components/ui';
@@ -7,6 +9,7 @@
 	import { toast } from '$lib/toast.svelte';
 
 	let { data, form } = $props();
+	const perms = $derived(page.data.permissoes);
 	const res = $derived(form as { values?: Record<string, any>; error?: string } | null);
 
 	type Cliente = (typeof data.clientes)[number];
@@ -55,7 +58,9 @@
 			<Input type="search" name="q" placeholder="Buscar por nome" bind:value={q} wrapperClass="w-56" />
 			<Button variant="secondary" type="submit">Buscar</Button>
 		</form>
-		<Button onclick={() => (novoAberto = true)}>+ Novo cliente</Button>
+		{#if podeEditar(perms, 'clientes')}
+			<Button onclick={() => (novoAberto = true)}>+ Novo cliente</Button>
+		{/if}
 	</div>
 </div>
 

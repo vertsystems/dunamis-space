@@ -1,10 +1,13 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { conteudoStatusTone, conteudoStatusLabel, conteudoTipoLabel } from '$lib/conteudo';
+	import { podeEditar } from '$lib/permissoes';
 	import { SEMANA, MESES, chaveDia, celulasMes } from '$lib/calendario';
 	import { Card, Button, SegmentedNav, toneClasses } from '$lib/components/ui';
 
 	let { data } = $props();
+	const perms = $derived(page.data.permissoes);
 
 	const segs = [
 		{ label: 'Lista', href: '/conteudo' },
@@ -35,7 +38,9 @@
 
 <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
 	<SegmentedNav items={segs} current="Calendário" />
-	<Button onclick={() => goto('/conteudo/novo')}>+ Novo conteúdo</Button>
+	{#if podeEditar(perms, 'conteudo')}
+		<Button onclick={() => goto('/conteudo/novo')}>+ Novo conteúdo</Button>
+	{/if}
 </div>
 
 {#if data.loadError}<div class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">Erro ao carregar: {data.loadError}</div>{/if}

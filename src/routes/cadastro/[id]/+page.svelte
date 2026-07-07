@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
+	import { page } from '$app/state';
+	import { podeEditar, podeExcluir } from '$lib/permissoes';
 	import ClienteForm from '$lib/components/ClienteForm.svelte';
 	import CalendarioConteudos from '$lib/components/CalendarioConteudos.svelte';
 	import CargoBadge from '$lib/components/CargoBadge.svelte';
@@ -11,6 +13,7 @@
 
 	let { data, form } = $props();
 	const c = $derived(data.cliente);
+	const perms = $derived(page.data.permissoes);
 
 	// Cor determinística do avatar a partir do nome.
 	const AVATAR_CORES = ['bg-navy', 'bg-brand', 'bg-brand-green', 'bg-brand-danger', 'bg-slate'];
@@ -93,9 +96,11 @@
 				</div>
 			{/if}
 		</div>
-		<Button variant="secondary" onclick={() => (editAberto = true)}>
-			<Icon name="edit" size={15} /> Editar
-		</Button>
+		{#if podeEditar(perms, 'clientes')}
+			<Button variant="secondary" onclick={() => (editAberto = true)}>
+				<Icon name="edit" size={15} /> Editar
+			</Button>
+		{/if}
 	</div>
 </Card>
 
@@ -150,6 +155,7 @@
 </div>
 
 <!-- Zona de perigo -->
+{#if podeExcluir(perms, 'clientes')}
 <Card class="mt-4">
 	<h2 class="mb-3 text-sm font-semibold text-brand-danger">Zona de perigo</h2>
 	{#if confirmDelete}
@@ -164,6 +170,7 @@
 		<Button variant="danger" onclick={() => (confirmDelete = true)}>Excluir cliente</Button>
 	{/if}
 </Card>
+{/if}
 
 <Modal open={editAberto} title="Editar cliente" size="lg" onClose={() => (editAberto = false)}>
 	<ClienteForm

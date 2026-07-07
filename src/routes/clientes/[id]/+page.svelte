@@ -1,11 +1,14 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { page } from '$app/state';
+	import { podeEditar, podeExcluir } from '$lib/permissoes';
 	import ClienteForm from '$lib/components/ClienteForm.svelte';
 	import Comentarios from '$lib/components/Comentarios.svelte';
 	import { statusTone, statusLabel } from '$lib/clientes';
 	import { Card, Badge, Button, Breadcrumb } from '$lib/components/ui';
 
 	let { data, form } = $props();
+	const perms = $derived(page.data.permissoes);
 
 	// Após salvar com sucesso, usa os valores atualizados; senão, os do banco.
 	let cliente = $derived(form?.values ?? data.cliente);
@@ -26,17 +29,22 @@
 {/if}
 
 <Card>
-	<ClienteForm
-		{cliente}
-		colaboradores={data.colaboradores}
-		error={form?.error ?? null}
-		submitLabel="Salvar alterações"
-		action="?/update"
-	/>
+	{#if podeEditar(perms, 'clientes')}
+		<ClienteForm
+			{cliente}
+			colaboradores={data.colaboradores}
+			error={form?.error ?? null}
+			submitLabel="Salvar alterações"
+			action="?/update"
+		/>
+	{:else}
+		<p class="text-sm text-grey">Você não tem permissão para editar este cliente.</p>
+	{/if}
 </Card>
 
 <Comentarios entidadeTipo="cliente" entidadeId={data.cliente.id} />
 
+{#if podeExcluir(perms, 'clientes')}
 <Card class="mt-6">
 	<h2 class="text-sm font-semibold text-brand-danger mb-3">Zona de perigo</h2>
 	{#if confirmDelete}
@@ -53,3 +61,4 @@
 		<Button variant="danger" onclick={() => (confirmDelete = true)}>Excluir cliente</Button>
 	{/if}
 </Card>
+{/if}

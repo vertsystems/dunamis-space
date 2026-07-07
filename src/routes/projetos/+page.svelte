@@ -1,12 +1,16 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
+	import { page } from '$app/state';
 	import { PROJETO_STATUS, projetoStatusTone, projetoStatusLabel, projetoTipoLabel } from '$lib/projetos';
 	import { Card, Badge, Button, Select, EmptyState, DataTable, Modal } from '$lib/components/ui';
 	import type { ColumnDef } from '$lib/components/ui';
 	import ProjetoForm from '$lib/components/ProjetoForm.svelte';
 	import { toast } from '$lib/toast.svelte';
+	import { podeEditar } from '$lib/permissoes';
 
 	let { data, form } = $props();
+
+	const perms = $derived(page.data.permissoes);
 	// O form vem de actions de outras rotas (/projetos/novo, /[id]?/update) → tipagem solta.
 	const res = $derived(form as { values?: Record<string, any>; error?: string } | null);
 	let status = $state(data.status);
@@ -58,7 +62,9 @@
 		</Select>
 		<Button variant="secondary" type="submit">Filtrar</Button>
 	</form>
-	<Button onclick={() => (novoAberto = true)}>+ Novo projeto</Button>
+	{#if podeEditar(perms, 'projetos')}
+		<Button onclick={() => (novoAberto = true)}>+ Novo projeto</Button>
+	{/if}
 </div>
 
 {#if data.loadError}<div class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">Erro ao carregar: {data.loadError}</div>{/if}
@@ -67,7 +73,7 @@
 	<DataTable {columns} data={data.projetos} initialSort={[{ id: 'projeto', desc: false }]}>
 		{#snippet row(r)}
 			{@const p = r.original}
-			<tr class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg" onclick={() => (editando = p)}>
+			<tr class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg" onclick={() => podeEditar(perms, 'projetos') && (editando = p)}>
 				<td class="px-4 py-3 font-medium text-navy">{p.nome}</td>
 				<td class="px-4 py-3">{p.cliente?.nome ?? '—'}</td>
 				<td class="px-4 py-3">{projetoTipoLabel(p.tipo)}</td>

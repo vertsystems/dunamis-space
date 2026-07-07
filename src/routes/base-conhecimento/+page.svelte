@@ -1,11 +1,15 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
+	import { page } from '$app/state';
 	import { Card, Badge, Button, Input, EmptyState, DataTable, Modal } from '$lib/components/ui';
 	import type { ColumnDef } from '$lib/components/ui';
 	import KbForm from '$lib/components/KbForm.svelte';
 	import { toast } from '$lib/toast.svelte';
+	import { podeEditar } from '$lib/permissoes';
 
 	let { data, form } = $props();
+
+	const perms = $derived(page.data.permissoes);
 	// O form vem de actions de outras rotas (/base-conhecimento/novo, /[id]?/update) → tipagem solta.
 	const res = $derived(form as { values?: Record<string, any>; error?: string } | null);
 	let q = $state(data.q);
@@ -48,7 +52,9 @@
 		<Input type="search" name="q" placeholder="Buscar por título" bind:value={q} wrapperClass="w-64" />
 		<Button variant="secondary" type="submit">Buscar</Button>
 	</form>
-	<Button onclick={() => (novoAberto = true)}>+ Novo artigo</Button>
+	{#if podeEditar(perms, 'base_conhecimento')}
+		<Button onclick={() => (novoAberto = true)}>+ Novo artigo</Button>
+	{/if}
 </div>
 
 {#if data.loadError}<div class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">Erro ao carregar: {data.loadError}</div>{/if}
@@ -57,7 +63,7 @@
 	<DataTable {columns} data={data.artigos} initialSort={[{ id: 'titulo', desc: false }]}>
 		{#snippet row(r)}
 			{@const a = r.original}
-			<tr class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg" onclick={() => (editando = a)}>
+			<tr class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg" onclick={() => podeEditar(perms, 'base_conhecimento') && (editando = a)}>
 				<td class="px-4 py-3 font-medium text-navy">{a.titulo}</td>
 				<td class="px-4 py-3">{a.categoria ?? '—'}</td>
 				<td class="px-4 py-3">{a.cliente?.nome ?? 'Geral'}</td>

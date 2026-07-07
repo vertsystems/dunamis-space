@@ -1,5 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { transacaoFromForm } from '$lib/financeiro';
+import { exigirPermissao } from '$lib/server/permissao';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals: { supabase } }) => {
@@ -8,10 +9,11 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 };
 
 export const actions: Actions = {
-	default: async ({ request, locals: { supabase } }) => {
+	default: async ({ request, locals }) => {
+		exigirPermissao(locals, 'financeiro', 'editar');
 		const values = transacaoFromForm(await request.formData());
 		if (!values.valor && values.valor !== 0) return fail(400, { error: 'Informe o valor.', values });
-		const { data, error } = await supabase.from('transacoes').insert(values).select('id').single();
+		const { data, error } = await locals.supabase.from('transacoes').insert(values).select('id').single();
 		if (error) return fail(500, { error: error.message, values });
 		throw redirect(303, `/financeiro/${data.id}`);
 	}

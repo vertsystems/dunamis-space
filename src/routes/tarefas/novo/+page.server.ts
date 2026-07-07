@@ -1,5 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { tarefaFromForm } from '$lib/tarefas';
+import { exigirPermissao } from '$lib/server/permissao';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals: { supabase } }) => {
@@ -11,7 +12,9 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 };
 
 export const actions: Actions = {
-	default: async ({ request, locals: { supabase } }) => {
+	default: async ({ request, locals }) => {
+		exigirPermissao(locals, 'tarefas', 'editar');
+		const { supabase } = locals;
 		const values = tarefaFromForm(await request.formData());
 		if (!values.titulo) return fail(400, { error: 'O título é obrigatório.', values });
 		const { error } = await supabase.from('tarefas').insert(values);

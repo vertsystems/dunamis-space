@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
+	import { page } from '$app/state';
 	import { TAREFA_STATUS, prioridadeTone, prioridadeLabel } from '$lib/tarefas';
+	import { podeEditar, podeExcluir } from '$lib/permissoes';
 	import { Badge, Button, Modal } from '$lib/components/ui';
 	import TarefaForm from '$lib/components/TarefaForm.svelte';
 	import Icon from '$lib/components/Icon.svelte';
@@ -8,6 +10,7 @@
 	import { autoanimate } from '$lib/autoAnimate';
 
 	let { data, form } = $props();
+	const perms = $derived(page.data.permissoes);
 	// O form vem de actions de outras rotas (/tarefas/novo, /[id]?/update) → tipagem solta.
 	const res = $derived(form as { values?: Record<string, any>; error?: string } | null);
 
@@ -100,7 +103,9 @@
 			</div>
 		{/if}
 	</div>
-	<Button onclick={() => (novoAberto = true)}>+ Nova tarefa</Button>
+	{#if podeEditar(perms, 'tarefas')}
+		<Button onclick={() => (novoAberto = true)}>+ Nova tarefa</Button>
+	{/if}
 </div>
 
 {#if data.loadError}<div class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">Erro ao carregar: {data.loadError}</div>{/if}
@@ -143,18 +148,20 @@
 						<span class="block font-medium text-navy">{t.titulo}</span>
 						<div class="flex shrink-0 items-center gap-1.5">
 							<a class="text-xs text-brand hover:underline" href={`/tarefas/${t.id}`} onclick={(e) => e.stopPropagation()}>Abrir</a>
-							<button
-								type="button"
-								class="text-grey transition-colors hover:text-brand-danger"
-								title="Excluir tarefa"
-								aria-label="Excluir tarefa"
-								onclick={(e) => {
-									e.stopPropagation();
-									confirmandoExcluir = t.id;
-								}}
-							>
-								<Icon name="trash" size={13} />
-							</button>
+							{#if podeExcluir(perms, 'tarefas')}
+								<button
+									type="button"
+									class="text-grey transition-colors hover:text-brand-danger"
+									title="Excluir tarefa"
+									aria-label="Excluir tarefa"
+									onclick={(e) => {
+										e.stopPropagation();
+										confirmandoExcluir = t.id;
+									}}
+								>
+									<Icon name="trash" size={13} />
+								</button>
+							{/if}
 						</div>
 					</div>
 					{#if t.projeto?.nome}<div class="text-xs text-grey">{t.projeto.nome}</div>{/if}

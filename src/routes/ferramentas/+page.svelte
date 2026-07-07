@@ -1,14 +1,18 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { page } from '$app/state';
 	import { Button, Card, Badge, Input, Select, Textarea, Checkbox, EmptyState, DataTable } from '$lib/components/ui';
 	import type { BadgeTone, ColumnDef } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
 	import ResponsavelPicker from '$lib/components/ResponsavelPicker.svelte';
 	import CrmModal from '$lib/components/crm/CrmModal.svelte';
 	import { toast } from '$lib/toast.svelte';
+	import { podeEditar, podeExcluir } from '$lib/permissoes';
 	import { formatBRL } from '$lib/clientes';
 
 	let { data } = $props();
+
+	const perms = $derived(page.data.permissoes);
 
 	type Ferramenta = (typeof data.ferramentas)[number];
 	type Acesso = (typeof data.acessos)[number];
@@ -114,7 +118,9 @@
 					<span class="tabular-nums">{formatBRL(totalMensal)}</span>/mês
 				</p>
 			</div>
-			<Button size="sm" onclick={novaFerramenta}>+ Nova ferramenta</Button>
+			{#if podeEditar(perms, 'ferramentas')}
+				<Button size="sm" onclick={novaFerramenta}>+ Nova ferramenta</Button>
+			{/if}
 		</div>
 
 		<Card padding="none" class="overflow-hidden">
@@ -150,7 +156,9 @@
 				<h2 class="text-sm font-semibold text-navy">Acessos / Contas</h2>
 				<p class="text-sm text-grey">Onde ficam os logins da agência e dos clientes.</p>
 			</div>
-			<Button size="sm" onclick={novoAcesso}>+ Novo acesso</Button>
+			{#if podeEditar(perms, 'ferramentas')}
+				<Button size="sm" onclick={novoAcesso}>+ Novo acesso</Button>
+			{/if}
 		</div>
 
 		<p class="mb-3 rounded-[var(--radius)] bg-brand-amber/15 p-2 text-xs text-brand-brown">
@@ -252,12 +260,14 @@
 		<Textarea label="Observações" name="observacoes" value={f?.observacoes ?? ''} rows={2} wrapperClass="md:col-span-12" />
 
 		<div class="flex items-center gap-2 pt-1 md:col-span-12">
-			<Button type="submit" loading={savingFerr}>Salvar</Button>
+			{#if podeEditar(perms, 'ferramentas')}
+				<Button type="submit" loading={savingFerr}>Salvar</Button>
+			{/if}
 			<Button variant="secondary" type="button" onclick={() => (modalFerramenta = false)}>Cancelar</Button>
 		</div>
 	</form>
 
-	{#if f}
+	{#if f && podeExcluir(perms, 'ferramentas')}
 		<form
 			method="POST"
 			action="?/ferramenta_excluir"
@@ -321,12 +331,14 @@
 		<Textarea label="Observações" name="observacoes" value={a?.observacoes ?? ''} rows={2} wrapperClass="md:col-span-12" />
 
 		<div class="flex items-center gap-2 pt-1 md:col-span-12">
-			<Button type="submit" loading={savingAcesso}>Salvar</Button>
+			{#if podeEditar(perms, 'ferramentas')}
+				<Button type="submit" loading={savingAcesso}>Salvar</Button>
+			{/if}
 			<Button variant="secondary" type="button" onclick={() => (modalAcesso = false)}>Cancelar</Button>
 		</div>
 	</form>
 
-	{#if a}
+	{#if a && podeExcluir(perms, 'ferramentas')}
 		<form
 			method="POST"
 			action="?/acesso_excluir"

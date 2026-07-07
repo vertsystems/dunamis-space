@@ -1,6 +1,7 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { conteudoFromForm } from '$lib/conteudo';
 import { nomesDeCampanha } from '$lib/server/conteudo';
+import { exigirPermissao } from '$lib/server/permissao';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals: { supabase } }) => {
@@ -36,20 +37,26 @@ export const load: PageServerLoad = async ({ params, locals: { supabase } }) => 
 };
 
 export const actions: Actions = {
-	update: async ({ request, params, locals: { supabase } }) => {
+	update: async ({ request, params, locals }) => {
+		exigirPermissao(locals, 'conteudo', 'editar');
+		const { supabase } = locals;
 		const values = conteudoFromForm(await request.formData());
 		if (!values.cliente_id) return fail(400, { error: 'Selecione um cliente.', values });
 		const { error: e } = await supabase.from('conteudos').update(values).eq('id', params.id);
 		if (e) return fail(500, { error: e.message, values });
 		return { saved: true };
 	},
-	enviarAprovacao: async ({ params, locals: { supabase } }) => {
+	enviarAprovacao: async ({ params, locals }) => {
+		exigirPermissao(locals, 'conteudo', 'editar');
+		const { supabase } = locals;
 		const { error: e } = await supabase.from('aprovacoes').insert({ conteudo_id: params.id });
 		if (e) return fail(500, { error: e.message });
 		await supabase.from('conteudos').update({ status: 'aprovar_conteudo' }).eq('id', params.id);
 		return { aprovacaoCriada: true };
 	},
-	delete: async ({ params, locals: { supabase } }) => {
+	delete: async ({ params, locals }) => {
+		exigirPermissao(locals, 'conteudo', 'excluir');
+		const { supabase } = locals;
 		const { error: e } = await supabase.from('conteudos').delete().eq('id', params.id);
 		if (e) return fail(500, { error: e.message });
 		throw redirect(303, '/conteudo');

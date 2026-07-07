@@ -2,6 +2,7 @@ import { error, fail, redirect } from '@sveltejs/kit';
 import { campanhaFromForm } from '$lib/campanhas';
 import { redesFromForm } from '$lib/conteudo';
 import { parseMes, fmtMes, mesAnterior, mesSeguinte, celulasMes } from '$lib/calendario';
+import { exigirPermissao } from '$lib/server/permissao';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, url, locals: { supabase } }) => {
@@ -65,7 +66,9 @@ export const load: PageServerLoad = async ({ params, url, locals: { supabase } }
 };
 
 export const actions: Actions = {
-	update: async ({ request, params, locals: { supabase } }) => {
+	update: async ({ request, params, locals }) => {
+		exigirPermissao(locals, 'campanhas', 'editar');
+		const { supabase } = locals;
 		const values = campanhaFromForm(await request.formData());
 		if (!values.cliente_id) return fail(400, { error: 'Selecione um cliente.', values });
 		if (!values.nome) return fail(400, { error: 'O nome é obrigatório.', values });
@@ -75,7 +78,10 @@ export const actions: Actions = {
 	},
 	// Agendamento rápido de conteúdo pelo calendário (modal). O cliente vem da
 	// campanha (não confiamos no formulário); data_publicacao chega como ISO UTC.
-	agendar: async ({ request, params, locals: { supabase } }) => {
+	agendar: async ({ request, params, locals }) => {
+		// Agendar cria um registro em `conteudos` → guarda pelo módulo 'conteudo'.
+		exigirPermissao(locals, 'conteudo', 'editar');
+		const { supabase } = locals;
 		const fd = await request.formData();
 		const str = (k: string) => {
 			const v = fd.get(k);
@@ -105,7 +111,9 @@ export const actions: Actions = {
 		if (e) return fail(500, { agendarError: e.message });
 		return { agendado: true };
 	},
-	delete: async ({ params, locals: { supabase } }) => {
+	delete: async ({ params, locals }) => {
+		exigirPermissao(locals, 'campanhas', 'excluir');
+		const { supabase } = locals;
 		const { error: e } = await supabase.from('campanhas').delete().eq('id', params.id);
 		if (e) return fail(500, { error: e.message });
 		throw redirect(303, '/campanhas');

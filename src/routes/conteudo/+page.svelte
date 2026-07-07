@@ -7,12 +7,15 @@
 		conteudoTipoLabel
 	} from '$lib/conteudo';
 	import { invalidateAll } from '$app/navigation';
+	import { page } from '$app/state';
+	import { podeEditar } from '$lib/permissoes';
 	import { Card, Badge, Button, Select, SegmentedNav, EmptyState, DataTable, Modal } from '$lib/components/ui';
 	import type { ColumnDef } from '$lib/components/ui';
 	import ConteudoForm from '$lib/components/ConteudoForm.svelte';
 	import { toast } from '$lib/toast.svelte';
 
 	let { data, form } = $props();
+	const perms = $derived(page.data.permissoes);
 	// O form vem de actions de outras rotas (/conteudo/novo, /[id]?/update) → tipagem solta.
 	const res = $derived(form as { values?: Record<string, any>; error?: string } | null);
 
@@ -82,7 +85,9 @@
 			<Button variant="secondary" type="submit">Filtrar</Button>
 		</form>
 	</div>
-	<Button onclick={() => (novoAberto = true)}>+ Novo conteúdo</Button>
+	{#if podeEditar(perms, 'conteudo')}
+		<Button onclick={() => (novoAberto = true)}>+ Novo conteúdo</Button>
+	{/if}
 </div>
 
 {#if data.loadError}<div class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">Erro ao carregar: {data.loadError}</div>{/if}

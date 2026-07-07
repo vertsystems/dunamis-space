@@ -5,8 +5,11 @@
 	import type { ColumnDef } from '$lib/components/ui';
 	import PlanoForm from '$lib/components/PlanoForm.svelte';
 	import { toast } from '$lib/toast.svelte';
+	import { page } from '$app/state';
+	import { podeEditar } from '$lib/permissoes';
 
 	let { data, form } = $props();
+	const perms = $derived(page.data.permissoes);
 	// O form vem de actions de outras rotas (/contratos/planos/novo, /[id]?/update) → tipagem solta.
 	const res = $derived(form as { values?: Record<string, any>; error?: string } | null);
 	const lim = (n: number | null) => (n == null ? '—' : n);
@@ -44,7 +47,7 @@
 		<h1 class="text-base font-semibold text-navy">Planos</h1>
 		<p class="text-sm text-grey">Planos de serviço oferecidos aos clientes.</p>
 	</div>
-	<Button onclick={() => (novoAberto = true)}>+ Novo plano</Button>
+	{#if podeEditar(perms, 'contratos')}<Button onclick={() => (novoAberto = true)}>+ Novo plano</Button>{/if}
 </div>
 
 {#if data.loadError}
@@ -55,7 +58,7 @@
 	<DataTable {columns} data={data.planos} initialSort={[{ id: 'nome', desc: false }]}>
 		{#snippet row(r)}
 			{@const p = r.original}
-			<tr class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg" onclick={() => (editando = p)}>
+			<tr class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg" onclick={() => podeEditar(perms, 'contratos') && (editando = p)}>
 				<td class="px-4 py-3 font-medium text-navy">{p.nome}</td>
 				<td class="px-4 py-3 text-right tabular-nums">{formatBRL(p.valor_mensal)}</td>
 				<td class="px-4 py-3 text-center">{lim(p.limite_posts)}</td>

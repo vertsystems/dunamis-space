@@ -1,4 +1,5 @@
 import { fail } from '@sveltejs/kit';
+import { exigirPermissao } from '$lib/server/permissao';
 import type { Actions, PageServerLoad } from './$types';
 
 export type SosChamado = {
@@ -56,21 +57,23 @@ function idDe(fd: FormData): string | null {
 }
 
 export const actions: Actions = {
-	status: async ({ request, locals: { supabase } }) => {
+	status: async ({ request, locals }) => {
+		exigirPermissao(locals, 'sos', 'editar');
 		const fd = await request.formData();
 		const id = idDe(fd);
 		const status = (fd.get('status') as string) ?? '';
 		if (!id || !STATUS.includes(status)) return fail(400, { error: 'Dados inválidos.' });
-		const { error } = await supabase.from('sos_chamados').update({ status }).eq('id', id);
+		const { error } = await locals.supabase.from('sos_chamados').update({ status }).eq('id', id);
 		if (error) return fail(500, { error: error.message });
 		return { ok: true };
 	},
 
-	excluir: async ({ request, locals: { supabase } }) => {
+	excluir: async ({ request, locals }) => {
+		exigirPermissao(locals, 'sos', 'excluir');
 		const fd = await request.formData();
 		const id = idDe(fd);
 		if (!id) return fail(400, { error: 'Chamado inválido.' });
-		const { error } = await supabase.from('sos_chamados').delete().eq('id', id);
+		const { error } = await locals.supabase.from('sos_chamados').delete().eq('id', id);
 		if (error) return fail(500, { error: error.message });
 		return { deleted: true };
 	}

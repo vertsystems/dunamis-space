@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
+	import { page } from '$app/state';
+	import { podeEditar } from '$lib/permissoes';
 	import { funcaoLabel, funcoesDe } from '$lib/equipe';
 	import { formatBRL } from '$lib/clientes';
 	import { Card, Badge, Button, EmptyState, DataTable, Modal } from '$lib/components/ui';
@@ -9,6 +11,7 @@
 	import { toast } from '$lib/toast.svelte';
 
 	let { data, form } = $props();
+	const perms = $derived(page.data.permissoes);
 	// O form vem de actions de outras rotas (/equipe/novo, /[id]?/update) → tipagem solta.
 	const res = $derived(form as { values?: Record<string, any>; error?: string } | null);
 
@@ -42,7 +45,9 @@
 		<h1 class="text-base font-semibold text-navy">Equipe</h1>
 		<p class="text-sm text-grey">Time da agência e custos por hora.</p>
 	</div>
-	<Button onclick={() => (novoAberto = true)}>+ Novo colaborador</Button>
+	{#if podeEditar(perms, 'equipe')}
+		<Button onclick={() => (novoAberto = true)}>+ Novo colaborador</Button>
+	{/if}
 </div>
 
 {#if data.loadError}<div class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">Erro ao carregar: {data.loadError}</div>{/if}
@@ -81,13 +86,17 @@
 
 <Modal open={!!editando} title="Editar colaborador" size="lg" onClose={() => (editando = null)}>
 	{#if editando}
-		<ColaboradorForm
-			action={`/equipe/${editando.id}?/update`}
-			submitLabel="Salvar alterações"
-			colaborador={res?.values ?? editando}
-			error={res?.error ?? null}
-			onCancel={() => (editando = null)}
-			onDone={aposEditar}
-		/>
+		{#if podeEditar(perms, 'equipe')}
+			<ColaboradorForm
+				action={`/equipe/${editando.id}?/update`}
+				submitLabel="Salvar alterações"
+				colaborador={res?.values ?? editando}
+				error={res?.error ?? null}
+				onCancel={() => (editando = null)}
+				onDone={aposEditar}
+			/>
+		{:else}
+			<p class="text-sm text-grey">Você não tem permissão para editar colaboradores.</p>
+		{/if}
 	{/if}
 </Modal>

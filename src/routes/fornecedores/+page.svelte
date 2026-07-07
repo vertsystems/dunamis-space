@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import { podeEditar, podeExcluir } from '$lib/permissoes';
 	import { Button, Card, Badge, Input, Select, Textarea, Checkbox, EmptyState, DataTable } from '$lib/components/ui';
 	import type { BadgeTone, ColumnDef } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
@@ -10,6 +12,7 @@
 	import type { Fornecedor } from './+page.server';
 
 	let { data } = $props();
+	const perms = $derived(page.data.permissoes);
 
 	const tipoTone: Record<string, BadgeTone> = {
 		freelancer: 'neutral',
@@ -72,7 +75,7 @@
 		<h1 class="text-base font-semibold text-navy">Fornecedores / Freelancers</h1>
 		<p class="text-sm text-grey">Parceiros, freelancers e fornecedores da agência.</p>
 	</div>
-	{#if !data.pendente}
+	{#if !data.pendente && podeEditar(perms, 'fornecedores')}
 		<Button onclick={abrirNovo}><Icon name="plus" size={15} /> Novo fornecedor</Button>
 	{/if}
 </div>
@@ -226,13 +229,15 @@
 
 			<div class="sm:col-span-2 flex items-center justify-between gap-2 pt-2">
 				<div class="flex items-center gap-2">
-					<Button type="submit" loading={saving}>Salvar</Button>
+					{#if podeEditar(perms, 'fornecedores')}
+						<Button type="submit" loading={saving}>Salvar</Button>
+					{/if}
 					<Button type="button" variant="secondary" onclick={fechar}>Cancelar</Button>
 				</div>
 			</div>
 		</form>
 
-		{#if editando}
+		{#if editando && podeExcluir(perms, 'fornecedores')}
 			<form
 				method="POST"
 				action="?/excluir"

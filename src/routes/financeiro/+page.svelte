@@ -11,8 +11,11 @@
 	import type { ColumnDef } from '$lib/components/ui';
 	import TransacaoForm from '$lib/components/TransacaoForm.svelte';
 	import { toast } from '$lib/toast.svelte';
+	import { page } from '$app/state';
+	import { podeEditar } from '$lib/permissoes';
 
 	let { data, form } = $props();
+	const perms = $derived(page.data.permissoes);
 	// O form vem de actions de outras rotas (/financeiro/novo, /[id]?/update) → tipagem solta.
 	const res = $derived(form as { values?: Record<string, any>; error?: string } | null);
 
@@ -97,7 +100,9 @@
 	</form>
 	<div class="flex gap-2">
 		<Button variant="secondary" onclick={() => goto('/financeiro/lucro')}>Lucro por cliente</Button>
-		<Button onclick={() => (novoAberto = true)}>+ Nova transação</Button>
+		{#if podeEditar(perms, 'financeiro')}
+			<Button onclick={() => (novoAberto = true)}>+ Nova transação</Button>
+		{/if}
 	</div>
 </div>
 
@@ -110,7 +115,7 @@
 		{#snippet row(r)}
 			{@const t = r.original}
 			{@const receita = t.tipo === 'receita'}
-			<tr class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg" onclick={() => (editando = t)}>
+			<tr class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg" onclick={() => podeEditar(perms, 'financeiro') && (editando = t)}>
 				<td class="px-4 py-3 whitespace-nowrap">{fmtData(t.data_competencia)}</td>
 				<td class="px-4 py-3 font-medium text-navy">{t.descricao ?? '—'}</td>
 				<td class="px-4 py-3">{t.categoria ?? '—'}</td>

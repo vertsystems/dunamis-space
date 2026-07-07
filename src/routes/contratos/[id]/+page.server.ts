@@ -1,5 +1,6 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { contratoFromForm } from '$lib/contratos';
+import { exigirPermissao } from '$lib/server/permissao';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals: { supabase } }) => {
@@ -13,15 +14,17 @@ export const load: PageServerLoad = async ({ params, locals: { supabase } }) => 
 };
 
 export const actions: Actions = {
-	update: async ({ request, params, locals: { supabase } }) => {
+	update: async ({ request, params, locals }) => {
+		exigirPermissao(locals, 'contratos', 'editar');
 		const values = contratoFromForm(await request.formData());
 		if (!values.cliente_id) return fail(400, { error: 'Selecione um cliente.', values });
-		const { error: e } = await supabase.from('contratos').update(values).eq('id', params.id);
+		const { error: e } = await locals.supabase.from('contratos').update(values).eq('id', params.id);
 		if (e) return fail(500, { error: e.message, values });
 		return { saved: true };
 	},
-	delete: async ({ params, locals: { supabase } }) => {
-		const { error: e } = await supabase.from('contratos').delete().eq('id', params.id);
+	delete: async ({ params, locals }) => {
+		exigirPermissao(locals, 'contratos', 'excluir');
+		const { error: e } = await locals.supabase.from('contratos').delete().eq('id', params.id);
 		if (e) return fail(500, { error: e.message });
 		throw redirect(303, '/contratos');
 	}

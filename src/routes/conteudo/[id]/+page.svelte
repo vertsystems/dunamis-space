@@ -4,9 +4,11 @@
 	import ConteudoForm from '$lib/components/ConteudoForm.svelte';
 	import Comentarios from '$lib/components/Comentarios.svelte';
 	import { aprovacaoStatusTone, aprovacaoStatusLabel } from '$lib/conteudo';
+	import { podeEditar, podeExcluir } from '$lib/permissoes';
 	import { Card, Badge, Button, Input, Breadcrumb } from '$lib/components/ui';
 
 	let { data, form } = $props();
+	const perms = $derived(page.data.permissoes);
 	let conteudo = $derived(form?.values ?? data.conteudo);
 	let confirmDelete = $state(false);
 	let copiado = $state(false);
@@ -69,23 +71,27 @@
 		{:else}
 			<p class="mb-3 text-slate">Gere um link público para o cliente aprovar este conteúdo.</p>
 		{/if}
-		<form method="POST" action="?/enviarAprovacao" use:enhance>
-			<Button type="submit">Gerar {aprovacao ? 'novo ' : ''}link de aprovação</Button>
-		</form>
+		{#if podeEditar(perms, 'conteudo')}
+			<form method="POST" action="?/enviarAprovacao" use:enhance>
+				<Button type="submit">Gerar {aprovacao ? 'novo ' : ''}link de aprovação</Button>
+			</form>
+		{/if}
 	{/if}
 </Card>
 
-<Card class="mt-6">
-	<h2 class="text-sm font-semibold text-brand-danger mb-3">Zona de perigo</h2>
-	{#if confirmDelete}
-		<form method="POST" action="?/delete" use:enhance>
-			<p class="mb-3 text-sm text-slate">Excluir este conteúdo?</p>
-			<div class="flex gap-2">
-				<Button variant="danger" type="submit">Sim, excluir</Button>
-				<Button variant="secondary" onclick={() => (confirmDelete = false)}>Cancelar</Button>
-			</div>
-		</form>
-	{:else}
-		<Button variant="danger" onclick={() => (confirmDelete = true)}>Excluir conteúdo</Button>
-	{/if}
-</Card>
+{#if podeExcluir(perms, 'conteudo')}
+	<Card class="mt-6">
+		<h2 class="text-sm font-semibold text-brand-danger mb-3">Zona de perigo</h2>
+		{#if confirmDelete}
+			<form method="POST" action="?/delete" use:enhance>
+				<p class="mb-3 text-sm text-slate">Excluir este conteúdo?</p>
+				<div class="flex gap-2">
+					<Button variant="danger" type="submit">Sim, excluir</Button>
+					<Button variant="secondary" onclick={() => (confirmDelete = false)}>Cancelar</Button>
+				</div>
+			</form>
+		{:else}
+			<Button variant="danger" onclick={() => (confirmDelete = true)}>Excluir conteúdo</Button>
+		{/if}
+	</Card>
+{/if}

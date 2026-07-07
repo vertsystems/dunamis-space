@@ -1,5 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import { um } from '$lib/db';
+import { exigirPermissao } from '$lib/server/permissao';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
@@ -43,7 +44,9 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 };
 
 export const actions: Actions = {
-	move: async ({ request, locals: { supabase } }) => {
+	move: async ({ request, locals }) => {
+		exigirPermissao(locals, 'tarefas', 'editar');
+		const { supabase } = locals;
 		const fd = await request.formData();
 		const id = fd.get('id');
 		const status = fd.get('status');
@@ -52,7 +55,9 @@ export const actions: Actions = {
 		if (error) return fail(500, { error: error.message });
 		return { ok: true };
 	},
-	excluir: async ({ request, locals: { supabase } }) => {
+	excluir: async ({ request, locals }) => {
+		exigirPermissao(locals, 'tarefas', 'excluir');
+		const { supabase } = locals;
 		const fd = await request.formData();
 		const id = fd.get('id');
 		if (typeof id !== 'string') return fail(400, { error: 'Dados inválidos' });

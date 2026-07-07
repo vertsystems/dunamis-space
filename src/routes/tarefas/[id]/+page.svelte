@@ -1,10 +1,13 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { page } from '$app/state';
+	import { podeExcluir } from '$lib/permissoes';
 	import TarefaForm from '$lib/components/TarefaForm.svelte';
 	import Comentarios from '$lib/components/Comentarios.svelte';
 	import { Card, Button, Breadcrumb } from '$lib/components/ui';
 
 	let { data, form } = $props();
+	const perms = $derived(page.data.permissoes);
 	let tarefa = $derived(form?.values ?? data.tarefa);
 	let confirmDelete = $state(false);
 </script>
@@ -29,17 +32,19 @@
 
 <Comentarios entidadeTipo="tarefa" entidadeId={data.tarefa.id} />
 
-<Card class="mt-6">
-	<h2 class="text-sm font-semibold text-brand-danger mb-3">Zona de perigo</h2>
-	{#if confirmDelete}
-		<form method="POST" action="?/delete" use:enhance>
-			<p class="mb-3 text-sm text-slate">Excluir esta tarefa?</p>
-			<div class="flex gap-2">
-				<Button variant="danger" type="submit">Sim, excluir</Button>
-				<Button variant="secondary" onclick={() => (confirmDelete = false)}>Cancelar</Button>
-			</div>
-		</form>
-	{:else}
-		<Button variant="danger" onclick={() => (confirmDelete = true)}>Excluir tarefa</Button>
-	{/if}
-</Card>
+{#if podeExcluir(perms, 'tarefas')}
+	<Card class="mt-6">
+		<h2 class="text-sm font-semibold text-brand-danger mb-3">Zona de perigo</h2>
+		{#if confirmDelete}
+			<form method="POST" action="?/delete" use:enhance>
+				<p class="mb-3 text-sm text-slate">Excluir esta tarefa?</p>
+				<div class="flex gap-2">
+					<Button variant="danger" type="submit">Sim, excluir</Button>
+					<Button variant="secondary" onclick={() => (confirmDelete = false)}>Cancelar</Button>
+				</div>
+			</form>
+		{:else}
+			<Button variant="danger" onclick={() => (confirmDelete = true)}>Excluir tarefa</Button>
+		{/if}
+	</Card>
+{/if}

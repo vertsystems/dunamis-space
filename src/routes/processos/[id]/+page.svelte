@@ -1,11 +1,15 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { page } from '$app/state';
 	import ProcessoForm from '$lib/components/ProcessoForm.svelte';
 	import { Card, Button, Breadcrumb } from '$lib/components/ui';
+	import { podeExcluir } from '$lib/permissoes';
 
 	let { data, form } = $props();
 	let processo = $derived(form?.values ?? data.processo);
 	let confirmDelete = $state(false);
+
+	const perms = $derived(page.data.permissoes);
 </script>
 
 <Breadcrumb items={[{ label: 'Processos', href: '/processos' }, { label: data.processo.nome }]} />
@@ -21,17 +25,19 @@
 	<ProcessoForm {processo} error={form?.error ?? null} submitLabel="Salvar alterações" action="?/update" />
 </Card>
 
-<Card class="mt-6">
-	<h2 class="text-sm font-semibold text-brand-danger mb-3">Zona de perigo</h2>
-	{#if confirmDelete}
-		<form method="POST" action="?/delete" use:enhance>
-			<p class="mb-3 text-sm text-slate">Excluir este processo?</p>
-			<div class="flex gap-2">
-				<Button variant="danger" type="submit">Sim, excluir</Button>
-				<Button variant="secondary" onclick={() => (confirmDelete = false)}>Cancelar</Button>
-			</div>
-		</form>
-	{:else}
-		<Button variant="danger" onclick={() => (confirmDelete = true)}>Excluir processo</Button>
-	{/if}
-</Card>
+{#if podeExcluir(perms, 'processos')}
+	<Card class="mt-6">
+		<h2 class="text-sm font-semibold text-brand-danger mb-3">Zona de perigo</h2>
+		{#if confirmDelete}
+			<form method="POST" action="?/delete" use:enhance>
+				<p class="mb-3 text-sm text-slate">Excluir este processo?</p>
+				<div class="flex gap-2">
+					<Button variant="danger" type="submit">Sim, excluir</Button>
+					<Button variant="secondary" onclick={() => (confirmDelete = false)}>Cancelar</Button>
+				</div>
+			</form>
+		{:else}
+			<Button variant="danger" onclick={() => (confirmDelete = true)}>Excluir processo</Button>
+		{/if}
+	</Card>
+{/if}

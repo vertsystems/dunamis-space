@@ -3,9 +3,13 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import { enhance, deserialize } from '$app/forms';
+	import { page } from '$app/state';
+	import { podeEditar, podeExcluir } from '$lib/permissoes';
 	import { statusLabel } from '$lib/clientes';
 
 	let { data } = $props();
+
+	const perms = $derived(page.data.permissoes);
 
 	// Estado local dos itens, clonado de data + re-sync a cada navegação/invalidação.
 	let itens = $state(data.itens.map((x) => ({ ...x })));
@@ -142,10 +146,12 @@
 						Este cliente ainda não tem checklist. Inicie o onboarding com os itens padrão.
 					</p>
 				</div>
-				<form method="POST" action="?/iniciar" use:enhance={iniciarEnhance}>
-					<input type="hidden" name="cliente_id" value={selecionado} />
-					<Button type="submit" loading={iniciando}>Iniciar onboarding</Button>
-				</form>
+				{#if podeEditar(perms, 'onboarding')}
+					<form method="POST" action="?/iniciar" use:enhance={iniciarEnhance}>
+						<input type="hidden" name="cliente_id" value={selecionado} />
+						<Button type="submit" loading={iniciando}>Iniciar onboarding</Button>
+					</form>
+				{/if}
 			</div>
 		</Card>
 	{:else}
@@ -168,45 +174,59 @@
 			<ul class="flex flex-col gap-1">
 				{#each itensSel as item (item.id)}
 					<li class="flex items-center gap-3 rounded-[var(--radius)] px-2 py-2 hover:bg-bg">
-						<button
-							type="button"
-							onclick={() => toggle(item)}
-							aria-label={item.concluido ? 'Desmarcar' : 'Concluir'}
-							class="flex size-5 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border transition-colors {item.concluido
-								? 'border-brand-green bg-brand-green text-white'
-								: 'border-grey-200 text-transparent hover:border-brand-green'}"
-						>
-							<Icon name="check" size={14} />
-						</button>
+						{#if podeEditar(perms, 'onboarding')}
+							<button
+								type="button"
+								onclick={() => toggle(item)}
+								aria-label={item.concluido ? 'Desmarcar' : 'Concluir'}
+								class="flex size-5 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border transition-colors {item.concluido
+									? 'border-brand-green bg-brand-green text-white'
+									: 'border-grey-200 text-transparent hover:border-brand-green'}"
+							>
+								<Icon name="check" size={14} />
+							</button>
+						{:else}
+							<span
+								class="flex size-5 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border {item.concluido
+									? 'border-brand-green bg-brand-green text-white'
+									: 'border-grey-200 text-transparent'}"
+							>
+								<Icon name="check" size={14} />
+							</span>
+						{/if}
 						<span class="flex-1 text-sm {item.concluido ? 'text-grey line-through' : 'text-navy'}">
 							{item.texto}
 						</span>
-						<form method="POST" action="?/item_excluir" use:enhance={excluirEnhance}>
-							<input type="hidden" name="id" value={item.id} />
-							<Button variant="ghost" size="sm" type="submit" aria-label="Excluir item">
-								<Icon name="trash" size={16} />
-							</Button>
-						</form>
+						{#if podeExcluir(perms, 'onboarding')}
+							<form method="POST" action="?/item_excluir" use:enhance={excluirEnhance}>
+								<input type="hidden" name="id" value={item.id} />
+								<Button variant="ghost" size="sm" type="submit" aria-label="Excluir item">
+									<Icon name="trash" size={16} />
+								</Button>
+							</form>
+						{/if}
 					</li>
 				{/each}
 			</ul>
 
-			<form
-				method="POST"
-				action="?/item_add"
-				use:enhance={addEnhance}
-				class="mt-4 flex items-end gap-2 border-t border-grey-200 pt-4"
-			>
-				<input type="hidden" name="cliente_id" value={selecionado} />
-				<Input
-					name="texto"
-					placeholder="Adicionar item ao checklist..."
-					bind:value={novoTexto}
-					wrapperClass="flex-1"
-					required
-				/>
-				<Button type="submit" loading={adicionando}>+ Adicionar</Button>
-			</form>
+			{#if podeEditar(perms, 'onboarding')}
+				<form
+					method="POST"
+					action="?/item_add"
+					use:enhance={addEnhance}
+					class="mt-4 flex items-end gap-2 border-t border-grey-200 pt-4"
+				>
+					<input type="hidden" name="cliente_id" value={selecionado} />
+					<Input
+						name="texto"
+						placeholder="Adicionar item ao checklist..."
+						bind:value={novoTexto}
+						wrapperClass="flex-1"
+						required
+					/>
+					<Button type="submit" loading={adicionando}>+ Adicionar</Button>
+				</form>
+			{/if}
 		</Card>
 	{/if}
 {/if}

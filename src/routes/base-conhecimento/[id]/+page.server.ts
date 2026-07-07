@@ -1,5 +1,6 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { kbFromForm } from '$lib/kb';
+import { exigirPermissao } from '$lib/server/permissao';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals: { supabase } }) => {
@@ -12,15 +13,17 @@ export const load: PageServerLoad = async ({ params, locals: { supabase } }) => 
 };
 
 export const actions: Actions = {
-	update: async ({ request, params, locals: { supabase } }) => {
+	update: async ({ request, params, locals }) => {
+		exigirPermissao(locals, 'base_conhecimento', 'editar');
 		const values = kbFromForm(await request.formData());
 		if (!values.titulo) return fail(400, { error: 'O título é obrigatório.', values });
-		const { error: e } = await supabase.from('kb_artigos').update(values).eq('id', params.id);
+		const { error: e } = await locals.supabase.from('kb_artigos').update(values).eq('id', params.id);
 		if (e) return fail(500, { error: e.message, values });
 		return { saved: true };
 	},
-	delete: async ({ params, locals: { supabase } }) => {
-		const { error: e } = await supabase.from('kb_artigos').delete().eq('id', params.id);
+	delete: async ({ params, locals }) => {
+		exigirPermissao(locals, 'base_conhecimento', 'excluir');
+		const { error: e } = await locals.supabase.from('kb_artigos').delete().eq('id', params.id);
 		if (e) return fail(500, { error: e.message });
 		throw redirect(303, '/base-conhecimento');
 	}

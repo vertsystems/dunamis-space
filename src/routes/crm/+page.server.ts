@@ -1,4 +1,5 @@
 import { fail } from '@sveltejs/kit';
+import { exigirPermissao } from '$lib/server/permissao';
 import {
 	contatoFromForm,
 	negocioFromForm,
@@ -230,7 +231,9 @@ function idDe(fd: FormData, campo = 'id'): string | null {
 
 export const actions: Actions = {
 	// ---------------- Negócios ----------------
-	negocio_criar: async ({ request, locals: { supabase } }) => {
+	negocio_criar: async ({ request, locals }) => {
+		exigirPermissao(locals, 'crm', 'editar');
+		const { supabase } = locals;
 		const fd = await request.formData();
 		const v = negocioFromForm(fd);
 		if (!v.titulo) return fail(400, { error: 'O título do negócio é obrigatório.' });
@@ -289,7 +292,9 @@ export const actions: Actions = {
 		return { saved: true, id: data?.id ?? null };
 	},
 
-	negocio_atualizar: async ({ request, locals: { supabase } }) => {
+	negocio_atualizar: async ({ request, locals }) => {
+		exigirPermissao(locals, 'crm', 'editar');
+		const { supabase } = locals;
 		const fd = await request.formData();
 		const id = idDe(fd);
 		if (!id) return fail(400, { error: 'Negócio inválido.' });
@@ -313,7 +318,9 @@ export const actions: Actions = {
 	},
 
 	// Move + reordena: recebe id, stage_id e a ordem final de ids da coluna de destino.
-	negocio_mover: async ({ request, locals: { supabase } }) => {
+	negocio_mover: async ({ request, locals }) => {
+		exigirPermissao(locals, 'crm', 'editar');
+		const { supabase } = locals;
 		const fd = await request.formData();
 		const id = idDe(fd);
 		const stage_id = idDe(fd, 'stage_id');
@@ -342,7 +349,9 @@ export const actions: Actions = {
 		return { ok: true };
 	},
 
-	negocio_status: async ({ request, locals: { supabase } }) => {
+	negocio_status: async ({ request, locals }) => {
+		exigirPermissao(locals, 'crm', 'editar');
+		const { supabase } = locals;
 		const fd = await request.formData();
 		const id = idDe(fd);
 		const status = fd.get('status');
@@ -372,7 +381,9 @@ export const actions: Actions = {
 		return { saved: true };
 	},
 
-	negocio_excluir: async ({ request, locals: { supabase } }) => {
+	negocio_excluir: async ({ request, locals }) => {
+		exigirPermissao(locals, 'crm', 'excluir');
+		const { supabase } = locals;
 		const fd = await request.formData();
 		const id = idDe(fd);
 		if (!id) return fail(400, { error: 'Negócio inválido.' });
@@ -382,7 +393,9 @@ export const actions: Actions = {
 	},
 
 	// ---------------- Metas (comercial) ----------------
-	meta_definir: async ({ request, locals: { supabase } }) => {
+	meta_definir: async ({ request, locals }) => {
+		exigirPermissao(locals, 'crm', 'editar');
+		const { supabase } = locals;
 		const fd = await request.formData();
 		const colaborador_id = idDe(fd, 'colaborador_id');
 		if (!colaborador_id) return fail(400, { error: 'Colaborador inválido.' });
@@ -401,7 +414,9 @@ export const actions: Actions = {
 	},
 
 	// ---------------- Contatos ----------------
-	contato_criar: async ({ request, locals: { supabase } }) => {
+	contato_criar: async ({ request, locals }) => {
+		exigirPermissao(locals, 'crm', 'editar');
+		const { supabase } = locals;
 		const fd = await request.formData();
 		const v = contatoFromForm(fd);
 		if (!v.nome) return fail(400, { error: 'O nome do contato é obrigatório.' });
@@ -410,7 +425,9 @@ export const actions: Actions = {
 		return { saved: true, id: data?.id ?? null };
 	},
 
-	contato_atualizar: async ({ request, locals: { supabase } }) => {
+	contato_atualizar: async ({ request, locals }) => {
+		exigirPermissao(locals, 'crm', 'editar');
+		const { supabase } = locals;
 		const fd = await request.formData();
 		const id = idDe(fd);
 		if (!id) return fail(400, { error: 'Contato inválido.' });
@@ -424,7 +441,9 @@ export const actions: Actions = {
 		return { saved: true };
 	},
 
-	contato_excluir: async ({ request, locals: { supabase } }) => {
+	contato_excluir: async ({ request, locals }) => {
+		exigirPermissao(locals, 'crm', 'excluir');
+		const { supabase } = locals;
 		const fd = await request.formData();
 		const id = idDe(fd);
 		if (!id) return fail(400, { error: 'Contato inválido.' });
@@ -434,7 +453,9 @@ export const actions: Actions = {
 	},
 
 	// ---------------- Atividades ----------------
-	atividade_criar: async ({ request, locals: { supabase } }) => {
+	atividade_criar: async ({ request, locals }) => {
+		exigirPermissao(locals, 'crm', 'editar');
+		const { supabase } = locals;
 		const fd = await request.formData();
 		const v = atividadeFromForm(fd);
 		if (!v.titulo && v.tipo !== 'nota') {
@@ -452,7 +473,9 @@ export const actions: Actions = {
 		return { saved: true, id: data?.id ?? null };
 	},
 
-	atividade_concluir: async ({ request, locals: { supabase } }) => {
+	atividade_concluir: async ({ request, locals }) => {
+		exigirPermissao(locals, 'crm', 'editar');
+		const { supabase } = locals;
 		const fd = await request.formData();
 		const id = idDe(fd);
 		if (!id) return fail(400, { error: 'Atividade inválida.' });
@@ -469,7 +492,9 @@ export const actions: Actions = {
 		return { ok: true };
 	},
 
-	atividade_excluir: async ({ request, locals: { supabase } }) => {
+	atividade_excluir: async ({ request, locals }) => {
+		exigirPermissao(locals, 'crm', 'excluir');
+		const { supabase } = locals;
 		const fd = await request.formData();
 		const id = idDe(fd);
 		if (!id) return fail(400, { error: 'Atividade inválida.' });

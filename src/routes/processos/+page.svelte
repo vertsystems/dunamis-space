@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
+	import { page } from '$app/state';
 	import { Card, Button, Badge, Modal } from '$lib/components/ui';
 	import {
 		PROCESSO_ETAPAS,
@@ -11,8 +12,11 @@
 	} from '$lib/processos';
 	import ProcessoForm from '$lib/components/ProcessoForm.svelte';
 	import { toast } from '$lib/toast.svelte';
+	import { podeEditar } from '$lib/permissoes';
 
 	let { data, form } = $props();
+
+	const perms = $derived(page.data.permissoes);
 	// O form vem de actions de outras rotas (/processos/novo, /[id]?/update) → tipagem solta.
 	const res = $derived(form as { values?: Record<string, any>; error?: string } | null);
 
@@ -42,7 +46,9 @@
 		<h1 class="text-sm font-semibold text-navy">Cronograma de Processos</h1>
 		<p class="text-sm text-grey">Visão tabular dos processos e etapas</p>
 	</div>
-	<Button onclick={() => (novoAberto = true)}>+ Novo processo</Button>
+	{#if podeEditar(perms, 'processos')}
+		<Button onclick={() => (novoAberto = true)}>+ Novo processo</Button>
+	{/if}
 </div>
 
 {#if data.processosPendente}
@@ -77,7 +83,7 @@
 					{#each processos as p, i (p.id)}
 						<tr
 							class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg"
-							onclick={() => (editando = p)}
+							onclick={() => podeEditar(perms, 'processos') && (editando = p)}
 						>
 							<td class="px-3 py-3 text-grey">{i + 1}</td>
 							<td class="px-3 py-3">

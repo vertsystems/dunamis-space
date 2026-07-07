@@ -1,9 +1,12 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { colaboradorFromForm } from '$lib/equipe';
+import { exigirPermissao } from '$lib/server/permissao';
 import type { Actions } from './$types';
 
 export const actions: Actions = {
-	default: async ({ request, locals: { supabase } }) => {
+	default: async ({ request, locals }) => {
+		exigirPermissao(locals, 'equipe', 'editar');
+		const { supabase } = locals;
 		const values = colaboradorFromForm(await request.formData());
 		if (!values.nome) return fail(400, { error: 'O nome é obrigatório.', values });
 		if (!values.email) return fail(400, { error: 'O e-mail é obrigatório.', values });

@@ -5,8 +5,11 @@
 	import type { ColumnDef } from '$lib/components/ui';
 	import ContratoForm from '$lib/components/ContratoForm.svelte';
 	import { toast } from '$lib/toast.svelte';
+	import { page } from '$app/state';
+	import { podeEditar } from '$lib/permissoes';
 
 	let { data, form } = $props();
+	const perms = $derived(page.data.permissoes);
 	// O form vem de actions de outras rotas (/contratos/novo, /[id]?/update) → tipagem solta.
 	const res = $derived(form as { values?: Record<string, any>; error?: string } | null);
 	let status = $state(data.status);
@@ -70,7 +73,9 @@
 	</form>
 	<div class="flex gap-2">
 		<Button variant="secondary" onclick={() => goto('/contratos/planos')}>Gerenciar planos</Button>
-		<Button onclick={() => (novoAberto = true)}>+ Novo contrato</Button>
+		{#if podeEditar(perms, 'contratos')}
+			<Button onclick={() => (novoAberto = true)}>+ Novo contrato</Button>
+		{/if}
 	</div>
 </div>
 
@@ -86,7 +91,7 @@
 			{@const c = r.original}
 			<tr
 				class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg"
-				onclick={() => (editando = c)}
+				onclick={() => podeEditar(perms, 'contratos') && (editando = c)}
 			>
 				<td class="px-4 py-3 font-medium text-navy">{c.cliente?.nome ?? '—'}</td>
 				<td class="px-4 py-3">{c.plano?.nome ?? '—'}</td>

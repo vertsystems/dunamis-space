@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
+	import { page } from '$app/state';
+	import { podeEditar, podeExcluir } from '$lib/permissoes';
 	import { Card, Button, EmptyState, DataTable, Modal } from '$lib/components/ui';
 	import type { ColumnDef } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
@@ -8,6 +10,7 @@
 	import { toast } from '$lib/toast.svelte';
 
 	let { data, form } = $props();
+	const perms = $derived(page.data.permissoes);
 	// O form vem de actions de outras rotas (/campanhas/novo, /[id]?/update) → tipagem solta.
 	const res = $derived(form as { values?: Record<string, any>; error?: string } | null);
 	function fmt(d: string | null) {
@@ -43,7 +46,9 @@
 		<h1 class="text-base font-semibold text-navy">Campanhas</h1>
 		<p class="text-sm text-grey">Campanhas e promoções por cliente.</p>
 	</div>
-	<Button onclick={() => (novoAberto = true)}>+ Nova campanha</Button>
+	{#if podeEditar(perms, 'campanhas')}
+		<Button onclick={() => (novoAberto = true)}>+ Nova campanha</Button>
+	{/if}
 </div>
 
 {#if data.loadError}<div class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">Erro ao carregar: {data.loadError}</div>{/if}
@@ -59,18 +64,20 @@
 				<td class="px-4 py-3 text-right">
 					<div class="flex items-center justify-end gap-3">
 						<a class="text-sm text-brand hover:underline" href={`/campanhas/${c.id}`} onclick={(e) => e.stopPropagation()}>Abrir</a>
-						<button
-							type="button"
-							class="grid size-7 place-items-center rounded-[var(--radius)] text-grey transition-colors hover:bg-brand-danger/10 hover:text-brand-danger"
-							title="Excluir campanha"
-							aria-label={`Excluir campanha ${c.nome}`}
-							onclick={(e) => {
-								e.stopPropagation();
-								excluindo = c;
-							}}
-						>
-							<Icon name="trash" size={16} />
-						</button>
+						{#if podeExcluir(perms, 'campanhas')}
+							<button
+								type="button"
+								class="grid size-7 place-items-center rounded-[var(--radius)] text-grey transition-colors hover:bg-brand-danger/10 hover:text-brand-danger"
+								title="Excluir campanha"
+								aria-label={`Excluir campanha ${c.nome}`}
+								onclick={(e) => {
+									e.stopPropagation();
+									excluindo = c;
+								}}
+							>
+								<Icon name="trash" size={16} />
+							</button>
+						{/if}
 					</div>
 				</td>
 			</tr>

@@ -1,4 +1,5 @@
 import { fail } from '@sveltejs/kit';
+import { exigirPermissao } from '$lib/server/permissao';
 import type { Actions, PageServerLoad } from './$types';
 
 export type Fornecedor = {
@@ -92,7 +93,9 @@ function fornecedorFromForm(fd: FormData) {
 }
 
 export const actions: Actions = {
-	criar: async ({ request, locals: { supabase } }) => {
+	criar: async ({ request, locals }) => {
+		exigirPermissao(locals, 'fornecedores', 'editar');
+		const { supabase } = locals;
 		const fd = await request.formData();
 		const v = fornecedorFromForm(fd);
 		if (!v.nome) return fail(400, { error: 'O nome é obrigatório.' });
@@ -101,7 +104,9 @@ export const actions: Actions = {
 		return { saved: true };
 	},
 
-	atualizar: async ({ request, locals: { supabase } }) => {
+	atualizar: async ({ request, locals }) => {
+		exigirPermissao(locals, 'fornecedores', 'editar');
+		const { supabase } = locals;
 		const fd = await request.formData();
 		const id = idDe(fd);
 		if (!id) return fail(400, { error: 'Fornecedor inválido.' });
@@ -115,7 +120,9 @@ export const actions: Actions = {
 		return { saved: true };
 	},
 
-	excluir: async ({ request, locals: { supabase } }) => {
+	excluir: async ({ request, locals }) => {
+		exigirPermissao(locals, 'fornecedores', 'excluir');
+		const { supabase } = locals;
 		const fd = await request.formData();
 		const id = idDe(fd);
 		if (!id) return fail(400, { error: 'Fornecedor inválido.' });

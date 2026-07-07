@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import { podeEditar, podeExcluir } from '$lib/permissoes';
 	import { toast } from '$lib/toast.svelte';
 	import CampanhaForm from '$lib/components/CampanhaForm.svelte';
 	import ResponsavelPicker from '$lib/components/ResponsavelPicker.svelte';
@@ -16,6 +18,7 @@
 	import { Card, Button, Breadcrumb, Modal, Input, Select, toneClasses } from '$lib/components/ui';
 
 	let { data, form } = $props();
+	const perms = $derived(page.data.permissoes);
 	let campanha = $derived(form?.values ?? data.campanha);
 	let confirmDelete = $state(false);
 
@@ -129,7 +132,7 @@
 				>
 					<div class="flex items-center justify-between">
 						<span class="text-xs font-semibold leading-none {foraDoMes ? 'text-grey-200' : daCampanha ? 'text-brand' : 'text-slate'}">{d.getDate()}</span>
-						{#if daCampanha}
+						{#if daCampanha && podeEditar(perms, 'conteudo')}
 							<button
 								type="button"
 								onclick={() => abrirAgendar(k)}
@@ -159,20 +162,22 @@
 	</Card>
 {/if}
 
-<Card class="mt-6">
-	<h2 class="text-sm font-semibold text-brand-danger mb-3">Zona de perigo</h2>
-	{#if confirmDelete}
-		<form method="POST" action="?/delete" use:enhance>
-			<p class="mb-3 text-sm text-slate">Excluir esta campanha? Esta ação não pode ser desfeita.</p>
-			<div class="flex gap-2">
-				<Button variant="danger" type="submit">Sim, excluir</Button>
-				<Button variant="secondary" onclick={() => (confirmDelete = false)}>Cancelar</Button>
-			</div>
-		</form>
-	{:else}
-		<Button variant="danger" onclick={() => (confirmDelete = true)}>Excluir campanha</Button>
-	{/if}
-</Card>
+{#if podeExcluir(perms, 'campanhas')}
+	<Card class="mt-6">
+		<h2 class="text-sm font-semibold text-brand-danger mb-3">Zona de perigo</h2>
+		{#if confirmDelete}
+			<form method="POST" action="?/delete" use:enhance>
+				<p class="mb-3 text-sm text-slate">Excluir esta campanha? Esta ação não pode ser desfeita.</p>
+				<div class="flex gap-2">
+					<Button variant="danger" type="submit">Sim, excluir</Button>
+					<Button variant="secondary" onclick={() => (confirmDelete = false)}>Cancelar</Button>
+				</div>
+			</form>
+		{:else}
+			<Button variant="danger" onclick={() => (confirmDelete = true)}>Excluir campanha</Button>
+		{/if}
+	</Card>
+{/if}
 
 <!-- Agendamento rápido de conteúdo (abre ao clicar no + de um dia da campanha) -->
 <Modal open={modalAberto} title="Agendar conteúdo" subtitle={diaLabel} onClose={() => (modalAberto = false)}>

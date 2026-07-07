@@ -2,10 +2,13 @@
 	import { enhance } from '$app/forms';
 	import ContratoForm from '$lib/components/ContratoForm.svelte';
 	import { Card, Button, Breadcrumb } from '$lib/components/ui';
+	import { page } from '$app/state';
+	import { podeExcluir } from '$lib/permissoes';
 
 	let { data, form } = $props();
 	let contrato = $derived(form?.values ?? data.contrato);
 	let confirmDelete = $state(false);
+	const perms = $derived(page.data.permissoes);
 </script>
 
 <Breadcrumb
@@ -31,17 +34,19 @@
 	/>
 </Card>
 
-<Card class="mt-6">
-	<h2 class="text-sm font-semibold text-brand-danger mb-3">Zona de perigo</h2>
-	{#if confirmDelete}
-		<form method="POST" action="?/delete" use:enhance>
-			<p class="mb-3 text-sm text-slate">Excluir este contrato?</p>
-			<div class="flex gap-2">
-				<Button variant="danger" type="submit">Sim, excluir</Button>
-				<Button variant="secondary" onclick={() => (confirmDelete = false)}>Cancelar</Button>
-			</div>
-		</form>
-	{:else}
-		<Button variant="danger" onclick={() => (confirmDelete = true)}>Excluir contrato</Button>
-	{/if}
-</Card>
+{#if podeExcluir(perms, 'contratos')}
+	<Card class="mt-6">
+		<h2 class="text-sm font-semibold text-brand-danger mb-3">Zona de perigo</h2>
+		{#if confirmDelete}
+			<form method="POST" action="?/delete" use:enhance>
+				<p class="mb-3 text-sm text-slate">Excluir este contrato?</p>
+				<div class="flex gap-2">
+					<Button variant="danger" type="submit">Sim, excluir</Button>
+					<Button variant="secondary" onclick={() => (confirmDelete = false)}>Cancelar</Button>
+				</div>
+			</form>
+		{:else}
+			<Button variant="danger" onclick={() => (confirmDelete = true)}>Excluir contrato</Button>
+		{/if}
+	</Card>
+{/if}

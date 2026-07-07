@@ -27,8 +27,11 @@
 		MOTIVOS_PERDA
 	} from '$lib/crm';
 	import type { Negocio, Atividade } from '$lib/crm';
+	import { page } from '$app/state';
+	import { podeEditar } from '$lib/permissoes';
 
 	let { data } = $props();
+	const perms = $derived(page.data.permissoes);
 
 	// Cópias locais reativas (para updates otimistas); re-sincronizam a cada reload do load.
 	let negocios = $state<Negocio[]>(data.negocios.map((n) => ({ ...n })));
@@ -243,7 +246,7 @@
 				{#each data.pipelines as p (p.id)}<option value={p.id}>{p.nome}</option>{/each}
 			</Select>
 		{/if}
-		{#if !data.crmPendente}
+		{#if !data.crmPendente && podeEditar(perms, 'crm')}
 			<Dropdown
 				align="end"
 				triggerClass="inline-flex size-10 items-center justify-center rounded-[var(--radius)] bg-brand text-white shadow-[0_2px_10px_-2px_rgba(59,110,246,0.55)] transition-all hover:brightness-[1.07] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35 focus-visible:ring-offset-2 focus-visible:ring-offset-bg"

@@ -1,4 +1,5 @@
 import { fail } from '@sveltejs/kit';
+import { exigirPermissao } from '$lib/server/permissao';
 import type { Actions, PageServerLoad } from './$types';
 
 /** PostgREST tipa relações to-one como array; extrai o objeto único. */
@@ -105,11 +106,12 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 
 export const actions: Actions = {
 	// ---------------- Ferramentas ----------------
-	ferramenta_criar: async ({ request, locals: { supabase } }) => {
+	ferramenta_criar: async ({ request, locals }) => {
+		exigirPermissao(locals, 'ferramentas', 'editar');
 		const fd = await request.formData();
 		const nome = str(fd, 'nome');
 		if (!nome) return fail(400, { error: 'O nome da ferramenta é obrigatório.' });
-		const { error } = await supabase.from('adm_ferramentas').insert({
+		const { error } = await locals.supabase.from('adm_ferramentas').insert({
 			nome,
 			categoria: str(fd, 'categoria'),
 			url: str(fd, 'url'),
@@ -124,13 +126,14 @@ export const actions: Actions = {
 		return { saved: true };
 	},
 
-	ferramenta_atualizar: async ({ request, locals: { supabase } }) => {
+	ferramenta_atualizar: async ({ request, locals }) => {
+		exigirPermissao(locals, 'ferramentas', 'editar');
 		const fd = await request.formData();
 		const id = idDe(fd);
 		if (!id) return fail(400, { error: 'Ferramenta inválida.' });
 		const nome = str(fd, 'nome');
 		if (!nome) return fail(400, { error: 'O nome da ferramenta é obrigatório.' });
-		const { error } = await supabase
+		const { error } = await locals.supabase
 			.from('adm_ferramentas')
 			.update({
 				nome,
@@ -149,21 +152,23 @@ export const actions: Actions = {
 		return { saved: true };
 	},
 
-	ferramenta_excluir: async ({ request, locals: { supabase } }) => {
+	ferramenta_excluir: async ({ request, locals }) => {
+		exigirPermissao(locals, 'ferramentas', 'excluir');
 		const fd = await request.formData();
 		const id = idDe(fd);
 		if (!id) return fail(400, { error: 'Ferramenta inválida.' });
-		const { error } = await supabase.from('adm_ferramentas').delete().eq('id', id);
+		const { error } = await locals.supabase.from('adm_ferramentas').delete().eq('id', id);
 		if (error) return fail(500, { error: error.message });
 		return { deleted: true };
 	},
 
 	// ---------------- Acessos ----------------
-	acesso_criar: async ({ request, locals: { supabase } }) => {
+	acesso_criar: async ({ request, locals }) => {
+		exigirPermissao(locals, 'ferramentas', 'editar');
 		const fd = await request.formData();
 		const plataforma = str(fd, 'plataforma');
 		if (!plataforma) return fail(400, { error: 'A plataforma é obrigatória.' });
-		const { error } = await supabase.from('adm_acessos').insert({
+		const { error } = await locals.supabase.from('adm_acessos').insert({
 			plataforma,
 			cliente_id: str(fd, 'cliente_id'),
 			login: str(fd, 'login'),
@@ -176,13 +181,14 @@ export const actions: Actions = {
 		return { saved: true };
 	},
 
-	acesso_atualizar: async ({ request, locals: { supabase } }) => {
+	acesso_atualizar: async ({ request, locals }) => {
+		exigirPermissao(locals, 'ferramentas', 'editar');
 		const fd = await request.formData();
 		const id = idDe(fd);
 		if (!id) return fail(400, { error: 'Acesso inválido.' });
 		const plataforma = str(fd, 'plataforma');
 		if (!plataforma) return fail(400, { error: 'A plataforma é obrigatória.' });
-		const { error } = await supabase
+		const { error } = await locals.supabase
 			.from('adm_acessos')
 			.update({
 				plataforma,
@@ -199,11 +205,12 @@ export const actions: Actions = {
 		return { saved: true };
 	},
 
-	acesso_excluir: async ({ request, locals: { supabase } }) => {
+	acesso_excluir: async ({ request, locals }) => {
+		exigirPermissao(locals, 'ferramentas', 'excluir');
 		const fd = await request.formData();
 		const id = idDe(fd);
 		if (!id) return fail(400, { error: 'Acesso inválido.' });
-		const { error } = await supabase.from('adm_acessos').delete().eq('id', id);
+		const { error } = await locals.supabase.from('adm_acessos').delete().eq('id', id);
 		if (error) return fail(500, { error: error.message });
 		return { deleted: true };
 	}

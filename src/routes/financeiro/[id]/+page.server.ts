@@ -1,5 +1,6 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { transacaoFromForm } from '$lib/financeiro';
+import { exigirPermissao } from '$lib/server/permissao';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals: { supabase } }) => {
@@ -12,14 +13,16 @@ export const load: PageServerLoad = async ({ params, locals: { supabase } }) => 
 };
 
 export const actions: Actions = {
-	update: async ({ request, params, locals: { supabase } }) => {
+	update: async ({ request, params, locals }) => {
+		exigirPermissao(locals, 'financeiro', 'editar');
 		const values = transacaoFromForm(await request.formData());
-		const { error: e } = await supabase.from('transacoes').update(values).eq('id', params.id);
+		const { error: e } = await locals.supabase.from('transacoes').update(values).eq('id', params.id);
 		if (e) return fail(500, { error: e.message, values });
 		return { saved: true };
 	},
-	delete: async ({ params, locals: { supabase } }) => {
-		const { error: e } = await supabase.from('transacoes').delete().eq('id', params.id);
+	delete: async ({ params, locals }) => {
+		exigirPermissao(locals, 'financeiro', 'excluir');
+		const { error: e } = await locals.supabase.from('transacoes').delete().eq('id', params.id);
 		if (e) return fail(500, { error: e.message });
 		throw redirect(303, '/financeiro');
 	}

@@ -1,5 +1,6 @@
 import { error as svelteError, fail, redirect } from '@sveltejs/kit';
 import { processoFromForm } from '$lib/processos';
+import { exigirPermissao } from '$lib/server/permissao';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals: { supabase } }) => {
@@ -14,12 +15,13 @@ export const load: PageServerLoad = async ({ params, locals: { supabase } }) => 
 };
 
 export const actions: Actions = {
-	update: async ({ request, params, locals: { supabase } }) => {
+	update: async ({ request, params, locals }) => {
+		exigirPermissao(locals, 'processos', 'editar');
 		const fd = await request.formData();
 		const values = processoFromForm(fd);
 		if (!values.nome) return fail(400, { error: 'Informe o nome do processo.', values });
 
-		const { error } = await supabase
+		const { error } = await locals.supabase
 			.from('processos')
 			.update({ ...values, updated_at: new Date().toISOString() })
 			.eq('id', params.id);
@@ -27,8 +29,9 @@ export const actions: Actions = {
 		return { saved: true };
 	},
 
-	delete: async ({ params, locals: { supabase } }) => {
-		const { error } = await supabase.from('processos').delete().eq('id', params.id);
+	delete: async ({ params, locals }) => {
+		exigirPermissao(locals, 'processos', 'excluir');
+		const { error } = await locals.supabase.from('processos').delete().eq('id', params.id);
 		if (error) return fail(500, { error: error.message });
 		throw redirect(303, '/processos');
 	}
