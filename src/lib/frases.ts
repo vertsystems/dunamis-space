@@ -165,5 +165,6 @@ export const FRASES: Frase[] = [
 	{ q: 'Riqueza é habilidade multiplicada.', a: 'Naval Ravikant' },
 	{ q: 'Desejo é contrato com a infelicidade.', a: 'Naval Ravikant' },
 	{ q: 'Simplicidade escala.', a: 'Naval Ravikant' },
-	{ q: 'O jogo longo vence o impulso curto.', a: 'Naval Ravikant' }
+	{ q: 'O jogo longo vence o impulso curto.', a: 'Naval Ravikant' },
+	{ q: 'Um homem não pode aceitar seu destino, ou será destruído por ele.', a: 'Spartacus' }
 ];
