@@ -33,7 +33,9 @@
 		CalendarDays,
 		CalendarRange,
 		LayoutGrid,
-		LogOut
+		LogOut,
+		Rows3,
+		Columns2
 	} from '@lucide/svelte';
 	import type { PageData } from './$types';
 
@@ -54,6 +56,18 @@
 	let mTitulo = $state('');
 	let novaSub = $state('');
 	const modalTarefa = $derived(organyze.tarefas.find((t) => t.id === modalId) ?? null);
+
+	// Modo de visualização do modal: 'compacto' (empilhado) | 'amplo' (janela larga, 2 colunas).
+	type ModalLayout = 'compacto' | 'amplo';
+	let modalLayout = $state<ModalLayout>('compacto');
+	$effect(() => {
+		const salvo = localStorage.getItem('organyze:modalLayout');
+		if (salvo === 'amplo' || salvo === 'compacto') modalLayout = salvo;
+	});
+	function setModalLayout(l: ModalLayout) {
+		modalLayout = l;
+		localStorage.setItem('organyze:modalLayout', l);
+	}
 
 	$effect(() => {
 		if (data.supabase) organyze.init(data.supabase, (data.perfil?.id as string | undefined) ?? null);
@@ -908,11 +922,52 @@
 {/if}
 
 <!-- ===== Modal de edição da tarefa ===== -->
-<Modal open={modalId !== null} title="Editar tarefa" size="md" onClose={fecharModal}>
+<Modal
+	open={modalId !== null}
+	title="Editar tarefa"
+	size={modalLayout === 'amplo' ? 'xl' : 'md'}
+	onClose={fecharModal}
+>
 	{#if modalTarefa}
 		{@const u = urgencia(modalTarefa.prazo, hojeStr)}
 		{@const dono = colabById(modalTarefa.colaboradorId)}
-		<div class="space-y-5">
+		{@const amplo = modalLayout === 'amplo'}
+
+		<!-- Seletor de visualização -->
+		<div class="mb-4 flex justify-end">
+			<div class="inline-flex rounded-[var(--radius)] border border-grey-200 bg-bg p-0.5">
+				<button
+					class="flex items-center gap-1.5 rounded-[calc(var(--radius)-2px)] px-3 py-1.5 text-xs font-semibold transition-colors"
+					class:bg-surface={!amplo}
+					class:text-navy={!amplo}
+					class:shadow-sm={!amplo}
+					class:text-grey={amplo}
+					aria-pressed={!amplo}
+					onclick={() => setModalLayout('compacto')}
+				>
+					<Rows3 size={14} /> Compacto
+				</button>
+				<button
+					class="flex items-center gap-1.5 rounded-[calc(var(--radius)-2px)] px-3 py-1.5 text-xs font-semibold transition-colors"
+					class:bg-surface={amplo}
+					class:text-navy={amplo}
+					class:shadow-sm={amplo}
+					class:text-grey={!amplo}
+					aria-pressed={amplo}
+					onclick={() => setModalLayout('amplo')}
+				>
+					<Columns2 size={14} /> Amplo
+				</button>
+			</div>
+		</div>
+
+		<div
+			class={amplo
+				? 'grid grid-cols-1 items-start gap-x-6 gap-y-5 md:grid-cols-[minmax(0,360px)_minmax(0,1fr)]'
+				: 'space-y-5'}
+		>
+			<!-- Coluna 1 (metadados) -->
+			<div class="space-y-5">
 			<!-- Título -->
 			<div>
 				<label for="m-titulo" class="mb-1.5 block text-sm font-medium text-navy">Título</label>
@@ -1065,7 +1120,11 @@
 					{/each}
 				</div>
 			</div>
+			</div>
+			<!-- end Coluna 1 -->
 
+			<!-- Coluna 2 (conteúdo) -->
+			<div class="space-y-5">
 			<!-- Descrição (editor leve) -->
 			<div>
 				<span class="mb-1.5 block text-sm font-medium text-navy">Descrição</span>
@@ -1154,8 +1213,14 @@
 				</div>
 			</div>
 
-			<!-- Ações -->
-			<div class="flex items-center justify-between border-t border-grey-200 pt-4">
+			</div>
+			<!-- end Coluna 2 -->
+
+			<!-- Ações (largura total) -->
+			<div
+				class="flex items-center justify-between border-t border-grey-200 pt-4"
+				class:col-span-2={amplo}
+			>
 				<Button variant="danger" size="sm" onclick={excluirDoModal}>
 					<Trash2 size={15} /> Excluir
 				</Button>

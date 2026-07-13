@@ -2,7 +2,18 @@
 	// Editor de texto leve (estilo Notion enxuto): negrito, itálico, sublinhado,
 	// tachado, lista, cor de texto e cor de fundo (marca-texto). Baseado em
 	// contenteditable + execCommand (sem dependências). Salva o HTML via onSave.
-	import { Bold, Italic, Underline, Strikethrough, List, Baseline, Highlighter } from '@lucide/svelte';
+	import {
+		Bold,
+		Italic,
+		Underline,
+		Strikethrough,
+		List,
+		Baseline,
+		Highlighter,
+		Link2,
+		ChevronDown,
+		ChevronUp
+	} from '@lucide/svelte';
 
 	let {
 		value = '',
@@ -14,18 +25,127 @@
 	// Qual paleta está aberta (cor de texto ou de fundo) — null = nenhuma.
 	let paleta = $state<'texto' | 'fundo' | null>(null);
 
+	// Altura: colapsado mostra ~metade; "Expandir" cresce até 65vh. Rola dentro da caixa.
+	const ALTURA_COLAPSADA = 260; // px
+	let expandido = $state(false);
+	let transbordou = $state(false); // conteúdo maior que a altura colapsada
+
+	function medir() {
+		if (el) transbordou = el.scrollHeight > ALTURA_COLAPSADA + 8;
+	}
+
 	function init(node: HTMLDivElement) {
 		node.innerHTML = value || '';
+		normalizarLinks(node);
+		// Mede depois que o layout assenta.
+		requestAnimationFrame(() => {
+			el = node;
+			medir();
+		});
 	}
 
 	function comando(cmd: string) {
 		el?.focus();
 		document.execCommand(cmd, false);
 		if (el) onSave(el.innerHTML);
+		medir();
 	}
 
-	function salvar() {
-		if (el) onSave(el.innerHTML);
+	// Digitação: salva sem linkificar (não mexer no cursor). Linkificação acontece ao sair.
+	function onEntrada() {
+		if (!el) return;
+		onSave(el.innerHTML);
+		medir();
+	}
+
+	function onSaida() {
+		if (!el) return;
+		linkificar(el);
+		onSave(el.innerHTML);
+		medir();
+	}
+
+	function escaparHtml(s: string): string {
+		return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+	}
+
+	// Garante que todo <a> abra em nova aba com segurança.
+	function normalizarLinks(root: HTMLElement) {
+		root.querySelectorAll('a').forEach((a) => {
+			a.setAttribute('target', '_blank');
+			a.setAttribute('rel', 'noopener noreferrer');
+		});
+	}
+
+	const URL_RE = /(https?:\/\/[^\s<]+[^\s<.,;:!?)"'\]}])/g;
+
+	// Converte URLs "cruas" (fora de <a>) em links clicáveis, preservando o resto.
+	function linkificar(root: HTMLElement) {
+		const alvos: Text[] = [];
+		const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+		let n: Node | null;
+		while ((n = walker.nextNode())) {
+			const t = n as Text;
+			if (t.parentElement?.closest('a')) continue; // já é link
+			URL_RE.lastIndex = 0;
+			if (URL_RE.test(t.nodeValue || '')) alvos.push(t);
+		}
+		for (const t of alvos) {
+			const texto = t.nodeValue || '';
+			const frag = document.createDocumentFragment();
+			let last = 0;
+			let m: RegExpExecArray | null;
+			URL_RE.lastIndex = 0;
+			while ((m = URL_RE.exec(texto))) {
+				if (m.index > last) frag.appendChild(document.createTextNode(texto.slice(last, m.index)));
+				const a = document.createElement('a');
+				a.href = m[0];
+				a.textContent = m[0];
+				a.target = '_blank';
+				a.rel = 'noopener noreferrer';
+				frag.appendChild(a);
+				last = m.index + m[0].length;
+			}
+			if (last < texto.length) frag.appendChild(document.createTextNode(texto.slice(last)));
+			t.parentNode?.replaceChild(frag, t);
+		}
+	}
+
+	// Botão da barra: cria link a partir da seleção (ou insere a própria URL).
+	function inserirLink() {
+		el?.focus();
+		const sel = window.getSelection();
+		const selecionado = sel?.toString() ?? '';
+		const entrada = prompt('URL do link:', 'https://');
+		if (!entrada) return;
+		const url = entrada.trim();
+		const href = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+		if (selecionado) {
+			document.execCommand('createLink', false, href);
+		} else {
+			document.execCommand(
+				'insertHTML',
+				false,
+				`<a href="${escaparHtml(href)}" target="_blank" rel="noopener noreferrer">${escaparHtml(href)}</a>&nbsp;`
+			);
+		}
+		if (el) {
+			normalizarLinks(el);
+			onSave(el.innerHTML);
+		}
+		medir();
+	}
+
+	// Clique num link dentro do editor abre em nova aba (em vez de só posicionar o cursor).
+	function onClickEditor(e: MouseEvent) {
+		const a = (e.target as HTMLElement | null)?.closest('a');
+		if (a && el?.contains(a)) {
+			const href = a.getAttribute('href');
+			if (href) {
+				e.preventDefault();
+				window.open(href, '_blank', 'noopener,noreferrer');
+			}
+		}
 	}
 
 	/** Aplica cor de texto (foreColor) ou de fundo (hiliteColor/backColor) à seleção. */
@@ -43,10 +163,22 @@
 	}
 
 	// Cola sempre como texto puro (mantém o conteúdo enxuto e evita HTML externo).
+	// Se o texto colado for uma única URL, insere já como link clicável.
 	function onPaste(e: ClipboardEvent) {
 		e.preventDefault();
 		const text = e.clipboardData?.getData('text/plain') ?? '';
-		document.execCommand('insertText', false, text);
+		const url = text.trim();
+		if (/^https?:\/\/\S+$/.test(url)) {
+			document.execCommand(
+				'insertHTML',
+				false,
+				`<a href="${escaparHtml(url)}" target="_blank" rel="noopener noreferrer">${escaparHtml(url)}</a>&nbsp;`
+			);
+		} else {
+			document.execCommand('insertText', false, text);
+		}
+		if (el) onSave(el.innerHTML);
+		medir();
 	}
 
 	const BOTOES = [
@@ -121,6 +253,18 @@
 			</button>
 		{/each}
 
+		<!-- Link -->
+		<button
+			type="button"
+			title="Inserir link"
+			aria-label="Inserir link"
+			class="grid size-7 place-items-center rounded-md text-slate transition-colors hover:bg-bg hover:text-navy"
+			onmousedown={(e) => e.preventDefault()}
+			onclick={inserirLink}
+		>
+			<Link2 size={15} />
+		</button>
+
 		<span class="mx-1 h-4 w-px bg-grey-200"></span>
 
 		<!-- Cor de texto -->
@@ -190,6 +334,7 @@
 			{/if}
 		</div>
 	</div>
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<div
 		bind:this={el}
 		use:init
@@ -198,11 +343,27 @@
 		tabindex="0"
 		aria-multiline="true"
 		data-placeholder={placeholder}
-		class="organyze-rt min-h-[90px] px-3.5 py-2.5 text-sm text-navy-900 outline-none"
-		oninput={salvar}
-		onblur={salvar}
+		class="organyze-rt min-h-[90px] overflow-y-auto px-3.5 py-2.5 text-sm text-navy-900 outline-none"
+		style="max-height: {expandido ? '65vh' : ALTURA_COLAPSADA + 'px'}"
+		oninput={onEntrada}
+		onblur={onSaida}
 		onpaste={onPaste}
+		onclick={onClickEditor}
 	></div>
+
+	{#if transbordou}
+		<button
+			type="button"
+			class="flex w-full items-center justify-center gap-1.5 border-t border-grey-200 py-1.5 text-xs font-semibold text-grey transition-colors hover:bg-bg hover:text-navy"
+			onclick={() => (expandido = !expandido)}
+		>
+			{#if expandido}
+				<ChevronUp size={14} /> Recolher
+			{:else}
+				<ChevronDown size={14} /> Expandir
+			{/if}
+		</button>
+	{/if}
 </div>
 
 <style>
@@ -219,5 +380,7 @@
 	.organyze-rt :global(a) {
 		color: var(--color-brand);
 		text-decoration: underline;
+		cursor: pointer;
+		word-break: break-all;
 	}
 </style>

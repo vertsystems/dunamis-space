@@ -16,12 +16,12 @@
 		open?: boolean;
 		title?: string;
 		subtitle?: string;
-		size?: 'sm' | 'md' | 'lg';
+		size?: 'sm' | 'md' | 'lg' | 'xl';
 		onClose: () => void;
 		children: Snippet;
 	} = $props();
 
-	const maxW = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl' };
+	const maxW = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-5xl' };
 
 	const FOCAVEIS =
 		'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -85,7 +85,7 @@
 		<div
 			bind:this={dialogEl}
 			tabindex="-1"
-			class="w-full {maxW[size]} rounded-[var(--radius-xl)] bg-surface border border-grey-200 shadow-2xl focus:outline-none"
+			class="w-full {maxW[size]} rounded-[var(--radius-xl)] bg-surface border border-grey-200 shadow-2xl focus:outline-none transition-[max-width] duration-300 ease-out"
 			role="dialog"
 			aria-modal="true"
 			aria-label={title}
