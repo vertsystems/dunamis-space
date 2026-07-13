@@ -963,7 +963,7 @@
 
 		<div
 			class={amplo
-				? 'grid grid-cols-1 items-start gap-x-6 gap-y-5 md:grid-cols-[minmax(0,360px)_minmax(0,1fr)]'
+				? 'grid grid-cols-1 items-start gap-x-6 gap-y-5 lg:grid-cols-[minmax(0,300px)_minmax(0,1fr)_minmax(0,340px)]'
 				: 'space-y-5'}
 		>
 			<!-- Coluna 1 (metadados) -->
@@ -1135,7 +1135,11 @@
 					/>
 				{/key}
 			</div>
+			</div>
+			<!-- end Coluna 2 -->
 
+			<!-- Coluna 3 (subtarefas) -->
+			<div class="space-y-5">
 			<!-- Subtarefas -->
 			<div>
 				<div class="mb-1.5 flex items-center justify-between">
@@ -1214,12 +1218,12 @@
 			</div>
 
 			</div>
-			<!-- end Coluna 2 -->
+			<!-- end Coluna 3 -->
 
 			<!-- Ações (largura total) -->
 			<div
 				class="flex items-center justify-between border-t border-grey-200 pt-4"
-				class:col-span-2={amplo}
+				class:col-span-full={amplo}
 			>
 				<Button variant="danger" size="sm" onclick={excluirDoModal}>
 					<Trash2 size={15} /> Excluir
