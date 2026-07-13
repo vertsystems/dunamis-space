@@ -45,7 +45,6 @@
 		LifeBuoy,
 		ListChecks,
 		ShieldCheck,
-		Radar,
 		type IconProps
 	} from '@lucide/svelte';
 	import type { Component } from 'svelte';
@@ -92,8 +91,7 @@
 		camera: Camera,
 		lifebuoy: LifeBuoy,
 		organyze: ListChecks,
-		shield: ShieldCheck,
-		leadgrap: Radar
+		shield: ShieldCheck
 	};
 </script>
 
