@@ -33,6 +33,13 @@ export const DTOOLS_FERRAMENTAS: Ferramenta[] = [
 			{ href: '/dtools/organyze/metas', label: 'Metas do Mês', letra: 'M' },
 			{ href: '/dtools/organyze/lixeira', label: 'Lixeira', letra: 'L' }
 		]
+	},
+	{
+		href: '/dtools/leadgrap',
+		label: 'LeadGrap',
+		icon: 'leadgrap',
+		descricao:
+			'CRM de prospecção: captura leads do Google Maps, organiza o funil (kanban) e agiliza o contato por WhatsApp/e-mail.'
 	}
 ];
 
