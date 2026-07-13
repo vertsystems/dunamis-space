@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { browser } from '$app/environment';
 	import {
 		organyze,
 		toISODate,
@@ -57,16 +58,19 @@
 	let novaSub = $state('');
 	const modalTarefa = $derived(organyze.tarefas.find((t) => t.id === modalId) ?? null);
 
-	// Modo de visualização do modal: 'compacto' (empilhado) | 'amplo' (janela larga, 2 colunas).
+	// Modo de visualização do modal: 'compacto' (empilhado) | 'amplo' (janela larga, 3 colunas).
+	// A escolha do usuário fica salva no localStorage e é lida já na criação do
+	// componente (sem "flash"), então o modal sempre reabre no modo escolhido.
 	type ModalLayout = 'compacto' | 'amplo';
-	let modalLayout = $state<ModalLayout>('compacto');
-	$effect(() => {
-		const salvo = localStorage.getItem('organyze:modalLayout');
-		if (salvo === 'amplo' || salvo === 'compacto') modalLayout = salvo;
-	});
+	const LAYOUT_KEY = 'organyze:modalLayout';
+	function lerLayoutSalvo(): ModalLayout {
+		if (!browser) return 'compacto';
+		return localStorage.getItem(LAYOUT_KEY) === 'amplo' ? 'amplo' : 'compacto';
+	}
+	let modalLayout = $state<ModalLayout>(lerLayoutSalvo());
 	function setModalLayout(l: ModalLayout) {
 		modalLayout = l;
-		localStorage.setItem('organyze:modalLayout', l);
+		if (browser) localStorage.setItem(LAYOUT_KEY, l);
 	}
 
 	$effect(() => {
