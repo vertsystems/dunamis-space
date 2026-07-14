@@ -6,7 +6,9 @@
 	import { Button, Card, Badge, Input, Select, Textarea, Checkbox, EmptyState, DataTable } from '$lib/components/ui';
 	import type { BadgeTone, ColumnDef } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
-	import { Globe, AtSign, MessageCircle } from '@lucide/svelte';
+	import { Globe } from '@lucide/svelte';
+	import WhatsappIcon from '$lib/components/icons/WhatsappIcon.svelte';
+	import InstagramIcon from '$lib/components/icons/InstagramIcon.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import { formatBRL } from '$lib/clientes';
 	import CrmModal from '$lib/components/crm/CrmModal.svelte';
@@ -162,7 +164,7 @@
 									class="grid size-8 place-items-center rounded-md text-slate transition-colors hover:bg-bg hover:text-navy"
 									onclick={(e) => e.stopPropagation()}
 								>
-									<Globe size={16} />
+									<Globe size={17} strokeWidth={2.25} />
 								</a>
 							{/if}
 							{#if iu}
@@ -172,10 +174,10 @@
 									rel="noopener"
 									title="Abrir Instagram"
 									aria-label="Abrir Instagram"
-									class="grid size-8 place-items-center rounded-md text-slate transition-colors hover:bg-bg hover:text-brand"
+									class="grid size-8 place-items-center rounded-md transition-transform hover:scale-110 hover:bg-bg"
 									onclick={(e) => e.stopPropagation()}
 								>
-									<AtSign size={16} />
+									<InstagramIcon size={18} />
 								</a>
 							{/if}
 							{#if wu}
@@ -185,10 +187,10 @@
 									rel="noopener"
 									title="Abrir WhatsApp"
 									aria-label="Abrir WhatsApp"
-									class="grid size-8 place-items-center rounded-md text-slate transition-colors hover:bg-bg hover:text-brand-green"
+									class="grid size-8 place-items-center rounded-md text-[#25D366] transition-transform hover:scale-110 hover:bg-bg"
 									onclick={(e) => e.stopPropagation()}
 								>
-									<MessageCircle size={16} />
+									<WhatsappIcon size={18} />
 								</a>
 							{/if}
 							{#if !f.site && !iu && !wu}
