@@ -32,6 +32,10 @@
 	} = $props();
 
 	let saving = $state(false);
+	// Contato rápido: digitar o nome de um novo contato direto aqui (sem abrir a
+	// janela de novo contato). O nome é criado como contato e pode ser editado depois.
+	let modoNovoContato = $state(false);
+	let novoContatoNome = $state('');
 
 	const valorStr = $derived(
 		negocio && negocio.valor
@@ -75,17 +79,39 @@
 		placeholder="Ex.: Plano Social Media — Loja X"
 	/>
 
-	<Select
-		label="Contato"
-		name="contato_id"
-		value={negocio?.contato_id ?? ''}
-		wrapperClass="md:col-span-6"
-	>
-		<option value="">— sem contato —</option>
-		{#each contatos as c (c.id)}
-			<option value={c.id}>{c.nome}{c.empresa ? ` · ${c.empresa}` : ''}</option>
-		{/each}
-	</Select>
+	<div class="md:col-span-6">
+		{#if modoNovoContato}
+			<label for="novo-contato" class="mb-1.5 block text-sm font-medium text-navy">Novo contato</label>
+			<input
+				id="novo-contato"
+				name="novo_contato_nome"
+				bind:value={novoContatoNome}
+				placeholder="Nome do contato"
+				class="h-10 w-full rounded-[var(--radius)] border border-grey-200 bg-surface px-3.5 text-sm text-navy-900 shadow-xs placeholder:text-grey/90 transition-colors hover:border-grey focus-visible:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/25"
+			/>
+			<button
+				type="button"
+				class="mt-1.5 text-xs font-medium text-brand hover:underline"
+				onclick={() => (modoNovoContato = false)}
+			>
+				escolher um contato existente
+			</button>
+		{:else}
+			<Select label="Contato" name="contato_id" value={negocio?.contato_id ?? ''}>
+				<option value="">— sem contato —</option>
+				{#each contatos as c (c.id)}
+					<option value={c.id}>{c.nome}{c.empresa ? ` · ${c.empresa}` : ''}</option>
+				{/each}
+			</Select>
+			<button
+				type="button"
+				class="mt-1.5 text-xs font-medium text-brand hover:underline"
+				onclick={() => (modoNovoContato = true)}
+			>
+				+ adicionar novo contato
+			</button>
+		{/if}
+	</div>
 
 	<Select
 		label="Etapa"

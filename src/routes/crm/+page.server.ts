@@ -11,11 +11,35 @@ import {
 	type Pipeline,
 	type Meta
 } from '$lib/crm';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Actions, PageServerLoad } from './$types';
 
 /** PostgREST tipa relações to-one como array; extrai o objeto único. */
 function um<T>(v: T | T[] | null | undefined): T | null {
 	return Array.isArray(v) ? (v[0] ?? null) : (v ?? null);
+}
+
+/**
+ * Contato rápido no form de negócio: se nenhum contato foi escolhido mas um nome
+ * novo foi digitado (`novo_contato_nome`), cria o contato só com o nome e usa o id.
+ * Retorna uma mensagem de erro (string) ou null em caso de sucesso.
+ */
+async function resolverContatoRapido(
+	supabase: SupabaseClient,
+	fd: FormData,
+	v: { contato_id: string | null }
+): Promise<string | null> {
+	if (v.contato_id) return null;
+	const nome = (fd.get('novo_contato_nome') as string | null)?.trim();
+	if (!nome) return null;
+	const { data, error } = await supabase
+		.from('crm_contatos')
+		.insert({ nome })
+		.select('id')
+		.single();
+	if (error) return error.message;
+	v.contato_id = data?.id ?? null;
+	return null;
 }
 
 export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
@@ -238,6 +262,11 @@ export const actions: Actions = {
 		const v = negocioFromForm(fd);
 		if (!v.titulo) return fail(400, { error: 'O título do negócio é obrigatório.' });
 
+		// Contato rápido: se digitou um nome novo (sem escolher existente), cria o
+		// contato só com o nome — pode ser completado depois na aba Contatos.
+		const contatoErr = await resolverContatoRapido(supabase, fd, v);
+		if (contatoErr) return fail(500, { error: contatoErr });
+
 		// Resolve funil/etapa padrão quando não informados.
 		let pipeline_id = v.pipeline_id;
 		let stage_id = v.stage_id;
@@ -300,6 +329,8 @@ export const actions: Actions = {
 		if (!id) return fail(400, { error: 'Negócio inválido.' });
 		const v = negocioFromForm(fd);
 		if (!v.titulo) return fail(400, { error: 'O título do negócio é obrigatório.' });
+		const contatoErr = await resolverContatoRapido(supabase, fd, v);
+		if (contatoErr) return fail(500, { error: contatoErr });
 		const { error } = await supabase
 			.from('crm_negocios')
 			.update({
