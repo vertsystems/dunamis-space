@@ -8,7 +8,8 @@
 		inicioMes
 	} from '$lib/organyze/store.svelte';
 	import {
-		corPrioridade,
+		corPrioridadeEfetiva,
+		prazoUrgente,
 		proximaPrioridade,
 		prazoOrdem,
 		urgencia,
@@ -28,6 +29,7 @@
 		ChevronRight,
 		Plus,
 		Trash2,
+		Copy,
 		Check,
 		GripVertical,
 		CalendarClock,
@@ -240,6 +242,10 @@
 	}
 	function excluirDoModal() {
 		if (modalId) organyze.removeTarefa(modalId);
+		modalId = null;
+	}
+	function duplicarDoModal() {
+		if (modalId) organyze.duplicarTarefa(modalId);
 		modalId = null;
 	}
 
@@ -563,11 +569,13 @@
 					<GripVertical size={18} />
 				</span>
 
-				<!-- Prioridade (clique cicla) -->
+				<!-- Prioridade (clique cicla). Fica vermelha quando o prazo está chegando. -->
 				<button
 					class="mt-1 size-3 shrink-0 rounded-full ring-2 ring-transparent transition-all hover:ring-grey-200"
-					style="background: {corPrioridade(t.prioridade)}"
-					title="Prioridade: {t.prioridade}"
+					style="background: {corPrioridadeEfetiva(t.prioridade, t.prazo, hojeStr)}"
+					title={prazoUrgente(t.prazo, hojeStr)
+						? `Prioridade: ${t.prioridade} · prazo chegando`
+						: `Prioridade: ${t.prioridade}`}
 					aria-label="Prioridade {t.prioridade}, clique para alterar"
 					onclick={() => organyze.setPrioridade(t.id, proximaPrioridade(t.prioridade))}
 				></button>
@@ -645,6 +653,16 @@
 					{/if}
 				</button>
 
+				<!-- Duplicar -->
+				<button
+					class="grid size-8 shrink-0 place-items-center rounded-md text-grey opacity-0 transition-all hover:bg-bg hover:text-navy group-hover:opacity-100"
+					aria-label="Duplicar tarefa"
+					title="Duplicar tarefa"
+					onclick={() => organyze.duplicarTarefa(t.id)}
+				>
+					<Copy size={15} />
+				</button>
+
 				<!-- Excluir rápido -->
 				<button
 					class="grid size-8 shrink-0 place-items-center rounded-md text-grey opacity-0 transition-all hover:bg-brand-danger/10 hover:text-brand-danger group-hover:opacity-100"
@@ -679,7 +697,7 @@
 				>
 					<span
 						class="size-2 shrink-0 rounded-full"
-						style="background: {corPrioridade(t.prioridade)}"
+						style="background: {corPrioridadeEfetiva(t.prioridade, t.prazo, hojeStr)}"
 					></span>
 					<span
 						class="flex-1 truncate text-sm"
@@ -1232,7 +1250,12 @@
 				<Button variant="danger" size="sm" onclick={excluirDoModal}>
 					<Trash2 size={15} /> Excluir
 				</Button>
-				<Button variant="secondary" size="sm" onclick={fecharModal}>Concluir edição</Button>
+				<div class="flex items-center gap-2">
+					<Button variant="secondary" size="sm" onclick={duplicarDoModal}>
+						<Copy size={15} /> Duplicar
+					</Button>
+					<Button variant="secondary" size="sm" onclick={fecharModal}>Concluir edição</Button>
+				</div>
 			</div>
 		</div>
 	{/if}

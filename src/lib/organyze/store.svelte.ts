@@ -258,6 +258,30 @@ class OrganyzeStore {
 		return tarefa;
 	}
 
+	/** Duplica uma tarefa (cópia com novo id; subtarefas ganham novos ids). */
+	duplicarTarefa(id: string): Tarefa | null {
+		const orig = this.tarefas.find((t) => t.id === id);
+		if (!orig || !this.colaboradorId) return null;
+		const posicao = this.tarefas.length
+			? Math.max(...this.tarefas.map((t) => t.posicao)) + 1
+			: 0;
+		const nova: Tarefa = {
+			...orig,
+			id: uid(),
+			titulo: `${orig.titulo} (cópia)`,
+			posicao,
+			subtarefas: orig.subtarefas.map((s) => ({ ...s, id: uid() })),
+			responsaveis: [...orig.responsaveis]
+		};
+		this.tarefas = [...this.tarefas, nova];
+		this.#persist(
+			() => db.insertTarefa(this.supabase!, nova),
+			() => (this.tarefas = this.tarefas.filter((t) => t.id !== nova.id)),
+			'Falha ao duplicar tarefa.'
+		);
+		return nova;
+	}
+
 	#update(id: string, patch: Partial<Tarefa>, errMsg: string) {
 		const snapshot = this.tarefas;
 		this.tarefas = this.tarefas.map((t) => (t.id === id ? { ...t, ...patch } : t));

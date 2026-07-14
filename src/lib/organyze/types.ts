@@ -126,3 +126,31 @@ export function urgencia(prazo: string | null, hoje: string): Urgencia | null {
 	const [, m, d] = prazo.split('-');
 	return { status: 'futura', label: `${d}/${m}`, cor: '#98a2b3' };
 }
+
+/** Dias até o prazo (negativo = atrasado). null se não houver prazo. */
+export function diasAtePrazo(prazo: string | null, hoje: string): number | null {
+	if (!prazo) return null;
+	const p = new Date(`${prazo}T00:00:00`);
+	const h = new Date(`${hoje}T00:00:00`);
+	return Math.round((p.getTime() - h.getTime()) / 86400000);
+}
+
+/** Limite (em dias) para considerar o prazo "chegando perto". */
+export const DIAS_PRAZO_URGENTE = 2;
+
+/** Prazo próximo: atrasado, hoje ou dentro dos próximos DIAS_PRAZO_URGENTE dias. */
+export function prazoUrgente(prazo: string | null, hoje: string): boolean {
+	const d = diasAtePrazo(prazo, hoje);
+	return d !== null && d <= DIAS_PRAZO_URGENTE;
+}
+
+/**
+ * Cor da bolinha de prioridade — sobe automaticamente para "alta" (vermelho)
+ * quando o prazo de entrega está chegando perto, mesmo que a prioridade
+ * definida seja menor.
+ */
+export const corPrioridadeEfetiva = (
+	prioridade: Prioridade,
+	prazo: string | null,
+	hoje: string
+): string => (prazoUrgente(prazo, hoje) ? corPrioridade('alta') : corPrioridade(prioridade));
