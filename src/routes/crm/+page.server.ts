@@ -105,7 +105,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		supabase
 			.from('crm_contatos')
 			.select(
-				'id, nome, empresa, cargo, email, telefone, whatsapp, origem, segmento, tags, observacoes, cliente_id, created_at, responsavel_id, responsavel:colaboradores(id, nome), negocios:crm_negocios(id, valor, status)'
+				'id, nome, empresa, cargo, email, telefone, whatsapp, instagram, site, origem, segmento, tags, observacoes, cliente_id, created_at, responsavel_id, responsavel:colaboradores(id, nome), negocios:crm_negocios(id, valor, status)'
 			)
 			.order('created_at', { ascending: false }),
 		supabase
@@ -173,6 +173,8 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 			email: (c.email as string | null) ?? null,
 			telefone: (c.telefone as string | null) ?? null,
 			whatsapp: (c.whatsapp as string | null) ?? null,
+			instagram: (c.instagram as string | null) ?? null,
+			site: (c.site as string | null) ?? null,
 			origem: (c.origem as string | null) ?? null,
 			segmento: (c.segmento as string | null) ?? null,
 			tags: (c.tags as string[] | null) ?? [],

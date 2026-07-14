@@ -211,6 +211,8 @@ export function contatoFromForm(fd: FormData) {
 		email: str(fd, 'email'),
 		telefone: str(fd, 'telefone'),
 		whatsapp: str(fd, 'whatsapp'),
+		instagram: str(fd, 'instagram'),
+		site: str(fd, 'site'),
 		origem: str(fd, 'origem'),
 		segmento: str(fd, 'segmento'),
 		tags: parseTags(str(fd, 'tags')),
@@ -296,6 +298,8 @@ export type Contato = {
 	email: string | null;
 	telefone: string | null;
 	whatsapp: string | null;
+	instagram: string | null;
+	site: string | null;
 	origem: string | null;
 	segmento: string | null;
 	tags: string[];

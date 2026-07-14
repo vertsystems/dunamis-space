@@ -69,6 +69,22 @@
 	<Input label="WhatsApp" name="whatsapp" value={contato?.whatsapp ?? ''} wrapperClass="md:col-span-4" />
 
 	<Input label="Telefone" name="telefone" value={contato?.telefone ?? ''} wrapperClass="md:col-span-4" />
+	<Input
+		label="Instagram"
+		name="instagram"
+		value={contato?.instagram ?? ''}
+		wrapperClass="md:col-span-4"
+		placeholder="@usuario ou link"
+	/>
+	<Input
+		label="Site"
+		name="site"
+		type="url"
+		value={contato?.site ?? ''}
+		wrapperClass="md:col-span-4"
+		placeholder="https://…"
+	/>
+
 	<Select label="Origem" name="origem" value={contato?.origem ?? ''} wrapperClass="md:col-span-4">
 		<option value="">—</option>
 		{#each origens as o (o)}

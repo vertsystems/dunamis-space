@@ -1,5 +1,8 @@
 <script lang="ts">
 	import { Badge, Card, Input, Select, EmptyState } from '$lib/components/ui';
+	import { Globe } from '@lucide/svelte';
+	import WhatsappIcon from '$lib/components/icons/WhatsappIcon.svelte';
+	import InstagramIcon from '$lib/components/icons/InstagramIcon.svelte';
 	import { formatBRL, type Contato } from '$lib/crm';
 
 	let {
@@ -9,6 +12,26 @@
 		contatos?: Contato[];
 		onOpen: (id: string) => void;
 	} = $props();
+
+	// Acesso rápido: normaliza os campos em URLs abríveis.
+	function instaUrl(v: string | null): string | null {
+		if (!v) return null;
+		const s = v.trim();
+		if (!s) return null;
+		return /^https?:\/\//i.test(s) ? s : `https://instagram.com/${s.replace(/^@/, '')}`;
+	}
+	function siteUrl(v: string | null): string | null {
+		if (!v) return null;
+		const s = v.trim();
+		if (!s) return null;
+		return /^https?:\/\//i.test(s) ? s : `https://${s}`;
+	}
+	function whatsUrl(tel: string | null): string | null {
+		if (!tel) return null;
+		const d = tel.replace(/\D/g, '');
+		if (d.length < 8) return null;
+		return `https://wa.me/${d.startsWith('55') ? d : `55${d}`}`;
+	}
 
 	let busca = $state('');
 	let origemFiltro = $state('');
@@ -45,6 +68,7 @@
 			<thead>
 				<tr class="border-b border-grey-200 text-left text-xs uppercase tracking-wide text-grey">
 					<th class="px-4 py-3 font-semibold">Contato</th>
+					<th class="px-4 py-3 font-semibold">Acesso</th>
 					<th class="px-4 py-3 font-semibold">Empresa</th>
 					<th class="px-4 py-3 font-semibold">Origem</th>
 					<th class="px-4 py-3 font-semibold">Responsável</th>
@@ -55,6 +79,9 @@
 			</thead>
 			<tbody>
 				{#each filtrados as c (c.id)}
+					{@const iu = instaUrl(c.instagram)}
+					{@const wu = whatsUrl(c.whatsapp ?? c.telefone)}
+					{@const su = siteUrl(c.site)}
 					<tr
 						class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg"
 						onclick={() => onOpen(c.id)}
@@ -62,6 +89,26 @@
 						<td class="px-4 py-3">
 							<div class="font-medium text-navy">{c.nome}</div>
 							{#if c.email}<div class="text-xs text-grey truncate">{c.email}</div>{/if}
+						</td>
+						<td class="px-4 py-3">
+							<div class="flex items-center gap-0.5">
+								{#if su}
+									<a href={su} target="_blank" rel="noopener" title="Abrir site" aria-label="Abrir site" class="grid size-8 place-items-center rounded-md text-grey transition-colors hover:bg-surface hover:text-brand" onclick={(e) => e.stopPropagation()}>
+										<Globe size={17} strokeWidth={2.25} />
+									</a>
+								{/if}
+								{#if iu}
+									<a href={iu} target="_blank" rel="noopener" title="Abrir Instagram" aria-label="Abrir Instagram" class="grid size-8 place-items-center rounded-md transition-transform hover:scale-110 hover:bg-surface" onclick={(e) => e.stopPropagation()}>
+										<InstagramIcon size={18} />
+									</a>
+								{/if}
+								{#if wu}
+									<a href={wu} target="_blank" rel="noopener" title="Abrir WhatsApp" aria-label="Abrir WhatsApp" class="grid size-8 place-items-center rounded-md text-[#25D366] transition-transform hover:scale-110 hover:bg-surface" onclick={(e) => e.stopPropagation()}>
+										<WhatsappIcon size={18} />
+									</a>
+								{/if}
+								{#if !su && !iu && !wu}<span class="text-grey">—</span>{/if}
+							</div>
 						</td>
 						<td class="px-4 py-3 text-slate">{c.empresa ?? '—'}</td>
 						<td class="px-4 py-3">
@@ -79,7 +126,7 @@
 						</td>
 					</tr>
 				{:else}
-					<tr><td colspan="7" class="px-2"><EmptyState icon="contact" title="Nenhum contato" description="Cadastre leads e contatos no CRM." /></td></tr>
+					<tr><td colspan="8" class="px-2"><EmptyState icon="contact" title="Nenhum contato" description="Cadastre leads e contatos no CRM." /></td></tr>
 				{/each}
 			</tbody>
 		</table>
