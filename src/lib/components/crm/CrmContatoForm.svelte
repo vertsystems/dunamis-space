@@ -2,6 +2,8 @@
 	import { enhance } from '$app/forms';
 	import { Button, Input, Select, Textarea } from '$lib/components/ui';
 	import ResponsavelPicker from '$lib/components/ResponsavelPicker.svelte';
+	import AutosaveStatus from '$lib/components/AutosaveStatus.svelte';
+	import { autosave, type AutosaveStatus as SaveStatus } from '$lib/actions/autosave';
 	import { toast } from '$lib/toast.svelte';
 	import { ORIGENS, type Contato, type Colaborador } from '$lib/crm';
 
@@ -26,6 +28,9 @@
 	} = $props();
 
 	let saving = $state(false);
+	// Auto-save só na edição (registro já existente).
+	const editando = $derived(!!contato);
+	let saveStatus = $state<SaveStatus>('idle');
 
 	// Inclui a origem atual mesmo que fora da lista de sugestões.
 	const origens = $derived(
@@ -49,6 +54,7 @@
 				toast.error((result.data as { error?: string })?.error ?? 'Não foi possível salvar.');
 		};
 	}}
+	use:autosave={{ enabled: editando, onStatus: (s) => (saveStatus = s) }}
 	class="grid grid-cols-1 md:grid-cols-12 gap-3"
 >
 	{#if contato}<input type="hidden" name="id" value={contato.id} />{/if}
@@ -123,9 +129,17 @@
 	/>
 
 	<div class="md:col-span-12 flex items-center gap-2 pt-1">
-		<Button type="submit" loading={saving}>{submitLabel}</Button>
-		{#if onCancel}
-			<Button variant="secondary" type="button" onclick={onCancel}>Cancelar</Button>
+		{#if editando}
+			<AutosaveStatus status={saveStatus} />
+			<div class="flex-1"></div>
+			{#if onCancel}
+				<Button variant="secondary" type="button" onclick={onCancel}>Fechar</Button>
+			{/if}
+		{:else}
+			<Button type="submit" loading={saving}>{submitLabel}</Button>
+			{#if onCancel}
+				<Button variant="secondary" type="button" onclick={onCancel}>Cancelar</Button>
+			{/if}
 		{/if}
 	</div>
 </form>
