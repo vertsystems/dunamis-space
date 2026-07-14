@@ -3,6 +3,9 @@
 	import { Badge, Button, Input, Select } from '$lib/components/ui';
 	import { toast } from '$lib/toast.svelte';
 	import Icon from '$lib/components/Icon.svelte';
+	import { Globe } from '@lucide/svelte';
+	import WhatsappIcon from '$lib/components/icons/WhatsappIcon.svelte';
+	import InstagramIcon from '$lib/components/icons/InstagramIcon.svelte';
 	import CrmNegocioForm from './CrmNegocioForm.svelte';
 	import CrmContatoForm from './CrmContatoForm.svelte';
 	import {
@@ -23,6 +26,26 @@
 		type Stage,
 		type Colaborador
 	} from '$lib/crm';
+
+	// Acesso rápido (WhatsApp/Instagram/Site) — normaliza os campos em URLs.
+	function instaUrl(v: string | null): string | null {
+		if (!v) return null;
+		const s = v.trim();
+		if (!s) return null;
+		return /^https?:\/\//i.test(s) ? s : `https://instagram.com/${s.replace(/^@/, '')}`;
+	}
+	function siteUrl(v: string | null): string | null {
+		if (!v) return null;
+		const s = v.trim();
+		if (!s) return null;
+		return /^https?:\/\//i.test(s) ? s : `https://${s}`;
+	}
+	function whatsUrl(tel: string | null): string | null {
+		if (!tel) return null;
+		const d = tel.replace(/\D/g, '');
+		if (d.length < 8) return null;
+		return `https://wa.me/${d.startsWith('55') ? d : `55${d}`}`;
+	}
 
 	let {
 		open = false,
@@ -190,13 +213,33 @@
 				<!-- Contato vinculado -->
 				{#if contatoDoNegocio}
 					{@const c = contatoDoNegocio}
+					{@const iu = instaUrl(c.instagram)}
+					{@const su = siteUrl(c.site)}
+					{@const wu = whatsUrl(c.whatsapp ?? c.telefone)}
 					<div class="rounded-[var(--radius-lg)] border border-grey-200 p-3">
 						<div class="flex items-center justify-between gap-2">
 							<div class="min-w-0">
 								<div class="font-medium text-navy truncate">{c.nome}</div>
 								{#if c.empresa}<div class="text-xs text-grey truncate">{c.empresa}</div>{/if}
 							</div>
-							<button type="button" class="text-xs text-brand hover:underline shrink-0" onclick={() => onOpenContato(c.id)}>Abrir</button>
+							<div class="flex shrink-0 items-center gap-0.5">
+								{#if wu}
+									<a href={wu} target="_blank" rel="noopener" title="Abrir WhatsApp" aria-label="Abrir WhatsApp" class="grid size-8 place-items-center rounded-md text-[#25D366] transition-transform hover:scale-110 hover:bg-bg">
+										<WhatsappIcon size={18} />
+									</a>
+								{/if}
+								{#if iu}
+									<a href={iu} target="_blank" rel="noopener" title="Abrir Instagram" aria-label="Abrir Instagram" class="grid size-8 place-items-center rounded-md transition-transform hover:scale-110 hover:bg-bg">
+										<InstagramIcon size={18} />
+									</a>
+								{/if}
+								{#if su}
+									<a href={su} target="_blank" rel="noopener" title="Abrir site" aria-label="Abrir site" class="grid size-8 place-items-center rounded-md text-grey transition-colors hover:bg-bg hover:text-brand">
+										<Globe size={17} strokeWidth={2.25} />
+									</a>
+								{/if}
+								<button type="button" class="ml-1 text-xs text-brand hover:underline" onclick={() => onOpenContato(c.id)}>Abrir</button>
+							</div>
 						</div>
 						<div class="flex flex-wrap gap-3 mt-2 text-xs text-slate">
 							{#if c.email}<span class="inline-flex items-center gap-1"><Icon name="mail" size={13} />{c.email}</span>{/if}
