@@ -6,6 +6,7 @@
 	import { Button, Card, Badge, Input, Select, Textarea, Checkbox, EmptyState, DataTable } from '$lib/components/ui';
 	import type { BadgeTone, ColumnDef } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
+	import { Globe, AtSign, MessageCircle } from '@lucide/svelte';
 	import { toast } from '$lib/toast.svelte';
 	import { formatBRL } from '$lib/clientes';
 	import CrmModal from '$lib/components/crm/CrmModal.svelte';
@@ -56,6 +57,21 @@
 		return [f.email, f.telefone].filter(Boolean).join(' · ');
 	}
 
+	// Acesso rápido: normaliza os campos em URLs abríveis.
+	function instaUrl(v: string | null | undefined): string | null {
+		if (!v) return null;
+		const s = v.trim();
+		if (!s) return null;
+		if (/^https?:\/\//i.test(s)) return s;
+		return `https://instagram.com/${s.replace(/^@/, '')}`;
+	}
+	function whatsUrl(tel: string | null | undefined): string | null {
+		if (!tel) return null;
+		const d = tel.replace(/\D/g, '');
+		if (d.length < 8) return null;
+		return `https://wa.me/${d.startsWith('55') ? d : `55${d}`}`;
+	}
+
 	const columns: ColumnDef<Fornecedor>[] = [
 		{ id: 'nome', accessorFn: (f) => f.nome ?? '', meta: { label: 'Nome' } },
 		{ id: 'tipo', accessorFn: (f) => tipoLabel[f.tipo] ?? f.tipo, meta: { label: 'Tipo' } },
@@ -66,7 +82,8 @@
 			accessorFn: (f) => f.custo_referencia ?? 0,
 			meta: { label: 'Custo ref.', thClass: 'text-right' }
 		},
-		{ id: 'avaliacao', accessorFn: (f) => f.avaliacao ?? 0, meta: { label: 'Avaliação' } }
+		{ id: 'avaliacao', accessorFn: (f) => f.avaliacao ?? 0, meta: { label: 'Avaliação' } },
+		{ id: 'acesso', accessorFn: () => '', enableSorting: false, meta: { label: 'Acesso' } }
 	];
 </script>
 
@@ -110,6 +127,8 @@
 		<DataTable {columns} data={data.itens} initialSort={[{ id: 'nome', desc: false }]}>
 			{#snippet row(r)}
 				{@const f = r.original}
+				{@const iu = instaUrl(f.instagram)}
+				{@const wu = whatsUrl(f.telefone)}
 				<tr
 					class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg"
 					onclick={() => abrirEdicao(f)}
@@ -131,10 +150,56 @@
 					<td class="px-4 py-3 tabular-nums text-slate">
 						{f.avaliacao != null ? `★ ${f.avaliacao}/5` : '—'}
 					</td>
+					<td class="px-4 py-3">
+						<div class="flex items-center gap-1">
+							{#if f.site}
+								<a
+									href={f.site}
+									target="_blank"
+									rel="noopener"
+									title="Abrir site"
+									aria-label="Abrir site"
+									class="grid size-8 place-items-center rounded-md text-slate transition-colors hover:bg-bg hover:text-navy"
+									onclick={(e) => e.stopPropagation()}
+								>
+									<Globe size={16} />
+								</a>
+							{/if}
+							{#if iu}
+								<a
+									href={iu}
+									target="_blank"
+									rel="noopener"
+									title="Abrir Instagram"
+									aria-label="Abrir Instagram"
+									class="grid size-8 place-items-center rounded-md text-slate transition-colors hover:bg-bg hover:text-brand"
+									onclick={(e) => e.stopPropagation()}
+								>
+									<AtSign size={16} />
+								</a>
+							{/if}
+							{#if wu}
+								<a
+									href={wu}
+									target="_blank"
+									rel="noopener"
+									title="Abrir WhatsApp"
+									aria-label="Abrir WhatsApp"
+									class="grid size-8 place-items-center rounded-md text-slate transition-colors hover:bg-bg hover:text-brand-green"
+									onclick={(e) => e.stopPropagation()}
+								>
+									<MessageCircle size={16} />
+								</a>
+							{/if}
+							{#if !f.site && !iu && !wu}
+								<span class="text-grey">—</span>
+							{/if}
+						</div>
+					</td>
 				</tr>
 			{/snippet}
 			{#snippet empty()}
-				<tr><td colspan="6" class="px-2"><EmptyState icon="building" title="Nenhum fornecedor" description="Cadastre freelancers, fornecedores e parceiros." /></td></tr>
+				<tr><td colspan="7" class="px-2"><EmptyState icon="building" title="Nenhum fornecedor" description="Cadastre freelancers, fornecedores e parceiros." /></td></tr>
 			{/snippet}
 		</DataTable>
 	</Card>
