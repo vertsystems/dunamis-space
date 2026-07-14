@@ -105,10 +105,7 @@
 			id: 'comercial',
 			label: 'Comercial',
 			icon: 'comercial',
-			areas: [
-				{ href: '/crm', label: 'CRM Master', icon: 'funnel' },
-				{ href: '/financeiro', label: 'Financeiro', icon: 'dollar' }
-			]
+			areas: [{ href: '/crm', label: 'CRM Master', icon: 'funnel' }]
 		},
 		{
 			id: 'marketing',
