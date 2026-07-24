@@ -205,17 +205,18 @@
 		organyze.setModo('dia');
 	}
 
-	// Agrupa por lado (categoria) e status. Ativas ordenadas por urgência; concluídas
-	// por posição. Usado nas duas colunas (Empresa / Vida Pessoal) do modo Dia.
+	// Agrupa por lado (categoria) e status. Ordena pela POSIÇÃO manual (o usuário
+	// reordena arrastando para cima/baixo, e a ordem "gruda"). O prazo continua
+	// visível como etiqueta/urgência, mas não manda mais na ordem. Modo Dia.
 	function gruposLado(cat: Categoria): Record<Status, Tarefa[]> {
 		const by = (s: Status) =>
-			organyze.tarefasDia.filter((t) => t.status === s && t.categoria === cat);
-		const urg = (arr: Tarefa[]) =>
-			[...arr].sort((a, b) => prazoOrdem(a) - prazoOrdem(b) || a.posicao - b.posicao);
+			organyze.tarefasDia
+				.filter((t) => t.status === s && t.categoria === cat)
+				.sort((a, b) => a.posicao - b.posicao);
 		return {
-			em_execucao: urg(by('em_execucao')),
-			nao_iniciado: urg(by('nao_iniciado')),
-			concluida: [...by('concluida')].sort((a, b) => a.posicao - b.posicao)
+			em_execucao: by('em_execucao'),
+			nao_iniciado: by('nao_iniciado'),
+			concluida: by('concluida')
 		} as Record<Status, Tarefa[]>;
 	}
 	const totalLado = (cat: Categoria) =>
