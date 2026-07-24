@@ -366,6 +366,19 @@ class OrganyzeStore {
 		const subtarefas = t.subtarefas.filter((s) => s.id !== subId);
 		this.#update(id, { subtarefas }, 'Falha ao excluir subtarefa.');
 	}
+	/** Reordena as subtarefas: move `subId` para o índice `destino`. */
+	reordenarSubtarefa(id: string, subId: string, destino: number) {
+		const t = this.tarefas.find((x) => x.id === id);
+		if (!t) return;
+		const atual = t.subtarefas.findIndex((s) => s.id === subId);
+		if (atual === -1) return;
+		const subtarefas = [...t.subtarefas];
+		const [movida] = subtarefas.splice(atual, 1);
+		// Ajusta o índice de destino considerando a remoção do item.
+		const alvo = Math.max(0, Math.min(destino > atual ? destino - 1 : destino, subtarefas.length));
+		subtarefas.splice(alvo, 0, movida);
+		this.#update(id, { subtarefas }, 'Falha ao reordenar subtarefas.');
+	}
 
 	/** Move a tarefa para a Lixeira (soft delete) com opção de desfazer. */
 	removeTarefa(id: string) {

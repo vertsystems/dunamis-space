@@ -58,6 +58,9 @@
 	let modalId = $state<string | null>(null);
 	let mTitulo = $state('');
 	let novaSub = $state('');
+	// Drag-and-drop das subtarefas (dentro do modal).
+	let subDragId = $state<string | null>(null);
+	let subDropIndex = $state<number | null>(null);
 	const modalTarefa = $derived(organyze.tarefas.find((t) => t.id === modalId) ?? null);
 
 	// Modo de visualização do modal: 'compacto' (empilhado) | 'amplo' (janela larga, 3 colunas).
@@ -318,6 +321,30 @@
 			}
 		}
 		organyze.aplicarQuadro(lista);
+	}
+
+	// ---- Drag & drop das subtarefas ----
+	function calcDropSub(e: DragEvent) {
+		e.preventDefault();
+		if (!subDragId) return;
+		const alvo = e.currentTarget as HTMLElement;
+		const items = [...alvo.querySelectorAll<HTMLElement>('[data-sub]')];
+		let idx = items.length;
+		for (let i = 0; i < items.length; i++) {
+			const r = items[i].getBoundingClientRect();
+			if (e.clientY < r.top + r.height / 2) {
+				idx = i;
+				break;
+			}
+		}
+		subDropIndex = idx;
+	}
+	function soltarSub() {
+		const from = subDragId;
+		const idx = subDropIndex;
+		subDragId = null;
+		subDropIndex = null;
+		if (from && modalId && idx != null) organyze.reordenarSubtarefa(modalId, from, idx);
 	}
 </script>
 
@@ -1175,11 +1202,30 @@
 				</div>
 
 				{#if modalTarefa.subtarefas.length}
-					<ul class="mb-2 space-y-1.5">
-						{#each modalTarefa.subtarefas as s (s.id)}
+					<ul class="mb-2 space-y-1.5" ondragover={calcDropSub} ondrop={soltarSub} role="list">
+						{#each modalTarefa.subtarefas as s, i (s.id)}
+							{#if subDragId && subDropIndex === i}
+								<li class="h-0.5 rounded-full bg-brand" aria-hidden="true"></li>
+							{/if}
 							<li
-								class="group/sub flex items-center gap-2.5 rounded-[var(--radius)] border border-grey-200 bg-surface px-3 py-2"
+								data-sub
+								class="group/sub flex items-center gap-2 rounded-[var(--radius)] border border-grey-200 bg-surface px-2.5 py-2 transition-opacity"
+								class:opacity-40={subDragId === s.id}
 							>
+								<span
+									class="shrink-0 cursor-grab text-grey/50 hover:text-grey active:cursor-grabbing"
+									role="button"
+									tabindex="-1"
+									aria-label="Arrastar para reordenar"
+									draggable="true"
+									ondragstart={() => (subDragId = s.id)}
+									ondragend={() => {
+										subDragId = null;
+										subDropIndex = null;
+									}}
+								>
+									<GripVertical size={16} />
+								</span>
 								<button
 									class="grid size-4 shrink-0 place-items-center rounded border-2 transition-colors"
 									class:border-grey-200={!s.feita}
@@ -1209,6 +1255,9 @@
 								</button>
 							</li>
 						{/each}
+						{#if subDragId && (subDropIndex ?? -1) >= modalTarefa.subtarefas.length}
+							<li class="h-0.5 rounded-full bg-brand" aria-hidden="true"></li>
+						{/if}
 					</ul>
 				{/if}
 
