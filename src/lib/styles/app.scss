@@ -276,6 +276,22 @@
 		}
 	}
 
+	// ---- Foco visível: linha de base para o app inteiro ----
+	// 135 dos 141 <button> escritos à mão fora de components/ui não declaravam
+	// nenhum estilo de foco — módulos inteiros (Organyze, CRM, calendário) eram
+	// invisíveis para quem navega por teclado. Migrar 135 call sites para um
+	// componente seria arriscado; uma regra base resolve o problema de uma vez.
+	//
+	// Fica em @layer components, então qualquer `focus-visible:ring-*` do Tailwind
+	// (que vive em @layer utilities) vence isto. E todos os componentes do DS que
+	// definem anel próprio já usam `focus-visible:outline-none` junto, então não
+	// há indicador duplicado.
+	:is(button, a, [role='button'], [tabindex]):focus-visible {
+		outline: 2px solid var(--ds-primary);
+		outline-offset: 2px;
+		border-radius: var(--radius-sm, 0.5rem);
+	}
+
 	// Foco visível acessível no shell (navegação por teclado)
 	.app-topbar .departments a:focus-visible,
 	.app-topbar .actions .icon-btn:focus-visible,
@@ -583,4 +599,17 @@
 		}
 	}
 
+	// Movimento reduzido: respeita a preferência do sistema. O app tem typewriter
+	// no login, spinner no botão de atualizar, shimmer nos skeletons, transições
+	// de modal e auto-animate — nada disso podia ser desligado.
+	@media (prefers-reduced-motion: reduce) {
+		*,
+		*::before,
+		*::after {
+			animation-duration: 0.01ms !important;
+			animation-iteration-count: 1 !important;
+			transition-duration: 0.01ms !important;
+			scroll-behavior: auto !important;
+		}
+	}
 }

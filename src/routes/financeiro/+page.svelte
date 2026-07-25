@@ -16,6 +16,17 @@
 
 	let { data, form } = $props();
 	const perms = $derived(page.data.permissoes);
+
+	// Paginação — preserva os filtros da URL ao trocar de página.
+	const primeiraLinha = $derived((data.paginacao.pagina - 1) * data.paginacao.porPagina + 1);
+	const ultimaLinha = $derived(
+		Math.min(data.paginacao.pagina * data.paginacao.porPagina, data.paginacao.total)
+	);
+	function irPara(pagina: number) {
+		const params = new URLSearchParams(page.url.searchParams);
+		params.set('pagina', String(pagina));
+		goto(`?${params}`, { keepFocus: true, noScroll: false });
+	}
 	// O form vem de actions de outras rotas (/financeiro/novo, /[id]?/update) → tipagem solta.
 	const res = $derived(form as { values?: Record<string, any>; error?: string } | null);
 
@@ -134,6 +145,39 @@
 		{/snippet}
 	</DataTable>
 </Card>
+
+<!-- Paginação: a listagem passou a carregar 100 por vez (antes vinha tudo, e ao
+     passar do teto de linhas do PostgREST as transações antigas sumiam sem aviso
+     e os totais do topo somavam um subconjunto). Ver migration 0041. -->
+{#if data.paginacao.paginas > 1}
+	<nav class="mt-3 flex items-center justify-between gap-3" aria-label="Paginação das transações">
+		<p class="text-sm text-grey">
+			Mostrando <strong class="text-navy tabular-nums">{primeiraLinha}–{ultimaLinha}</strong>
+			de <strong class="text-navy tabular-nums">{data.paginacao.total}</strong> transações
+		</p>
+		<div class="flex items-center gap-2">
+			<Button
+				variant="secondary"
+				size="sm"
+				disabled={data.paginacao.pagina <= 1}
+				onclick={() => irPara(data.paginacao.pagina - 1)}
+			>
+				Anterior
+			</Button>
+			<span class="text-sm tabular-nums text-slate">
+				{data.paginacao.pagina} / {data.paginacao.paginas}
+			</span>
+			<Button
+				variant="secondary"
+				size="sm"
+				disabled={data.paginacao.pagina >= data.paginacao.paginas}
+				onclick={() => irPara(data.paginacao.pagina + 1)}
+			>
+				Próxima
+			</Button>
+		</div>
+	</nav>
+{/if}
 
 <Modal open={novoAberto} title="Nova transação" size="lg" onClose={() => (novoAberto = false)}>
 	<TransacaoForm
