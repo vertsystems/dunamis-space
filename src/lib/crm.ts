@@ -2,6 +2,7 @@
 // CRM Master — tipos, constantes e helpers de UI
 // Módulo de vendas: contatos (leads), negócios (pipeline), atividades.
 // ============================================================
+import { str } from '$lib/form';
 import type { BadgeTone } from '$lib/components/ui';
 import { formatBRL } from '$lib/clientes';
 
@@ -163,12 +164,6 @@ export function vencimentoLabel(v: Vencimento): string {
 }
 
 // ---------- Normalização de FormData ----------
-function str(fd: FormData, k: string): string | null {
-	const v = fd.get(k);
-	const s = typeof v === 'string' ? v.trim() : '';
-	return s === '' ? null : s;
-}
-
 /**
  * Converte um valor monetário digitado -> Number, tolerante a pt-BR e a ponto decimal.
  * Heurística: se há vírgula, ela é o decimal e pontos são milhar ("1.234,56" -> 1234.56).

@@ -1,3 +1,4 @@
+import { str } from '$lib/form';
 export const TAREFA_STATUS = [
 	{ value: 'backlog', label: 'Backlog' },
 	{ value: 'fazendo', label: 'Fazendo' },
@@ -26,12 +27,6 @@ export function prioridadeTone(p: string): 'danger' | 'warning' | 'neutral' {
 
 export function prioridadeLabel(p: string): string {
 	return PRIORIDADE.find((x) => x.value === p)?.label ?? p;
-}
-
-function str(fd: FormData, k: string): string | null {
-	const v = fd.get(k);
-	const s = typeof v === 'string' ? v.trim() : '';
-	return s === '' ? null : s;
 }
 
 export function tarefaFromForm(fd: FormData) {

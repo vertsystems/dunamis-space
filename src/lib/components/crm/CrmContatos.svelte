@@ -73,14 +73,14 @@
 		<table class="w-full text-sm">
 			<thead>
 				<tr class="border-b border-grey-200 text-left text-xs uppercase tracking-wide text-grey">
-					<th class="px-4 py-3 font-semibold">Contato</th>
-					<th class="px-4 py-3 font-semibold">Acesso</th>
-					<th class="px-4 py-3 font-semibold">Empresa</th>
-					<th class="px-4 py-3 font-semibold">Origem</th>
-					<th class="px-4 py-3 font-semibold">Responsável</th>
-					<th class="px-4 py-3 font-semibold text-right">Negócios</th>
-					<th class="px-4 py-3 font-semibold text-right">Valor total</th>
-					<th class="px-4 py-3 font-semibold">Tags</th>
+					<th scope="col" class="px-4 py-3 font-semibold">Contato</th>
+					<th scope="col" class="px-4 py-3 font-semibold">Acesso</th>
+					<th scope="col" class="px-4 py-3 font-semibold">Empresa</th>
+					<th scope="col" class="px-4 py-3 font-semibold">Origem</th>
+					<th scope="col" class="px-4 py-3 font-semibold">Responsável</th>
+					<th scope="col" class="px-4 py-3 font-semibold text-right">Negócios</th>
+					<th scope="col" class="px-4 py-3 font-semibold text-right">Valor total</th>
+					<th scope="col" class="px-4 py-3 font-semibold">Tags</th>
 				</tr>
 			</thead>
 			<tbody>

@@ -1,10 +1,5 @@
+import { um } from '$lib/db';
 import type { PageServerLoad } from './$types';
-
-/** PostgREST tipa relações to-one como array; extrai o objeto único. */
-function um<T>(v: T | T[] | null | undefined): T | null {
-	if (Array.isArray(v)) return v[0] ?? null;
-	return v ?? null;
-}
 
 export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	// Por padrão mostra as pendentes; aceita ?status=todas|pendente|aprovado|alteracao_solicitada

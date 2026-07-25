@@ -1,12 +1,9 @@
+import { um } from '$lib/db';
 import { fail } from '@sveltejs/kit';
 import { hojeSP } from '$lib/rotina';
 import { funcaoLabel } from '$lib/equipe';
 import { sel, selUm } from '$lib/server/query';
 import type { Actions, PageServerLoad } from './$types';
-
-function um<T>(v: T | T[] | null | undefined): T | null {
-	return Array.isArray(v) ? (v[0] ?? null) : (v ?? null);
-}
 
 /** Colaborador do usuário logado (por auth_user_id, com fallback por e-mail). */
 async function meuColab(supabase: App.Locals['supabase'], user: { id: string; email?: string } | null) {

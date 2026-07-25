@@ -313,13 +313,15 @@
 				</span>
 				<span class="flex items-center gap-1">
 					<span class="inline-flex items-center rounded-full px-1 py-px text-[0.56rem] font-medium leading-tight {toneClasses[conteudoStatusTone(a.c.status)]}">{conteudoStatusLabel(a.c.status)}</span>
+					<!-- As bolinhas têm 12px: o ::after invisível (inset -8px) leva o alvo de
+					     toque a 28px sem mudar o desenho — antes errar a mira abria o modal. -->
 					{#if a.c.status !== 'programar' && a.c.status !== 'publicado'}
 						<button
 							type="button"
 							onclick={(e) => definirStatusRapido(a.c, 'programar', e)}
 							title="Marcar como Programar"
 							aria-label="Marcar como Programar"
-							class="size-3 shrink-0 rounded-full border border-brand-amber bg-brand-amber/30 transition-colors hover:bg-brand-amber"
+							class="relative size-3 shrink-0 rounded-full border border-brand-amber bg-brand-amber/30 transition-colors after:absolute after:-inset-2 after:content-[''] hover:bg-brand-amber"
 						></button>
 					{:else if a.c.status === 'programar'}
 						<button
@@ -327,7 +329,7 @@
 							onclick={(e) => definirStatusRapido(a.c, 'publicado', e)}
 							title="Marcar como Publicado"
 							aria-label="Marcar como Publicado"
-							class="size-3 shrink-0 rounded-full border border-brand-green bg-brand-green/30 transition-colors hover:bg-brand-green"
+							class="relative size-3 shrink-0 rounded-full border border-brand-green bg-brand-green/30 transition-colors after:absolute after:-inset-2 after:content-[''] hover:bg-brand-green"
 						></button>
 					{/if}
 				</span>
@@ -439,17 +441,10 @@
 			{#each celulasDoMes as d (chaveDia(d))}
 				{@const key = chaveDia(d)}
 				{@const foraDoMes = d.getMonth() !== data.mes}
+				<!-- Container NEUTRO: o botão "Ver agenda" cobre a célula por baixo do
+				     conteúdo (isolate + -z-10) e os botões de ação (＋, pílulas) são IRMÃOS
+				     dele, não filhos — sem interativo aninhado e navegável por teclado. -->
 				<div
-					role="button"
-					tabindex="0"
-					aria-label={`Ver agenda de ${key}`}
-					onclick={() => (diaAberto = key)}
-					onkeydown={(e) => {
-						if (e.key === 'Enter' || e.key === ' ') {
-							e.preventDefault();
-							diaAberto = key;
-						}
-					}}
 					ondragover={(e) => {
 						if (!arrastando) return;
 						e.preventDefault();
@@ -462,14 +457,23 @@
 						e.preventDefault();
 						soltarEm(key);
 					}}
-					class="flex min-h-40 cursor-pointer flex-col gap-1 overflow-hidden rounded-[var(--radius-sm)] border p-1.5 text-left transition-colors hover:border-brand/50 {foraDoMes
+					class="relative isolate flex min-h-40 cursor-pointer flex-col gap-1 overflow-hidden rounded-[var(--radius-sm)] border p-1.5 text-left transition-colors hover:border-brand/50 {foraDoMes
 						? 'border-grey-200/60 bg-bg'
 						: 'border-grey-200 bg-surface'} {key === hojeKey ? 'ring-1 ring-brand' : ''} {arrastando &&
 					sobreDia === key
 						? 'border-brand ring-2 ring-brand/40'
 						: ''}"
 				>
-					<div class="flex items-center justify-between leading-none">
+					<button
+						type="button"
+						aria-label={`Ver agenda de ${key}`}
+						onclick={() => (diaAberto = key)}
+						class="absolute inset-0 -z-10 cursor-pointer rounded-[var(--radius-sm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/60"
+					></button>
+					<!-- pointer-events-none: o clique no número do dia atravessa e cai no
+					     botão de fundo, mantendo o comportamento de "clicar em qualquer
+					     lugar abre o dia". -->
+					<div class="pointer-events-none flex items-center justify-between leading-none">
 						<span class="text-xs font-semibold {foraDoMes ? 'text-grey-200' : 'text-slate'}">{d.getDate()}</span>
 						{#if !foraDoMes}
 							<button
@@ -480,7 +484,7 @@
 								}}
 								title="Adicionar post"
 								aria-label={`Adicionar post em ${key}`}
-								class="grid size-5 shrink-0 place-items-center rounded-full bg-brand text-white shadow-sm transition-opacity hover:opacity-90"
+								class="pointer-events-auto relative grid size-5 shrink-0 place-items-center rounded-full bg-brand text-white shadow-sm transition-opacity after:absolute after:-inset-2 after:content-[''] hover:opacity-90"
 							><Icon name="plus" size={13} /></button>
 						{/if}
 					</div>

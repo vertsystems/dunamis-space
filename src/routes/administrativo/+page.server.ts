@@ -1,10 +1,6 @@
+import { um } from '$lib/db';
 import { sel } from '$lib/server/query';
 import type { PageServerLoad } from './$types';
-
-/** PostgREST tipa relações to-one como array; extrai o objeto único. */
-function um<T>(v: T | T[] | null | undefined): T | null {
-	return Array.isArray(v) ? (v[0] ?? null) : (v ?? null);
-}
 
 async function carregarKpis(supabase: Parameters<PageServerLoad>[0]['locals']['supabase']) {
 	const [clientesRes, ferramentasRes, fornecedoresRes, onboardingRes, equipeRes, artigosRes] =

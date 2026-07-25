@@ -136,34 +136,32 @@
 
 			{#each byStatus(col.value) as t (t.id)}
 				{@const prazo = fmtData(t.prazo)}
+				<!-- Container NEUTRO (role="listitem" da coluna role="list"): o botão do
+				     título abre a tarefa e o link "Abrir"/excluir são IRMÃOS dele — nada de
+				     interativo aninhado. Mesmo padrão do CrmPipeline. -->
 				<div
-					class="bg-surface border border-grey-200 rounded-[var(--radius)] px-3 py-2.5 mb-2.5 cursor-grab active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
+					class="bg-surface border border-grey-200 rounded-[var(--radius)] px-3 py-2.5 mb-2.5 cursor-grab active:cursor-grabbing"
 					draggable="true"
-					role="button"
-					tabindex="0"
+					role="listitem"
 					ondragstart={() => (dragId = t.id)}
-					onclick={() => (editando = t)}
-					onkeydown={(e) => {
-						if (e.key === 'Enter' || e.key === ' ') {
-							e.preventDefault();
-							editando = t;
-						}
-					}}
 				>
 					<div class="flex items-start justify-between gap-2">
-						<span class="block font-medium text-navy">{t.titulo}</span>
+						<button
+							type="button"
+							class="block min-w-0 flex-1 rounded-[var(--radius-sm)] text-left font-medium text-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35"
+							onclick={() => (editando = t)}
+						>
+							{t.titulo}
+						</button>
 						<div class="flex shrink-0 items-center gap-1.5">
-							<a class="text-xs text-brand hover:underline" href={`/tarefas/${t.id}`} onclick={(e) => e.stopPropagation()}>Abrir</a>
+							<a class="text-xs text-brand hover:underline" href={`/tarefas/${t.id}`}>Abrir</a>
 							{#if podeExcluir(perms, 'tarefas')}
 								<button
 									type="button"
 									class="text-grey transition-colors hover:text-brand-danger"
 									title="Excluir tarefa"
 									aria-label="Excluir tarefa"
-									onclick={(e) => {
-										e.stopPropagation();
-										confirmandoExcluir = t.id;
-									}}
+									onclick={() => (confirmandoExcluir = t.id)}
 								>
 									<Icon name="trash" size={13} />
 								</button>
@@ -178,30 +176,23 @@
 					</div>
 
 					{#if confirmandoExcluir === t.id}
-						<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+						<!-- O card não é mais clicável, então não precisa de stopPropagation. -->
 						<div
 							class="mt-2 flex items-center justify-between gap-2 rounded-[var(--radius)] bg-brand-danger/10 px-2.5 py-1.5"
-							onclick={(e) => e.stopPropagation()}
 						>
 							<span class="text-xs font-medium text-brand-danger">Excluir esta tarefa?</span>
 							<div class="flex items-center gap-1.5">
 								<button
 									type="button"
 									class="text-xs font-semibold text-brand-danger hover:underline"
-									onclick={(e) => {
-										e.stopPropagation();
-										excluir(t.id);
-									}}
+									onclick={() => excluir(t.id)}
 								>
 									Sim
 								</button>
 								<button
 									type="button"
 									class="text-xs font-medium text-slate hover:text-navy"
-									onclick={(e) => {
-										e.stopPropagation();
-										confirmandoExcluir = null;
-									}}
+									onclick={() => (confirmandoExcluir = null)}
 								>
 									Não
 								</button>

@@ -1,3 +1,4 @@
+import { str } from '$lib/form';
 import type { BadgeTone } from '$lib/components/ui';
 
 /** Linha de processo exibida na grade da listagem. */
@@ -75,12 +76,6 @@ export function situacaoLabel(situacao: string): string {
 /** Mapa de etapas padrão (todas pendentes) para um processo novo. */
 export function etapasPadrao(): EtapasMap {
 	return Object.fromEntries(PROCESSO_ETAPAS.map((e) => [e.key, 'pendente'])) as EtapasMap;
-}
-
-function str(fd: FormData, k: string): string | null {
-	const v = fd.get(k);
-	const s = typeof v === 'string' ? v.trim() : '';
-	return s === '' ? null : s;
 }
 
 const STATUS_VALIDOS = new Set<string>(ETAPA_STATUS.map((s) => s.value));

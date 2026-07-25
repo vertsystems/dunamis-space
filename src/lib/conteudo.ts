@@ -1,3 +1,4 @@
+import { str } from '$lib/form';
 export const CONTEUDO_TIPO = [
 	{ value: 'feed', label: 'Feed' },
 	{ value: 'reels', label: 'Reels' },
@@ -128,12 +129,6 @@ export function aprovacaoStatusTone(status: string): 'warning' | 'success' | 'da
 
 export function aprovacaoStatusLabel(status: string): string {
 	return APROVACAO_STATUS.find((s) => s.value === status)?.label ?? status;
-}
-
-function str(fd: FormData, k: string): string | null {
-	const v = fd.get(k);
-	const s = typeof v === 'string' ? v.trim() : '';
-	return s === '' ? null : s;
 }
 
 export function conteudoFromForm(fd: FormData) {

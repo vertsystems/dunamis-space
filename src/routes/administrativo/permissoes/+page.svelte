@@ -160,9 +160,9 @@
 		<table class="perm-matriz w-full min-w-[860px] text-sm">
 			<thead>
 				<tr class="border-b border-grey-200 bg-bg">
-					<th class="sticky left-0 z-10 bg-bg px-4 py-3 text-left font-semibold text-navy">Módulo</th>
+					<th scope="col" class="sticky left-0 z-10 bg-bg px-4 py-3 text-left font-semibold text-navy">Módulo</th>
 					{#each FUNCAO as f (f.value)}
-						<th class="px-3 py-3 text-center font-medium">
+						<th scope="col" class="px-3 py-3 text-center font-medium">
 							<div class="flex flex-col items-center gap-1">
 								<CargoBadge funcao={f.value} />
 								<span class="whitespace-nowrap text-[11px] text-grey">{f.label}</span>
@@ -248,9 +248,9 @@
 			<table class="w-full min-w-[560px] text-sm">
 				<thead>
 					<tr class="border-b border-grey-200 bg-bg">
-						<th class="px-4 py-3 text-left font-semibold text-navy">Módulo</th>
-						<th class="px-4 py-3 text-left font-medium text-grey">Herdado do cargo</th>
-						<th class="px-4 py-3 text-left font-medium text-navy">Exceção</th>
+						<th scope="col" class="px-4 py-3 text-left font-semibold text-navy">Módulo</th>
+						<th scope="col" class="px-4 py-3 text-left font-medium text-grey">Herdado do cargo</th>
+						<th scope="col" class="px-4 py-3 text-left font-medium text-navy">Exceção</th>
 					</tr>
 				</thead>
 				<tbody>

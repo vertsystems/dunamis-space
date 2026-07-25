@@ -1,3 +1,4 @@
+import { str } from '$lib/form';
 export { formatBRL } from './clientes';
 
 export const PROJETO_TIPO = [
@@ -39,12 +40,6 @@ export function projetoStatusLabel(status: string): string {
 
 export function projetoTipoLabel(tipo: string): string {
 	return PROJETO_TIPO.find((t) => t.value === tipo)?.label ?? tipo;
-}
-
-function str(fd: FormData, k: string): string | null {
-	const v = fd.get(k);
-	const s = typeof v === 'string' ? v.trim() : '';
-	return s === '' ? null : s;
 }
 
 export function projetoFromForm(fd: FormData) {

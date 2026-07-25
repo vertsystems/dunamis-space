@@ -71,13 +71,13 @@
 		<table class="w-full text-sm">
 			<thead>
 				<tr class="border-b border-grey-200 text-left text-xs uppercase tracking-wide text-grey">
-					<th class="px-4 py-3 font-semibold">Conteúdo</th>
-					<th class="px-4 py-3 font-semibold">Cliente</th>
-					<th class="px-4 py-3 font-semibold">Tipo</th>
-					<th class="px-4 py-3 font-semibold">Status</th>
-					<th class="px-4 py-3 font-semibold">Enviado</th>
-					<th class="px-4 py-3 font-semibold">Resposta</th>
-					<th class="px-4 py-3 font-semibold">Link</th>
+					<th scope="col" class="px-4 py-3 font-semibold">Conteúdo</th>
+					<th scope="col" class="px-4 py-3 font-semibold">Cliente</th>
+					<th scope="col" class="px-4 py-3 font-semibold">Tipo</th>
+					<th scope="col" class="px-4 py-3 font-semibold">Status</th>
+					<th scope="col" class="px-4 py-3 font-semibold">Enviado</th>
+					<th scope="col" class="px-4 py-3 font-semibold">Resposta</th>
+					<th scope="col" class="px-4 py-3 font-semibold">Link</th>
 				</tr>
 			</thead>
 			<tbody>

@@ -48,12 +48,12 @@
 				<table class="w-full text-sm">
 					<thead>
 						<tr class="border-b border-grey-200 text-left text-xs uppercase tracking-wide text-grey">
-							<th class="px-5 py-2.5 font-semibold">Origem</th>
-							<th class="px-3 py-2.5 text-right font-semibold">Leads</th>
-							<th class="px-3 py-2.5 text-right font-semibold">Neg.</th>
-							<th class="px-3 py-2.5 text-right font-semibold">Ganhos</th>
-							<th class="px-5 py-2.5 text-right font-semibold">Valor</th>
-							<th class="px-5 py-2.5 text-right font-semibold">Conv.</th>
+							<th scope="col" class="px-5 py-2.5 font-semibold">Origem</th>
+							<th scope="col" class="px-3 py-2.5 text-right font-semibold">Leads</th>
+							<th scope="col" class="px-3 py-2.5 text-right font-semibold">Neg.</th>
+							<th scope="col" class="px-3 py-2.5 text-right font-semibold">Ganhos</th>
+							<th scope="col" class="px-5 py-2.5 text-right font-semibold">Valor</th>
+							<th scope="col" class="px-5 py-2.5 text-right font-semibold">Conv.</th>
 						</tr>
 					</thead>
 					<tbody>

@@ -1,4 +1,5 @@
 export { formatBRL } from './clientes';
+import { str } from '$lib/form';
 import { hojeISO } from '$lib/datas';
 
 export const TRANSACAO_TIPO = [
@@ -31,12 +32,6 @@ export function statusLabel(status: string): string {
 
 export function tipoLabel(tipo: string): string {
 	return TRANSACAO_TIPO.find((t) => t.value === tipo)?.label ?? tipo;
-}
-
-function str(fd: FormData, k: string): string | null {
-	const v = fd.get(k);
-	const s = typeof v === 'string' ? v.trim() : '';
-	return s === '' ? null : s;
 }
 
 // Valor vem de <input type="number">: já em formato canônico (ponto decimal).

@@ -1,4 +1,5 @@
 // Cada cargo tem sua cor de bandeirinha (gradiente + borda um tom mais escura).
+import { str } from '$lib/form';
 export const FUNCAO = [
 	{ value: 'ceo', label: 'Diretor Executivo', sigla: 'CEO', grad: 'linear-gradient(135deg, #b8860b 0%, #f5d67b 45%, #c99a2e 100%)', borda: '#a5761a' },
 	{ value: 'admin', label: 'Administrador', sigla: 'ADM', grad: 'linear-gradient(135deg, #dc2626 0%, #f87171 50%, #ef4444 100%)', borda: '#991b1b' },
@@ -37,12 +38,6 @@ export function funcoesDe(
 	c: { funcoes?: string[] | null; funcao?: string | null } | null | undefined
 ): string[] {
 	return c?.funcoes?.length ? c.funcoes : c?.funcao ? [c.funcao] : [];
-}
-
-function str(fd: FormData, k: string): string | null {
-	const v = fd.get(k);
-	const s = typeof v === 'string' ? v.trim() : '';
-	return s === '' ? null : s;
 }
 
 export function colaboradorFromForm(fd: FormData) {

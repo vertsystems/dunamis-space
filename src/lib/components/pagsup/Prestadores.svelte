@@ -166,12 +166,12 @@
 						<table class="w-full text-left border-collapse">
 							<thead>
 								<tr class="text-grey text-xs uppercase tracking-wider border-b border-grey-200">
-									<th class="px-5 py-3 font-semibold">Nome</th>
-									<th class="px-5 py-3 font-semibold">Serviço</th>
-									<th class="px-5 py-3 font-semibold">Região</th>
-									<th class="px-5 py-3 font-semibold">CPF / CNPJ</th>
-									<th class="px-5 py-3 font-semibold">Chave PIX</th>
-									<th class="px-5 py-3 font-semibold text-right w-28">Ações</th>
+									<th scope="col" class="px-5 py-3 font-semibold">Nome</th>
+									<th scope="col" class="px-5 py-3 font-semibold">Serviço</th>
+									<th scope="col" class="px-5 py-3 font-semibold">Região</th>
+									<th scope="col" class="px-5 py-3 font-semibold">CPF / CNPJ</th>
+									<th scope="col" class="px-5 py-3 font-semibold">Chave PIX</th>
+									<th scope="col" class="px-5 py-3 font-semibold text-right w-28">Ações</th>
 								</tr>
 							</thead>
 							<tbody class="divide-y divide-grey-200/70">

@@ -75,7 +75,7 @@
 	<div class="flex items-start gap-3 px-3 py-2.5 border-b border-grey-200/60 last:border-0 hover:bg-bg">
 		<button
 			type="button"
-			class="mt-0.5 grid size-5 shrink-0 place-items-center rounded-md border transition-colors {a.concluida
+			class="relative mt-0.5 grid size-5 shrink-0 place-items-center rounded-md border transition-colors after:absolute after:-inset-3 after:content-[''] {a.concluida
 				? 'bg-brand-green border-brand-green text-white'
 				: 'border-grey-200 text-transparent hover:border-brand-green'}"
 			aria-label={a.concluida ? 'Reabrir' : 'Concluir'}

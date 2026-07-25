@@ -1,11 +1,8 @@
+import { um } from '$lib/db';
+import { str } from '$lib/form';
 import { fail } from '@sveltejs/kit';
 import { exigirPermissao } from '$lib/server/permissao';
 import type { Actions, PageServerLoad } from './$types';
-
-/** PostgREST tipa relações to-one como array; extrai o objeto único. */
-function um<T>(v: T | T[] | null | undefined): T | null {
-	return Array.isArray(v) ? (v[0] ?? null) : (v ?? null);
-}
 
 /** Erro típico de tabela/coluna inexistente → migration 0006 ainda não aplicada. */
 const PENDENTE_RX = /adm_|does not exist|column|schema cache|relation/i;
@@ -13,11 +10,6 @@ const PENDENTE_RX = /adm_|does not exist|column|schema cache|relation/i;
 // ------------------------------------------------------------
 // Helpers de FormData
 // ------------------------------------------------------------
-function str(fd: FormData, k: string): string | null {
-	const v = fd.get(k);
-	const s = typeof v === 'string' ? v.trim() : '';
-	return s === '' ? null : s;
-}
 function num(fd: FormData, k: string): number | null {
 	const raw = str(fd, k);
 	if (raw === null) return null;

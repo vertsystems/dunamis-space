@@ -1,3 +1,4 @@
+import { str } from '$lib/form';
 export { formatBRL } from './clientes';
 
 export const CONTRATO_STATUS = [
@@ -19,12 +20,6 @@ export function contratoStatusTone(status: string): 'success' | 'warning' | 'neu
 
 export function contratoStatusLabel(status: string): string {
 	return CONTRATO_STATUS.find((s) => s.value === status)?.label ?? status;
-}
-
-function str(fd: FormData, k: string): string | null {
-	const v = fd.get(k);
-	const s = typeof v === 'string' ? v.trim() : '';
-	return s === '' ? null : s;
 }
 
 // Campos monetários vêm de <input type="number">: valor já em formato canônico

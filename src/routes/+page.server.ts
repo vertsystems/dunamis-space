@@ -1,13 +1,8 @@
+import { um } from '$lib/db';
 import type { PageServerLoad } from './$types';
 import { DIAS_CONTRATO_VENCENDO, DIAS_SEM_INTERACAO } from '$lib/alertas';
 import { cached, chaveDoUsuario } from '$lib/server/cache';
 import { sel } from '$lib/server/query';
-
-/** PostgREST tipa relações to-one como array; extrai o objeto único. */
-function um<T>(v: T | T[] | null | undefined): T | null {
-	if (Array.isArray(v)) return v[0] ?? null;
-	return v ?? null;
-}
 
 type SupabaseClient = Parameters<PageServerLoad>[0]['locals']['supabase'];
 

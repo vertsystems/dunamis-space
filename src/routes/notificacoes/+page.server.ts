@@ -1,9 +1,6 @@
+import { um } from '$lib/db';
 import type { PageServerLoad } from './$types';
 import { DIAS_CONTRATO_VENCENDO, DIAS_SEM_INTERACAO } from '$lib/alertas';
-
-function um<T>(v: T | T[] | null | undefined): T | null {
-	return Array.isArray(v) ? (v[0] ?? null) : (v ?? null);
-}
 
 export type Notificacao = {
 	id: string;

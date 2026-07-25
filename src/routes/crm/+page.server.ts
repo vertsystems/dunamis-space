@@ -1,3 +1,4 @@
+import { um } from '$lib/db';
 import { fail } from '@sveltejs/kit';
 import { exigirPermissao } from '$lib/server/permissao';
 import {
@@ -14,11 +15,6 @@ import {
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { mesRefSP } from '$lib/datas';
 import type { Actions, PageServerLoad } from './$types';
-
-/** PostgREST tipa relações to-one como array; extrai o objeto único. */
-function um<T>(v: T | T[] | null | undefined): T | null {
-	return Array.isArray(v) ? (v[0] ?? null) : (v ?? null);
-}
 
 /**
  * Contato rápido no form de negócio: se nenhum contato foi escolhido mas um nome

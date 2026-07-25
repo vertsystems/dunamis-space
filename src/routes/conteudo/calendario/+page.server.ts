@@ -1,13 +1,8 @@
+import { um } from '$lib/db';
 import { sel } from '$lib/server/query';
 import type { PageServerLoad } from './$types';
 
 const MES_RE = /^\d{4}-\d{2}$/;
-
-/** PostgREST tipa relações to-one como array; extrai o objeto único. */
-function um<T>(v: T | T[] | null | undefined): T | null {
-	if (Array.isArray(v)) return v[0] ?? null;
-	return v ?? null;
-}
 
 export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	const mesParam = url.searchParams.get('mes');
