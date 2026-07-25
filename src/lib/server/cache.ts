@@ -8,7 +8,12 @@
  * e passa a cachear automaticamente quando as env vars forem configuradas
  * (local em `.env`, produção no painel da Vercel).
  *
- * Único tenant → chaves globais (sem namespace por usuário).
+ * ATENÇÃO — chaves e RLS: qualquer fetcher que use `locals.supabase` enxerga só
+ * o que a RLS do usuário permite. Cachear esse resultado numa chave global faz
+ * um perfil servir os dados de outro durante o TTL (nos dois sentidos: o de mais
+ * acesso vaza dados, o de menos acesso zera os KPIs de quem podia ver). Nesses
+ * casos a chave PRECISA incluir o id do usuário — ver `chaveDoUsuario()`.
+ * Chave global só para dado que não passa por RLS (config, API externa).
  */
 import { Redis } from '@upstash/redis';
 import { env } from '$env/dynamic/private';
@@ -57,6 +62,14 @@ export async function cached<T>(key: string, ttlSeconds: number, fetcher: () => 
 	}
 
 	return fresh;
+}
+
+/**
+ * Monta uma chave de cache isolada por usuário. Use SEMPRE que o fetcher ler
+ * dados através de `locals.supabase` (ou seja, sujeitos à RLS).
+ */
+export function chaveDoUsuario(base: string, userId: string | undefined | null): string {
+	return `${base}:u:${userId ?? 'anon'}`;
 }
 
 /** Invalida uma ou mais chaves (ex.: após escrita que afeta um relatório cacheado). */

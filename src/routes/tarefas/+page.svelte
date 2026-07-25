@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
+	import { deserialize } from '$app/forms';
 	import { page } from '$app/state';
 	import { TAREFA_STATUS, prioridadeTone, prioridadeLabel } from '$lib/tarefas';
 	import { podeEditar, podeExcluir } from '$lib/permissoes';
@@ -44,12 +45,7 @@
 		const fd = new FormData();
 		fd.set('id', id);
 		try {
-			const res = await fetch('?/excluir', {
-				method: 'POST',
-				body: fd,
-				headers: { 'x-sveltekit-action': 'true' }
-			});
-			if (!res.ok) throw new Error();
+			await postar('?/excluir', fd);
 			cards = cards.filter((c) => c.id !== id);
 			confirmandoExcluir = null;
 			toast.success('Tarefa excluída');
@@ -58,18 +54,28 @@
 		}
 	}
 
+	// O SvelteKit responde `fail()` com HTTP 200 e o erro no corpo, então `res.ok`
+	// não serve para detectar falha — é preciso desserializar o resultado.
+	async function postar(action: string, fd: FormData) {
+		const res = await fetch(action, {
+			method: 'POST',
+			body: fd,
+			headers: { 'x-sveltekit-action': 'true' }
+		});
+		const result = deserialize(await res.text());
+		if (result.type !== 'success') throw new Error('action falhou');
+		return result;
+	}
+
 	async function persist(id: string, status: string) {
-		const anterior = data.tarefas.find((t) => t.id === id)?.status;
+		// Snapshot do estado ATUAL do card (não o do load), senão um rollback
+		// depois de dois movimentos devolve a tarefa para a coluna errada.
+		const anterior = cards.find((c) => c.id === id)?.status;
 		const fd = new FormData();
 		fd.set('id', id);
 		fd.set('status', status);
 		try {
-			const res = await fetch('?/move', {
-				method: 'POST',
-				body: fd,
-				headers: { 'x-sveltekit-action': 'true' }
-			});
-			if (!res.ok) throw new Error();
+			await postar('?/move', fd);
 		} catch {
 			const card = cards.find((c) => c.id === id);
 			if (card && anterior !== undefined) card.status = anterior; // rollback otimista

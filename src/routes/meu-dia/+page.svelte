@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
+	import { deserialize } from '$app/forms';
 	import { Card, Badge, Button, Modal } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
 	import { diasAte, formatDateBR } from '$lib/alertas';
@@ -31,6 +32,9 @@
 		novoItem = '';
 	}
 
+	// O SvelteKit responde `fail()` com HTTP 200 e o erro no corpo — `res.ok` seria
+	// true mesmo com a action falhando, e todo o Mapa de Rotina marcava/renomeava
+	// só na tela. É preciso desserializar e checar o tipo do resultado.
 	async function post(action: string, body: Record<string, string>): Promise<boolean> {
 		const fd = new FormData();
 		for (const [k, v] of Object.entries(body)) fd.set(k, v);
@@ -40,7 +44,7 @@
 				body: fd,
 				headers: { 'x-sveltekit-action': 'true' }
 			});
-			return res.ok;
+			return deserialize(await res.text()).type === 'success';
 		} catch {
 			return false;
 		}

@@ -1,5 +1,4 @@
 import { fail } from '@sveltejs/kit';
-import { funcoesFromForm } from '$lib/equipe';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals: { supabase, user } }) => {
@@ -52,7 +51,12 @@ export const load: PageServerLoad = async ({ locals: { supabase, user } }) => {
 };
 
 export const actions: Actions = {
-	// Dados pessoais (nome, telefone, localização, cargo). Email é o login → só leitura.
+	// Dados pessoais (nome, telefone, localização). Email é o login → só leitura.
+	//
+	// Cargo NÃO entra aqui: é o que define permissão. Quando gravávamos funcao/funcoes
+	// direto do formulário, qualquer colaborador se marcava como "Diretor Executivo"
+	// e virava super-admin (perm_nivel_efetivo tem short-circuit para ceo/admin).
+	// Quem define cargo é o admin de Equipe, em /equipe. Ver migration 0039.
 	salvar: async ({ request, locals: { supabase, user } }) => {
 		const email = user?.email;
 		if (!email) return fail(401, { error: 'Sessão expirada. Entre novamente.' });
@@ -63,13 +67,10 @@ export const actions: Actions = {
 
 		const telefone = ((fd.get('telefone') as string) ?? '').trim() || null;
 		const local = ((fd.get('local') as string) ?? '').trim() || null;
-		let funcoes = funcoesFromForm(fd);
-		if (funcoes.length === 0) funcoes = ['social_media'];
-		const funcao = funcoes[0]; // enum single = primeira (compat)
 
 		const { error } = await supabase
 			.from('colaboradores')
-			.update({ nome, telefone, local, funcao, funcoes })
+			.update({ nome, telefone, local })
 			.eq('email', email);
 		if (error) return fail(500, { error: error.message });
 

@@ -6,7 +6,7 @@
 	import { Card, Button, Input, Select } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
 	import { toast } from '$lib/toast.svelte';
-	import { FUNCAO, funcaoLabel, funcoesDe } from '$lib/equipe';
+	import { funcaoLabel, funcoesDe } from '$lib/equipe';
 	import CargoBadge from '$lib/components/CargoBadge.svelte';
 	import { CORES_TEMA, COR_PADRAO, normalizaHex, escurece } from '$lib/tema';
 	import { AVATARES } from '$lib/avatares';
@@ -34,10 +34,6 @@
 	let nome = $state((colab?.nome as string) ?? '');
 	let telefone = $state((colab?.telefone as string) ?? '');
 	let local = $state((colab?.local as string) ?? '');
-	let funcoes = $state<string[]>(funcoesDe(colab));
-	function toggleFuncao(v: string) {
-		funcoes = funcoes.includes(v) ? funcoes.filter((f) => f !== v) : [...funcoes, v];
-	}
 	let salvando = $state(false);
 
 	// --- Avatar: galeria de imagens de static/avatares/ ---
@@ -209,26 +205,24 @@
 					<Input label="Telefone" name="telefone" bind:value={telefone} placeholder="(11) 99999-9999" />
 					<Input label="Localização" name="local" bind:value={local} placeholder="Cidade, UF" />
 
+					<!-- Cargo é só leitura: define permissão, então quem altera é o admin
+					     de Equipe. Editável aqui, virava escalada de privilégio (0039). -->
 					<div class="sm:col-span-2">
 						<span class="mb-1.5 block text-sm font-medium text-navy">Cargos</span>
 						<div class="flex flex-wrap gap-1.5">
-							{#each FUNCAO as f (f.value)}
-								<label class="cursor-pointer">
-									<input
-										type="checkbox"
-										name="funcoes"
-										value={f.value}
-										checked={funcoes.includes(f.value)}
-										onchange={() => toggleFuncao(f.value)}
-										class="peer sr-only"
-									/>
-									<span
-										class="inline-flex rounded-full bg-bg px-3.5 py-1.5 text-sm font-medium text-slate transition-colors hover:bg-grey-200/70 peer-checked:bg-brand peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-brand/30"
-										>{f.label}</span
-									>
-								</label>
+							{#each funcoesDe(colab) as f (f)}
+								<span
+									class="inline-flex rounded-full bg-bg px-3.5 py-1.5 text-sm font-medium text-slate"
+									>{funcaoLabel(f)}</span
+								>
+							{:else}
+								<span class="text-sm text-slate">—</span>
 							{/each}
 						</div>
+						<p class="mt-1.5 text-xs text-grey">
+							O cargo define seus acessos no sistema. Para alterar, fale com quem administra a
+							Equipe.
+						</p>
 					</div>
 				</div>
 

@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { DIAS_CONTRATO_VENCENDO, DIAS_SEM_INTERACAO } from '$lib/alertas';
-import { cached } from '$lib/server/cache';
+import { cached, chaveDoUsuario } from '$lib/server/cache';
 
 /** PostgREST tipa relações to-one como array; extrai o objeto único. */
 function um<T>(v: T | T[] | null | undefined): T | null {
@@ -206,12 +206,17 @@ async function carregarOperacao(supabase: SupabaseClient) {
 	};
 }
 
-export const load: PageServerLoad = async ({ locals: { supabase } }) => {
+export const load: PageServerLoad = async ({ locals: { supabase, user } }) => {
+	// As três queries cacheadas leem via `locals.supabase`, então o resultado já
+	// vem filtrado pela RLS de QUEM pediu. Com chave global, um perfil servia os
+	// dados de outro durante os 60s de TTL — daí o namespace por usuário.
+	const k = (base: string) => chaveDoUsuario(base, user?.id);
+
 	const [kpis, pipeline, operacao, clientes] = await Promise.all([
-		cached('dashboard:kpis:v3', 60, () => carregarKpis(supabase)),
+		cached(k('dashboard:kpis:v3'), 60, () => carregarKpis(supabase)),
 		carregarPipeline(supabase),
 		carregarOperacao(supabase),
-		cached('dashboard:clientes', 60, () => carregarClientes(supabase))
+		cached(k('dashboard:clientes'), 60, () => carregarClientes(supabase))
 	]);
 
 	return {
@@ -220,6 +225,6 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 		operacao,
 		clientes,
 		// Alertas: cacheados 60s + Promise não-aguardada → streaming com skeleton.
-		alertas: cached('dashboard:alertas', 60, () => carregarAlertas(supabase))
+		alertas: cached(k('dashboard:alertas'), 60, () => carregarAlertas(supabase))
 	};
 };
