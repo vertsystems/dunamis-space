@@ -141,6 +141,7 @@
 			<select
 				value={data.rotina.cargoSel}
 				onchange={trocarCargo}
+				aria-label="Ver mapa de rotina de outro cargo"
 				class="rounded-[var(--radius)] border border-grey-200 bg-surface px-2.5 py-1.5 text-sm text-navy focus:border-brand focus:outline-none"
 			>
 				{#each data.rotina.cargos as c (c.value)}<option value={c.value}>{c.label}</option>{/each}

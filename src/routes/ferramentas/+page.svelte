@@ -131,7 +131,18 @@
 						onclick={() => editarFerramenta(f)}
 					>
 						<td class="px-4 py-3">
-							<div class="font-medium text-navy">{f.nome}</div>
+							<!-- Botão na 1ª célula: dá acesso por teclado à linha (a linha inteira
+							     segue clicável no mouse). stopPropagation evita abrir duas vezes. -->
+							<button
+								type="button"
+								class="block rounded-[var(--radius-sm)] text-left font-medium text-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35"
+								onclick={(e) => {
+									e.stopPropagation();
+									editarFerramenta(f);
+								}}
+							>
+								{f.nome}
+							</button>
 							{#if !f.ativo}<span class="text-xs text-grey">inativa</span>{/if}
 						</td>
 						<td class="px-4 py-3 text-slate">{f.categoria ?? '—'}</td>
@@ -172,7 +183,20 @@
 						class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg"
 						onclick={() => editarAcesso(a)}
 					>
-						<td class="px-4 py-3 font-medium text-navy">{a.plataforma}</td>
+						<td class="px-4 py-3">
+							<!-- Botão na 1ª célula: dá acesso por teclado à linha (a linha inteira
+							     segue clicável no mouse). stopPropagation evita abrir duas vezes. -->
+							<button
+								type="button"
+								class="block rounded-[var(--radius-sm)] text-left font-medium text-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35"
+								onclick={(e) => {
+									e.stopPropagation();
+									editarAcesso(a);
+								}}
+							>
+								{a.plataforma}
+							</button>
+						</td>
 						<td class="px-4 py-3">
 							{#if a.cliente_id}
 								<span class="text-slate">{a.cliente_nome ?? '—'}</span>

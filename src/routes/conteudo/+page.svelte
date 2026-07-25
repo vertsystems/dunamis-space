@@ -70,7 +70,7 @@
 	<div class="flex flex-wrap items-end gap-2">
 		<SegmentedNav items={segs} current="Lista" />
 		<form class="flex gap-2" method="GET">
-			<Select name="status" bind:value={status} wrapperClass="w-40">
+			<Select name="status" bind:value={status} aria-label="Filtrar por status" wrapperClass="w-40">
 				<option value="">Todos os status</option>
 				{#each CONTEUDO_STATUS_GRUPOS as g (g.grupo)}
 					<optgroup label={g.grupo}>
@@ -78,7 +78,7 @@
 					</optgroup>
 				{/each}
 			</Select>
-			<Select name="tipo" bind:value={tipo} wrapperClass="w-40">
+			<Select name="tipo" bind:value={tipo} aria-label="Filtrar por tipo" wrapperClass="w-40">
 				<option value="">Todos os tipos</option>
 				{#each CONTEUDO_TIPO as t (t.value)}<option value={t.value}>{t.label}</option>{/each}
 			</Select>

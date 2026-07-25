@@ -148,6 +148,16 @@ export async function softDeleteTarefa(supabase: SupabaseClient, id: string): Pr
 	if (error) throw error;
 }
 
+/** Manda várias tarefas para a Lixeira em UMA requisição. */
+export async function softDeleteTarefas(supabase: SupabaseClient, ids: string[]): Promise<void> {
+	if (!ids.length) return;
+	const { error } = await supabase
+		.from('organyze_tarefas')
+		.update({ deleted_at: new Date().toISOString() })
+		.in('id', ids);
+	if (error) throw error;
+}
+
 /** Restaura uma tarefa da Lixeira (volta a ser ativa). */
 export async function restoreTarefa(supabase: SupabaseClient, id: string): Promise<void> {
 	const { error } = await supabase
@@ -235,6 +245,13 @@ export async function updatePosicoes(
 
 export async function deleteTarefa(supabase: SupabaseClient, id: string): Promise<void> {
 	const { error } = await supabase.from('organyze_tarefas').delete().eq('id', id);
+	if (error) throw error;
+}
+
+/** Apaga várias tarefas em UMA requisição (esvaziar lixeira). */
+export async function deleteTarefas(supabase: SupabaseClient, ids: string[]): Promise<void> {
+	if (!ids.length) return;
+	const { error } = await supabase.from('organyze_tarefas').delete().in('id', ids);
 	if (error) throw error;
 }
 

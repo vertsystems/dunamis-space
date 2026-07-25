@@ -270,6 +270,7 @@
 						<input
 							type="color"
 							value={corAtual}
+							aria-label="Cor personalizada do tema"
 							oninput={(e) => {
 								corAtual = e.currentTarget.value.toLowerCase();
 								aplicarTema(corAtual);

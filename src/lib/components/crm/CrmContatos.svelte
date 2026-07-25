@@ -52,7 +52,13 @@
 </script>
 
 <div class="flex flex-wrap items-end gap-2 mb-3">
-	<Input type="search" placeholder="Buscar contato" bind:value={busca} wrapperClass="w-64" />
+	<Input
+		type="search"
+		placeholder="Buscar contato"
+		aria-label="Buscar contato"
+		bind:value={busca}
+		wrapperClass="w-64"
+	/>
 	<Select bind:value={origemFiltro} wrapperClass="w-44" aria-label="Origem">
 		<option value="">Todas as origens</option>
 		{#each origens as o (o)}
@@ -87,7 +93,18 @@
 						onclick={() => onOpen(c.id)}
 					>
 						<td class="px-4 py-3">
-							<div class="font-medium text-navy">{c.nome}</div>
+							<!-- Botão na 1ª célula: dá acesso por teclado à linha (a linha inteira
+							     segue clicável no mouse). stopPropagation evita abrir duas vezes. -->
+							<button
+								type="button"
+								class="block rounded-[var(--radius-sm)] text-left font-medium text-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35"
+								onclick={(e) => {
+									e.stopPropagation();
+									onOpen(c.id);
+								}}
+							>
+								{c.nome}
+							</button>
 							{#if c.email}<div class="text-xs text-grey truncate">{c.email}</div>{/if}
 						</td>
 						<td class="px-4 py-3">

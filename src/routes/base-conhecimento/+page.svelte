@@ -49,7 +49,14 @@
 
 <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
 	<form class="flex items-end gap-2" method="GET">
-		<Input type="search" name="q" placeholder="Buscar por título" bind:value={q} wrapperClass="w-64" />
+		<Input
+			type="search"
+			name="q"
+			placeholder="Buscar por título"
+			aria-label="Buscar artigo por título"
+			bind:value={q}
+			wrapperClass="w-64"
+		/>
 		<Button variant="secondary" type="submit">Buscar</Button>
 	</form>
 	{#if podeEditar(perms, 'base_conhecimento')}

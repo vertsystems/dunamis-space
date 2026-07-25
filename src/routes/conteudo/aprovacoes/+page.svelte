@@ -43,7 +43,13 @@
 	<div class="flex flex-wrap items-end gap-2">
 		<SegmentedNav items={segs} current="Aprovações" />
 		<form method="GET">
-			<Select name="status" bind:value={status} wrapperClass="w-56" onchange={(e) => e.currentTarget.form?.requestSubmit()}>
+			<Select
+				name="status"
+				bind:value={status}
+				aria-label="Filtrar aprovações por status"
+				wrapperClass="w-56"
+				onchange={(e) => e.currentTarget.form?.requestSubmit()}
+			>
 				<option value="pendente">Pendentes</option>
 				<option value="todas">Todas</option>
 				{#each APROVACAO_STATUS.filter((s) => s.value !== 'pendente') as s (s.value)}

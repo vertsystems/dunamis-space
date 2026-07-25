@@ -55,7 +55,12 @@
 			<Badge tone={aprovacaoStatusTone(aprovacao.status)}>{aprovacaoStatusLabel(aprovacao.status)}</Badge>
 		</p>
 		<div class="flex gap-2">
-			<Input readonly value={linkAprovacao} wrapperClass="flex-1" />
+			<Input
+				readonly
+				value={linkAprovacao}
+				aria-label="Link de aprovação do cliente"
+				wrapperClass="flex-1"
+			/>
 			<Button variant="secondary" onclick={copiar}>{copiado ? 'Copiado!' : 'Copiar link'}</Button>
 		</div>
 		<p class="text-xs text-grey mt-1">Envie este link para o cliente aprovar ou pedir alteração (não precisa de login).</p>

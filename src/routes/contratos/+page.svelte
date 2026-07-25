@@ -63,7 +63,7 @@
 
 <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
 	<form class="flex items-end gap-2" method="GET">
-		<Select name="status" bind:value={status} wrapperClass="w-48">
+		<Select name="status" bind:value={status} aria-label="Filtrar por status" wrapperClass="w-48">
 			<option value="">Todos os status</option>
 			{#each CONTRATO_STATUS as s (s.value)}
 				<option value={s.value}>{s.label}</option>

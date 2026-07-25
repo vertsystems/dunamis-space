@@ -100,6 +100,7 @@
 											min="0"
 											bind:value={editValor}
 											placeholder="Meta R$"
+											aria-label="Meta de {l.nome} em reais"
 											wrapperClass="w-28"
 										/>
 										<Button size="sm" onclick={() => salvar(l.colaborador_id)}>Salvar</Button>

@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { pagsup } from '$lib/pagsup/store.svelte';
 	import { SERVICE_CATEGORIES, type Provider, type ScheduledService } from '$lib/pagsup/types';
-	import { exportScheduleXlsx } from '$lib/pagsup/excel';
 	import { formatBRL } from '$lib/clientes';
 	import { Button, Card } from '$lib/components/ui';
 	import ClienteSelector from './ClienteSelector.svelte';
@@ -107,6 +106,10 @@
 			}))
 		}));
 		try {
+			// Import dinâmico: o exceljs (com jszip + polyfills) pesa ~271 KB gzip e,
+			// com o preload-data="hover" do app.html, era baixado só por passar o mouse
+			// sobre "Pag's Up" no menu. Agora só desce no clique de exportar.
+			const { exportScheduleXlsx } = await import('$lib/pagsup/excel');
 			await exportScheduleXlsx(groups, { sendToFinanceDate, paymentDate });
 			toast.success('Planilha gerada');
 		} catch {

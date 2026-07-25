@@ -220,6 +220,7 @@
 					<Input
 						name="texto"
 						placeholder="Adicionar item ao checklist..."
+						aria-label="Novo item do checklist"
 						bind:value={novoTexto}
 						wrapperClass="flex-1"
 						required

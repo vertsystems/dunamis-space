@@ -141,6 +141,7 @@
 				<input
 					type="search"
 					placeholder="Buscar prestadores..."
+					aria-label="Buscar prestadores"
 					bind:value={searchTerm}
 					class="{fieldCls} h-10 pl-10"
 				/>
@@ -177,15 +178,23 @@
 								{#each grouped[category] as p (p.id)}
 									{#if editingId === p.id}
 										<tr class="bg-brand/[0.04]">
-											<td class="px-5 py-3"><input bind:value={edit.name} class={fieldCls} /></td>
 											<td class="px-5 py-3">
-												<select bind:value={edit.service} class={fieldCls}>
+												<input bind:value={edit.name} aria-label="Nome do prestador" class={fieldCls} />
+											</td>
+											<td class="px-5 py-3">
+												<select bind:value={edit.service} aria-label="Serviço" class={fieldCls}>
 													{#each SERVICE_CATEGORIES as c (c)}<option value={c}>{c}</option>{/each}
 												</select>
 											</td>
-											<td class="px-5 py-3"><input bind:value={edit.region} class={fieldCls} /></td>
-											<td class="px-5 py-3"><input bind:value={edit.cpf} class={fieldCls} placeholder="CPF / CNPJ" /></td>
-											<td class="px-5 py-3"><input bind:value={edit.pix} class={fieldCls} placeholder="PIX" /></td>
+											<td class="px-5 py-3">
+												<input bind:value={edit.region} aria-label="Região" class={fieldCls} />
+											</td>
+											<td class="px-5 py-3">
+												<input bind:value={edit.cpf} aria-label="CPF / CNPJ" class={fieldCls} placeholder="CPF / CNPJ" />
+											</td>
+											<td class="px-5 py-3">
+												<input bind:value={edit.pix} aria-label="Chave PIX" class={fieldCls} placeholder="PIX" />
+											</td>
 											<td class="px-5 py-3">
 												<div class="flex justify-end gap-1">
 													<button onclick={() => saveEdit(p.id)} title="Salvar" class="p-2 rounded-[var(--radius-sm)] text-brand-green hover:bg-brand-green/10 transition-colors"><Check size={18} /></button>

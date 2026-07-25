@@ -242,6 +242,7 @@
 					<input
 						type="time"
 						bind:value={hora}
+						aria-label="Outro horário"
 						class="bg-transparent text-sm font-medium tabular-nums text-navy-900 outline-none"
 					/>
 				</label>

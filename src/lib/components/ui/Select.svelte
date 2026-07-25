@@ -5,11 +5,26 @@
 	interface Props extends HTMLSelectAttributes {
 		label?: string;
 		wrapperClass?: string;
+		/** Mensagem de erro do campo — vira texto anunciado + aria-invalid/aria-describedby. */
+		erro?: string | null;
 		children: Snippet;
 	}
 
-	let { label, id, name, wrapperClass = '', value = $bindable(), children, ...rest }: Props = $props();
+	let {
+		label,
+		id,
+		name,
+		wrapperClass = '',
+		erro = null,
+		value = $bindable(),
+		children,
+		...rest
+	}: Props = $props();
 	const fieldId = $derived(id ?? name);
+	// Só sobrescreve os atributos ARIA quando há erro (senão o spread do caller vale).
+	const a11yErro = $derived(
+		erro ? { 'aria-invalid': 'true' as const, 'aria-describedby': `${fieldId}-erro` } : {}
+	);
 </script>
 
 <div class={wrapperClass}>
@@ -22,7 +37,11 @@
 		bind:value
 		class="h-10 w-full rounded-[var(--radius)] border border-grey-200 bg-surface px-3.5 text-sm text-navy-900 shadow-xs transition-colors hover:border-grey focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25 disabled:opacity-60 disabled:bg-bg"
 		{...rest}
+		{...a11yErro}
 	>
 		{@render children()}
 	</select>
+	{#if erro}
+		<p id="{fieldId}-erro" role="alert" class="mt-1.5 text-xs text-brand-danger">{erro}</p>
+	{/if}
 </div>

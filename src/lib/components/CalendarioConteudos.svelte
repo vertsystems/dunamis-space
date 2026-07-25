@@ -406,7 +406,12 @@
 	</div>
 
 	{#if !clienteFixo}
-		<Select value={data.clienteFiltro} onchange={trocarCliente} wrapperClass="w-full sm:w-60">
+		<Select
+			value={data.clienteFiltro}
+			onchange={trocarCliente}
+			aria-label="Filtrar por cliente"
+			wrapperClass="w-full sm:w-60"
+		>
 			<option value="">Todos os clientes</option>
 			{#each data.clientes as c (c.id)}<option value={c.id}>{c.nome}</option>{/each}
 		</Select>

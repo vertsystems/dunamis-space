@@ -74,6 +74,7 @@
 
 	{#if error}
 		<div
+			role="alert"
 			class="md:col-span-12 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger"
 		>
 			{error}

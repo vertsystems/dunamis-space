@@ -188,6 +188,7 @@
 											class="nivel-sel"
 											data-n={nivel}
 											value={nivel}
+											aria-label="{m.label} — {f.label}"
 											onchange={(e) => mudarCargo(f.value, m.id, e.currentTarget.value as Nivel)}
 										>
 											{#each NIVEIS as n (n)}
@@ -271,6 +272,7 @@
 												class="nivel-sel !w-auto min-w-[150px]"
 												data-n={exc ?? 'herdar'}
 												value={exc ?? 'herdar'}
+												aria-label="{m.label} — exceção para {pessoa.nome}"
 												onchange={(e) => mudarExcecao(pessoa!.id, m.id, e.currentTarget.value)}
 											>
 												<option value="herdar">Herdar ({NIVEL_LABEL[herd]})</option>

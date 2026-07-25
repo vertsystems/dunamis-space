@@ -46,7 +46,7 @@
 	}}
 >
 	{#if error}
-		<div class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">
+		<div role="alert" class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">
 			{error}
 		</div>
 	{/if}

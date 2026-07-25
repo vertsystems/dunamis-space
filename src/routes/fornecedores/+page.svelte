@@ -135,7 +135,18 @@
 					onclick={() => abrirEdicao(f)}
 				>
 					<td class="px-4 py-3">
-						<span class="font-medium text-navy">{f.nome}</span>
+						<!-- Botão na 1ª célula: dá acesso por teclado à linha (a linha inteira
+						     segue clicável no mouse). stopPropagation evita abrir duas vezes. -->
+						<button
+							type="button"
+							class="rounded-[var(--radius-sm)] text-left font-medium text-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35"
+							onclick={(e) => {
+								e.stopPropagation();
+								abrirEdicao(f);
+							}}
+						>
+							{f.nome}
+						</button>
 						{#if !f.ativo}
 							<span class="ml-2 text-xs text-grey">(inativo)</span>
 						{/if}

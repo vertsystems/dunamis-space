@@ -446,7 +446,9 @@ class OrganyzeStore {
 		this.tarefas = this.tarefas.filter((t) => !ids.has(t.id));
 		this.#persist(
 			async () => {
-				for (const t of concluidas) await db.softDeleteTarefa(this.supabase!, t.id);
+				// Era um round-trip SEQUENCIAL por tarefa; com 40 itens dava 4-8s de UI
+				// travada. O padrão em lote já existia em updatePosicoes.
+				await db.softDeleteTarefas(this.supabase!, [...ids]);
 			},
 			() => (this.tarefas = snapshot),
 			'Falha ao limpar concluídas.'
@@ -500,7 +502,7 @@ class OrganyzeStore {
 		this.lixeira = [];
 		this.#persist(
 			async () => {
-				for (const id of ids) await db.deleteTarefa(this.supabase!, id);
+				await db.deleteTarefas(this.supabase!, ids);
 			},
 			() => (this.lixeira = snapshot),
 			'Falha ao esvaziar a lixeira.'

@@ -55,7 +55,14 @@
 	</div>
 	<div class="flex flex-wrap items-end gap-2">
 		<form class="flex items-end gap-2" method="GET">
-			<Input type="search" name="q" placeholder="Buscar por nome" bind:value={q} wrapperClass="w-56" />
+			<Input
+				type="search"
+				name="q"
+				placeholder="Buscar por nome"
+				aria-label="Buscar cliente por nome"
+				bind:value={q}
+				wrapperClass="w-56"
+			/>
 			<Button variant="secondary" type="submit">Buscar</Button>
 		</form>
 		{#if podeEditar(perms, 'clientes')}

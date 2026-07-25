@@ -7,7 +7,8 @@ export const load: LayoutServerLoad = async ({
 	let aprovacoesPendentes = 0;
 	let sosAbertos = 0;
 	// Perfil do usuário logado (nome/avatar p/ o topo + cor de tema pessoal).
-	// select('*') p/ degradar bem caso a migration 0009 ainda não tenha rodado.
+	// Colunas explícitas: o select('*') anterior trazia custo_hora, super_admin e
+	// telefone em TODA navegação, sem nenhum uso no shell.
 	let perfil: Record<string, unknown> | null = null;
 	if (session && user?.email) {
 		const [aprov, perf, sos] = await Promise.all([
@@ -15,7 +16,11 @@ export const load: LayoutServerLoad = async ({
 				.from('aprovacoes')
 				.select('id', { count: 'exact', head: true })
 				.eq('status', 'pendente'),
-			supabase.from('colaboradores').select('*').eq('email', user.email).maybeSingle(),
+			supabase
+				.from('colaboradores')
+				.select('id, nome, avatar_url, cor_tema, funcao, funcoes')
+				.eq('email', user.email)
+				.maybeSingle(),
 			supabase
 				.from('sos_chamados')
 				.select('id', { count: 'exact', head: true })
@@ -29,6 +34,7 @@ export const load: LayoutServerLoad = async ({
 	return {
 		session,
 		user,
+		// Alimenta o createServerClient do +layout.ts durante o SSR.
 		cookies: cookies.getAll(),
 		aprovacoesPendentes,
 		sosAbertos,

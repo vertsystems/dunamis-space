@@ -212,10 +212,12 @@ export const load: PageServerLoad = async ({ locals: { supabase, user } }) => {
 	// dados de outro durante os 60s de TTL — daí o namespace por usuário.
 	const k = (base: string) => chaveDoUsuario(base, user?.id);
 
+	// As 4 são cacheadas: pipeline e operacao (7 das 15 queries do dashboard)
+	// tinham ficado de fora sem motivo.
 	const [kpis, pipeline, operacao, clientes] = await Promise.all([
 		cached(k('dashboard:kpis:v3'), 60, () => carregarKpis(supabase)),
-		carregarPipeline(supabase),
-		carregarOperacao(supabase),
+		cached(k('dashboard:pipeline'), 60, () => carregarPipeline(supabase)),
+		cached(k('dashboard:operacao'), 60, () => carregarOperacao(supabase)),
 		cached(k('dashboard:clientes'), 60, () => carregarClientes(supabase))
 	]);
 

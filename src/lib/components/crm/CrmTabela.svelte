@@ -70,6 +70,7 @@
 	<Input
 		type="search"
 		placeholder="Buscar negócio ou contato"
+		aria-label="Buscar negócio ou contato"
 		bind:value={busca}
 		wrapperClass="w-64"
 	/>
@@ -122,7 +123,18 @@
 						onclick={() => onOpen(n.id)}
 					>
 						<td class="px-4 py-3">
-							<span class="font-medium text-navy">{n.titulo}</span>
+							<!-- Botão na 1ª célula: dá acesso por teclado à linha (a linha inteira
+							     segue clicável no mouse). stopPropagation evita abrir duas vezes. -->
+							<button
+								type="button"
+								class="rounded-[var(--radius-sm)] text-left font-medium text-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35"
+								onclick={(e) => {
+									e.stopPropagation();
+									onOpen(n.id);
+								}}
+							>
+								{n.titulo}
+							</button>
 						</td>
 						<td class="px-4 py-3 text-slate">
 							{n.contato_nome ?? n.contato_empresa ?? '—'}

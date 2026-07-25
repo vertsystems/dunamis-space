@@ -32,12 +32,16 @@ function ehGestor(colab: { funcao?: string | null; funcoes?: string[] | null } |
 	return fns.includes('ceo') || fns.includes('admin');
 }
 
-export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
-	const {
-		data: { user }
-	} = await supabase.auth.getUser();
-
-	const colab = await meuColab(supabase, user);
+export const load: PageServerLoad = async ({ locals: { supabase, user }, url }) => {
+	// Esta página era a mais lenta do app: 8 round-trips estritamente sequenciais,
+	// um deles um auth.getUser() que o hooks.server.ts já tinha resolvido de graça
+	// em `locals.user`. Agora são 2 ondas.
+	//
+	// Onda 1 — o colaborador e os cargos com rotina não dependem um do outro.
+	const [colab, cargosRaw] = await Promise.all([
+		meuColab(supabase, user),
+		sel(supabase.from('rotina_itens').select('cargo'), 'meu-dia: cargos com rotina')
+	]);
 	const meuId = (colab?.id as string | undefined) ?? null;
 	const meusCargos: string[] = colab?.funcoes?.length
 		? colab.funcoes
@@ -45,11 +49,6 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 			? [colab.funcao]
 			: [];
 
-	// --- Mapa de Rotina ---
-	const cargosRaw = await sel(
-		supabase.from('rotina_itens').select('cargo'),
-		'meu-dia: cargos com rotina'
-	);
 	const cargosComRotina = [...new Set(cargosRaw.map((r) => r.cargo as string))];
 	// União: cargos do usuário + os que já têm rotina cadastrada (para o seletor).
 	const cargosOpcoes = [...new Set([...meusCargos, ...cargosComRotina])]
@@ -66,31 +65,8 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		cargosComRotina[0] ||
 		'social_media';
 
-	const rotinaItens = await sel(
-		supabase
-			.from('rotina_itens')
-			.select('id, cargo, dia_semana, titulo, ordem')
-			.eq('cargo', cargoSel)
-			.order('dia_semana', { ascending: true })
-			.order('ordem', { ascending: true }),
-		`meu-dia: itens da rotina (cargo ${cargoSel})`
-	);
-
 	const { data: hoje } = { data: hojeSP() };
-	let feitos: string[] = [];
-	if (meuId) {
-		const concl = await sel(
-			supabase
-				.from('rotina_conclusoes')
-				.select('item_id')
-				.eq('colaborador_id', meuId)
-				.eq('data', hoje.data),
-			'meu-dia: conclusões da rotina de hoje'
-		);
-		feitos = concl.map((c) => c.item_id as string);
-	}
 
-	// --- Tarefas em aberto ---
 	let tq = supabase
 		.from('tarefas')
 		.select('id, titulo, prazo, prioridade, projeto:projetos(nome)')
@@ -98,9 +74,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		.order('prazo', { ascending: true, nullsFirst: false })
 		.limit(60);
 	if (meuId) tq = tq.eq('responsavel_id', meuId);
-	const tarefasRaw = await sel(tq, 'meu-dia: tarefas em aberto');
 
-	// --- Atividades do CRM pendentes ---
 	let aq = supabase
 		.from('crm_atividades')
 		.select(
@@ -110,7 +84,33 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		.order('data_hora', { ascending: true, nullsFirst: false })
 		.limit(60);
 	if (meuId) aq = aq.eq('responsavel_id', meuId);
-	const { data: atividadesRaw, error: aErr } = await aq;
+
+	// Onda 2 — as quatro dependem só de `cargoSel`/`meuId`, já resolvidos acima.
+	const [rotinaItens, feitosRaw, tarefasRaw, atividadesRes] = await Promise.all([
+		sel(
+			supabase
+				.from('rotina_itens')
+				.select('id, cargo, dia_semana, titulo, ordem')
+				.eq('cargo', cargoSel)
+				.order('dia_semana', { ascending: true })
+				.order('ordem', { ascending: true }),
+			`meu-dia: itens da rotina (cargo ${cargoSel})`
+		),
+		meuId
+			? sel(
+					supabase
+						.from('rotina_conclusoes')
+						.select('item_id')
+						.eq('colaborador_id', meuId)
+						.eq('data', hoje.data),
+					'meu-dia: conclusões da rotina de hoje'
+				)
+			: Promise.resolve([] as { item_id: string }[]),
+		sel(tq, 'meu-dia: tarefas em aberto'),
+		aq
+	]);
+	const feitos = feitosRaw.map((c) => c.item_id as string);
+	const { data: atividadesRaw, error: aErr } = atividadesRes;
 
 	const tarefas = tarefasRaw.map((t) => ({
 		id: t.id as string,
@@ -157,10 +157,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 
 export const actions: Actions = {
 	// Marca/desmarca um item da rotina como feito hoje (por pessoa/dia).
-	toggleRotina: async ({ request, locals: { supabase } }) => {
-		const {
-			data: { user }
-		} = await supabase.auth.getUser();
+	toggleRotina: async ({ request, locals: { supabase, user } }) => {
 		const colab = await meuColab(supabase, user);
 		if (!colab) return fail(401, { error: 'Vincule seu login a um colaborador em Equipe.' });
 
@@ -189,10 +186,7 @@ export const actions: Actions = {
 		return { ok: true, feito: !existente };
 	},
 
-	criarItem: async ({ request, locals: { supabase } }) => {
-		const {
-			data: { user }
-		} = await supabase.auth.getUser();
+	criarItem: async ({ request, locals: { supabase, user } }) => {
 		if (!ehGestor(await meuColab(supabase, user)))
 			return fail(403, { error: 'Apenas CEO e Admin podem editar a rotina.' });
 
@@ -223,10 +217,7 @@ export const actions: Actions = {
 		return { ok: true };
 	},
 
-	editarItem: async ({ request, locals: { supabase } }) => {
-		const {
-			data: { user }
-		} = await supabase.auth.getUser();
+	editarItem: async ({ request, locals: { supabase, user } }) => {
 		if (!ehGestor(await meuColab(supabase, user)))
 			return fail(403, { error: 'Apenas CEO e Admin podem editar a rotina.' });
 
@@ -239,10 +230,7 @@ export const actions: Actions = {
 		return { ok: true };
 	},
 
-	excluirItem: async ({ request, locals: { supabase } }) => {
-		const {
-			data: { user }
-		} = await supabase.auth.getUser();
+	excluirItem: async ({ request, locals: { supabase, user } }) => {
 		if (!ehGestor(await meuColab(supabase, user)))
 			return fail(403, { error: 'Apenas CEO e Admin podem editar a rotina.' });
 

@@ -98,6 +98,8 @@
 							bind:value={email}
 							required
 							autocomplete="email"
+							aria-invalid={error ? 'true' : undefined}
+							aria-describedby={error ? 'login-erro' : undefined}
 							class="h-11 w-full rounded-[var(--radius)] border border-grey-200 bg-surface px-3.5 text-sm text-navy-900 shadow-xs placeholder:text-grey/80 transition-colors hover:border-grey focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25"
 						/>
 					</div>
@@ -122,13 +124,15 @@
 								bind:value={password}
 								required
 								autocomplete="current-password"
+								aria-invalid={error ? 'true' : undefined}
+								aria-describedby={error ? 'login-erro' : undefined}
 								class="h-11 w-full rounded-[var(--radius)] border border-grey-200 bg-surface px-3.5 pe-11 text-sm text-navy-900 shadow-xs placeholder:text-grey/80 transition-colors hover:border-grey focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25"
 							/>
 							<button
 								type="button"
 								onclick={() => (mostrarSenha = !mostrarSenha)}
 								aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
-								class="absolute inset-y-0 end-0 grid w-11 place-items-center text-grey transition-colors hover:text-navy focus-visible:outline-none"
+								class="absolute inset-y-0 end-0 grid w-11 place-items-center rounded-[var(--radius)] text-grey transition-colors hover:text-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35"
 							>
 								{#if mostrarSenha}
 									<EyeOff size={18} />
@@ -141,6 +145,8 @@
 
 					{#if error}
 						<div
+							id="login-erro"
+							role="alert"
 							class="rounded-[var(--radius)] bg-brand-danger/10 px-3.5 py-2.5 text-sm text-brand-danger"
 						>
 							{error}
@@ -168,12 +174,16 @@
 							bind:value={email}
 							required
 							autocomplete="email"
+							aria-invalid={error ? 'true' : undefined}
+							aria-describedby={error ? 'reset-erro' : undefined}
 							class="h-11 w-full rounded-[var(--radius)] border border-grey-200 bg-surface px-3.5 text-sm text-navy-900 shadow-xs placeholder:text-grey/80 transition-colors hover:border-grey focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25"
 						/>
 					</div>
 
 					{#if error}
 						<div
+							id="reset-erro"
+							role="alert"
 							class="rounded-[var(--radius)] bg-brand-danger/10 px-3.5 py-2.5 text-sm text-brand-danger"
 						>
 							{error}
@@ -181,6 +191,7 @@
 					{/if}
 					{#if aviso}
 						<div
+							role="status"
 							class="rounded-[var(--radius)] bg-brand-green/10 px-3.5 py-2.5 text-sm text-brand-green"
 						>
 							{aviso}

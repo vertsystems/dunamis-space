@@ -84,13 +84,13 @@
 
 <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
 	<form class="flex flex-wrap items-end gap-2" method="GET">
-		<Select name="tipo" bind:value={tipo} wrapperClass="w-44">
+		<Select name="tipo" bind:value={tipo} aria-label="Filtrar por tipo" wrapperClass="w-44">
 			<option value="">Todos os tipos</option>
 			{#each TRANSACAO_TIPO as t (t.value)}
 				<option value={t.value}>{t.label}</option>
 			{/each}
 		</Select>
-		<Select name="status" bind:value={status} wrapperClass="w-44">
+		<Select name="status" bind:value={status} aria-label="Filtrar por status" wrapperClass="w-44">
 			<option value="">Todos os status</option>
 			{#each TRANSACAO_STATUS as s (s.value)}
 				<option value={s.value}>{s.label}</option>

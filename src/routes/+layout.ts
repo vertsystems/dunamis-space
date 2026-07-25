@@ -19,17 +19,15 @@ export const load: LayoutLoad = async ({ data, depends, fetch }) => {
 				}
 			});
 
-	const {
-		data: { session }
-	} = await supabase.auth.getSession();
-
-	const {
-		data: { user }
-	} = await supabase.auth.getUser();
+	// Sessão e usuário vêm prontos do +layout.server.ts, que por sua vez os recebe
+	// do hooks.server.ts — onde o getUser() já validou contra o servidor de auth.
+	// Este load refazia getSession() + getUser() por conta própria, o que em SSR
+	// era um SEGUNDO round-trip ao GoTrue em toda navegação, para chegar
+	// exatamente no mesmo resultado.
+	const { session, user } = data;
 
 	// Encaminha aprovacoesPendentes + perfil do +layout.server.ts (o universal load
-	// NÃO mescla o server load automaticamente). Não espalhar `...data` para não
-	// serializar os cookies de auth no payload do cliente.
+	// NÃO mescla o server load automaticamente).
 	return {
 		supabase,
 		session,
