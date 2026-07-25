@@ -94,10 +94,12 @@ body::before {
 
 	.departments {
 		min-height: var(--ds-topbar-h);
-		background: var(--ds-glass);
+		// Branco com transparência leve (quase opaco) + borda dupla só embaixo.
+		background: rgba(255, 255, 255, 0.9);
 		backdrop-filter: blur(20px) saturate(180%);
 		-webkit-backdrop-filter: blur(20px) saturate(180%);
-		border: 1px solid var(--ds-glass-border);
+		border: none;
+		border-bottom: 3px double #d7dbe0;
 		border-radius: 18px;
 		box-shadow:
 			0 8px 24px -6px rgba(16, 24, 40, 0.14),
