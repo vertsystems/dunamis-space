@@ -302,12 +302,12 @@
 	.nivel-sel {
 		width: 100%;
 		min-width: 108px;
-		border: 1px solid var(--grey-200, #e5e7eb);
+		border: 1px solid var(--color-grey-200);
 		border-radius: 8px;
 		padding: 4px 8px;
 		font-size: 12px;
 		background: #fff;
-		color: var(--navy, #1f2937);
+		color: var(--color-navy);
 		cursor: pointer;
 	}
 	/* Cor de fundo sutil por nível para leitura rápida da matriz. */

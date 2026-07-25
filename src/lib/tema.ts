@@ -37,5 +37,8 @@ export function escurece(hex: string, amt = 0.12): string {
 export function temaCss(hex: string | null | undefined): string {
 	const cor = normalizaHex(hex);
 	if (!cor) return '';
-	return `:root{--color-brand:${cor};--ds-primary:${cor};--ds-primary-600:${escurece(cor)};}`;
+	// --ds-primary é alias de --color-brand (app.scss), então sobrescrever a
+	// primária basta. Os pontos que antes tinham o azul cravado em rgba() agora
+	// usam color-mix sobre estes tokens, então o tema pega em todo o shell.
+	return `:root{--color-brand:${cor};--ds-primary-600:${escurece(cor)};}`;
 }

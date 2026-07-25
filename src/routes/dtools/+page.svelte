@@ -52,7 +52,7 @@
 			</p>
 			<a
 				href={DTOOLS_SOLICITAR_URL}
-				class="inline-flex w-full items-center justify-center gap-2 h-10 rounded-[var(--radius)] bg-brand text-white font-semibold text-sm no-underline shadow-[0_2px_10px_-2px_rgba(59,110,246,0.55)] transition-all hover:brightness-[1.07] active:scale-[0.98]"
+				class="inline-flex w-full items-center justify-center gap-2 h-10 rounded-[var(--radius)] bg-brand text-white font-semibold text-sm no-underline shadow-[0_2px_10px_-2px_color-mix(in_srgb,var(--color-brand)_55%,transparent)] transition-all hover:brightness-[1.07] active:scale-[0.98]"
 			>
 				<Icon name="plus" size={16} /> Solicitar ferramenta
 			</a>

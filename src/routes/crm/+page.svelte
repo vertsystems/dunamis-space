@@ -263,7 +263,7 @@
 		{#if !data.crmPendente && podeEditar(perms, 'crm')}
 			<Dropdown
 				align="end"
-				triggerClass="inline-flex size-10 items-center justify-center rounded-[var(--radius)] bg-brand text-white shadow-[0_2px_10px_-2px_rgba(59,110,246,0.55)] transition-all hover:brightness-[1.07] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35 focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
+				triggerClass="inline-flex size-10 items-center justify-center rounded-[var(--radius)] bg-brand text-white shadow-[0_2px_10px_-2px_color-mix(in_srgb,var(--color-brand)_55%,transparent)] transition-all hover:brightness-[1.07] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35 focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
 				items={[
 					{ label: 'Novo negócio', icon: 'funnel', onSelect: () => abrirNovoNegocio() },
 					{ label: 'Novo contato', icon: 'contact', onSelect: () => (novoContato = true) }

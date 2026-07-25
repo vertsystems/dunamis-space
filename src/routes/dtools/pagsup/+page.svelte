@@ -120,7 +120,7 @@
 	.pagsup-dock button.is-active {
 		background: var(--color-brand, #3b6ef6);
 		color: #fff;
-		box-shadow: 0 4px 12px -2px rgba(59, 110, 246, 0.5);
+		box-shadow: 0 4px 12px -2px color-mix(in srgb, var(--color-brand) 50%, transparent);
 	}
 
 	@media (max-width: 640px) {

@@ -35,7 +35,7 @@
 
 	const variants: Record<ButtonVariant, string> = {
 		primary:
-			'bg-brand text-white shadow-[0_2px_10px_-2px_rgba(59,110,246,0.55)] hover:brightness-[1.07] active:brightness-95',
+			'bg-brand text-white shadow-[0_2px_10px_-2px_color-mix(in_srgb,var(--color-brand)_55%,transparent)] hover:brightness-[1.07] active:brightness-95',
 		secondary: 'bg-surface text-navy border border-grey-200 shadow-xs hover:bg-bg hover:border-grey',
 		ghost: 'bg-transparent text-slate hover:bg-bg hover:text-navy',
 		danger:

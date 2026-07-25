@@ -15,7 +15,8 @@
 	--color-navy-900: #0b1220; /* grafite — texto mais forte */
 	--color-navy: #1c2534; /* títulos / texto principal */
 	--color-slate: #5b6576; /* texto secundário */
-	--color-grey: #98a2b3; /* muted / labels */
+	--color-grey: #667085; /* muted / labels — 4.98:1 no branco (AA). Era #98a2b3,
+	                          que dava 2.58:1 e reprovava em ~400 usos de texto */
 	--color-grey-200: #e6e9f1; /* bordas suaves */
 	--color-surface: #ffffff; /* cards / superfícies */
 	--color-bg: #f3f6fb; /* fundo do app (gelo azulado) */
@@ -31,9 +32,18 @@
 	/* ---- Tipografia ---- */
 	--font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
+	/* Degraus abaixo de text-xs (12px). Sem eles, 61 tamanhos arbitrários
+	   (text-[11px], text-[0.6rem]…) foram improvisados pelo código. */
+	--text-2xs: 0.6875rem; /* 11px */
+	--text-3xs: 0.625rem; /* 10px */
+
 	/* ---- Raios (iOS: generosos) ---- */
 	--radius-sm: 0.5rem; /* 8px */
 	--radius: 0.75rem; /* 12px */
+	/* O @theme não sobrescrevia --radius-md, que ficava no default do Tailwind
+	   (6px) — abaixo do menor raio do DS, deixando 31 elementos com canto mais
+	   duro que o resto. Agora `rounded-md` é o raio padrão do sistema. */
+	--radius-md: 0.75rem; /* 12px */
 	--radius-lg: 1rem; /* 16px */
 	--radius-xl: 1.25rem; /* 20px */
 	--radius-2xl: 1.5rem; /* 24px */
