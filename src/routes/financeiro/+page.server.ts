@@ -1,3 +1,4 @@
+import { clientesLite } from '$lib/server/lookups';
 import { um } from '$lib/db';
 import { sel } from '$lib/server/query';
 import type { PageServerLoad } from './$types';
@@ -29,7 +30,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		// JS — e, passando do teto de linhas do PostgREST, os cards mostravam
 		// números truncados sem nenhum aviso. Ver migration 0041.
 		supabase.from('v_financeiro_totais').select('receitas, despesas').maybeSingle(),
-		sel(supabase.from('clientes').select('id, nome').order('nome'), 'financeiro: clientes')
+		sel(clientesLite(supabase), 'financeiro: clientes')
 	]);
 
 	const receitas = Number(totaisRes.data?.receitas ?? 0);

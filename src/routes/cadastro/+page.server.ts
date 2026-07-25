@@ -1,3 +1,4 @@
+import { colaboradoresAtivos } from '$lib/server/lookups';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
@@ -14,7 +15,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 
 	const [{ data, error }, { data: colaboradores }] = await Promise.all([
 		query,
-		supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').eq('ativo', true).order('nome')
+		colaboradoresAtivos(supabase)
 	]);
 
 	// Degradação: a migration 0006 pode não ter sido aplicada (colunas novas).

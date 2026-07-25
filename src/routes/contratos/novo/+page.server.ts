@@ -1,3 +1,4 @@
+import { clientesLite } from '$lib/server/lookups';
 import { fail, redirect } from '@sveltejs/kit';
 import { contratoFromForm } from '$lib/contratos';
 import { exigirPermissao } from '$lib/server/permissao';
@@ -5,7 +6,7 @@ import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 	const [{ data: clientes }, { data: planos }] = await Promise.all([
-		supabase.from('clientes').select('id, nome').order('nome'),
+		clientesLite(supabase),
 		supabase.from('planos').select('id, nome, valor_mensal').eq('ativo', true).order('valor_mensal')
 	]);
 	return { clientes: clientes ?? [], planos: planos ?? [] };

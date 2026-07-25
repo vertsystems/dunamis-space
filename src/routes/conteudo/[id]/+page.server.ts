@@ -1,3 +1,4 @@
+import { colaboradoresAtivos, clientesLite } from '$lib/server/lookups';
 import { error, fail, redirect } from '@sveltejs/kit';
 import { conteudoFromForm } from '$lib/conteudo';
 import { nomesDeCampanha } from '$lib/server/conteudo';
@@ -14,9 +15,9 @@ export const load: PageServerLoad = async ({ params, locals: { supabase } }) => 
 		campanhas
 	] = await Promise.all([
 		supabase.from('conteudos').select('*').eq('id', params.id).single(),
-		supabase.from('clientes').select('id, nome').order('nome'),
+		clientesLite(supabase),
 		supabase.from('projetos').select('id, nome').order('created_at', { ascending: false }),
-		supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').eq('ativo', true).order('nome'),
+		colaboradoresAtivos(supabase),
 		supabase
 			.from('aprovacoes')
 			.select('id, status, token_publico, data_envio, data_resposta, comentario_cliente')

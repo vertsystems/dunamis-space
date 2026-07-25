@@ -1,3 +1,4 @@
+import { clientesLite } from '$lib/server/lookups';
 import { error, fail, redirect } from '@sveltejs/kit';
 import { contratoFromForm } from '$lib/contratos';
 import { exigirPermissao } from '$lib/server/permissao';
@@ -6,7 +7,7 @@ import type { Actions, PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ params, locals: { supabase } }) => {
 	const [{ data: contrato, error: e }, { data: clientes }, { data: planos }] = await Promise.all([
 		supabase.from('contratos').select('*, cliente:clientes(nome)').eq('id', params.id).single(),
-		supabase.from('clientes').select('id, nome').order('nome'),
+		clientesLite(supabase),
 		supabase.from('planos').select('id, nome, valor_mensal').order('valor_mensal')
 	]);
 	if (e || !contrato) throw error(404, 'Contrato não encontrado');

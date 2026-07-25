@@ -1,3 +1,4 @@
+import { clientesLite } from '$lib/server/lookups';
 import { fail, redirect } from '@sveltejs/kit';
 import { transacaoFromForm } from '$lib/financeiro';
 import { exigirPermissao } from '$lib/server/permissao';
@@ -8,7 +9,7 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 	// Lookup do formulário: sem tratar o erro, uma falha aqui deixa o select de
 	// clientes vazio e parece que não há cliente cadastrado.
 	const { dados: clientes, erro } = await selComErro(
-		supabase.from('clientes').select('id, nome').order('nome'),
+		clientesLite(supabase),
 		'financeiro/novo: lista de clientes'
 	);
 	return {

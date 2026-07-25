@@ -1,3 +1,4 @@
+import { colaboradoresAtivos } from '$lib/server/lookups';
 import { fail, redirect } from '@sveltejs/kit';
 import { clienteFromForm } from '$lib/clientes';
 import { exigirPermissao } from '$lib/server/permissao';
@@ -8,7 +9,7 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 	// Lookup do formulário: se a query falha e o erro é engolido, o select fica
 	// vazio e o usuário conclui que não há colaboradores — daí o aviso na tela.
 	const { dados: colaboradores, erro } = await selComErro(
-		supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').eq('ativo', true).order('nome'),
+		colaboradoresAtivos(supabase),
 		'clientes/novo: colaboradores ativos'
 	);
 	return {

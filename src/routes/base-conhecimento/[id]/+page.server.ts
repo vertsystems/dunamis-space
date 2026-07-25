@@ -1,3 +1,4 @@
+import { clientesLite } from '$lib/server/lookups';
 import { error, fail, redirect } from '@sveltejs/kit';
 import { kbFromForm } from '$lib/kb';
 import { exigirPermissao } from '$lib/server/permissao';
@@ -6,7 +7,7 @@ import type { Actions, PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ params, locals: { supabase } }) => {
 	const [{ data: artigo, error: e }, { data: clientes }] = await Promise.all([
 		supabase.from('kb_artigos').select('*').eq('id', params.id).single(),
-		supabase.from('clientes').select('id, nome').order('nome')
+		clientesLite(supabase)
 	]);
 	if (e || !artigo) throw error(404, 'Artigo não encontrado');
 	return { artigo, clientes: clientes ?? [] };

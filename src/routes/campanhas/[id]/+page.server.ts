@@ -1,3 +1,4 @@
+import { clientesLite } from '$lib/server/lookups';
 import { error, fail, redirect } from '@sveltejs/kit';
 import { campanhaFromForm } from '$lib/campanhas';
 import { redesFromForm } from '$lib/conteudo';
@@ -11,7 +12,7 @@ export const load: PageServerLoad = async ({ params, url, locals: { supabase } }
 	// uma falha de RLS virava lista vazia e parecia que não havia cadastro nenhum.
 	const [{ data: campanha, error: e }, clientes, colaboradores] = await Promise.all([
 		supabase.from('campanhas').select('*, cliente:clientes(nome)').eq('id', params.id).single(),
-		sel(supabase.from('clientes').select('id, nome').order('nome'), 'campanhas/[id]: lista de clientes'),
+		sel(clientesLite(supabase), 'campanhas/[id]: lista de clientes'),
 		sel(
 			supabase
 				.from('colaboradores')

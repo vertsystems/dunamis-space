@@ -1,3 +1,4 @@
+import { colaboradoresAtivos, clientesLite } from '$lib/server/lookups';
 import { um } from '$lib/db';
 import { fail } from '@sveltejs/kit';
 import { exigirPermissao } from '$lib/server/permissao';
@@ -111,8 +112,8 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 				'id, tipo, titulo, descricao, data_hora, concluida, concluida_em, created_at, negocio_id, contato_id, responsavel_id, negocio:crm_negocios(id, titulo), contato:crm_contatos(id, nome), responsavel:colaboradores(id, nome)'
 			)
 			.order('data_hora', { ascending: true, nullsFirst: false }),
-		supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').eq('ativo', true).order('nome'),
-		supabase.from('clientes').select('id, nome').order('nome')
+		colaboradoresAtivos(supabase),
+		clientesLite(supabase)
 	]);
 
 	const stages = (stagesRes.data ?? []).map((s) => ({

@@ -1,3 +1,4 @@
+import { colaboradoresAtivos, clientesLite } from '$lib/server/lookups';
 import { um } from '$lib/db';
 import { nomesDeCampanha } from '$lib/server/conteudo';
 import type { PageServerLoad } from './$types';
@@ -19,9 +20,9 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	const [{ data, error }, { data: clientes }, { data: projetos }, { data: colaboradores }, campanhas] =
 		await Promise.all([
 			query,
-			supabase.from('clientes').select('id, nome').order('nome'),
+			clientesLite(supabase),
 			supabase.from('projetos').select('id, nome').order('created_at', { ascending: false }),
-			supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').eq('ativo', true).order('nome'),
+			colaboradoresAtivos(supabase),
 			nomesDeCampanha(supabase)
 		]);
 

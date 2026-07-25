@@ -1,3 +1,4 @@
+import { colaboradoresAtivos } from '$lib/server/lookups';
 import { error, fail, redirect } from '@sveltejs/kit';
 import { clienteFromForm } from '$lib/clientes';
 import { exigirPermissao } from '$lib/server/permissao';
@@ -6,7 +7,7 @@ import type { Actions, PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ params, locals: { supabase } }) => {
 	const [{ data: cliente, error: e }, { data: colaboradores }] = await Promise.all([
 		supabase.from('clientes').select('*').eq('id', params.id).single(),
-		supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').eq('ativo', true).order('nome')
+		colaboradoresAtivos(supabase)
 	]);
 
 	if (e || !cliente) throw error(404, 'Cliente não encontrado');

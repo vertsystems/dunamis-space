@@ -1,3 +1,4 @@
+import { clientesLite } from '$lib/server/lookups';
 import { um } from '$lib/db';
 import { str } from '$lib/form';
 import { fail } from '@sveltejs/kit';
@@ -42,7 +43,7 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 		// Sem filtro de ativo: um responsável desativado precisa continuar aparecendo
 		// no dropdown de itens existentes, senão a edição apagaria a atribuição.
 		supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').order('nome'),
-		supabase.from('clientes').select('id, nome').order('nome')
+		clientesLite(supabase)
 	]);
 
 	const errFerr = ferrRes.error;

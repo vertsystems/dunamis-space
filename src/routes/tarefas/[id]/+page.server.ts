@@ -1,3 +1,4 @@
+import { colaboradoresAtivos } from '$lib/server/lookups';
 import { error, fail, redirect } from '@sveltejs/kit';
 import { tarefaFromForm } from '$lib/tarefas';
 import { exigirPermissao } from '$lib/server/permissao';
@@ -7,7 +8,7 @@ export const load: PageServerLoad = async ({ params, locals: { supabase } }) => 
 	const [{ data: tarefa, error: e }, { data: projetos }, { data: colaboradores }] = await Promise.all([
 		supabase.from('tarefas').select('*').eq('id', params.id).single(),
 		supabase.from('projetos').select('id, nome').order('created_at', { ascending: false }),
-		supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').eq('ativo', true).order('nome')
+		colaboradoresAtivos(supabase)
 	]);
 	if (e || !tarefa) throw error(404, 'Tarefa não encontrada');
 	return { tarefa, projetos: projetos ?? [], colaboradores: colaboradores ?? [] };

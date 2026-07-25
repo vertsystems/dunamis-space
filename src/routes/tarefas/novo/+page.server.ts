@@ -1,3 +1,4 @@
+import { colaboradoresAtivos } from '$lib/server/lookups';
 import { fail, redirect } from '@sveltejs/kit';
 import { tarefaFromForm } from '$lib/tarefas';
 import { exigirPermissao } from '$lib/server/permissao';
@@ -6,7 +7,7 @@ import type { Actions, PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 	const [{ data: projetos }, { data: colaboradores }] = await Promise.all([
 		supabase.from('projetos').select('id, nome').order('created_at', { ascending: false }),
-		supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').eq('ativo', true).order('nome')
+		colaboradoresAtivos(supabase)
 	]);
 	return { projetos: projetos ?? [], colaboradores: colaboradores ?? [] };
 };

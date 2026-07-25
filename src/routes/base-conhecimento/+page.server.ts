@@ -1,3 +1,4 @@
+import { clientesLite } from '$lib/server/lookups';
 import { um } from '$lib/db';
 import type { PageServerLoad } from './$types';
 
@@ -13,7 +14,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 
 	const [{ data, error }, { data: clientes }] = await Promise.all([
 		query,
-		supabase.from('clientes').select('id, nome').order('nome')
+		clientesLite(supabase)
 	]);
 	const artigos = (data ?? []).map((a) => ({ ...a, cliente: um(a.cliente) }));
 	return { artigos, clientes: clientes ?? [], q, loadError: error?.message ?? null };
