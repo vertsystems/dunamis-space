@@ -14,15 +14,23 @@
 	--ds-glass: rgba(255, 255, 255, 0.72);
 	--ds-glass-border: rgba(255, 255, 255, 0.65);
 
-	// Layout: barra de departamentos flutuante + sidebar contextual
-	--ds-topbar-h: 50px;
-	--ds-topbar-gap: 10px;
-	--ds-topbar-top: 0;
-	--ds-topbar-space: calc(var(--ds-topbar-top) + var(--ds-topbar-h) + 24px);
+	// Layout: barra de topo de largura total + sidebar contextual.
+	// A altura TOTAL da barra é derivada das partes (--ds-topbar-full), então o
+	// espaço reservado abaixo dela nunca sai de sincronia com o visual.
+	// Atenção: em calc() todo valor precisa de unidade — `0` puro invalida a var.
+	--ds-topbar-h: 50px; // altura do conteúdo interno (avatar / menu)
+	--ds-topbar-pad-y: 6px; // respiro vertical da barra
+	--ds-topbar-border: 3px; // borda dupla inferior
+	--ds-topbar-full: calc(var(--ds-topbar-h) + 2 * var(--ds-topbar-pad-y) + var(--ds-topbar-border));
+	--ds-topbar-space: calc(var(--ds-topbar-full) + 16px); // barra + folga
 
 	// Largura máxima da coluna do app (sidebar + conteúdo). Centraliza tudo em
 	// telas largas, empurrando o conteúdo para o centro (~25% de margem em 1920px).
 	--ds-app-max: 1440px;
+	// Recuos laterais da coluna do app. A barra de topo usa os mesmos valores,
+	// então logo e ações alinham com a sidebar e o conteúdo.
+	--ds-gutter-left: 50px;
+	--ds-gutter-right: 80px;
 }
 
 html,
@@ -60,24 +68,39 @@ body::before {
 // Barra de topo de largura total (100vw) — fundo branco translúcido em glass
 .app-topbar {
 	position: fixed;
-	top: var(--ds-topbar-top);
+	top: 0;
 	left: 0;
 	right: 0;
 	width: 100%;
 	z-index: 30;
 	display: flex;
 	justify-content: center;
-	align-items: center;
-	gap: 10px;
-	padding: 6px var(--ds-topbar-gap);
-	// Barra de topo de largura total (100vw): fundo branco translúcido + borda
-	// dupla só embaixo, atrás da logo, do menu e das ações.
-	background: rgba(255, 255, 255, 0.9);
+	padding: var(--ds-topbar-pad-y) 0;
+	// Barra de largura total (100vw): fundo branco translúcido + borda dupla só
+	// embaixo, atrás da logo, do menu e das ações. Opaca o bastante para que o
+	// conteúdo não apareça por trás ao rolar.
+	background: rgba(255, 255, 255, 0.95);
 	backdrop-filter: blur(20px) saturate(180%);
 	-webkit-backdrop-filter: blur(20px) saturate(180%);
-	border-bottom: 3px double #d7dbe0;
+	border-bottom: var(--ds-topbar-border) double #d7dbe0;
+
+	// Conteúdo da barra alinhado à coluna do app: 3 trilhas mantêm o menu no
+	// centro óptico mesmo com logo e ações de larguras diferentes.
+	.topbar-inner {
+		width: 100%;
+		max-width: var(--ds-app-max);
+		margin-inline: auto;
+		padding-left: var(--ds-gutter-left);
+		padding-right: var(--ds-gutter-right);
+		min-height: var(--ds-topbar-h);
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+		align-items: center;
+		gap: 10px;
+	}
 
 	.brand {
+		justify-self: start;
 		display: inline-flex;
 		align-items: center;
 		flex-shrink: 0;
@@ -92,13 +115,13 @@ body::before {
 	.departments {
 		// Fundo/borda agora vivem na .app-topbar (barra de largura total). Aqui só
 		// o container flex dos links de departamento, transparente.
-		min-height: var(--ds-topbar-h);
+		justify-self: center;
 		display: flex;
 		flex-wrap: wrap;
 		justify-content: center;
 		align-items: center;
 		gap: 0.15rem;
-		padding: 0.28rem 0.45rem;
+		padding: 0.28rem 0;
 
 		a {
 			position: relative;
@@ -147,6 +170,7 @@ body::before {
 	}
 
 	.actions {
+		justify-self: end;
 		display: flex;
 		align-items: center;
 		gap: 0.3rem;
@@ -257,7 +281,7 @@ body::before {
 .app-sidebar {
 	width: 244px;
 	flex-shrink: 0;
-	margin: 0.75rem 0 0 50px;
+	margin: 0.75rem 0 0 var(--ds-gutter-left);
 	padding: 0.7rem 0.6rem;
 	background: var(--ds-glass);
 	backdrop-filter: blur(20px) saturate(180%);
@@ -419,20 +443,30 @@ body::before {
 .app-content {
 	flex: 1;
 	min-width: 0;
-	padding: 0.9rem 80px 3rem;
+	padding: 0.9rem var(--ds-gutter-right) 3rem;
 }
 
 // Mobile: topo e sidebar mostram apenas ícones
 @media (max-width: 768px) {
-	.app-topbar {
-		gap: 0.4rem;
-		padding: 6px 0.45rem;
+	// Recuos menores: barra, sidebar e conteúdo encolhem juntos.
+	:root {
+		--ds-gutter-left: 12px;
+		--ds-gutter-right: 12px;
+	}
 
-		.brand-name {
-			display: none;
+	.app-topbar {
+		// Sem as 3 trilhas do grid: no aperto a trilha `auto` colapsava para a
+		// largura de um item e quebrava o menu em duas linhas (barra mais alta que
+		// --ds-topbar-full). Flex + margin auto centra sem deixar quebrar.
+		.topbar-inner {
+			display: flex;
+			align-items: center;
+			gap: 0.4rem;
 		}
 
 		.departments {
+			margin-inline: auto;
+			flex-wrap: nowrap;
 			gap: 0.1rem;
 
 			a {
@@ -451,7 +485,6 @@ body::before {
 
 	.app-sidebar {
 		width: 60px;
-		margin-left: 12px;
 		padding: 0.5rem 0.45rem;
 
 		.sidebar-title,
@@ -500,10 +533,10 @@ body::before {
 	}
 
 	.app-content {
-		padding: 0.9rem 0.9rem 2.5rem;
+		padding: 0.9rem var(--ds-gutter-right) 2.5rem;
 
 		&.is-full {
-			padding-left: 0.9rem;
+			padding-left: var(--ds-gutter-right);
 		}
 	}
 }

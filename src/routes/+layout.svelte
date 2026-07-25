@@ -212,53 +212,55 @@
 {:else}
 	<div class="app">
 		<header class="app-topbar">
-			<a class="brand" href="/">
-				<img class="brand-logo" src={logo} alt="Dunamis Space" />
-			</a>
+			<div class="topbar-inner">
+				<a class="brand" href="/">
+					<img class="brand-logo" src={logo} alt="Dunamis Space" />
+				</a>
 
-			<nav class="departments">
-				{#each departamentosVisiveis as d (d.id)}
-					{@const badge = badgeDe(d.id)}
-					<a href={deptHref(d)} class:is-active={deptAtivo === d.id} title={d.label}>
-						<Icon name={d.icon} size={14} />
-						<span class="dept-label">{d.label}</span>
-						{#if badge}<span class="badge">{badge}</span>{/if}
-					</a>
-				{/each}
-			</nav>
+				<nav class="departments">
+					{#each departamentosVisiveis as d (d.id)}
+						{@const badge = badgeDe(d.id)}
+						<a href={deptHref(d)} class:is-active={deptAtivo === d.id} title={d.label}>
+							<Icon name={d.icon} size={14} />
+							<span class="dept-label">{d.label}</span>
+							{#if badge}<span class="badge">{badge}</span>{/if}
+						</a>
+					{/each}
+				</nav>
 
-			<div class="actions">
-				<button
-					class="icon-btn"
-					class:is-spinning={refreshing}
-					onclick={refresh}
-					title="Atualizar"
-					aria-label="Atualizar"
-				>
-					<Icon name="refresh" size={14} />
-				</button>
-				{#if session}
-					<a
-						class="avatar"
-						href="/perfil"
-						title={perfil?.nome ?? session.user.email}
-						aria-label="Meu perfil"
+				<div class="actions">
+					<button
+						class="icon-btn"
+						class:is-spinning={refreshing}
+						onclick={refresh}
+						title="Atualizar"
+						aria-label="Atualizar"
 					>
-						<span class="avatar-img">
-							{#if perfil?.avatar_url}
-								<img src={perfil.avatar_url} alt="" />
-							{:else}
-								{initials}
-							{/if}
-						</span>
-						{#if cargoUsuario}
-							<span class="avatar-cargo"><CargoBadge funcao={cargoUsuario} /></span>
-						{/if}
-					</a>
-					<button class="icon-btn" onclick={signOut} title="Sair" aria-label="Sair">
-						<Icon name="logout" size={14} />
+						<Icon name="refresh" size={14} />
 					</button>
-				{/if}
+					{#if session}
+						<a
+							class="avatar"
+							href="/perfil"
+							title={perfil?.nome ?? session.user.email}
+							aria-label="Meu perfil"
+						>
+							<span class="avatar-img">
+								{#if perfil?.avatar_url}
+									<img src={perfil.avatar_url} alt="" />
+								{:else}
+									{initials}
+								{/if}
+							</span>
+							{#if cargoUsuario}
+								<span class="avatar-cargo"><CargoBadge funcao={cargoUsuario} /></span>
+							{/if}
+						</a>
+						<button class="icon-btn" onclick={signOut} title="Sair" aria-label="Sair">
+							<Icon name="logout" size={14} />
+						</button>
+					{/if}
+				</div>
 			</div>
 		</header>
 
