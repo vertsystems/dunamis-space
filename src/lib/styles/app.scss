@@ -17,8 +17,8 @@
 	// Layout: barra de departamentos flutuante + sidebar contextual
 	--ds-topbar-h: 50px;
 	--ds-topbar-gap: 10px;
-	--ds-topbar-top: 2.4vh;
-	--ds-topbar-space: calc(var(--ds-topbar-top) + var(--ds-topbar-h) + 16px);
+	--ds-topbar-top: 0;
+	--ds-topbar-space: calc(var(--ds-topbar-top) + var(--ds-topbar-h) + 24px);
 
 	// Largura máxima da coluna do app (sidebar + conteúdo). Centraliza tudo em
 	// telas largas, empurrando o conteúdo para o centro (~25% de margem em 1920px).
@@ -57,7 +57,7 @@ body::before {
 	text-decoration: none;
 }
 
-// Barra de departamentos flutuante (topo) — glass
+// Barra de topo de largura total (100vw) — fundo branco translúcido em glass
 .app-topbar {
 	position: fixed;
 	top: var(--ds-topbar-top);
@@ -69,16 +69,13 @@ body::before {
 	justify-content: center;
 	align-items: center;
 	gap: 10px;
-	padding: 0 var(--ds-topbar-gap);
-	// O topbar é transparente; só o MENU é um pill de vidro. Logo e ações ficam
-	// sem fundo, colados ao menu. Cliques passam pelos vãos para o conteúdo abaixo.
-	pointer-events: none;
-
-	.brand,
-	.departments,
-	.actions {
-		pointer-events: auto;
-	}
+	padding: 6px var(--ds-topbar-gap);
+	// Barra de topo de largura total (100vw): fundo branco translúcido + borda
+	// dupla só embaixo, atrás da logo, do menu e das ações.
+	background: rgba(255, 255, 255, 0.9);
+	backdrop-filter: blur(20px) saturate(180%);
+	-webkit-backdrop-filter: blur(20px) saturate(180%);
+	border-bottom: 3px double #d7dbe0;
 
 	.brand {
 		display: inline-flex;
@@ -93,17 +90,9 @@ body::before {
 	}
 
 	.departments {
+		// Fundo/borda agora vivem na .app-topbar (barra de largura total). Aqui só
+		// o container flex dos links de departamento, transparente.
 		min-height: var(--ds-topbar-h);
-		// Branco com transparência leve (quase opaco) + borda dupla só embaixo.
-		background: rgba(255, 255, 255, 0.9);
-		backdrop-filter: blur(20px) saturate(180%);
-		-webkit-backdrop-filter: blur(20px) saturate(180%);
-		border: none;
-		border-bottom: 3px double #d7dbe0;
-		border-radius: 18px;
-		box-shadow:
-			0 8px 24px -6px rgba(16, 24, 40, 0.14),
-			0 2px 6px rgba(16, 24, 40, 0.05);
 		display: flex;
 		flex-wrap: wrap;
 		justify-content: center;
@@ -437,7 +426,7 @@ body::before {
 @media (max-width: 768px) {
 	.app-topbar {
 		gap: 0.4rem;
-		padding: 0 0.45rem;
+		padding: 6px 0.45rem;
 
 		.brand-name {
 			display: none;
