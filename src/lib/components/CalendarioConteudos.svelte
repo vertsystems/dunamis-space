@@ -445,6 +445,8 @@
 				     conteúdo (isolate + -z-10) e os botões de ação (＋, pílulas) são IRMÃOS
 				     dele, não filhos — sem interativo aninhado e navegável por teclado. -->
 				<div
+					role="group"
+					aria-label={`Dia ${key}`}
 					ondragover={(e) => {
 						if (!arrastando) return;
 						e.preventDefault();
@@ -500,6 +502,8 @@
 			{#each diasDaSemana as d (chaveDia(d))}
 				{@const key = chaveDia(d)}
 				<div
+					role="group"
+					aria-label={`Dia ${key}`}
 					ondragover={(e) => {
 						if (!arrastando) return;
 						e.preventDefault();

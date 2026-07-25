@@ -211,6 +211,13 @@
 	{@render children()}
 {:else}
 	<div class="app">
+		<!-- Sem isto são ~15 tabulações até o conteúdo a cada troca de página. -->
+		<a
+			href="#conteudo"
+			class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-[var(--radius)] focus:bg-surface focus:px-4 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-navy focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-brand/50"
+		>
+			Pular para o conteúdo
+		</a>
 		<header class="app-topbar">
 			<div class="topbar-inner">
 				<a class="brand" href="/">
@@ -306,7 +313,7 @@
 					</nav>
 				</aside>
 			{/if}
-			<main class="app-content" class:is-full={!areas.length}>
+			<main id="conteudo" tabindex="-1" class="app-content" class:is-full={!areas.length}>
 				{@render children()}
 			</main>
 		</div>

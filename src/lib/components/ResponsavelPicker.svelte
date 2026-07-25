@@ -61,8 +61,10 @@
 		'inline-flex items-center gap-1.5 rounded-full border border-grey-200 bg-bg px-2.5 py-1 text-sm font-medium text-slate transition-colors hover:bg-grey-200/60 peer-checked:border-brand peer-checked:bg-brand/10 peer-checked:text-navy peer-focus-visible:ring-2 peer-focus-visible:ring-brand/30';
 </script>
 
-<div class={wrapperClass}>
-	{#if label}<span class="mb-1.5 block text-sm font-medium text-navy">{label}</span>{/if}
+<!-- fieldset/legend: agrupa os radios/checkboxes, então o leitor de tela anuncia
+     "Responsável" antes de cada opção (antes o rótulo era um <span> solto). -->
+<fieldset class="min-w-0 {wrapperClass}">
+	{#if label}<legend class="mb-1.5 block text-sm font-medium text-navy">{label}</legend>{/if}
 	<div class="flex flex-wrap gap-1.5">
 		{#if !multiple}
 			<label class="cursor-pointer">
@@ -81,7 +83,8 @@
 				/>
 				<span class={tile}>
 					{#if col.avatar_url}
-						<img src={col.avatar_url} alt={col.nome} class="size-5 shrink-0 rounded-full object-cover" />
+						<!-- alt="" — o nome já vem no <span> ao lado; com alt={col.nome} era lido duas vezes. -->
+						<img src={col.avatar_url} alt="" class="size-5 shrink-0 rounded-full object-cover" />
 					{:else}
 						<span
 							class="grid size-5 shrink-0 place-items-center rounded-full text-[0.55rem] font-semibold text-white {cor(col.nome)}"
@@ -97,4 +100,4 @@
 			<span class="text-sm text-grey">Nenhum colaborador ativo.</span>
 		{/if}
 	</div>
-</div>
+</fieldset>

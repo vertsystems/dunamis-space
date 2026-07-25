@@ -268,11 +268,11 @@
 						<table class="w-full text-left border-collapse">
 							<thead>
 								<tr class="text-grey text-xs uppercase tracking-wider border-b border-grey-200">
-									<th class="px-5 py-3 font-semibold">Prestador</th>
-									<th class="px-5 py-3 font-semibold">Região</th>
-									<th class="px-5 py-3 font-semibold">Observações</th>
-									<th class="px-5 py-3 font-semibold text-right">Valor</th>
-									<th class="px-5 py-3 font-semibold text-right w-20"></th>
+									<th scope="col" class="px-5 py-3 font-semibold">Prestador</th>
+									<th scope="col" class="px-5 py-3 font-semibold">Região</th>
+									<th scope="col" class="px-5 py-3 font-semibold">Observações</th>
+									<th scope="col" class="px-5 py-3 font-semibold text-right">Valor</th>
+									<th scope="col" class="px-5 py-3 font-semibold text-right w-20"><span class="sr-only">Ações</span></th>
 								</tr>
 							</thead>
 							<tbody class="divide-y divide-grey-200/70">

@@ -95,12 +95,12 @@
 
 	<form onsubmit={enviar}>
 		<Textarea
-		rows={2}
-		placeholder="Escreva um comentário…"
-		aria-label="Novo comentário"
-		bind:value={texto}
-		wrapperClass="mb-2"
-	/>
+			rows={2}
+			placeholder="Escreva um comentário…"
+			aria-label="Novo comentário"
+			bind:value={texto}
+			wrapperClass="mb-2"
+		/>
 		<Button size="sm" type="submit" loading={saving}>Comentar</Button>
 	</form>
 </Card>

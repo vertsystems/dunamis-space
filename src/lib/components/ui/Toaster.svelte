@@ -13,16 +13,23 @@
 	const icon: Record<ToastTone, string> = { success: '✓', error: '!', info: 'i' };
 </script>
 
-<div class="fixed bottom-5 right-5 z-[60] flex flex-col gap-2.5 w-[min(90vw,23rem)]">
+<!-- A região live tem de existir ANTES do texto entrar: quando role/aria-live
+     nasciam junto com o toast, os leitores de tela não anunciavam nada. Este
+     container está sempre no DOM; só o conteúdo é que muda. -->
+<div
+	role="status"
+	aria-live="polite"
+	aria-atomic="false"
+	class="fixed bottom-5 right-5 z-[60] flex flex-col gap-2.5 w-[min(90vw,23rem)]"
+>
 	{#each toasts as t (t.id)}
 		<div
 			class="flex items-center gap-2.5 rounded-[var(--radius-lg)] border bg-surface/85 backdrop-blur-md px-4 py-3 text-sm font-medium shadow-lg {tone[t.tone]}"
-			role={t.tone === 'error' ? 'alert' : 'status'}
-			aria-live={t.tone === 'error' ? 'assertive' : 'polite'}
 			in:fly={{ y: 14, duration: 220 }}
 			out:fade={{ duration: 150 }}
 		>
 			<span
+				aria-hidden="true"
 				class="grid size-5 shrink-0 place-items-center rounded-full text-xs font-bold {tone[t.tone]}"
 				>{icon[t.tone]}</span
 			>
