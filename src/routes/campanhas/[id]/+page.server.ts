@@ -3,13 +3,23 @@ import { campanhaFromForm } from '$lib/campanhas';
 import { redesFromForm } from '$lib/conteudo';
 import { parseMes, fmtMes, mesAnterior, mesSeguinte, celulasMes } from '$lib/calendario';
 import { exigirPermissao } from '$lib/server/permissao';
+import { sel, selUm } from '$lib/server/query';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, url, locals: { supabase } }) => {
-	const [{ data: campanha, error: e }, { data: clientes }, { data: colaboradores }] = await Promise.all([
+	// Clientes/colaboradores alimentam os selects do formulário: com o erro descartado,
+	// uma falha de RLS virava lista vazia e parecia que não havia cadastro nenhum.
+	const [{ data: campanha, error: e }, clientes, colaboradores] = await Promise.all([
 		supabase.from('campanhas').select('*, cliente:clientes(nome)').eq('id', params.id).single(),
-		supabase.from('clientes').select('id, nome').order('nome'),
-		supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').eq('ativo', true).order('nome')
+		sel(supabase.from('clientes').select('id, nome').order('nome'), 'campanhas/[id]: lista de clientes'),
+		sel(
+			supabase
+				.from('colaboradores')
+				.select('id, nome, avatar_url, funcao, funcoes')
+				.eq('ativo', true)
+				.order('nome'),
+			'campanhas/[id]: colaboradores ativos'
+		)
 	]);
 	if (e || !campanha) throw error(404, 'Campanha não encontrada');
 
@@ -37,14 +47,17 @@ export const load: PageServerLoad = async ({ params, url, locals: { supabase } }
 			Date.UTC(ultima.getFullYear(), ultima.getMonth(), ultima.getDate() + 1) + DIA
 		).toISOString();
 
-		const { data: conteudos } = await supabase
-			.from('conteudos')
-			.select('id, titulo, tipo, status, data_publicacao')
-			.eq('cliente_id', campanha.cliente_id)
-			.not('data_publicacao', 'is', null)
-			.gte('data_publicacao', gte)
-			.lt('data_publicacao', lt)
-			.order('data_publicacao', { ascending: true });
+		const conteudos = await sel(
+			supabase
+				.from('conteudos')
+				.select('id, titulo, tipo, status, data_publicacao')
+				.eq('cliente_id', campanha.cliente_id)
+				.not('data_publicacao', 'is', null)
+				.gte('data_publicacao', gte)
+				.lt('data_publicacao', lt)
+				.order('data_publicacao', { ascending: true }),
+			`campanhas/[id]: conteúdos do calendário (${fmtMes(ano, mes)})`
+		);
 
 		calendario = {
 			ano,
@@ -53,14 +66,14 @@ export const load: PageServerLoad = async ({ params, url, locals: { supabase } }
 			prev: mesAnterior(ano, mes),
 			next: mesSeguinte(ano, mes),
 			inicioMes: fmtMes(Number(campanha.data_inicio.slice(0, 4)), Number(campanha.data_inicio.slice(5, 7)) - 1),
-			conteudos: conteudos ?? []
+			conteudos
 		};
 	}
 
 	return {
 		campanha,
-		clientes: clientes ?? [],
-		colaboradores: colaboradores ?? [],
+		clientes,
+		colaboradores,
 		calendario
 	};
 };
@@ -88,11 +101,10 @@ export const actions: Actions = {
 			return typeof v === 'string' && v.trim() !== '' ? v.trim() : null;
 		};
 
-		const { data: camp } = await supabase
-			.from('campanhas')
-			.select('cliente_id')
-			.eq('id', params.id)
-			.single();
+		const camp = await selUm<{ cliente_id: string | null }>(
+			supabase.from('campanhas').select('cliente_id').eq('id', params.id).single(),
+			'campanhas/[id]/agendar: cliente da campanha'
+		);
 		if (!camp?.cliente_id) return fail(400, { agendarError: 'Campanha sem cliente vinculado.' });
 
 		const dataPublicacao = str('data_publicacao');

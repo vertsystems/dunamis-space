@@ -1,3 +1,4 @@
+import { sel } from '$lib/server/query';
 import type { PageServerLoad } from './$types';
 
 const MES_RE = /^\d{4}-\d{2}$/;
@@ -37,12 +38,15 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		.order('data_publicacao', { ascending: true });
 
 	// Conteúdos sem data agendada (aparecem numa lista à parte).
-	const { data: semDataRaw } = await supabase
-		.from('conteudos')
-		.select('id, titulo, tipo, status, cliente:clientes(nome)')
-		.is('data_publicacao', null)
-		.order('created_at', { ascending: false })
-		.limit(50);
+	const semDataRaw = await sel(
+		supabase
+			.from('conteudos')
+			.select('id, titulo, tipo, status, cliente:clientes(nome)')
+			.is('data_publicacao', null)
+			.order('created_at', { ascending: false })
+			.limit(50),
+		'conteudo/calendario: conteúdos sem data'
+	);
 
 	const conteudos = (data ?? []).map((c) => ({
 		id: c.id as string,
@@ -53,7 +57,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		cliente_nome: um<{ nome: string }>(c.cliente)?.nome ?? null
 	}));
 
-	const semData = (semDataRaw ?? []).map((c) => ({
+	const semData = semDataRaw.map((c) => ({
 		id: c.id as string,
 		titulo: c.titulo as string | null,
 		tipo: c.tipo as string,

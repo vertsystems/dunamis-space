@@ -1,6 +1,7 @@
 import type { PageServerLoad } from './$types';
 import { DIAS_CONTRATO_VENCENDO, DIAS_SEM_INTERACAO } from '$lib/alertas';
 import { cached, chaveDoUsuario } from '$lib/server/cache';
+import { sel } from '$lib/server/query';
 
 /** PostgREST tipa relações to-one como array; extrai o objeto único. */
 function um<T>(v: T | T[] | null | undefined): T | null {
@@ -164,12 +165,11 @@ async function carregarPipeline(supabase: SupabaseClient) {
 
 /** Lista de clientes ativos para o painel de bolinhas na Visão Geral. */
 async function carregarClientes(supabase: SupabaseClient) {
-	const { data } = await supabase
-		.from('clientes')
-		.select('id, nome')
-		.eq('status', 'ativo')
-		.order('nome', { ascending: true });
-	return (data ?? []).map((c) => ({ id: c.id as string, nome: c.nome as string }));
+	const data = await sel(
+		supabase.from('clientes').select('id, nome').eq('status', 'ativo').order('nome', { ascending: true }),
+		'dashboard: clientes ativos'
+	);
+	return data.map((c) => ({ id: c.id as string, nome: c.nome as string }));
 }
 
 /** Bloco Operação: resumo do Kanban de tarefas + conteúdo (publicações/aprovações). */

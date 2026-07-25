@@ -1,15 +1,22 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { clienteFromForm } from '$lib/clientes';
 import { exigirPermissao } from '$lib/server/permissao';
+import { selComErro } from '$lib/server/query';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals: { supabase } }) => {
-	const { data } = await supabase
-		.from('colaboradores')
-		.select('id, nome, avatar_url, funcao, funcoes')
-		.eq('ativo', true)
-		.order('nome');
-	return { colaboradores: data ?? [] };
+	// Lookup do formulário: se a query falha e o erro é engolido, o select fica
+	// vazio e o usuário conclui que não há colaboradores — daí o aviso na tela.
+	const { dados: colaboradores, erro } = await selComErro(
+		supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').eq('ativo', true).order('nome'),
+		'clientes/novo: colaboradores ativos'
+	);
+	return {
+		colaboradores,
+		loadError: erro
+			? 'Não foi possível carregar a lista de colaboradores. Recarregue a página.'
+			: null
+	};
 };
 
 export const actions: Actions = {

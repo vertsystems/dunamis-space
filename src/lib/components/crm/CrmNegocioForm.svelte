@@ -17,6 +17,7 @@
 		error = null,
 		submitLabel = 'Salvar',
 		action = '?/negocio_criar',
+		podeEditar = true,
 		onSuccess,
 		onCancel
 	}: {
@@ -29,6 +30,9 @@
 		error?: string | null;
 		submitLabel?: string;
 		action?: string;
+		/** Sem permissão de edição o autosave fica desligado — senão cada tecla
+		    digitada vira um 403 vindo da action. */
+		podeEditar?: boolean;
 		onSuccess?: () => void;
 		onCancel?: () => void;
 	} = $props();
@@ -62,7 +66,7 @@
 				toast.error((result.data as { error?: string })?.error ?? 'Não foi possível salvar.');
 		};
 	}}
-	use:autosave={{ enabled: editando, onStatus: (s) => (saveStatus = s) }}
+	use:autosave={{ enabled: editando && podeEditar, onStatus: (s) => (saveStatus = s) }}
 	class="grid grid-cols-1 md:grid-cols-12 gap-3"
 >
 	{#if negocio}<input type="hidden" name="id" value={negocio.id} />{/if}

@@ -1,3 +1,4 @@
+import { sel } from '$lib/server/query';
 import type { PageServerLoad } from './$types';
 
 /** PostgREST tipa relações to-one como array; extrai o objeto único. */
@@ -40,29 +41,33 @@ async function carregarRenovacoes(supabase: Parameters<PageServerLoad>[0]['local
 	const hoje = new Date().toISOString().slice(0, 10);
 	const em30 = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
 
-	const { data } = await supabase
-		.from('adm_ferramentas')
-		.select('id, nome, categoria, custo_mensal, proxima_renovacao')
-		.eq('ativo', true)
-		.not('proxima_renovacao', 'is', null)
-		.lte('proxima_renovacao', em30)
-		.gte('proxima_renovacao', hoje)
-		.order('proxima_renovacao', { ascending: true })
-		.limit(8);
-
-	return data ?? [];
+	return sel(
+		supabase
+			.from('adm_ferramentas')
+			.select('id, nome, categoria, custo_mensal, proxima_renovacao')
+			.eq('ativo', true)
+			.not('proxima_renovacao', 'is', null)
+			.lte('proxima_renovacao', em30)
+			.gte('proxima_renovacao', hoje)
+			.order('proxima_renovacao', { ascending: true })
+			.limit(8),
+		'administrativo: renovações de ferramentas'
+	);
 }
 
 /** Itens de onboarding pendentes, agrupados por cliente. */
 async function carregarOnboardingPendente(supabase: Parameters<PageServerLoad>[0]['locals']['supabase']) {
-	const { data } = await supabase
-		.from('adm_onboarding_itens')
-		.select('id, texto, cliente:clientes(id, nome)')
-		.eq('concluido', false)
-		.order('created_at', { ascending: true })
-		.limit(8);
+	const data = await sel(
+		supabase
+			.from('adm_onboarding_itens')
+			.select('id, texto, cliente:clientes(id, nome)')
+			.eq('concluido', false)
+			.order('created_at', { ascending: true })
+			.limit(8),
+		'administrativo: itens de onboarding pendentes'
+	);
 
-	return (data ?? []).map((i) => ({
+	return data.map((i) => ({
 		id: i.id as string,
 		texto: i.texto as string,
 		cliente_id: um<{ id: string; nome: string }>(i.cliente)?.id ?? null,

@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
-	import { Button, Card, Badge, Input, Select, Textarea, Checkbox, EmptyState, DataTable } from '$lib/components/ui';
+	import { Button, Card, Badge, Input, Select, Textarea, Checkbox, EmptyState, DataTable, Modal } from '$lib/components/ui';
 	import type { BadgeTone, ColumnDef } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
 	import ResponsavelPicker from '$lib/components/ResponsavelPicker.svelte';
-	import CrmModal from '$lib/components/crm/CrmModal.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import { podeEditar, podeExcluir } from '$lib/permissoes';
 	import { formatBRL } from '$lib/clientes';
@@ -203,21 +202,21 @@
 {/if}
 
 <!-- ================= Modais ================= -->
-<CrmModal
+<Modal
 	open={modalFerramenta}
 	title={ferramentaEdit ? 'Editar ferramenta' : 'Nova ferramenta'}
 	onClose={() => (modalFerramenta = false)}
 >
 	{@render formFerramenta()}
-</CrmModal>
+</Modal>
 
-<CrmModal
+<Modal
 	open={modalAcesso}
 	title={acessoEdit ? 'Editar acesso' : 'Novo acesso'}
 	onClose={() => (modalAcesso = false)}
 >
 	{@render formAcesso()}
-</CrmModal>
+</Modal>
 
 {#snippet formFerramenta()}
 	{@const f = ferramentaEdit}

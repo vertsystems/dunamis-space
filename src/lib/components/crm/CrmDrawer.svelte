@@ -58,6 +58,8 @@
 		colaboradores = [],
 		clientes = [],
 		pipelineAtivoId = null,
+		podeEditar = false,
+		podeExcluir = false,
 		onClose,
 		onToggleAtividade,
 		onOpenNegocio,
@@ -72,6 +74,10 @@
 		stages?: Stage[];
 		colaboradores?: Colaborador[];
 		clientes?: { id: string; nome: string }[];
+		/** Gate de UI: nenhum componente do CRM checava permissão, então quem tinha
+		    só "ver" via os botões e batia num 403 de tela cheia ao clicar. */
+		podeEditar?: boolean;
+		podeExcluir?: boolean;
 		pipelineAtivoId?: string | null;
 		onClose: () => void;
 		onToggleAtividade: (id: string, concluida: boolean) => void;
@@ -258,6 +264,7 @@
 						{colaboradores}
 						action="?/negocio_atualizar"
 						submitLabel="Salvar alterações"
+						{podeEditar}
 					/>
 				</div>
 
@@ -322,6 +329,7 @@
 						{clientes}
 						action="?/contato_atualizar"
 						submitLabel="Salvar alterações"
+						{podeEditar}
 					/>
 				</div>
 
@@ -393,12 +401,14 @@
 								</Badge>
 							{/if}
 						</div>
-						<form method="POST" action="?/atividade_excluir" use:enhance>
-							<input type="hidden" name="id" value={a.id} />
-							<button type="submit" class="text-grey hover:text-brand-danger" aria-label="Excluir atividade">
-								<Icon name="trash" size={14} />
-							</button>
-						</form>
+						{#if podeExcluir}
+							<form method="POST" action="?/atividade_excluir" use:enhance>
+								<input type="hidden" name="id" value={a.id} />
+								<button type="submit" class="text-grey hover:text-brand-danger" aria-label="Excluir atividade">
+									<Icon name="trash" size={14} />
+								</button>
+							</form>
+						{/if}
 					</div>
 				{/each}
 			</div>
@@ -409,6 +419,7 @@
 {/snippet}
 
 {#snippet zonaPerigo(action: string, registroId: string, label: string)}
+	{#if podeExcluir}
 	<div class="border-t border-grey-200 pt-4">
 		{#if confirmDel}
 			<div class="flex items-center gap-2">
@@ -425,4 +436,5 @@
 			</button>
 		{/if}
 	</div>
+	{/if}
 {/snippet}

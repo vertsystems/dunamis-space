@@ -1,6 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import { hojeSP } from '$lib/rotina';
 import { funcaoLabel } from '$lib/equipe';
+import { sel, selUm } from '$lib/server/query';
 import type { Actions, PageServerLoad } from './$types';
 
 function um<T>(v: T | T[] | null | undefined): T | null {
@@ -45,8 +46,11 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 			: [];
 
 	// --- Mapa de Rotina ---
-	const { data: cargosRaw } = await supabase.from('rotina_itens').select('cargo');
-	const cargosComRotina = [...new Set((cargosRaw ?? []).map((r) => r.cargo as string))];
+	const cargosRaw = await sel(
+		supabase.from('rotina_itens').select('cargo'),
+		'meu-dia: cargos com rotina'
+	);
+	const cargosComRotina = [...new Set(cargosRaw.map((r) => r.cargo as string))];
 	// União: cargos do usuário + os que já têm rotina cadastrada (para o seletor).
 	const cargosOpcoes = [...new Set([...meusCargos, ...cargosComRotina])]
 		.map((c) => ({ value: c, label: funcaoLabel(c) }))
@@ -62,22 +66,28 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		cargosComRotina[0] ||
 		'social_media';
 
-	const { data: rotinaItens } = await supabase
-		.from('rotina_itens')
-		.select('id, cargo, dia_semana, titulo, ordem')
-		.eq('cargo', cargoSel)
-		.order('dia_semana', { ascending: true })
-		.order('ordem', { ascending: true });
+	const rotinaItens = await sel(
+		supabase
+			.from('rotina_itens')
+			.select('id, cargo, dia_semana, titulo, ordem')
+			.eq('cargo', cargoSel)
+			.order('dia_semana', { ascending: true })
+			.order('ordem', { ascending: true }),
+		`meu-dia: itens da rotina (cargo ${cargoSel})`
+	);
 
 	const { data: hoje } = { data: hojeSP() };
 	let feitos: string[] = [];
 	if (meuId) {
-		const { data: concl } = await supabase
-			.from('rotina_conclusoes')
-			.select('item_id')
-			.eq('colaborador_id', meuId)
-			.eq('data', hoje.data);
-		feitos = (concl ?? []).map((c) => c.item_id as string);
+		const concl = await sel(
+			supabase
+				.from('rotina_conclusoes')
+				.select('item_id')
+				.eq('colaborador_id', meuId)
+				.eq('data', hoje.data),
+			'meu-dia: conclusões da rotina de hoje'
+		);
+		feitos = concl.map((c) => c.item_id as string);
 	}
 
 	// --- Tarefas em aberto ---
@@ -88,7 +98,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		.order('prazo', { ascending: true, nullsFirst: false })
 		.limit(60);
 	if (meuId) tq = tq.eq('responsavel_id', meuId);
-	const { data: tarefasRaw } = await tq;
+	const tarefasRaw = await sel(tq, 'meu-dia: tarefas em aberto');
 
 	// --- Atividades do CRM pendentes ---
 	let aq = supabase
@@ -102,7 +112,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	if (meuId) aq = aq.eq('responsavel_id', meuId);
 	const { data: atividadesRaw, error: aErr } = await aq;
 
-	const tarefas = (tarefasRaw ?? []).map((t) => ({
+	const tarefas = tarefasRaw.map((t) => ({
 		id: t.id as string,
 		titulo: t.titulo as string,
 		prazo: (t.prazo as string | null) ?? null,
@@ -131,7 +141,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 			cargoSel,
 			cargoLabel: funcaoLabel(cargoSel),
 			cargos: cargosOpcoes,
-			itens: (rotinaItens ?? []) as {
+			itens: rotinaItens as {
 				id: string;
 				cargo: string;
 				dia_semana: number;
@@ -159,13 +169,16 @@ export const actions: Actions = {
 		if (!itemId) return fail(400, { error: 'Item inválido.' });
 		const { data: hoje } = { data: hojeSP() };
 
-		const { data: existente } = await supabase
-			.from('rotina_conclusoes')
-			.select('id')
-			.eq('item_id', itemId)
-			.eq('colaborador_id', colab.id)
-			.eq('data', hoje.data)
-			.maybeSingle();
+		const existente = await selUm<{ id: string }>(
+			supabase
+				.from('rotina_conclusoes')
+				.select('id')
+				.eq('item_id', itemId)
+				.eq('colaborador_id', colab.id)
+				.eq('data', hoje.data)
+				.maybeSingle(),
+			'meu-dia/toggleRotina: conclusão existente'
+		);
 
 		const { error } = existente
 			? await supabase.from('rotina_conclusoes').delete().eq('id', existente.id)
@@ -190,14 +203,17 @@ export const actions: Actions = {
 		if (!titulo || !Number.isInteger(dia) || dia < 0 || dia > 6)
 			return fail(400, { error: 'Dados inválidos.' });
 
-		const { data: ultimo } = await supabase
-			.from('rotina_itens')
-			.select('ordem')
-			.eq('cargo', cargo)
-			.eq('dia_semana', dia)
-			.order('ordem', { ascending: false })
-			.limit(1)
-			.maybeSingle();
+		const ultimo = await selUm<{ ordem: number }>(
+			supabase
+				.from('rotina_itens')
+				.select('ordem')
+				.eq('cargo', cargo)
+				.eq('dia_semana', dia)
+				.order('ordem', { ascending: false })
+				.limit(1)
+				.maybeSingle(),
+			'meu-dia/criarItem: última ordem da rotina'
+		);
 		const ordem = (ultimo?.ordem ?? -1) + 1;
 
 		const { error } = await supabase

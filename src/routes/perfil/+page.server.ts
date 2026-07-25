@@ -14,11 +14,14 @@ export const load: PageServerLoad = async ({ locals: { supabase, user } }) => {
 
 	if (!colab && email) {
 		const nome = email.split('@')[0] || 'Usuário';
-		const { data: novo } = await supabase
+		// Falha aqui (RLS, unique violation) deixava a tela sem perfil e sem pista
+		// nenhuma do motivo — no mínimo o erro precisa aparecer no log.
+		const { data: novo, error: erroInsert } = await supabase
 			.from('colaboradores')
 			.insert({ nome, email, funcao: 'social_media', auth_user_id: user?.id ?? null })
 			.select('*')
 			.single();
+		if (erroInsert) console.error(`[query] perfil: criar colaborador (${email}): ${erroInsert.message}`);
 		colab = novo;
 	} else if (colab && !colab.auth_user_id && user?.id) {
 		await supabase.from('colaboradores').update({ auth_user_id: user.id }).eq('id', colab.id);

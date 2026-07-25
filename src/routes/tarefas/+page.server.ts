@@ -1,6 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import { um } from '$lib/db';
 import { exigirPermissao } from '$lib/server/permissao';
+import { sel, selUm } from '$lib/server/query';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
@@ -16,15 +17,28 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 
 	if (projeto) query = query.eq('projeto_id', projeto);
 
-	const [{ data, error }, { data: projetos }, { data: colaboradores }] = await Promise.all([
+	const [{ data, error }, projetos, colaboradores] = await Promise.all([
 		query,
-		supabase.from('projetos').select('id, nome').order('created_at', { ascending: false }),
-		supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').eq('ativo', true).order('nome')
+		sel(
+			supabase.from('projetos').select('id, nome').order('created_at', { ascending: false }),
+			'tarefas: lista de projetos'
+		),
+		sel(
+			supabase
+				.from('colaboradores')
+				.select('id, nome, avatar_url, funcao, funcoes')
+				.eq('ativo', true)
+				.order('nome'),
+			'tarefas: colaboradores ativos'
+		)
 	]);
 
 	let projetoNome: string | null = null;
 	if (projeto) {
-		const { data: p } = await supabase.from('projetos').select('nome').eq('id', projeto).single();
+		const p = await selUm<{ nome: string }>(
+			supabase.from('projetos').select('nome').eq('id', projeto).single(),
+			`tarefas: nome do projeto ${projeto}`
+		);
 		projetoNome = p?.nome ?? null;
 	}
 
@@ -37,8 +51,8 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		tarefas,
 		projeto,
 		projetoNome,
-		projetos: projetos ?? [],
-		colaboradores: colaboradores ?? [],
+		projetos,
+		colaboradores,
 		loadError: error?.message ?? null
 	};
 };

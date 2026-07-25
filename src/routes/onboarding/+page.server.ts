@@ -1,6 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import { ONBOARDING_PADRAO } from '$lib/adm';
 import { exigirPermissao } from '$lib/server/permissao';
+import { selComErro, selUm } from '$lib/server/query';
 import type { Actions, PageServerLoad } from './$types';
 
 const str = (fd: FormData, k: string): string | null => {
@@ -10,10 +11,12 @@ const str = (fd: FormData, k: string): string | null => {
 };
 
 export const load: PageServerLoad = async ({ locals: { supabase } }) => {
-	const { data: clientes } = await supabase
-		.from('clientes')
-		.select('id, nome, status')
-		.order('nome', { ascending: true });
+	// Esta lista alimenta o seletor de "iniciar onboarding": se a query falhar em
+	// silêncio, o <Select> vazio vira um falso "não há clientes cadastrados".
+	const { dados: clientes, erro: clientesErro } = await selComErro(
+		supabase.from('clientes').select('id, nome, status').order('nome', { ascending: true }),
+		'onboarding: lista de clientes'
+	);
 
 	const { data, error } = await supabase
 		.from('adm_onboarding_itens')
@@ -25,10 +28,10 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 		!!error && /adm_|does not exist|column|schema cache|relation/i.test(error?.message ?? '');
 
 	return {
-		clientes: clientes ?? [],
+		clientes,
 		itens: data ?? [],
 		pendente,
-		loadError: pendente ? null : (error?.message ?? null)
+		loadError: pendente ? clientesErro : (error?.message ?? clientesErro)
 	};
 };
 
@@ -88,13 +91,16 @@ export const actions: Actions = {
 		if (!cliente_id) return fail(400, { error: 'Cliente obrigatório.' });
 		if (!texto) return fail(400, { error: 'Descreva o item.' });
 
-		const { data: last } = await supabase
-			.from('adm_onboarding_itens')
-			.select('ordem')
-			.eq('cliente_id', cliente_id)
-			.order('ordem', { ascending: false })
-			.limit(1)
-			.maybeSingle();
+		const last = await selUm<{ ordem: number }>(
+			supabase
+				.from('adm_onboarding_itens')
+				.select('ordem')
+				.eq('cliente_id', cliente_id)
+				.order('ordem', { ascending: false })
+				.limit(1)
+				.maybeSingle(),
+			'onboarding/item_add: última ordem do cliente'
+		);
 		const ordem = (last?.ordem ?? -1) + 1;
 
 		const { error } = await supabase

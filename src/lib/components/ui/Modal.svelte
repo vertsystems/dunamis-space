@@ -28,17 +28,55 @@
 
 	let dialogEl = $state<HTMLElement | null>(null);
 	let gatilho: HTMLElement | null = null; // elemento focado antes de abrir
+	let snapshot: string | null = null; // estado do form ao abrir (p/ detectar edição)
 
 	// Ao abrir: guarda o gatilho e move o foco para o diálogo. Ao fechar: devolve.
 	$effect(() => {
 		if (open) {
 			gatilho = document.activeElement as HTMLElement | null;
-			tick().then(() => dialogEl?.focus());
+			tick().then(() => {
+				dialogEl?.focus();
+				snapshot = serializarForm();
+			});
 		} else if (gatilho) {
 			gatilho.focus();
 			gatilho = null;
+			snapshot = null;
 		}
 	});
+
+	// Trava a rolagem do fundo enquanto o modal está aberto. Antes, rolar dentro de
+	// um modal longo fazia a página atrás deslizar e perder a posição na lista.
+	$effect(() => {
+		if (!open) return;
+		const anterior = document.body.style.overflow;
+		document.body.style.overflow = 'hidden';
+		return () => {
+			document.body.style.overflow = anterior;
+		};
+	});
+
+	// --- Proteção contra descarte acidental do que foi digitado ---
+	// Os formulários de criação não têm auto-save: um clique fora ou um Esc jogava
+	// fora uma legenda inteira sem confirmação nem rascunho.
+	function serializarForm(): string | null {
+		const form = dialogEl?.querySelector('form');
+		if (!form) return null;
+		return [...new FormData(form).entries()]
+			.map(([k, v]) => `${k}=${typeof v === 'string' ? v : v.name}`)
+			.join('&');
+	}
+
+	function temAlteracoes(): boolean {
+		if (snapshot === null) return false;
+		const atual = serializarForm();
+		return atual !== null && atual !== snapshot;
+	}
+
+	function tentarFechar() {
+		if (temAlteracoes() && !confirm('Você tem alterações não salvas. Descartar?')) return;
+		onClose();
+	}
 
 	function focaveis(): HTMLElement[] {
 		if (!dialogEl) return [];
@@ -47,7 +85,7 @@
 
 	function onKey(e: KeyboardEvent) {
 		if (e.key === 'Escape') {
-			onClose();
+			tentarFechar();
 			return;
 		}
 		if (e.key !== 'Tab') return;
@@ -78,7 +116,7 @@
 		class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy-900/30 backdrop-blur-[3px] p-4 pt-[8vh]"
 		role="presentation"
 		onclick={(e) => {
-			if (e.target === e.currentTarget) onClose();
+			if (e.target === e.currentTarget) tentarFechar();
 		}}
 		transition:fade={{ duration: 160 }}
 	>
@@ -99,7 +137,7 @@
 				<button
 					type="button"
 					class="grid size-8 shrink-0 place-items-center rounded-[var(--radius)] text-grey transition-colors hover:bg-bg hover:text-navy"
-					onclick={onClose}
+					onclick={tentarFechar}
 					aria-label="Fechar"
 				>
 					<Icon name="x" size={18} />

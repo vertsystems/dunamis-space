@@ -2,6 +2,7 @@ import { error, fail, redirect } from '@sveltejs/kit';
 import { clienteFromForm } from '$lib/clientes';
 import { carregarCalendario } from '$lib/server/calendario';
 import { exigirPermissao } from '$lib/server/permissao';
+import { sel } from '$lib/server/query';
 import type { Actions, PageServerLoad } from './$types';
 
 /** Erro de coluna inexistente → migration 0006 ainda não aplicada. */
@@ -23,12 +24,12 @@ export const load: PageServerLoad = async ({ params, url, locals: { supabase } }
 			: [];
 	let responsaveis: { id: string; nome: string; avatar_url: string | null; funcoes: string[] }[] = [];
 	if (ids.length) {
-		const { data: rs } = await supabase
-			.from('colaboradores')
-			.select('id, nome, avatar_url, funcao, funcoes')
-			.in('id', ids);
+		const rs = await sel(
+			supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').in('id', ids),
+			'cadastro/[id]: responsáveis do cliente'
+		);
 		responsaveis = ids
-			.map((id) => rs?.find((r) => r.id === id))
+			.map((id) => rs.find((r) => r.id === id))
 			.filter((r): r is NonNullable<typeof r> => !!r)
 			.map((r) => ({
 				id: r.id,

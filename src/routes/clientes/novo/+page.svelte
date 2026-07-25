@@ -12,6 +12,11 @@
 
 <Card>
 	<h1 class="text-sm font-semibold text-navy mb-4">Novo cliente</h1>
+	{#if data.loadError}
+		<div class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">
+			{data.loadError}
+		</div>
+	{/if}
 	{#if podeEditar(perms, 'clientes')}
 		<ClienteForm
 			cliente={form?.values ?? null}

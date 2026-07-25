@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { podeEditar, podeExcluir } from '$lib/permissoes';
-	import { Button, Card, Badge, Input, Select, Textarea, Checkbox, EmptyState, DataTable } from '$lib/components/ui';
+	import { Button, Card, Badge, Input, Select, Textarea, Checkbox, EmptyState, DataTable, Modal } from '$lib/components/ui';
 	import type { BadgeTone, ColumnDef } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
 	import { Globe } from '@lucide/svelte';
@@ -11,7 +11,6 @@
 	import InstagramIcon from '$lib/components/icons/InstagramIcon.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import { formatBRL } from '$lib/clientes';
-	import CrmModal from '$lib/components/crm/CrmModal.svelte';
 	import type { Fornecedor } from './+page.server';
 
 	let { data } = $props();
@@ -207,7 +206,7 @@
 	</Card>
 {/if}
 
-<CrmModal
+<Modal
 	open={modalAberto && !data.pendente}
 	title={editando ? 'Editar fornecedor' : 'Novo fornecedor'}
 	onClose={fechar}
@@ -334,4 +333,4 @@
 			</form>
 		{/if}
 	{/key}
-</CrmModal>
+</Modal>

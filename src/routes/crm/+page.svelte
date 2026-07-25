@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { deserialize } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
-	import { Button, Tabs, Select, Dropdown } from '$lib/components/ui';
+	import { Button, Tabs, Select, Dropdown, Modal } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import CrmKpis from '$lib/components/crm/CrmKpis.svelte';
@@ -14,7 +14,6 @@
 	import CrmForecast from '$lib/components/crm/CrmForecast.svelte';
 	import CrmFollowups from '$lib/components/crm/CrmFollowups.svelte';
 	import CrmDrawer from '$lib/components/crm/CrmDrawer.svelte';
-	import CrmModal from '$lib/components/crm/CrmModal.svelte';
 	import CrmNegocioForm from '$lib/components/crm/CrmNegocioForm.svelte';
 	import CrmContatoForm from '$lib/components/crm/CrmContatoForm.svelte';
 	import {
@@ -28,7 +27,7 @@
 	} from '$lib/crm';
 	import type { Negocio, Atividade } from '$lib/crm';
 	import { page } from '$app/state';
-	import { podeEditar } from '$lib/permissoes';
+	import { podeEditar, podeExcluir } from '$lib/permissoes';
 
 	let { data } = $props();
 	const perms = $derived(page.data.permissoes);
@@ -114,6 +113,14 @@
 	}
 
 	// ---------------- Ações otimistas (fetch p/ form actions) ----------------
+	// Rollback PONTUAL: restaura só o registro que falhou, pelo id. Antes cada
+	// handler guardava o array inteiro (`const anterior = negocios`) e o restaurava
+	// no catch — com duas ações concorrentes, a que falhava desfazia junto a que
+	// já tinha dado certo, e a tela ficava divergindo do banco até um F5.
+	function reverter<T extends { id: string }>(lista: T[], original: T | undefined): T[] {
+		if (!original) return lista;
+		return lista.map((x) => (x.id === original.id ? original : x));
+	}
 	async function postar(action: string, fd: FormData) {
 		const res = await fetch(action, {
 			method: 'POST',
@@ -124,7 +131,10 @@
 	}
 
 	async function mover(id: string, stageId: string, orderedIds: string[]) {
-		const anterior = negocios;
+		// Guarda só os registros tocados por ESTA operação (o arrastado + os que
+		// mudaram de ordem), não o array inteiro.
+		const tocados = new Set([id, ...orderedIds]);
+		const originais = negocios.filter((n) => tocados.has(n.id)).map((n) => ({ ...n }));
 		const ordemMap = new Map(orderedIds.map((nid, i) => [nid, i]));
 		negocios = negocios.map((n) => {
 			if (n.id === id) return { ...n, stage_id: stageId, ordem: ordemMap.get(n.id) ?? n.ordem };
@@ -139,13 +149,13 @@
 			const r = await postar('?/negocio_mover', fd);
 			if (r.type !== 'success') throw new Error();
 		} catch {
-			negocios = anterior;
+			for (const o of originais) negocios = reverter(negocios, o);
 			toast.error('Não foi possível mover o negócio.');
 		}
 	}
 
 	async function mudarStatus(id: string, status: 'ganho' | 'perdido', motivo: string | null = null) {
-		const anterior = negocios;
+		const original = negocios.find((n) => n.id === id);
 		const agora = new Date().toISOString();
 		// Espelha o patch do servidor (ganho_em/perdido_em) para KPI e ranking do mês
 		// refletirem imediatamente no update otimista.
@@ -170,7 +180,7 @@
 			toast.success(status === 'ganho' ? 'Negócio ganho! 🎉' : 'Negócio marcado como perdido.');
 			await invalidateAll();
 		} catch {
-			negocios = anterior;
+			negocios = reverter(negocios, original && { ...original });
 			toast.error('Não foi possível atualizar o negócio.');
 		}
 	}
@@ -193,7 +203,9 @@
 
 	// Metas: define/atualiza a meta do mês (otimista).
 	async function definirMeta(colaboradorId: string, valor: number) {
-		const anterior = metas;
+		// Metas não têm `id`; a chave natural é o colaborador.
+		const original = metas.find((m) => m.colaborador_id === colaboradorId);
+		const existia = !!original;
 		metas = metas.some((m) => m.colaborador_id === colaboradorId)
 			? metas.map((m) => (m.colaborador_id === colaboradorId ? { ...m, valor_meta: valor } : m))
 			: [...metas, { colaborador_id: colaboradorId, valor_meta: valor }];
@@ -205,13 +217,15 @@
 			if (r.type !== 'success') throw new Error();
 			toast.success('Meta atualizada.');
 		} catch {
-			metas = anterior;
+			metas = existia
+				? metas.map((m) => (m.colaborador_id === colaboradorId ? original! : m))
+				: metas.filter((m) => m.colaborador_id !== colaboradorId);
 			toast.error('Não foi possível salvar a meta.');
 		}
 	}
 
 	async function concluirAtividade(id: string, concluida: boolean) {
-		const anterior = atividades;
+		const original = atividades.find((a) => a.id === id);
 		atividades = atividades.map((a) =>
 			a.id === id
 				? { ...a, concluida, concluida_em: concluida ? new Date().toISOString() : null }
@@ -226,7 +240,7 @@
 			// Recalcula prox_atividade no servidor -> follow-ups e KPI de atrasadas atualizam.
 			await invalidateAll();
 		} catch {
-			atividades = anterior;
+			atividades = reverter(atividades, original && { ...original });
 			toast.error('Não foi possível atualizar a atividade.');
 		}
 	}
@@ -325,6 +339,8 @@
 	colaboradores={data.colaboradores}
 	clientes={data.clientes}
 	pipelineAtivoId={pipelineAtivo}
+	podeEditar={podeEditar(perms, 'crm')}
+	podeExcluir={podeExcluir(perms, 'crm')}
 	onClose={() => (drawerAberto = false)}
 	onToggleAtividade={concluirAtividade}
 	onOpenNegocio={abrirNegocio}
@@ -332,7 +348,7 @@
 />
 
 <!-- Modal: novo negócio -->
-<CrmModal open={novoNegocio} title="Novo negócio" onClose={() => (novoNegocio = false)}>
+<Modal open={novoNegocio} title="Novo negócio" onClose={() => (novoNegocio = false)}>
 	<CrmNegocioForm
 		stages={stagesDoPipeline}
 		initialStageId={novoNegocioStage}
@@ -344,10 +360,10 @@
 		onSuccess={() => (novoNegocio = false)}
 		onCancel={() => (novoNegocio = false)}
 	/>
-</CrmModal>
+</Modal>
 
 <!-- Modal: novo contato -->
-<CrmModal open={novoContato} title="Novo contato" onClose={() => (novoContato = false)}>
+<Modal open={novoContato} title="Novo contato" onClose={() => (novoContato = false)}>
 	<CrmContatoForm
 		colaboradores={data.colaboradores}
 		clientes={data.clientes}
@@ -356,10 +372,10 @@
 		onSuccess={() => (novoContato = false)}
 		onCancel={() => (novoContato = false)}
 	/>
-</CrmModal>
+</Modal>
 
 <!-- Modal: motivo de perda -->
-<CrmModal open={perdaAberta} title="Marcar como perdido" onClose={() => (perdaAberta = false)}>
+<Modal open={perdaAberta} title="Marcar como perdido" onClose={() => (perdaAberta = false)}>
 	<p class="mb-3 text-sm text-slate">Qual o motivo da perda? <span class="text-grey">(opcional)</span></p>
 	<div class="flex flex-wrap gap-2">
 		{#each MOTIVOS_PERDA as m (m)}
@@ -378,4 +394,4 @@
 		<Button variant="secondary" onclick={() => (perdaAberta = false)}>Cancelar</Button>
 		<Button variant="danger" onclick={confirmarPerda}>Confirmar perda</Button>
 	</div>
-</CrmModal>
+</Modal>
