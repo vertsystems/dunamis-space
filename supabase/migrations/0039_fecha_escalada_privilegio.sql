@@ -29,10 +29,14 @@
 --   · editar OUTRO colaborador passa a ser bloqueado (que é o desejado).
 -- Cargos ceo/admin não dependem desta tabela: têm short-circuit em
 -- perm_nivel_efetivo, então seguem com acesso total.
+-- Só REBAIXA (nivel > 'ver'). O `<> 'ver'` que estava aqui antes teria subido
+-- para 'ver' o cargo que hoje está em 'nenhum' — concedendo um acesso que ele
+-- não tem. O enum perm_nivel é ordenado (nenhum < ver < editar < excluir),
+-- então a comparação resolve isso direto.
 update public.permissoes_cargo
 	set nivel = 'ver'::perm_nivel
 	where modulo = 'equipe'
-		and nivel <> 'ver'::perm_nivel;
+		and nivel > 'ver'::perm_nivel;
 
 -- ---------- Elo 4: sanitiza `funcao` no INSERT do trigger ----------
 -- O ramo de INSERT (autoprovisão do próprio login) já zerava super_admin,
