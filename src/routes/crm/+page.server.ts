@@ -12,6 +12,7 @@ import {
 	type Meta
 } from '$lib/crm';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { mesRefSP } from '$lib/datas';
 import type { Actions, PageServerLoad } from './$types';
 
 /** PostgREST tipa relações to-one como array; extrai o objeto único. */
@@ -437,9 +438,11 @@ export const actions: Actions = {
 		if (!Number.isFinite(valor_meta) || valor_meta < 0) {
 			return fail(400, { error: 'Valor de meta inválido.' });
 		}
-		const now = new Date();
+		// Mesmo fuso do load (linhas ~46-56). Com `new Date()` cru, definir a meta
+		// no fim do mês à noite gravava no mês seguinte e ela sumia da tela.
+		const { ano, mes } = mesRefSP();
 		const { error } = await supabase.from('crm_metas').upsert(
-			{ colaborador_id, ano: now.getFullYear(), mes: now.getMonth() + 1, valor_meta },
+			{ colaborador_id, ano, mes, valor_meta },
 			{ onConflict: 'colaborador_id,ano,mes' }
 		);
 		if (error) return fail(500, { error: error.message });

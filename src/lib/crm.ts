@@ -180,7 +180,16 @@ export function parseValor(raw: string | null): number {
 	let s = raw.trim();
 	if (!s) return 0;
 	if (s.includes(',')) {
-		s = s.replace(/\./g, '').replace(',', '.');
+		// Formato en-US ("1,234.56"): vírgula de milhar + ponto decimal. Antes a
+		// vírgula era sempre tratada como decimal e o valor virava 1,23 — 1000x
+		// menor. Detecta pelo ponto vindo DEPOIS da última vírgula.
+		const ultimaVirgula = s.lastIndexOf(',');
+		const ultimoPonto = s.lastIndexOf('.');
+		if (ultimoPonto > ultimaVirgula) {
+			s = s.replace(/,/g, '');
+		} else {
+			s = s.replace(/\./g, '').replace(',', '.');
+		}
 	} else {
 		const pontos = (s.match(/\./g) ?? []).length;
 		if (pontos > 1) {

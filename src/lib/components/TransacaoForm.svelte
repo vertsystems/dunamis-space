@@ -25,8 +25,9 @@
 	} = $props();
 
 	let saving = $state(false);
+	import { hojeISO } from '$lib/datas';
 	const v = (k: string) => transacao?.[k] ?? '';
-	const today = new Date().toISOString().slice(0, 10);
+	const today = hojeISO();
 </script>
 
 <form

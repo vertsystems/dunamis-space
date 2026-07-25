@@ -9,17 +9,27 @@
 	let texto = $state('');
 	let saving = $state(false);
 	let meuId = $state<string | null>(null);
+	// Sem estes dois, uma falha de rede era indistinguível de "não há comentários",
+	// e o estado vazio piscava antes do fetch terminar.
+	let carregando = $state(true);
+	let erro = $state<string | null>(null);
 
 	const supabase = $derived(page.data.supabase);
 	const user = $derived(page.data.user);
 
 	async function carregar() {
-		const { data } = await supabase
+		erro = null;
+		const { data, error } = await supabase
 			.from('comentarios')
 			.select('id, texto, created_at, colaborador:colaboradores(nome)')
 			.eq('entidade_tipo', entidadeTipo)
 			.eq('entidade_id', entidadeId)
 			.order('created_at', { ascending: true });
+		carregando = false;
+		if (error) {
+			erro = 'Não foi possível carregar os comentários.';
+			return;
+		}
 		comentarios = data ?? [];
 	}
 
@@ -74,7 +84,13 @@
 			<p class="mb-0 whitespace-pre-wrap text-slate">{c.texto}</p>
 		</div>
 	{:else}
-		<p class="text-grey mb-3">Nenhum comentário ainda.</p>
+		{#if carregando}
+			<p class="mb-3 text-grey">Carregando comentários…</p>
+		{:else if erro}
+			<p class="mb-3 text-brand-danger">{erro}</p>
+		{:else}
+			<p class="mb-3 text-grey">Nenhum comentário ainda.</p>
+		{/if}
 	{/each}
 
 	<form onsubmit={enviar}>

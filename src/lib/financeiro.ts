@@ -1,4 +1,5 @@
 export { formatBRL } from './clientes';
+import { hojeISO } from '$lib/datas';
 
 export const TRANSACAO_TIPO = [
 	{ value: 'receita', label: 'Receita' },
@@ -47,7 +48,7 @@ function num(fd: FormData, k: string): number | null {
 }
 
 function today(): string {
-	return new Date().toISOString().slice(0, 10);
+	return hojeISO();
 }
 
 export function transacaoFromForm(fd: FormData) {

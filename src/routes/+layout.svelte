@@ -12,7 +12,7 @@
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { DTOOLS_FERRAMENTAS } from '$lib/dtools';
-	import { podeAcessarRota, type Permissoes } from '$lib/permissoes';
+	import { podeAcessarRota, podeEditar, type Permissoes } from '$lib/permissoes';
 	import { temaCss } from '$lib/tema';
 	import Icon from '$lib/components/Icon.svelte';
 	import CargoBadge from '$lib/components/CargoBadge.svelte';
@@ -312,9 +312,15 @@
 		</div>
 	</div>
 
-	<SosWidget
-		{supabase}
-		autorNome={perfil?.nome ?? null}
-		autorEmail={session?.user?.email ?? null}
-	/>
+	<!-- O insert em sos_chamados exige `sos:editar` na RLS. Sem esta guarda, quem
+	     não tem o módulo via o botão flutuante e recebia "Não foi possível enviar",
+	     que sugere falha temporária. Hoje o seed libera sos a todos, então nada
+	     muda na prática — isto é para quando a matriz real for definida. -->
+	{#if podeEditar(perms, 'sos')}
+		<SosWidget
+			{supabase}
+			autorNome={perfil?.nome ?? null}
+			autorEmail={session?.user?.email ?? null}
+		/>
+	{/if}
 {/if}

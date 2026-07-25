@@ -51,7 +51,13 @@ export const actions: Actions = {
 		const { supabase } = locals;
 		const { error: e } = await supabase.from('aprovacoes').insert({ conteudo_id: params.id });
 		if (e) return fail(500, { error: e.message });
-		await supabase.from('conteudos').update({ status: 'aprovar_conteudo' }).eq('id', params.id);
+		// Sem checar este segundo erro, existia link de aprovação ativo com o
+		// conteúdo parado no status anterior — fora da fila e do KPI.
+		const { error: eStatus } = await supabase
+			.from('conteudos')
+			.update({ status: 'aprovar_conteudo' })
+			.eq('id', params.id);
+		if (eStatus) return fail(500, { error: `Link criado, mas o status não mudou: ${eStatus.message}` });
 		return { aprovacaoCriada: true };
 	},
 	delete: async ({ params, locals }) => {

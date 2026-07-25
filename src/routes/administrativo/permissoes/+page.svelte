@@ -25,9 +25,13 @@
 		excluir: 'Acesso Total'
 	};
 
-	// ---- Estado reativo (inicializado a partir do banco) ----
+	// ---- Estado reativo (derivado do banco) ----
+	// $derived assinável (Svelte >= 5.25): dá para atribuir livremente E volta a
+	// acompanhar `data` quando o load recarrega. Com $state puro, esta tela ficava
+	// com a grade obsoleta depois de salvar ou quando outro admin editava junto —
+	// numa tela que controla acesso.
 	// cargoNivel[funcao][modulo] = Nivel
-	let cargoNivel = $state<Record<string, Record<string, Nivel>>>(montarCargo());
+	let cargoNivel = $derived<Record<string, Record<string, Nivel>>>(montarCargo());
 	function montarCargo() {
 		const m: Record<string, Record<string, Nivel>> = {};
 		for (const f of FUNCAO) m[f.value] = {};
@@ -41,7 +45,7 @@
 	}
 
 	// excecao[colabId][modulo] = Nivel (ausente = herda do cargo)
-	let excecao = $state<Record<string, Record<string, Nivel>>>(montarExcecao());
+	let excecao = $derived<Record<string, Record<string, Nivel>>>(montarExcecao());
 	function montarExcecao() {
 		const m: Record<string, Record<string, Nivel>> = {};
 		for (const r of data.permissoesColaborador) {
@@ -50,12 +54,12 @@
 		return m;
 	}
 
-	let superAdmin = $state<Record<string, boolean>>(
+	let superAdmin = $derived<Record<string, boolean>>(
 		Object.fromEntries(data.colaboradores.map((c) => [c.id, !!c.super_admin]))
 	);
 
 	let aba = $state<'cargos' | 'pessoas'>('cargos');
-	let pessoaId = $state<string>(data.colaboradores[0]?.id ?? '');
+	let pessoaId = $derived<string>(data.colaboradores[0]?.id ?? '');
 	const pessoa = $derived(data.colaboradores.find((c) => c.id === pessoaId) ?? null);
 
 	function funcoesDe(c: { funcoes?: string[] | null; funcao?: string | null }): string[] {

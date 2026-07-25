@@ -7,6 +7,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Provider, ScheduledService, Negotiation, ScheduledNegotiation, Client } from './types';
 import { toast } from '$lib/toast.svelte';
 import * as db from './db';
+import { hojeISO } from '$lib/datas';
 
 const K_CLIENT = 'pagsup_selected_client';
 
@@ -14,7 +15,7 @@ function uid(): string {
 	return crypto.randomUUID();
 }
 function hoje(): string {
-	return new Date().toISOString().split('T')[0];
+	return hojeISO();
 }
 
 /** Remove pontuação de CPF/CNPJ (mantém só dígitos/letras da chave). */

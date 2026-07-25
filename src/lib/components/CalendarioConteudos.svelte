@@ -50,17 +50,24 @@
 		e?.stopPropagation();
 		if (!c || processando) return;
 		processando = true;
-		const fd = new FormData();
-		fd.set('id', c.id);
-		const resp = await fetch(`${ACTION}?/excluir`, { method: 'POST', body: fd });
-		const result = deserialize(await resp.text());
-		processando = false;
-		if (result.type === 'success') {
-			if (editando?.id === c.id) editando = null;
-			toast.success('Conteúdo excluído');
-			invalidateAll();
-		} else if (result.type === 'failure') {
-			toast.error((result.data?.error as string) ?? 'Falha ao excluir');
+		try {
+			const fd = new FormData();
+			fd.set('id', c.id);
+			const resp = await fetch(`${ACTION}?/excluir`, { method: 'POST', body: fd });
+			const result = deserialize(await resp.text());
+			if (result.type === 'success') {
+				if (editando?.id === c.id) editando = null;
+				toast.success('Conteúdo excluído');
+				invalidateAll();
+			} else if (result.type === 'failure') {
+				toast.error((result.data?.error as string) ?? 'Falha ao excluir');
+			}
+		} catch {
+			toast.error('Falha de conexão. Tente novamente.');
+		} finally {
+			// Sem o finally, uma queda de rede deixava `processando` travado em true
+			// e o calendário parava de aceitar qualquer ação até recarregar a página.
+			processando = false;
 		}
 	}
 
@@ -85,18 +92,23 @@
 		const alvo = moverCopiar;
 		if (!alvo || processando) return;
 		processando = true;
-		const fd = new FormData();
-		fd.set('id', alvo.c.id);
-		fd.set('data_publicacao', alvo.novaISO);
-		const resp = await fetch(`${ACTION}?/${acao}`, { method: 'POST', body: fd });
-		const result = deserialize(await resp.text());
-		processando = false;
-		moverCopiar = null;
-		if (result.type === 'success') {
-			toast.success(acao === 'mover' ? 'Post movido' : 'Post copiado');
-			invalidateAll();
-		} else if (result.type === 'failure') {
-			toast.error((result.data?.error as string) ?? 'Falha na operação');
+		try {
+			const fd = new FormData();
+			fd.set('id', alvo.c.id);
+			fd.set('data_publicacao', alvo.novaISO);
+			const resp = await fetch(`${ACTION}?/${acao}`, { method: 'POST', body: fd });
+			const result = deserialize(await resp.text());
+			if (result.type === 'success') {
+				toast.success(acao === 'mover' ? 'Post movido' : 'Post copiado');
+				invalidateAll();
+			} else if (result.type === 'failure') {
+				toast.error((result.data?.error as string) ?? 'Falha na operação');
+			}
+		} catch {
+			toast.error('Falha de conexão. Tente novamente.');
+		} finally {
+			processando = false;
+			moverCopiar = null;
 		}
 	}
 
