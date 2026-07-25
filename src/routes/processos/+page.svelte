@@ -67,16 +67,16 @@
 			<table class="w-full text-sm border-collapse">
 				<thead>
 					<tr class="border-b border-grey-200 text-left text-xs uppercase tracking-wide text-grey">
-						<th class="px-3 py-3 font-semibold">#</th>
-						<th class="px-3 py-3 font-semibold">Processo</th>
-						<th class="px-3 py-3 font-semibold">Secretaria</th>
-						<th class="px-3 py-3 font-semibold">Responsável</th>
+						<th scope="col" class="px-3 py-3 font-semibold">#</th>
+						<th scope="col" class="px-3 py-3 font-semibold">Processo</th>
+						<th scope="col" class="px-3 py-3 font-semibold">Secretaria</th>
+						<th scope="col" class="px-3 py-3 font-semibold">Responsável</th>
 						{#each PROCESSO_ETAPAS as e (e.key)}
-							<th class="px-2 py-3 font-semibold text-center whitespace-nowrap">{e.label}</th>
+							<th scope="col" class="px-2 py-3 font-semibold text-center whitespace-nowrap">{e.label}</th>
 						{/each}
-						<th class="px-3 py-3 font-semibold">Prazo</th>
-						<th class="px-3 py-3 font-semibold">Situação</th>
-						<th class="px-3 py-3 font-semibold"></th>
+						<th scope="col" class="px-3 py-3 font-semibold">Prazo</th>
+						<th scope="col" class="px-3 py-3 font-semibold">Situação</th>
+						<th scope="col" class="px-3 py-3 font-semibold"><span class="sr-only">Ações</span></th>
 					</tr>
 				</thead>
 				<tbody>

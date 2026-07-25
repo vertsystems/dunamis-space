@@ -73,15 +73,26 @@
 					{#each hg.headers as header (header.id)}
 						{@const meta = header.column.columnDef.meta as ColMeta | undefined}
 						{@const dir = header.column.getIsSorted()}
-						<th class="px-4 py-3 font-semibold {meta?.thClass ?? ''}">
+						<th
+							scope="col"
+							class="px-4 py-3 font-semibold {meta?.thClass ?? ''}"
+							aria-sort={header.column.getCanSort()
+								? dir === 'asc'
+									? 'ascending'
+									: dir === 'desc'
+										? 'descending'
+										: 'none'
+								: undefined}
+						>
 							{#if header.column.getCanSort()}
 								<button
 									type="button"
-									class="inline-flex select-none items-center gap-1 transition-colors hover:text-navy focus-visible:outline-none focus-visible:text-navy"
+									class="inline-flex select-none items-center gap-1 rounded-[var(--radius-sm)] transition-colors hover:text-navy focus-visible:text-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35"
 									onclick={header.column.getToggleSortingHandler()}
 								>
 									{meta?.label ?? ''}
-									<span class="text-[0.6rem] {dir ? 'text-brand' : 'text-grey-200'}"
+									<!-- Glifo é decorativo: a direção já vai no aria-sort do <th>. -->
+									<span aria-hidden="true" class="text-[0.6rem] {dir ? 'text-brand' : 'text-grey'}"
 										>{dir === 'asc' ? '▲' : dir === 'desc' ? '▼' : '↕'}</span
 									>
 								</button>

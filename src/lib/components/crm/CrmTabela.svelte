@@ -64,6 +64,9 @@
 	});
 
 	const seta = (campo: typeof ordenarPor) => (ordenarPor === campo ? (asc ? '↑' : '↓') : '');
+	/** aria-sort do <th> — a seta é só decorativa (aria-hidden). */
+	const ariaSort = (campo: typeof ordenarPor): 'ascending' | 'descending' | 'none' =>
+		ordenarPor === campo ? (asc ? 'ascending' : 'descending') : 'none';
 </script>
 
 <div class="flex flex-wrap items-end gap-2 mb-3">
@@ -94,25 +97,29 @@
 		<table class="w-full text-sm">
 			<thead>
 				<tr class="border-b border-grey-200 text-left text-xs uppercase tracking-wide text-grey">
-					<th class="px-4 py-3 font-semibold">
+					<th scope="col" class="px-4 py-3 font-semibold" aria-sort={ariaSort('titulo')}>
 						<button type="button" class="hover:text-navy" onclick={() => ordenar('titulo')}>
-							Negócio {seta('titulo')}
+							Negócio <span aria-hidden="true">{seta('titulo')}</span>
 						</button>
 					</th>
-					<th class="px-4 py-3 font-semibold">Contato</th>
-					<th class="px-4 py-3 font-semibold">Etapa</th>
-					<th class="px-4 py-3 font-semibold text-right">
+					<th scope="col" class="px-4 py-3 font-semibold">Contato</th>
+					<th scope="col" class="px-4 py-3 font-semibold">Etapa</th>
+					<th scope="col" class="px-4 py-3 font-semibold text-right" aria-sort={ariaSort('valor')}>
 						<button type="button" class="hover:text-navy" onclick={() => ordenar('valor')}>
-							Valor {seta('valor')}
+							Valor <span aria-hidden="true">{seta('valor')}</span>
 						</button>
 					</th>
-					<th class="px-4 py-3 font-semibold">Responsável</th>
-					<th class="px-4 py-3 font-semibold whitespace-nowrap">
+					<th scope="col" class="px-4 py-3 font-semibold">Responsável</th>
+					<th
+						scope="col"
+						class="px-4 py-3 font-semibold whitespace-nowrap"
+						aria-sort={ariaSort('previsao')}
+					>
 						<button type="button" class="hover:text-navy" onclick={() => ordenar('previsao')}>
-							Previsão {seta('previsao')}
+							Previsão <span aria-hidden="true">{seta('previsao')}</span>
 						</button>
 					</th>
-					<th class="px-4 py-3 font-semibold">Status</th>
+					<th scope="col" class="px-4 py-3 font-semibold">Status</th>
 				</tr>
 			</thead>
 			<tbody>
