@@ -14,7 +14,6 @@ export type Notificacao = {
 };
 
 export const load: PageServerLoad = async ({ locals: { supabase } }) => {
-	const hoje = new Date().toISOString().slice(0, 10);
 	const nowISO = new Date().toISOString();
 
 	const limiteContrato = new Date();
@@ -25,7 +24,7 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 	cutoffInteracao.setDate(cutoffInteracao.getDate() - DIAS_SEM_INTERACAO);
 	const cutoffInteracaoStr = cutoffInteracao.toISOString();
 
-	const [contratosRes, tarefasRes, clientesRes, atividadesRes] = await Promise.all([
+	const [contratosRes, atrasadosRes, clientesRes, atividadesRes] = await Promise.all([
 		supabase
 			.from('contratos')
 			.select('id, data_fim, cliente:clientes(nome)')
@@ -33,12 +32,13 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 			.not('data_fim', 'is', null)
 			.lte('data_fim', limiteContratoStr)
 			.order('data_fim', { ascending: true }),
+		// Tarefas foi aposentado — a notificação de atraso passa a ser de publicação.
 		supabase
-			.from('tarefas')
-			.select('id, titulo, prazo, projeto:projetos(id, nome)')
-			.lt('prazo', hoje)
-			.neq('status', 'concluido')
-			.order('prazo', { ascending: true })
+			.from('conteudos')
+			.select('id, titulo, tipo, data_publicacao, cliente:clientes(nome)')
+			.lt('data_publicacao', new Date().toISOString())
+			.neq('status', 'publicado')
+			.order('data_publicacao', { ascending: true })
 			.limit(30),
 		supabase
 			.from('clientes')
@@ -73,16 +73,22 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 		});
 	}
 
-	for (const t of tarefasRes.data ?? []) {
-		const proj = um<{ id: string; nome: string }>(t.projeto);
+	for (const c of atrasadosRes.data ?? []) {
+		const cli = um<{ nome: string }>(c.cliente);
+		const quando = c.data_publicacao
+			? new Date(c.data_publicacao as string).toLocaleString('pt-BR', {
+					dateStyle: 'short',
+					timeStyle: 'short'
+				})
+			: '—';
 		itens.push({
-			id: `tarefa-${t.id}`,
-			tipo: 'Tarefa atrasada',
+			id: `conteudo-${c.id}`,
+			tipo: 'Publicação atrasada',
 			tone: 'danger',
-			icon: 'check',
-			titulo: t.titulo as string,
-			detalhe: `${proj?.nome ?? 'Sem projeto'} · prazo ${t.prazo ? new Date((t.prazo as string) + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}`,
-			href: `/tarefas?projeto=${proj?.id ?? ''}`,
+			icon: 'calendar',
+			titulo: (c.titulo as string | null) || 'Sem título',
+			detalhe: `${cli?.nome ?? 'Sem cliente'} · previsto para ${quando}`,
+			href: `/conteudo/${c.id}`,
 			peso: 90
 		});
 	}

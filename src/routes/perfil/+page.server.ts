@@ -28,14 +28,15 @@ export const load: PageServerLoad = async ({ locals: { supabase, user } }) => {
 	}
 
 	// Métricas da agência ligadas a este colaborador.
-	let metricas = { tarefas: 0, projetos: 0, clientes: 0 };
+	let metricas = { conteudos: 0, projetos: 0, clientes: 0 };
 	if (colab?.id) {
 		const [t, p, c] = await Promise.all([
+			// Tarefas foi aposentado; o que a pessoa "tem em mãos" agora é conteúdo.
 			supabase
-				.from('tarefas')
+				.from('conteudos')
 				.select('id', { count: 'exact', head: true })
 				.eq('responsavel_id', colab.id)
-				.neq('status', 'concluido'),
+				.neq('status', 'publicado'),
 			supabase
 				.from('projetos')
 				.select('id', { count: 'exact', head: true })
@@ -47,7 +48,7 @@ export const load: PageServerLoad = async ({ locals: { supabase, user } }) => {
 				.eq('responsavel_id', colab.id)
 				.eq('status', 'ativo')
 		]);
-		metricas = { tarefas: t.count ?? 0, projetos: p.count ?? 0, clientes: c.count ?? 0 };
+		metricas = { conteudos: t.count ?? 0, projetos: p.count ?? 0, clientes: c.count ?? 0 };
 	}
 
 	return { colab, metricas, email };

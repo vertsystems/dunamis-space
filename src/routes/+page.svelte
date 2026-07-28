@@ -11,10 +11,10 @@
 		{ label: 'Clientes ativos', value: String(data.ativos), accent: 'text-navy', icon: 'contact' },
 		{ label: 'Negócios em aberto', value: String(data.negociosAbertos), accent: 'text-navy', icon: 'funnel' },
 		{
-			label: 'Tarefas atrasadas',
+			label: 'Publicações atrasadas',
 			value: String(data.atrasadas),
 			accent: data.atrasadas > 0 ? 'text-brand-danger' : 'text-brand-green',
-			icon: 'check'
+			icon: 'calendar'
 		},
 		{ label: 'Publicações da semana', value: String(data.publicacoesSemana), accent: 'text-navy', icon: 'edit' }
 	]);
@@ -22,10 +22,12 @@
 	const maxFunil = $derived(Math.max(1, ...data.pipeline.funil.map((f) => f.count)));
 	const totalFunil = $derived(data.pipeline.funil.reduce((s, f) => s + f.count, 0));
 
-	const TAREFA_TILES = [
-		{ chave: 'backlog', label: 'A fazer' },
-		{ chave: 'fazendo', label: 'Fazendo' },
-		{ chave: 'em_aprovacao', label: 'Em aprovação' }
+	// Funil de conteúdo — substituiu o resumo do Kanban, aposentado junto com o
+	// módulo de Tarefas.
+	const FUNIL_TILES = [
+		{ chave: 'afazer', label: 'A fazer', href: '/calendario?view=lista' },
+		{ chave: 'andamento', label: 'Em andamento', href: '/calendario?view=lista' },
+		{ chave: 'semData', label: 'Backlog', href: '/calendario?view=backlog' }
 	] as const;
 
 	function quandoPub(v: string | null): string {
@@ -156,19 +158,19 @@
 		<h2 class="text-sm font-semibold text-navy flex items-center gap-2 mb-4"><Icon name="check" size={17} /> Operação</h2>
 
 		<div class="flex items-center justify-between mb-2">
-			<h3 class="text-xs uppercase tracking-wide font-semibold text-grey">Tarefas</h3>
-			<a class="text-xs text-brand hover:underline" href="/tarefas">Kanban</a>
+			<h3 class="text-xs uppercase tracking-wide font-semibold text-grey">Conteúdo</h3>
+			<a class="text-xs text-brand hover:underline" href="/calendario">Calendário</a>
 		</div>
 		<div class="grid grid-cols-3 gap-2">
-			{#each TAREFA_TILES as t (t.chave)}
-				<div class="rounded-[var(--radius)] bg-bg p-3 text-center">
-					<div class="text-base font-semibold text-navy tabular-nums">{data.operacao.tarefas[t.chave]}</div>
+			{#each FUNIL_TILES as t (t.chave)}
+				<a href={t.href} class="rounded-[var(--radius)] bg-bg p-3 text-center no-underline transition-colors hover:bg-grey-200/50">
+					<div class="text-base font-semibold text-navy tabular-nums">{data.operacao.funil[t.chave]}</div>
 					<div class="text-xs uppercase tracking-wide text-grey font-semibold mt-0.5">{t.label}</div>
-				</div>
+				</a>
 			{/each}
 		</div>
 		{#if data.atrasadas > 0}
-			<p class="text-xs text-brand-danger mt-2">{data.atrasadas} tarefa(s) atrasada(s)</p>
+			<p class="text-xs text-brand-danger mt-2">{data.atrasadas} publicação(ões) atrasada(s)</p>
 		{/if}
 
 		<div class="border-t border-grey-200 mt-4 pt-4">
@@ -216,7 +218,7 @@
 			{/each}
 		</div>
 	{:then alertas}
-		{@const total = alertas.contratos.length + alertas.tarefas.length + alertas.semInteracao.length}
+		{@const total = alertas.contratos.length + alertas.atrasados.length + alertas.semInteracao.length}
 		<div class="flex items-center justify-between mb-4">
 			<h2 class="text-sm font-semibold text-navy">Alertas inteligentes</h2>
 			<Badge tone={total ? 'danger' : 'success'}>
@@ -225,7 +227,7 @@
 		</div>
 
 		{#if total === 0}
-			<p class="text-slate">✅ Nenhum alerta no momento. Contratos, tarefas e contatos com clientes estão em dia.</p>
+			<p class="text-slate">✅ Nenhum alerta no momento. Contratos, publicações e contatos com clientes estão em dia.</p>
 		{:else}
 			<div class="grid md:grid-cols-3 gap-6">
 				<!-- Contratos vencendo -->
@@ -251,29 +253,29 @@
 					{/if}
 				</section>
 
-				<!-- Tarefas atrasadas -->
+				<!-- Publicações atrasadas -->
 				<section>
 					<h3 class="flex items-center gap-2 font-semibold text-sm mb-3">
 						<span class="size-2.5 rounded-full bg-brand-danger"></span>
-						Tarefas atrasadas <span class="text-grey font-normal">({data.atrasadas})</span>
+						Publicações atrasadas <span class="text-grey font-normal">({data.atrasadas})</span>
 					</h3>
-					{#if alertas.tarefas.length}
+					{#if alertas.atrasados.length}
 						<ul class="divide-y divide-grey-200/60">
-							{#each alertas.tarefas as t (t.id)}
-								{@const dias = diasAte(t.prazo)}
+							{#each alertas.atrasados as c (c.id)}
+								{@const dias = diasAte(c.data_publicacao.slice(0, 10))}
 								<li class="py-1.5 text-sm">
-									<a class="text-brand hover:underline" href={`/tarefas?projeto=${t.projeto_id ?? ''}`}>{t.titulo}</a>
+									<a class="text-brand hover:underline" href={`/conteudo/${c.id}`}>{c.titulo || 'Sem título'}</a>
 									<span class="block text-xs text-brand-danger">
-										{prazoContratoLabel(dias)}{t.cliente_nome ? ' · ' + t.cliente_nome : ''}
+										{prazoContratoLabel(dias)}{c.cliente_nome ? ' · ' + c.cliente_nome : ''}
 									</span>
 								</li>
 							{/each}
 						</ul>
-						{#if data.atrasadas > alertas.tarefas.length}
-							<p class="text-sm mt-2"><a class="text-brand hover:underline" href="/tarefas">+ ver todas no Kanban</a></p>
+						{#if data.atrasadas > alertas.atrasados.length}
+							<p class="text-sm mt-2"><a class="text-brand hover:underline" href="/calendario?view=lista">+ ver todas no calendário</a></p>
 						{/if}
 					{:else}
-						<p class="text-grey text-sm">Nenhuma tarefa atrasada.</p>
+						<p class="text-grey text-sm">Nenhuma publicação atrasada.</p>
 					{/if}
 				</section>
 

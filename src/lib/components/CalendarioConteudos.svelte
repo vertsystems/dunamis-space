@@ -218,22 +218,10 @@
 		}
 		return m;
 	});
-	const tarefasPorDia = $derived.by(() => {
-		const m = new Map<string, typeof data.tarefas>();
-		for (const t of data.tarefas) {
-			const arr = m.get(t.prazo) ?? [];
-			arr.push(t);
-			m.set(t.prazo, arr);
-		}
-		return m;
-	});
 	const tiposDe = (c: { tipos?: string[]; tipo?: string }) =>
 		c.tipos?.length ? c.tipos : c.tipo ? [c.tipo] : [];
 	function acoesDoDia(key: string) {
-		return [
-			...(conteudosPorDia.get(key) ?? []).map((c: any) => ({ k: 'c' as const, c })),
-			...(tarefasPorDia.get(key) ?? []).map((t: any) => ({ k: 't' as const, t }))
-		];
+		return (conteudosPorDia.get(key) ?? []).map((c: any) => ({ k: 'c' as const, c }));
 	}
 
 	const hojeKey = $derived(data.hojeKey);
@@ -246,7 +234,7 @@
 	});
 	const mesAtual = $derived(`${data.ano}-${String(data.mes + 1).padStart(2, '0')}`);
 	const diasComAcoes = $derived.by(() =>
-		[...new Set<string>([...conteudosPorDia.keys(), ...tarefasPorDia.keys()])]
+		[...conteudosPorDia.keys()]
 			.filter((k) => k.startsWith(mesAtual + '-'))
 			.sort()
 	);
@@ -324,25 +312,6 @@
 	});
 </script>
 
-{#snippet bandaCampanhas()}
-	{#if data.campanhas.length}
-		<div class="mb-3 flex flex-wrap gap-1.5">
-			{#each data.campanhas as c (c.id)}
-				<a
-					href={`/campanhas/${c.id}`}
-					title={`Campanha: ${c.nome}${semCliente && c.cliente_nome ? ' · ' + c.cliente_nome : ''}`}
-					class="inline-flex items-center gap-1.5 rounded-full bg-brand-green/12 px-2.5 py-1 text-xs text-navy-900 no-underline transition-colors hover:bg-brand-green/20"
-				>
-					<span class="text-brand-green"><Icon name="tag" size={11} /></span>
-					<span class="max-w-40 truncate font-semibold">{c.nome}</span>
-					<span class="text-grey">{fmtData(c.data_inicio)}–{fmtData(c.data_fim)}</span>
-					{#if semCliente && c.cliente_nome}<span class="text-slate">· {c.cliente_nome}</span>{/if}
-				</a>
-			{/each}
-		</div>
-	{/if}
-{/snippet}
-
 {#snippet pills(key: string, cap: number)}
 	{@const itens = acoesDoDia(key)}
 	{@const limite = cap && itens.length > cap ? cap - 1 : itens.length}
@@ -418,15 +387,6 @@
 					class="absolute bottom-1 right-1 grid size-4 place-items-center rounded-full bg-brand-danger/15 text-brand-danger transition-colors hover:bg-brand-danger hover:text-white"
 				><Icon name="trash" size={9} /></button>
 			</div>
-		{:else}
-			<a
-				href="/tarefas"
-				onclick={(e) => e.stopPropagation()}
-				title={`Tarefa: ${a.t.titulo}${semCliente && a.t.cliente_nome ? ' · ' + a.t.cliente_nome : ''}`}
-				class="flex items-center gap-1 truncate rounded-[var(--radius-sm)] bg-brand-amber/15 px-1.5 py-0.5 text-[0.64rem] font-medium text-brand-brown no-underline transition-colors hover:bg-brand-amber/25"
-			>
-				<Icon name="check" size={10} /><span class="truncate">{a.t.titulo}</span>
-			</a>
 		{/if}
 	{/each}
 	{#if cap && itens.length > cap}
@@ -444,7 +404,7 @@
 {#if mostrarCabecalho}
 	<div class="mb-4">
 		<h1 class="text-base font-semibold text-navy">Calendário</h1>
-		<p class="text-sm text-grey">Conteúdos, tarefas e campanhas do período.</p>
+		<p class="text-sm text-grey">Conteúdos do período.</p>
 	</div>
 {/if}
 
@@ -500,7 +460,6 @@
 
 {#if data.view === 'mes'}
 	<Card>
-		{@render bandaCampanhas()}
 		<div class="mb-1.5 grid grid-cols-7 gap-1.5">
 			{#each SEMANA as dia (dia)}
 				<div class="text-center text-xs font-semibold uppercase tracking-wide text-grey">{dia}</div>
@@ -566,7 +525,6 @@
 	</Card>
 {:else if data.view === 'semana'}
 	<Card>
-		{@render bandaCampanhas()}
 		<div class="grid grid-cols-1 gap-2 md:grid-cols-7">
 			{#each diasDaSemana as d (chaveDia(d))}
 				{@const key = chaveDia(d)}
@@ -611,28 +569,9 @@
 		</div>
 	</Card>
 {:else}
-	{#if data.campanhas.length}
-		<Card class="mb-4">
-			<h2 class="mb-2 flex items-center gap-1.5 text-sm font-semibold text-navy">
-				<Icon name="tag" size={14} /> Campanhas no período
-			</h2>
-			<div class="flex flex-col gap-1.5">
-				{#each data.campanhas as c (c.id)}
-					<a
-						href={`/campanhas/${c.id}`}
-						class="flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-[var(--radius)] bg-brand-green/10 px-3 py-2 text-sm no-underline transition-colors hover:bg-brand-green/15"
-					>
-						<span class="font-semibold text-navy-900">{c.nome}</span>
-						<span class="text-grey">{fmtData(c.data_inicio)} – {fmtData(c.data_fim)}</span>
-						{#if semCliente && c.cliente_nome}<span class="text-xs text-slate">· {c.cliente_nome}</span>{/if}
-					</a>
-				{/each}
-			</div>
-		</Card>
-	{/if}
 	<Card>
 		{#if diasComAcoes.length === 0}
-			<p class="text-sm text-grey">Nenhuma publicação ou tarefa neste mês.</p>
+			<p class="text-sm text-grey">Nenhuma publicação neste mês.</p>
 		{:else}
 			<div class="flex flex-col divide-y divide-grey-200/60">
 				{#each diasComAcoes as key (key)}
@@ -661,17 +600,6 @@
 										<Icon name="trash" size={14} />
 									</button>
 								</div>
-							{/each}
-							{#each tarefasPorDia.get(key) ?? [] as t (t.id)}
-								<a
-									href="/tarefas"
-									class="flex items-center gap-2 rounded-[var(--radius)] px-2 py-1 text-sm no-underline transition-colors hover:bg-bg"
-								>
-									<span class="grid size-6 shrink-0 place-items-center rounded-[var(--radius-sm)] bg-brand-amber/15 text-brand-brown"><Icon name="check" size={13} /></span>
-									<span class="w-10 shrink-0" aria-hidden="true"></span>
-									<span class="truncate text-navy">{t.titulo}</span>
-									{#if semCliente && t.cliente_nome}<span class="ml-auto shrink-0 text-xs text-slate">{t.cliente_nome}</span>{/if}
-								</a>
 							{/each}
 						</div>
 					</div>
@@ -828,9 +756,8 @@
 <Modal open={!!diaAberto} title={diaAberto ? diaLongo(diaAberto) : ''} size="md" onClose={() => (diaAberto = null)}>
 	{#if diaAberto}
 		{@const cs = conteudosPorDia.get(diaAberto) ?? []}
-		{@const ts = tarefasPorDia.get(diaAberto) ?? []}
 		<div class="flex flex-col gap-3">
-			{#if cs.length === 0 && ts.length === 0}
+			{#if cs.length === 0}
 				<p class="text-sm text-grey">Nada programado neste dia.</p>
 			{:else}
 				<div class="flex flex-col gap-1.5">
@@ -852,15 +779,6 @@
 								{#if semCliente && c.cliente_nome}<span class="inline-flex items-center gap-0.5 text-[0.7rem] text-grey"><Icon name="building" size={11} />{c.cliente_nome}</span>{/if}
 							</span>
 						</button>
-					{/each}
-					{#each ts as t (t.id)}
-						<a
-							href="/tarefas"
-							class="flex items-center gap-2 rounded-[var(--radius)] bg-brand-amber/10 px-3 py-2 text-sm text-brand-brown no-underline transition-colors hover:bg-brand-amber/20"
-						>
-							<Icon name="check" size={13} /><span class="truncate">{t.titulo}</span>
-							{#if semCliente && t.cliente_nome}<span class="ml-auto shrink-0 text-xs text-slate">{t.cliente_nome}</span>{/if}
-						</a>
 					{/each}
 				</div>
 			{/if}
@@ -915,6 +833,4 @@
 
 <div class="mt-4 flex flex-wrap items-center gap-4 text-xs text-grey">
 	<span class="flex items-center gap-1.5"><span class="size-2.5 rounded-full bg-brand"></span> Conteúdo</span>
-	<span class="flex items-center gap-1.5"><span class="size-2.5 rounded-full bg-brand-amber"></span> Tarefa</span>
-	<span class="flex items-center gap-1.5"><span class="size-2.5 rounded-full bg-brand-green"></span> Campanha</span>
 </div>

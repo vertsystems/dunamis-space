@@ -31,7 +31,7 @@
 	<h2 class="text-sm font-semibold text-brand-danger mb-3">Zona de perigo</h2>
 	{#if confirmDelete}
 		<form method="POST" action="?/delete" use:enhance>
-			<p class="mb-3 text-sm text-slate">Excluir este colaborador? Ele será desvinculado dos clientes/projetos/tarefas.</p>
+			<p class="mb-3 text-sm text-slate">Excluir este colaborador? Ele será desvinculado dos clientes, projetos e conteúdos.</p>
 			<div class="flex gap-2">
 				<Button variant="danger" type="submit">Sim, excluir</Button>
 				<Button variant="secondary" onclick={() => (confirmDelete = false)}>Cancelar</Button>

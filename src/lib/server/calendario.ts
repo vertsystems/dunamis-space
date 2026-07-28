@@ -34,7 +34,7 @@ function hojeSP(): Date {
 }
 
 /**
- * Carrega os dados do calendário de conteúdos (conteúdos + tarefas + campanhas)
+ * Carrega os dados do calendário de conteúdos de conteúdos
  * para o período pedido em `url` (?view/?mes/?semana). Usado na página
  * /calendario e embutido no perfil do cliente. `opts.clienteFixo` fixa o
  * calendário a um cliente (esconde o filtro na UI).
@@ -95,8 +95,6 @@ export async function carregarCalendario(
 	const ltISO = new Date(
 		Date.UTC(janelaFim.getFullYear(), janelaFim.getMonth(), janelaFim.getDate() + 1) + DIA
 	).toISOString();
-	const dataIni = chaveDia(janelaIni);
-	const dataFim = chaveDia(janelaFim);
 
 	let qConteudos = supabase
 		.from('conteudos')
@@ -108,24 +106,6 @@ export async function carregarCalendario(
 		.lt('data_publicacao', ltISO)
 		.order('data_publicacao', { ascending: true });
 	if (clienteFiltro) qConteudos = qConteudos.eq('cliente_id', clienteFiltro);
-
-	const qTarefas = supabase
-		.from('tarefas')
-		.select('id, titulo, status, prazo, projeto:projetos(nome, cliente_id, cliente:clientes(nome))')
-		.not('prazo', 'is', null)
-		.gte('prazo', dataIni)
-		.lte('prazo', dataFim)
-		.order('prazo', { ascending: true });
-
-	let qCampanhas = supabase
-		.from('campanhas')
-		.select('id, nome, data_inicio, data_fim, cliente:clientes(nome)')
-		.not('data_inicio', 'is', null)
-		.not('data_fim', 'is', null)
-		.lte('data_inicio', dataFim)
-		.gte('data_fim', dataIni)
-		.order('data_inicio', { ascending: true });
-	if (clienteFiltro) qCampanhas = qCampanhas.eq('cliente_id', clienteFiltro);
 
 	// Backlog: conteúdos ainda sem data — a fila de programação.
 	let qSemData = supabase
@@ -149,8 +129,6 @@ export async function carregarCalendario(
 		{ data: projetos },
 		{ data: colaboradores },
 		{ data: conteudosRaw, error: errCon },
-		{ data: tarefasRaw, error: errTar },
-		{ data: campanhasRaw, error: errCamp },
 		{ data: semDataRaw, error: errSem },
 		{ data: aprovRaw, error: errAprov }
 	] = await Promise.all([
@@ -159,8 +137,6 @@ export async function carregarCalendario(
 		supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').eq('ativo', true).order('nome'),
 		// As três queries de janela não fazem sentido nas abas de painel.
 		ehPainel ? vazio : qConteudos,
-		ehPainel ? vazio : qTarefas,
-		ehPainel ? vazio : qCampanhas,
 		view === 'backlog' ? qSemData : vazio,
 		view === 'aprovacoes' ? qAprov : vazio
 	]);
@@ -188,31 +164,6 @@ export async function carregarCalendario(
 
 	// Nomes de campanha já usados (todas, não só do mês) p/ autocomplete no form.
 	const campanhasNomes = await nomesDeCampanha(supabase);
-
-	let tarefas = (tarefasRaw ?? []).map((t) => {
-		const projeto = um<{
-			nome: string;
-			cliente_id: string;
-			cliente: { nome: string } | { nome: string }[] | null;
-		}>(t.projeto);
-		return {
-			id: t.id as string,
-			titulo: t.titulo as string,
-			status: t.status as string,
-			prazo: t.prazo as string,
-			cliente_id: projeto?.cliente_id ?? null,
-			cliente_nome: um<{ nome: string }>(projeto?.cliente)?.nome ?? null
-		};
-	});
-	if (clienteFiltro) tarefas = tarefas.filter((t) => t.cliente_id === clienteFiltro);
-
-	const campanhas = (campanhasRaw ?? []).map((c) => ({
-		id: c.id as string,
-		nome: c.nome as string,
-		data_inicio: c.data_inicio as string,
-		data_fim: c.data_fim as string,
-		cliente_nome: um<{ nome: string }>(c.cliente)?.nome ?? null
-	}));
 
 	const semData = (semDataRaw ?? []).map((c) => ({
 		id: c.id as string,
@@ -263,9 +214,7 @@ export async function carregarCalendario(
 		projetos: projetos ?? [],
 		colaboradores: colaboradores ?? [],
 		conteudos,
-		tarefas,
-		campanhas,
 		campanhasNomes,
-		loadError: (errCli ?? errCon ?? errTar ?? errCamp ?? errSem ?? errAprov)?.message ?? null
+		loadError: (errCli ?? errCon ?? errSem ?? errAprov)?.message ?? null
 	};
 }

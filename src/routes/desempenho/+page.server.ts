@@ -7,10 +7,11 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 
 	const [novosRes, concluidasRes, stagesRes, negociosRes] = await Promise.all([
 		supabase.from('clientes').select('id', { count: 'exact', head: true }).gte('created_at', trintaDias),
+		// Tarefas foi aposentado — a métrica de entrega agora é conteúdo publicado.
 		supabase
-			.from('tarefas')
+			.from('conteudos')
 			.select('id', { count: 'exact', head: true })
-			.eq('status', 'concluido')
+			.eq('status', 'publicado')
 			.gte('updated_at', trintaDias),
 		supabase.from('crm_stages').select('id, nome, ordem, cor, pipeline_id').order('ordem', { ascending: true }),
 		supabase.from('crm_negocios').select('id, valor, status, stage_id, ganho_em, perdido_em')
@@ -76,7 +77,7 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 
 	return {
 		novosClientes: novosRes.count ?? 0,
-		tarefasConcluidas: concluidasRes.count ?? 0,
+		publicados: concluidasRes.count ?? 0,
 		crmPendente,
 		kpisCrm,
 		funil

@@ -15,7 +15,7 @@ type Supa = App.Locals['supabase'];
 // App.Locals['supabase'] é um SupabaseClient SEM o generic do schema, então o
 // PostgREST devolve linhas `unknown` e o `sel<T>()` inferia T = unknown — o que
 // quebrava o type-check de quem passa a lista para uma prop tipada (ex.:
-// ResponsavelPicker, CampanhaForm). O overrideTypes declara a forma real.
+// ResponsavelPicker, ConteudoForm). O overrideTypes declara a forma real.
 export type ColaboradorLite = {
 	id: string;
 	nome: string;

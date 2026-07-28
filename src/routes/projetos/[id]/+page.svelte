@@ -22,7 +22,6 @@
 <Card>
 	<div class="flex items-center justify-between mb-4">
 		<h1 class="text-sm font-semibold text-navy">{data.projeto.nome}</h1>
-		<Button size="sm" variant="secondary" onclick={() => location.assign(`/tarefas?projeto=${data.projeto.id}`)}>Ver tarefas</Button>
 	</div>
 	<ProjetoForm
 		{projeto}
@@ -41,7 +40,7 @@
 		<h2 class="text-sm font-semibold text-brand-danger mb-3">Zona de perigo</h2>
 		{#if confirmDelete}
 			<form method="POST" action="?/delete" use:enhance>
-				<p class="mb-3 text-sm text-slate">Excluir este projeto? As tarefas vinculadas também serão removidas.</p>
+				<p class="mb-3 text-sm text-slate">Excluir este projeto? Os conteúdos vinculados perdem a ligação com ele.</p>
 				<div class="flex gap-2">
 					<Button variant="danger" type="submit">Sim, excluir</Button>
 					<Button variant="secondary" onclick={() => (confirmDelete = false)}>Cancelar</Button>

@@ -64,11 +64,14 @@ export const load: PageServerLoad = async ({ locals: { supabase, user }, url }) 
 
 	const { data: hoje } = { data: hojeSP() };
 
+	// O módulo de Tarefas foi aposentado; o trabalho agora é centrado em conteúdo.
+	// Aqui entram as próximas publicações sob responsabilidade da pessoa.
 	let tq = supabase
-		.from('tarefas')
-		.select('id, titulo, prazo, prioridade, projeto:projetos(nome)')
-		.neq('status', 'concluido')
-		.order('prazo', { ascending: true, nullsFirst: false })
+		.from('conteudos')
+		.select('id, titulo, tipo, status, data_publicacao, cliente:clientes(nome)')
+		.not('data_publicacao', 'is', null)
+		.neq('status', 'publicado')
+		.order('data_publicacao', { ascending: true })
 		.limit(60);
 	if (meuId) tq = tq.eq('responsavel_id', meuId);
 
@@ -83,7 +86,7 @@ export const load: PageServerLoad = async ({ locals: { supabase, user }, url }) 
 	if (meuId) aq = aq.eq('responsavel_id', meuId);
 
 	// Onda 2 — as quatro dependem só de `cargoSel`/`meuId`, já resolvidos acima.
-	const [rotinaItens, feitosRaw, tarefasRaw, atividadesRes] = await Promise.all([
+	const [rotinaItens, feitosRaw, publicacoesRaw, atividadesRes] = await Promise.all([
 		sel(
 			supabase
 				.from('rotina_itens')
@@ -103,18 +106,19 @@ export const load: PageServerLoad = async ({ locals: { supabase, user }, url }) 
 					'meu-dia: conclusões da rotina de hoje'
 				)
 			: Promise.resolve([] as { item_id: string }[]),
-		sel(tq, 'meu-dia: tarefas em aberto'),
+		sel(tq, 'meu-dia: próximas publicações'),
 		aq
 	]);
 	const feitos = feitosRaw.map((c) => c.item_id as string);
 	const { data: atividadesRaw, error: aErr } = atividadesRes;
 
-	const tarefas = tarefasRaw.map((t) => ({
-		id: t.id as string,
-		titulo: t.titulo as string,
-		prazo: (t.prazo as string | null) ?? null,
-		prioridade: t.prioridade as string,
-		projeto_nome: um<{ nome: string }>(t.projeto)?.nome ?? null
+	const publicacoes = publicacoesRaw.map((c) => ({
+		id: c.id as string,
+		titulo: (c.titulo as string | null) ?? null,
+		tipo: c.tipo as string,
+		status: c.status as string,
+		data_publicacao: c.data_publicacao as string,
+		cliente_nome: um<{ nome: string }>(c.cliente)?.nome ?? null
 	}));
 
 	const atividades = aErr
@@ -131,7 +135,7 @@ export const load: PageServerLoad = async ({ locals: { supabase, user }, url }) 
 	return {
 		nome: (colab?.nome as string | undefined) ?? null,
 		semColaborador: !meuId,
-		tarefas,
+		publicacoes,
 		atividades,
 		rotina: {
 			podeGerenciar,

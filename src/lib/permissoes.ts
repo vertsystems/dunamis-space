@@ -37,13 +37,11 @@ export const MODULOS: Modulo[] = [
 	{ id: 'crm', label: 'CRM Master', grupo: 'comercial', rotas: ['/crm'] },
 	{ id: 'financeiro', label: 'Financeiro', grupo: 'comercial', rotas: ['/financeiro'] },
 	{ id: 'calendario', label: 'Calendário', grupo: 'marketing', rotas: ['/calendario'] },
-	{ id: 'tarefas', label: 'Tarefas', grupo: 'marketing', rotas: ['/tarefas'] },
 	// '/calendario' NÃO entra aqui: já pertence ao módulo 'calendario', e duas
 	// entradas com a mesma rota deixariam moduloDaRota() dependente da ordem.
 	// A divisão continua fazendo sentido: 'calendario' governa VER a tela,
 	// 'conteudo' governa criar/editar/excluir o conteúdo dentro dela.
 	{ id: 'conteudo', label: 'Conteúdo', grupo: 'marketing', rotas: ['/conteudo'] },
-	{ id: 'campanhas', label: 'Campanhas', grupo: 'marketing', rotas: ['/campanhas'] },
 	{ id: 'processos', label: 'Processos', grupo: 'marketing', rotas: ['/processos'] },
 	{ id: 'contratos', label: 'Contratos', grupo: 'administrativo', rotas: ['/contratos'] },
 	{ id: 'projetos', label: 'Projetos', grupo: 'marketing', rotas: ['/projetos'] },

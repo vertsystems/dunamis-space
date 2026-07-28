@@ -25,7 +25,7 @@
 
 	// Métricas da agência (cards do topo).
 	const stats = $derived([
-		{ label: 'Tarefas atribuídas', value: data.metricas.tarefas, icon: 'check' },
+		{ label: 'Conteúdos em aberto', value: data.metricas.conteudos, icon: 'calendar' },
 		{ label: 'Projetos ativos', value: data.metricas.projetos, icon: 'folder' },
 		{ label: 'Clientes ativos', value: data.metricas.clientes, icon: 'contact' }
 	]);

@@ -4,7 +4,7 @@
 	import { Card, Badge, Button, Modal } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
 	import { diasAte, formatDateBR } from '$lib/alertas';
-	import { prioridadeTone, prioridadeLabel } from '$lib/tarefas';
+	import { conteudoTipoLabel, conteudoStatusLabel, conteudoStatusTone } from '$lib/conteudo';
 	import { atividadeTipo, formatDataHora, vencimentoDe, vencimentoTone } from '$lib/crm';
 	import { DIAS, porDia } from '$lib/rotina';
 	import { toast } from '$lib/toast.svelte';
@@ -92,21 +92,25 @@
 		goto(`/meu-dia?cargo=${encodeURIComponent(cargo)}`, { keepFocus: true });
 	}
 
-	/* ---------------- Tarefas / CRM (existente) ---------------- */
-	const GRUPOS_T = [
+	/* ---------------- Publicações / CRM ---------------- */
+	const GRUPOS_P = [
 		{ chave: 'atrasada', label: 'Atrasadas', tone: 'danger' as const },
 		{ chave: 'hoje', label: 'Hoje', tone: 'warning' as const },
-		{ chave: 'proxima', label: 'Em breve', tone: 'info' as const },
-		{ chave: 'sem', label: 'Sem prazo', tone: 'neutral' as const }
+		{ chave: 'proxima', label: 'Em breve', tone: 'info' as const }
 	];
-	function grupoTarefa(prazo: string | null): string {
-		const d = diasAte(prazo);
-		if (d === null) return 'sem';
+	function grupoPublicacao(data_publicacao: string): string {
+		const d = diasAte(data_publicacao.slice(0, 10));
+		if (d === null) return 'proxima';
 		if (d < 0) return 'atrasada';
 		if (d === 0) return 'hoje';
 		return 'proxima';
 	}
-	const tarefasDo = $derived((k: string) => data.tarefas.filter((t) => grupoTarefa(t.prazo) === k));
+	const publicacoesDo = $derived((k: string) =>
+		data.publicacoes.filter((c) => grupoPublicacao(c.data_publicacao) === k)
+	);
+	function horaDe(iso: string) {
+		return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+	}
 
 	const GRUPOS_A = [
 		{ chave: 'atrasada', label: 'Atrasadas' },
@@ -317,34 +321,41 @@
 
 <!-- ===================== TAREFAS / CRM ===================== -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-	<!-- Tarefas -->
+	<!-- Próximas publicações (substituiu o bloco de Tarefas, aposentado) -->
 	<Card padding="none" class="overflow-hidden">
 		<div class="flex items-center justify-between gap-2 px-5 py-3.5 border-b border-grey-200">
-			<h2 class="font-semibold text-navy flex items-center gap-2"><Icon name="check" size={16} /> Tarefas</h2>
-			<a class="text-xs text-brand hover:underline" href="/tarefas">Ver Kanban</a>
+			<h2 class="font-semibold text-navy flex items-center gap-2">
+				<Icon name="calendar" size={16} /> Próximas publicações
+			</h2>
+			<a class="text-xs text-brand hover:underline" href="/calendario">Abrir calendário</a>
 		</div>
 		<div class="p-3">
-			{#if !data.tarefas.length}
-				<p class="px-2 py-8 text-center text-sm text-grey">Nenhuma tarefa em aberto. 🎉</p>
+			{#if !data.publicacoes.length}
+				<p class="px-2 py-8 text-center text-sm text-grey">Nada programado para você. 🎉</p>
 			{:else}
-				{#each GRUPOS_T as g (g.chave)}
-					{@const itens = tarefasDo(g.chave)}
+				{#each GRUPOS_P as g (g.chave)}
+					{@const itens = publicacoesDo(g.chave)}
 					{#if itens.length}
 						<div class="mb-2 last:mb-0">
-							<div class="flex items-center gap-2 px-2 mb-1">
-								<span class="text-xs uppercase tracking-wide font-semibold text-grey">{g.label}</span>
+							<div class="mb-1 flex items-center gap-2 px-2">
+								<span class="text-xs font-semibold uppercase tracking-wide text-grey">{g.label}</span>
 								<Badge tone={g.tone}>{itens.length}</Badge>
 							</div>
-							{#each itens as t (t.id)}
-								<div class="flex items-start justify-between gap-2 px-2 py-2 rounded-[var(--radius)] hover:bg-bg">
+							{#each itens as c (c.id)}
+								<a
+									href={`/conteudo/${c.id}`}
+									class="flex items-start justify-between gap-2 rounded-[var(--radius)] px-2 py-2 no-underline hover:bg-bg"
+								>
 									<div class="min-w-0">
-										<div class="text-sm text-navy">{t.titulo}</div>
-										<div class="text-xs text-grey truncate">
-											{t.projeto_nome ?? 'Sem projeto'}{t.prazo ? ` · ${formatDateBR(t.prazo)}` : ''}
+										<div class="truncate text-sm text-navy">{c.titulo || conteudoTipoLabel(c.tipo)}</div>
+										<div class="truncate text-xs text-grey">
+											{formatDateBR(c.data_publicacao.slice(0, 10))} · {horaDe(c.data_publicacao)}{c.cliente_nome
+												? ` · ${c.cliente_nome}`
+												: ''}
 										</div>
 									</div>
-									<Badge tone={prioridadeTone(t.prioridade)}>{prioridadeLabel(t.prioridade)}</Badge>
-								</div>
+									<Badge tone={conteudoStatusTone(c.status)}>{conteudoStatusLabel(c.status)}</Badge>
+								</a>
 							{/each}
 						</div>
 					{/if}

@@ -7,7 +7,7 @@
 
 	const stats = $derived([
 		{ label: 'Novos clientes (30d)', value: String(data.novosClientes), accent: 'text-navy', icon: 'contact' },
-		{ label: 'Tarefas concluídas (30d)', value: String(data.tarefasConcluidas), accent: 'text-brand-green', icon: 'check' },
+		{ label: 'Publicados (30d)', value: String(data.publicados), accent: 'text-brand-green', icon: 'calendar' },
 		...(data.kpisCrm
 			? [
 					{ label: 'Negócios ganhos (mês)', value: String(data.kpisCrm.ganhosMes), accent: 'text-brand-green', icon: 'funnel' },

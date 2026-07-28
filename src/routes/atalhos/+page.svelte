@@ -6,7 +6,7 @@
 	const criar: Atalho[] = [
 		{ href: '/clientes/novo', label: 'Novo cliente', desc: 'Cadastrar cliente / lead', icon: 'contact' },
 		{ href: '/crm', label: 'Novo negócio', desc: 'Abrir o CRM e criar oportunidade', icon: 'funnel' },
-		{ href: '/tarefas/novo', label: 'Nova tarefa', desc: 'Adicionar tarefa ao Kanban', icon: 'check' },
+		{ href: '/conteudo/novo', label: 'Novo conteúdo', desc: 'Criar post no calendário', icon: 'edit' },
 		{ href: '/conteudo/novo', label: 'Novo conteúdo', desc: 'Planejar publicação', icon: 'edit' },
 		{ href: '/financeiro/novo', label: 'Nova transação', desc: 'Registrar receita ou despesa', icon: 'dollar' },
 		{ href: '/contratos/novo', label: 'Novo contrato', desc: 'Cadastrar contrato', icon: 'file' }
@@ -15,10 +15,8 @@
 	const acessar: Atalho[] = [
 		{ href: '/crm', label: 'CRM Master', desc: 'Pipeline de vendas', icon: 'funnel' },
 		{ href: '/cadastro', label: 'Clientes', desc: 'Base de clientes', icon: 'contact' },
-		{ href: '/tarefas', label: 'Tarefas', desc: 'Kanban da equipe', icon: 'check' },
 		{ href: '/calendario', label: 'Calendário Editorial', desc: 'Conteúdo, backlog e aprovações', icon: 'calendar' },
 		{ href: '/financeiro', label: 'Financeiro', desc: 'Receitas e despesas', icon: 'dollar' },
-		{ href: '/campanhas', label: 'Campanhas', desc: 'Promoções e materiais', icon: 'tag' },
 		{ href: '/equipe', label: 'Equipe', desc: 'Colaboradores', icon: 'users' },
 		{ href: '/base-conhecimento', label: 'Base de Conhecimento', desc: 'Wiki interna', icon: 'book' }
 	];
