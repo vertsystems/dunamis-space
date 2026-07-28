@@ -111,12 +111,11 @@
 			id: 'marketing',
 			label: 'Marketing',
 			icon: 'marketing',
-			areas: [
-				{ href: '/calendario', label: 'Calendário', icon: 'calendar' },
-				{ href: '/tarefas', label: 'Tarefas', icon: 'check' },
-				{ href: '/conteudo', label: 'Conteúdo', icon: 'edit' },
-				{ href: '/campanhas', label: 'Campanhas', icon: 'tag' }
-			]
+			// Tarefas, Conteúdo e Campanhas saíram do menu: dá para trabalhar tudo
+			// pelo Calendário Editorial. As ROTAS continuam existindo e funcionando —
+			// só o atalho na sidebar foi removido, então links vindos do dashboard,
+			// de notificações e de outras telas seguem abrindo normalmente.
+			areas: [{ href: '/calendario', label: 'Calendário Editorial', icon: 'calendar' }]
 		},
 		{
 			id: 'dtools',

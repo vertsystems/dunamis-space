@@ -213,19 +213,27 @@
 				{#each DIAS as d (d.idx)}
 					{@const itens = itensPorDia[d.idx] ?? []}
 					{@const ehHoje = d.idx === data.rotina.dia}
-					{@const domingo = d.idx === 0}
+					<!-- `flex flex-col` é o que alinha os cabeçalhos: <button> nativo
+					     centraliza o próprio conteúdo verticalmente, e como o grid estica
+					     todos os blocos para a mesma altura, o nome do dia descia conforme
+					     a coluna tinha menos itens (o domingo, vazio, ficava no meio). -->
 					<button
 						type="button"
 						onclick={() => abrirDia(d.idx)}
-						class="rounded-[var(--radius)] p-2 text-left transition-colors {ehHoje
+						class="flex flex-col rounded-[var(--radius)] p-2 text-left transition-colors {ehHoje
 							? 'bg-brand/5 ring-2 ring-brand/40'
 							: 'bg-bg hover:bg-grey-200/50'}"
 					>
-						<div class="mb-1.5 flex flex-wrap items-center gap-1 px-0.5">
-							<span class="text-xs font-semibold {ehHoje ? 'text-brand' : 'text-slate'}">{domingo ? 'D' : d.curto}</span>
-							{#if ehHoje}<span class="rounded-full bg-brand px-1.5 text-[0.6rem] font-bold text-white">HOJE</span>{/if}
+						<!-- Altura fixa e sem quebra: o selo HOJE não pode empurrar o
+						     cabeçalho para uma segunda linha e desalinhar só essa coluna. -->
+						<div class="mb-1.5 flex h-5 shrink-0 items-center gap-1.5 px-0.5">
+							<span class="text-xs font-semibold {ehHoje ? 'text-brand' : 'text-slate'}">{d.curto}</span>
+							{#if ehHoje}<span class="shrink-0 rounded-full bg-brand px-1.5 py-px text-[0.6rem] leading-none font-bold text-white">HOJE</span>{/if}
+							{#if itens.length}
+								<span class="ml-auto shrink-0 text-[0.65rem] tabular-nums {ehHoje ? 'text-brand/70' : 'text-grey'}">{itens.length}</span>
+							{/if}
 						</div>
-						<div class="space-y-1">
+						<div class="flex-1 space-y-1">
 							{#each itens as it (it.id)}
 								{@const feito = ehHoje && feitos.has(it.id)}
 								<div class="rounded-[var(--radius)] bg-surface px-2 py-1.5 text-[0.72rem] leading-snug shadow-xs {feito ? 'text-grey line-through' : 'text-slate'}">
@@ -233,7 +241,7 @@
 								</div>
 							{/each}
 							{#if !itens.length}
-								<p class="px-1 py-1.5 text-[0.68rem] text-grey/70">—</p>
+								<p class="px-1 py-1.5 text-[0.68rem] text-grey/70">Sem rotina</p>
 							{/if}
 						</div>
 					</button>
