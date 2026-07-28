@@ -25,7 +25,7 @@
 	}
 </script>
 
-<Breadcrumb items={[{ label: 'Conteúdo', href: '/conteudo' }, { label: data.conteudo.titulo ?? 'Conteúdo' }]} />
+<Breadcrumb items={[{ label: 'Calendário Editorial', href: '/calendario' }, { label: data.conteudo.titulo ?? 'Conteúdo' }]} />
 
 {#if form?.saved}
 	<div class="mb-4 rounded-[var(--radius)] bg-brand-green/10 px-4 py-3 text-sm text-brand-green">Conteúdo salvo com sucesso.</div>

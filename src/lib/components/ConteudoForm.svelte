@@ -184,7 +184,7 @@
 
 	<div class="flex items-center gap-2 mt-4">
 		<Button type="submit" loading={saving}>{submitLabel}</Button>
-		<Button variant="secondary" onclick={() => (onCancel ? onCancel() : goto('/conteudo'))}>Cancelar</Button>
+		<Button variant="secondary" onclick={() => (onCancel ? onCancel() : goto('/calendario'))}>Cancelar</Button>
 		{#if onDelete}
 			<Button variant="danger" type="button" onclick={onDelete} class="ml-auto">Excluir conteúdo</Button>
 		{/if}

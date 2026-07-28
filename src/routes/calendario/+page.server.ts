@@ -58,6 +58,33 @@ export const actions: Actions = {
 		if (error) return fail(500, { error: error.message });
 		return { ok: true };
 	},
+	// Backlog → calendário: define a data de um conteúdo que ainda não tinha.
+	// Veio de /conteudo/calendario, que foi absorvida pelo Calendário Editorial.
+	agendar: async ({ request, locals }) => {
+		exigirPermissao(locals, 'conteudo', 'editar');
+		const { supabase } = locals;
+		const fd = await request.formData();
+		const id = String(fd.get('id') ?? '');
+		const dp = String(fd.get('data_publicacao') ?? '');
+		if (!UUID_RE.test(id) || !ISO_RE.test(dp)) return fail(400, { error: 'Dados inválidos.' });
+		const { error } = await supabase.from('conteudos').update({ data_publicacao: dp }).eq('id', id);
+		if (error) return fail(500, { error: error.message });
+		return { ok: true };
+	},
+	// Tira a data de um conteúdo, devolvendo-o ao backlog.
+	desagendar: async ({ request, locals }) => {
+		exigirPermissao(locals, 'conteudo', 'editar');
+		const { supabase } = locals;
+		const fd = await request.formData();
+		const id = String(fd.get('id') ?? '');
+		if (!UUID_RE.test(id)) return fail(400, { error: 'ID inválido.' });
+		const { error } = await supabase
+			.from('conteudos')
+			.update({ data_publicacao: null })
+			.eq('id', id);
+		if (error) return fail(500, { error: error.message });
+		return { ok: true };
+	},
 	// Excluir conteúdo (botão no modal de edição do calendário).
 	excluir: async ({ request, locals }) => {
 		exigirPermissao(locals, 'conteudo', 'excluir');

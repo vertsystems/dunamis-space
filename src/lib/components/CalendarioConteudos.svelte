@@ -1,11 +1,17 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
 	import { deserialize } from '$app/forms';
-	import { Card, Button, Select, Modal, toneClasses } from '$lib/components/ui';
+	import { Card, Button, Select, Modal, EmptyState, toneClasses } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
 	import ConteudoForm from '$lib/components/ConteudoForm.svelte';
 	import { SEMANA, MESES, chaveDia, celulasMes } from '$lib/calendario';
-	import { conteudoTipoLabel, conteudoStatusLabel, conteudoStatusTone } from '$lib/conteudo';
+	import {
+		conteudoTipoLabel,
+		conteudoStatusLabel,
+		conteudoStatusTone,
+		aprovacaoStatusTone,
+		aprovacaoStatusLabel
+	} from '$lib/conteudo';
 	import { toast } from '$lib/toast.svelte';
 
 	let {
@@ -25,6 +31,52 @@
 	// As actions (mover/copiar/excluir/definirStatus) vivem sempre na rota /calendario.
 	const ACTION = '/calendario';
 	const res = $derived(form as { values?: Record<string, any>; error?: string } | null);
+
+	// ---- Backlog: agendar um conteúdo que ainda não tem data ----
+	let agendando = $state<Record<string, any> | null>(null);
+	let dataAgendar = $state('');
+	async function confirmarAgendar() {
+		const c = agendando;
+		if (!c || !dataAgendar || processando) return;
+		processando = true;
+		try {
+			const fd = new FormData();
+			fd.set('id', c.id);
+			// <input type="datetime-local"> devolve hora local; o servidor valida ISO.
+			fd.set('data_publicacao', new Date(dataAgendar).toISOString());
+			const resp = await fetch(`${ACTION}?/agendar`, { method: 'POST', body: fd });
+			const r = deserialize(await resp.text());
+			if (r.type === 'success') {
+				toast.success('Conteúdo agendado');
+				agendando = null;
+				await invalidateAll();
+			} else {
+				toast.error('Não foi possível agendar.');
+			}
+		} catch {
+			toast.error('Falha de conexão. Tente novamente.');
+		} finally {
+			processando = false;
+		}
+	}
+
+	// ---- Aprovações: link público para o cliente ----
+	let copiadoId = $state<string | null>(null);
+	function linkAprovacao(token: string) {
+		return `${location.origin}/aprovar/${token}`;
+	}
+	async function copiarLink(token: string, id: string) {
+		await navigator.clipboard.writeText(linkAprovacao(token));
+		copiadoId = id;
+		setTimeout(() => (copiadoId = null), 2000);
+	}
+	function trocarStatusAprov(e: Event) {
+		const v = (e.currentTarget as HTMLSelectElement).value;
+		goto(href({ view: 'aprovacoes', aprov: v }), { keepFocus: true });
+	}
+	function fmtDataHora(d: string | null) {
+		return d ? new Date(d).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+	}
 
 	// --- Novo post a partir de um dia do calendário ---
 	let novoConteudo = $state<Record<string, any> | null>(null);
@@ -141,11 +193,19 @@
 		if (k) abrirNovo(k);
 	}
 
+	// Backlog e Aprovações vieram de /conteudo/calendario e /conteudo/aprovacoes,
+	// absorvidas aqui — o Calendário Editorial passa a ser o único lugar de
+	// trabalho de conteúdo.
 	const VIEWS = [
 		{ key: 'semana', label: 'Semana', icon: 'calendar' },
 		{ key: 'lista', label: 'Conteúdos', icon: 'clipboard' },
-		{ key: 'mes', label: 'Calendário', icon: 'calendar' }
+		{ key: 'mes', label: 'Calendário', icon: 'calendar' },
+		{ key: 'backlog', label: 'Backlog', icon: 'clock' },
+		{ key: 'aprovacoes', label: 'Aprovações', icon: 'check' }
 	] as const;
+
+	/** Painéis (backlog/aprovações) não têm navegação de período. */
+	const ehPainel = $derived(data.view === 'backlog' || data.view === 'aprovacoes');
 
 	const MAX_CELULA = 3;
 
@@ -192,11 +252,18 @@
 	);
 
 	// --- URLs / navegação ---
-	function href(o: { view?: string; mes?: string; semana?: string; cliente?: string | undefined }) {
+	function href(o: {
+		view?: string;
+		mes?: string;
+		semana?: string;
+		cliente?: string | undefined;
+		aprov?: string;
+	}) {
 		const p = new URLSearchParams();
 		p.set('view', o.view ?? data.view);
 		if (o.mes) p.set('mes', o.mes);
 		if (o.semana) p.set('semana', o.semana);
+		if (o.aprov) p.set('aprov', o.aprov);
 		if (!clienteFixo) {
 			const cli = 'cliente' in o ? o.cliente : data.clienteFiltro;
 			if (cli) p.set('cliente', cli);
@@ -420,6 +487,7 @@
 	{/if}
 </div>
 
+{#if !ehPainel}
 <div class="mb-4 flex items-center justify-between gap-2">
 	<h2 class="text-sm font-semibold capitalize text-navy">{periodoLabel}</h2>
 	<div class="flex gap-1">
@@ -428,6 +496,7 @@
 		<Button size="sm" variant="secondary" onclick={() => goto(navNext)} aria-label="Próximo período">›</Button>
 	</div>
 </div>
+{/if}
 
 {#if data.view === 'mes'}
 	<Card>
@@ -612,6 +681,115 @@
 	</Card>
 {/if}
 
+{#if data.view === 'backlog'}
+	<!-- Fila de programação: conteúdo criado mas ainda sem data. Veio de
+	     /conteudo/calendario, que era um segundo calendário redundante. -->
+	<Card padding="none" class="overflow-hidden">
+		{#if data.semData?.length}
+			<ul class="divide-y divide-grey-200/60">
+				{#each data.semData as c (c.id)}
+					<li class="flex flex-wrap items-center gap-3 px-4 py-3">
+						<span class="grid size-8 shrink-0 place-items-center rounded-[var(--radius)] bg-brand/10 text-brand">
+							<Icon name="edit" size={15} />
+						</span>
+						<div class="min-w-0 flex-1">
+							<p class="truncate text-sm font-medium text-navy">{c.titulo || '(sem título)'}</p>
+							<p class="text-xs text-grey">
+								{conteudoTipoLabel(c.tipo)}{c.cliente_nome ? ` · ${c.cliente_nome}` : ''}
+							</p>
+						</div>
+						<span class="shrink-0 rounded-full px-2 py-0.5 text-xs font-medium {toneClasses[conteudoStatusTone(c.status)]}">
+							{conteudoStatusLabel(c.status)}
+						</span>
+						<div class="flex shrink-0 items-center gap-2">
+							<Button size="sm" variant="secondary" onclick={() => (editando = c)}>Editar</Button>
+							<Button
+								size="sm"
+								onclick={() => {
+									agendando = c;
+									dataAgendar = '';
+								}}
+							>
+								Agendar
+							</Button>
+						</div>
+					</li>
+				{/each}
+			</ul>
+		{:else}
+			<div class="p-2">
+				<EmptyState
+					icon="clock"
+					title="Backlog vazio"
+					description="Todo conteúdo criado já tem data. Novos itens sem data aparecem aqui para você programar."
+				/>
+			</div>
+		{/if}
+	</Card>
+{:else if data.view === 'aprovacoes'}
+	<!-- Fila de aprovação do cliente. Veio de /conteudo/aprovacoes. -->
+	<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+		<h2 class="text-sm font-semibold text-navy">Aprovações do cliente</h2>
+		<Select
+			value={data.aprovStatus}
+			onchange={trocarStatusAprov}
+			aria-label="Filtrar aprovações por status"
+			wrapperClass="w-full sm:w-56"
+		>
+			<option value="pendente">Pendentes</option>
+			<option value="todas">Todas</option>
+			<option value="aprovado">Aprovadas</option>
+			<option value="alteracao_solicitada">Alteração solicitada</option>
+		</Select>
+	</div>
+	<Card padding="none" class="overflow-hidden">
+		{#if data.aprovacoes?.length}
+			<ul class="divide-y divide-grey-200/60">
+				{#each data.aprovacoes as a (a.id)}
+					<li class="flex flex-wrap items-center gap-3 px-4 py-3">
+						<div class="min-w-0 flex-1">
+							<p class="truncate text-sm font-medium text-navy">
+								{a.conteudo_titulo || '(sem título)'}
+							</p>
+							<p class="text-xs text-grey">
+								{a.cliente_nome ?? 'Sem cliente'} · enviado em {fmtDataHora(a.data_envio)}
+								{#if a.data_resposta}· respondido em {fmtDataHora(a.data_resposta)}{/if}
+							</p>
+							{#if a.comentario_cliente}
+								<p class="mt-1 rounded-[var(--radius)] bg-bg px-2 py-1 text-xs text-slate">
+									“{a.comentario_cliente}”
+								</p>
+							{/if}
+						</div>
+						<span class="shrink-0 rounded-full px-2 py-0.5 text-xs font-medium {toneClasses[aprovacaoStatusTone(a.status)]}">
+							{aprovacaoStatusLabel(a.status)}
+						</span>
+						<div class="flex shrink-0 items-center gap-2">
+							<Button size="sm" variant="secondary" onclick={() => copiarLink(a.token_publico, a.id)}>
+								{copiadoId === a.id ? 'Copiado!' : 'Copiar link'}
+							</Button>
+							{#if a.conteudo_id}
+								<a
+									class="text-sm text-brand no-underline hover:underline"
+									href={`/conteudo/${a.conteudo_id}`}>Abrir</a
+								>
+							{/if}
+						</div>
+					</li>
+				{/each}
+			</ul>
+		{:else}
+			<div class="p-2">
+				<EmptyState
+					icon="check"
+					title="Nada aguardando aprovação"
+					description="Ao enviar um conteúdo para o cliente, ele aparece aqui até ser respondido."
+				/>
+			</div>
+		{/if}
+	</Card>
+{/if}
+
 <Modal open={!!novoConteudo} title="Novo conteúdo" size="lg" onClose={() => (novoConteudo = null)}>
 	{#if novoConteudo}
 		<ConteudoForm
@@ -706,6 +884,31 @@
 			<Button variant="primary" loading={processando} onclick={() => executar('mover')}>Mover</Button>
 			<Button variant="secondary" loading={processando} onclick={() => executar('copiar')}>Copiar</Button>
 			<Button variant="ghost" onclick={() => (moverCopiar = null)}>Cancelar</Button>
+		</div>
+	{/if}
+</Modal>
+
+<!-- Agendar um item do backlog: escolhe data/hora e ele entra no calendário. -->
+<Modal
+	open={!!agendando}
+	title="Agendar conteúdo"
+	subtitle={agendando?.titulo || ''}
+	size="sm"
+	onClose={() => (agendando = null)}
+>
+	{#if agendando}
+		<label class="mb-1.5 block text-sm font-medium text-navy" for="data-agendar">
+			Data e hora da publicação
+		</label>
+		<input
+			id="data-agendar"
+			type="datetime-local"
+			bind:value={dataAgendar}
+			class="h-10 w-full rounded-[var(--radius)] border border-grey-200 bg-surface px-3.5 text-sm text-navy-900 shadow-xs transition-colors hover:border-grey focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25 focus-visible:outline-none"
+		/>
+		<div class="mt-4 flex justify-end gap-2">
+			<Button variant="secondary" onclick={() => (agendando = null)}>Cancelar</Button>
+			<Button onclick={confirmarAgendar} disabled={!dataAgendar} loading={processando}>Agendar</Button>
 		</div>
 	{/if}
 </Modal>

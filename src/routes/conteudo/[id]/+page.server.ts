@@ -66,6 +66,6 @@ export const actions: Actions = {
 		const { supabase } = locals;
 		const { error: e } = await supabase.from('conteudos').delete().eq('id', params.id);
 		if (e) return fail(500, { error: e.message });
-		throw redirect(303, '/conteudo');
+		throw redirect(303, '/calendario');
 	}
 };

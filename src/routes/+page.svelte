@@ -174,10 +174,10 @@
 		<div class="border-t border-grey-200 mt-4 pt-4">
 			<div class="flex items-center justify-between mb-2">
 				<h3 class="text-xs uppercase tracking-wide font-semibold text-grey">Conteúdo</h3>
-				<a class="text-xs text-brand hover:underline" href="/conteudo">Ver</a>
+				<a class="text-xs text-brand hover:underline" href="/calendario?view=lista">Ver</a>
 			</div>
 			{#if data.operacao.conteudoEmAprovacao > 0}
-				<a href="/conteudo/aprovacoes" class="inline-flex items-center gap-1.5 mb-2">
+				<a href="/calendario?view=aprovacoes" class="inline-flex items-center gap-1.5 mb-2">
 					<Badge tone="warning">{data.operacao.conteudoEmAprovacao} aprovação(ões) pendente(s)</Badge>
 				</a>
 			{/if}
