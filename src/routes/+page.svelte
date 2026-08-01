@@ -27,7 +27,7 @@
 	const FUNIL_TILES = [
 		{ chave: 'afazer', label: 'A fazer', href: '/calendario?view=lista' },
 		{ chave: 'andamento', label: 'Em andamento', href: '/calendario?view=lista' },
-		{ chave: 'semData', label: 'Backlog', href: '/calendario?view=backlog' }
+		{ chave: 'semData', label: 'Sem data', href: '/calendario?view=lista' }
 	] as const;
 
 	function quandoPub(v: string | null): string {
@@ -179,9 +179,10 @@
 				<a class="text-xs text-brand hover:underline" href="/calendario?view=lista">Ver</a>
 			</div>
 			{#if data.operacao.conteudoEmAprovacao > 0}
-				<a href="/calendario?view=aprovacoes" class="inline-flex items-center gap-1.5 mb-2">
+				<!-- A tela de aprovações foi aposentada; o indicador continua útil. -->
+				<span class="inline-flex items-center gap-1.5 mb-2">
 					<Badge tone="warning">{data.operacao.conteudoEmAprovacao} aprovação(ões) pendente(s)</Badge>
-				</a>
+				</span>
 			{/if}
 			{#if data.operacao.publicacoes.length}
 				<div class="text-xs uppercase tracking-wide font-semibold text-grey mb-1">Publicações da semana</div>

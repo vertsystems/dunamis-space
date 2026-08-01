@@ -1,8 +1,8 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 
-// Esta tela foi absorvida pelo Calendário Editorial (?view=backlog). O redirect fica
-// no lugar para não quebrar link salvo, favorito nem histórico do navegador.
+// Esta tela foi aposentada junto com a aba Backlog do Calendário Editorial.
+// O redirect fica no lugar para não quebrar link salvo, favorito nem histórico.
 export const load: PageServerLoad = async () => {
-	redirect(308, '/calendario?view=backlog');
+	redirect(308, '/calendario?view=lista');
 };

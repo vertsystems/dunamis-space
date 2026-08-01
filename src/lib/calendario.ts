@@ -2,7 +2,18 @@
 // campanhas. Toda a aritmética de data usa horário LOCAL (o grid é montado no
 // cliente); a conversão de/para UTC de instantes fica a cargo de quem consome.
 
-export const SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'] as const;
+// A semana começa na SEGUNDA e termina no domingo (padrão da agência).
+export const SEMANA = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'] as const;
+
+/** Índice da coluna (0=segunda … 6=domingo) de uma data. */
+export function colunaSemana(d: Date): number {
+	return (d.getDay() + 6) % 7;
+}
+
+/** Segunda-feira da semana a que a data pertence. */
+export function inicioDaSemana(d: Date): Date {
+	return new Date(d.getFullYear(), d.getMonth(), d.getDate() - colunaSemana(d));
+}
 
 export const MESES = [
 	'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -39,12 +50,12 @@ export function mesSeguinte(ano: number, mes: number): string {
 }
 
 /**
- * Grid de células (semanas completas, Dom→Sáb) que cobre o mês informado,
+ * Grid de células (semanas completas, Seg→Dom) que cobre o mês informado,
  * incluindo os dias "vazando" do mês anterior/seguinte para fechar as semanas.
  */
 export function celulasMes(ano: number, mes: number): Date[] {
 	const primeiro = new Date(ano, mes, 1);
-	const inicioSemana = primeiro.getDay();
+	const inicioSemana = colunaSemana(primeiro);
 	const diasNoMes = new Date(ano, mes + 1, 0).getDate();
 	const total = Math.ceil((inicioSemana + diasNoMes) / 7) * 7;
 	const inicio = new Date(ano, mes, 1 - inicioSemana);

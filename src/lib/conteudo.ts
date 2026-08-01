@@ -19,13 +19,14 @@ export const CONTEUDO_STATUS = [
 	{ value: 'criar_design', label: 'Criar design', grupo: 'Em andamento' },
 	{ value: 'aprovar_roteiro', label: 'Aprovar roteiro', grupo: 'Em andamento' },
 	{ value: 'aprovar_conteudo', label: 'Aprovar conteúdo', grupo: 'Em andamento' },
-	{ value: 'programado_parcial', label: 'Programado parcial', grupo: 'Em andamento' },
-	{ value: 'programado', label: 'Programado', grupo: 'Em andamento' },
-	// Concluídos
-	{ value: 'programar', label: 'Programar', grupo: 'Concluídos' },
-	{ value: 'programar_feed', label: 'Programar Feed', grupo: 'Concluídos' },
-	{ value: 'programar_stories', label: 'Programar Stories', grupo: 'Concluídos' },
-	{ value: 'programar_reels', label: 'Programar Reels', grupo: 'Concluídos' },
+	// "Programar ..." é trabalho a fazer (agendar o post), por isso fica aqui.
+	{ value: 'programar', label: 'Programar', grupo: 'Em andamento' },
+	{ value: 'programar_feed', label: 'Programar Feed', grupo: 'Em andamento' },
+	{ value: 'programar_stories', label: 'Programar Stories', grupo: 'Em andamento' },
+	{ value: 'programar_reels', label: 'Programar Reels', grupo: 'Em andamento' },
+	// Concluídos — já programado/publicado, nada mais a fazer.
+	{ value: 'programado_parcial', label: 'Programado parcial', grupo: 'Concluídos' },
+	{ value: 'programado', label: 'Programado', grupo: 'Concluídos' },
 	{ value: 'publicado', label: 'Publicado', grupo: 'Concluídos' }
 ] as const;
 
@@ -80,18 +81,20 @@ export function conteudoStatusTone(
 		case 'gravar_video':
 		case 'criar_design':
 			return 'brand';
-		// Em andamento — aprovação/programação (azul)
+		// Em andamento — aprovação (azul)
 		case 'aprovar_roteiro':
 		case 'aprovar_conteudo':
-		case 'programado_parcial':
-		case 'programado':
 			return 'info';
-		// Concluídos — programar (laranja)
+		// Em andamento — a programar (laranja)
 		case 'programar':
 		case 'programar_feed':
 		case 'programar_stories':
 		case 'programar_reels':
 			return 'warning';
+		// Concluídos — já programado (azul)
+		case 'programado_parcial':
+		case 'programado':
+			return 'info';
 		// Concluídos — publicado (verde)
 		case 'publicado':
 			return 'success';
