@@ -36,7 +36,13 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	// Degrada bem se a migration 0010 ainda não tiver rodado.
 	const pendente =
 		!!error && /sos_chamados|does not exist|schema cache|relation/i.test(error?.message ?? '');
-	const itens = pendente ? [] : ((data ?? []) as SosChamado[]);
+	// Abertos primeiro, resolvidos no fim. O sort do JS é estável, então dentro de
+	// cada grupo vale o created_at desc que veio do banco.
+	const itens = pendente
+		? []
+		: ((data ?? []) as SosChamado[]).sort(
+				(a, b) => Number(a.status === 'resolvido') - Number(b.status === 'resolvido')
+			);
 
 	let abertos = 0;
 	if (!pendente) {
