@@ -85,11 +85,6 @@ create unique index if not exists idx_aprovacoes_token_publico
 -- Contagem de pendentes no +layout.server.ts → roda em todo SSR.
 create index if not exists idx_aprovacoes_status on public.aprovacoes (status);
 
--- Dashboard, /notificacoes e /meu-dia filtram por prazo de tarefa não concluída.
-create index if not exists idx_tarefas_prazo_abertas
-	on public.tarefas (prazo)
-	where status <> 'concluido';
-
 create index if not exists idx_contratos_status_data_fim on public.contratos (status, data_fim);
 create index if not exists idx_transacoes_status on public.transacoes (status);
 create index if not exists idx_crm_atividades_responsavel on public.crm_atividades (responsavel_id);
@@ -98,11 +93,12 @@ create index if not exists idx_crm_atividades_responsavel on public.crm_atividad
 create index if not exists idx_cliente_interacoes_cliente_data
 	on public.cliente_interacoes (cliente_id, data desc);
 
+-- NOTA (aplicada em 03/08/2026): os índices de `tarefas`, `campanhas`,
+-- `campanha_produtos`, `campanha_materiais` e `tarefa_checklist` saíram daqui.
+-- Esta migration ficou pendente até depois da 0042, que apagou essas tabelas —
+-- criar índice em tabela inexistente aborta o arquivo inteiro no meio.
+
 -- Chaves estrangeiras sem índice (importa para embeds e para on delete cascade).
-create index if not exists idx_campanhas_cliente on public.campanhas (cliente_id);
-create index if not exists idx_campanha_produtos_campanha on public.campanha_produtos (campanha_id);
-create index if not exists idx_campanha_materiais_campanha on public.campanha_materiais (campanha_id);
-create index if not exists idx_tarefa_checklist_tarefa on public.tarefa_checklist (tarefa_id);
 create index if not exists idx_kb_artigos_cliente on public.kb_artigos (cliente_id);
 create index if not exists idx_notificacoes_colaborador on public.notificacoes (colaborador_id);
 create index if not exists idx_contratos_plano on public.contratos (plano_id);
