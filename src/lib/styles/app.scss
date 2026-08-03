@@ -39,15 +39,19 @@
 		--ds-topbar-space: calc(var(--ds-topbar-full) + 16px); // barra + folga
 
 		// Largura máxima da coluna do app (sidebar + conteúdo). Centraliza tudo em
-		// telas largas, empurrando o conteúdo para o centro (~25% de margem em 1920px).
-		--ds-app-max: 1440px;
-		// Recuos laterais da coluna do app. A barra de topo usa os mesmos valores,
-		// então logo e ações alinham com a sidebar e o conteúdo.
-		--ds-gutter-left: 50px;
-		--ds-gutter-right: 80px;
+		// telas largas. Era 1440px com recuo esquerdo de 50px, o que jogava a
+		// sidebar a ~230px da borda num monitor de 1800px; 1600px + recuo de 40px
+		// traz esse começo para ~139px (40% menos) e devolve a folga ao conteúdo.
+		--ds-app-max: 1600px;
+		// Recuos laterais da coluna do app, iguais dos dois lados. A barra de topo
+		// usa os mesmos valores, então logo e ações alinham com sidebar e conteúdo.
+		--ds-gutter-left: 40px;
+		--ds-gutter-right: 40px;
 		// Vão entre sidebar e conteúdo. Era governado por --ds-gutter-right via
 		// shorthand, então ajustar a margem direita da barra movia o conteúdo junto.
-		--ds-content-gap: 80px;
+		--ds-content-gap: 40px;
+		// Largura da sidebar contextual — a mesma em todas as áreas do app.
+		--ds-sidebar-w: 244px;
 	}
 
 	html,
@@ -312,7 +316,7 @@
 
 	// Sidebar contextual — glass
 	.app-sidebar {
-		width: 244px;
+		width: var(--ds-sidebar-w);
 		flex-shrink: 0;
 		margin: 0.75rem 0 0 var(--ds-gutter-left);
 		padding: 0.7rem 0.6rem;
@@ -484,13 +488,10 @@
 	// faixa em que os md:grid-cols-3 entram em vigor.
 	@media (min-width: 768px) and (max-width: 1024px) {
 		:root {
-			--ds-gutter-left: 20px;
+			--ds-gutter-left: 24px;
 			--ds-gutter-right: 24px;
 			--ds-content-gap: 24px;
-		}
-
-		.app-sidebar {
-			width: 200px;
+			--ds-sidebar-w: 200px;
 		}
 	}
 
@@ -503,6 +504,7 @@
 			--ds-gutter-left: 12px;
 			--ds-gutter-right: 12px;
 			--ds-content-gap: 12px;
+			--ds-sidebar-w: 60px;
 		}
 
 		.app-topbar {
@@ -535,7 +537,6 @@
 		}
 
 		.app-sidebar {
-			width: 60px;
 			padding: 0.5rem 0.45rem;
 
 			.sidebar-title,
