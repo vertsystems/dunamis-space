@@ -86,28 +86,45 @@
 		return false;
 	}
 
+	// As três funções abaixo REATRIBUEM o mapa em vez de mutar por dentro.
+	// `montarCargo()` devolve um objeto comum, não um proxy de $state: mutar
+	// `cargoNivel[f][m]` não avisava ninguém, e a cor do select só mudava no
+	// recarregamento seguinte — o rótulo mudava (é o próprio <select>) e a cor não.
+	function comNivel<T>(mapa: Record<string, Record<string, T>>, chave: string, modulo: string, valor: T) {
+		return { ...mapa, [chave]: { ...(mapa[chave] ?? {}), [modulo]: valor } };
+	}
+	function semNivel<T>(mapa: Record<string, Record<string, T>>, chave: string, modulo: string) {
+		const interno = { ...(mapa[chave] ?? {}) };
+		delete interno[modulo];
+		return { ...mapa, [chave]: interno };
+	}
+
 	async function mudarCargo(funcao: string, modulo: string, nivel: Nivel) {
 		const anterior = nivelCargo(funcao, modulo);
-		(cargoNivel[funcao] ??= {})[modulo] = nivel; // otimista
+		cargoNivel = comNivel(cargoNivel, funcao, modulo, nivel); // otimista
 		const ok = await postAction('salvar_cargo', { funcao, modulo, nivel });
 		if (ok) toast.success('Permissão do cargo salva');
-		else cargoNivel[funcao][modulo] = anterior;
+		else cargoNivel = comNivel(cargoNivel, funcao, modulo, anterior);
 	}
 
 	async function mudarExcecao(colaborador_id: string, modulo: string, valor: string) {
 		const antes = excecao[colaborador_id]?.[modulo];
-		if (valor === 'herdar') delete excecao[colaborador_id]?.[modulo];
-		else (excecao[colaborador_id] ??= {})[modulo] = valor as Nivel;
+		excecao =
+			valor === 'herdar'
+				? semNivel(excecao, colaborador_id, modulo)
+				: comNivel(excecao, colaborador_id, modulo, valor as Nivel);
 		const ok = await postAction('salvar_excecao', { colaborador_id, modulo, nivel: valor });
 		if (ok) toast.success('Exceção salva');
 		else {
-			if (antes === undefined) delete excecao[colaborador_id]?.[modulo];
-			else (excecao[colaborador_id] ??= {})[modulo] = antes;
+			excecao =
+				antes === undefined
+					? semNivel(excecao, colaborador_id, modulo)
+					: comNivel(excecao, colaborador_id, modulo, antes);
 		}
 	}
 
 	async function mudarSuper(colaborador_id: string, valor: boolean) {
-		superAdmin[colaborador_id] = valor; // otimista
+		superAdmin = { ...superAdmin, [colaborador_id]: valor }; // otimista
 		const ok = await postAction('toggle_super', {
 			colaborador_id,
 			super_admin: String(valor)
@@ -115,7 +132,7 @@
 		if (ok) {
 			toast.success(valor ? 'Super-admin ativado' : 'Super-admin desativado');
 			invalidateAll();
-		} else superAdmin[colaborador_id] = !valor;
+		} else superAdmin = { ...superAdmin, [colaborador_id]: !valor };
 	}
 
 	function ehSuperPorCargo(c: { funcoes?: string[] | null; funcao?: string | null }): boolean {
@@ -304,14 +321,23 @@
 		border-radius: 8px;
 		padding: 4px 8px;
 		font-size: 12px;
+		font-weight: 600;
 		background: #fff;
 		color: var(--color-navy);
 		cursor: pointer;
+		/* A cor troca junto com o data-n, na hora do clique. */
+		transition:
+			background-color 0.15s ease,
+			border-color 0.15s ease,
+			color 0.15s ease;
 	}
-	/* Cor de fundo sutil por nível para leitura rápida da matriz. */
-	.nivel-sel[data-n='nenhum'] { background: #f8fafc; color: #94a3b8; }
-	.nivel-sel[data-n='ver'] { background: #eff6ff; border-color: #bfdbfe; }
-	.nivel-sel[data-n='editar'] { background: #ecfdf5; border-color: #a7f3d0; }
-	.nivel-sel[data-n='excluir'] { background: #fef2f2; border-color: #fecaca; }
-	.nivel-sel[data-n='herdar'] { background: #fff; color: #94a3b8; }
+	/* Uma cor por nível, com fundo saturado o bastante para ler a matriz inteira
+	   de relance e texto escuro do mesmo matiz. Todos os pares texto/fundo foram
+	   medidos: ficam acima de 4.5:1 (AA), que é o exigido — 12px em negrito NÃO
+	   conta como "texto grande" para a WCAG. */
+	.nivel-sel[data-n='nenhum'] { background: #eef2f6; border-color: #cbd5e1; color: #475569; }
+	.nivel-sel[data-n='ver'] { background: #dbeafe; border-color: #60a5fa; color: #1d4ed8; }
+	.nivel-sel[data-n='editar'] { background: #d1fae5; border-color: #34d399; color: #047857; }
+	.nivel-sel[data-n='excluir'] { background: #fee2e2; border-color: #f87171; color: #b91c1c; }
+	.nivel-sel[data-n='herdar'] { background: #fff; border-color: var(--color-grey-200); color: #64748b; }
 </style>
