@@ -74,9 +74,13 @@
 <!-- Header estilo perfil: avatar (iniciais) + nome + status + responsável -->
 <Card>
 	<div class="flex flex-wrap items-start gap-4">
-		<span
-			class="grid size-16 shrink-0 place-items-center rounded-full text-lg font-semibold text-white shadow-sm {corAvatar(c.nome)}"
-		>{iniciais(c.nome)}</span>
+		{#if c.logo_url}
+			<img src={c.logo_url} alt={c.nome} class="size-16 shrink-0 rounded-full object-cover shadow-sm" />
+		{:else}
+			<span
+				class="grid size-16 shrink-0 place-items-center rounded-full text-lg font-semibold text-white shadow-sm {corAvatar(c.nome)}"
+			>{iniciais(c.nome)}</span>
+		{/if}
 		<div class="min-w-0 flex-1">
 			<div class="flex flex-wrap items-center gap-2">
 				<h1 class="text-[1.3rem] font-semibold text-navy">{c.nome}</h1>

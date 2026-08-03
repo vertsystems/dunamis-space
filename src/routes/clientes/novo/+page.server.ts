@@ -1,6 +1,6 @@
 import { colaboradoresAtivos } from '$lib/server/lookups';
 import { fail, redirect } from '@sveltejs/kit';
-import { clienteFromForm } from '$lib/clientes';
+import { clienteFromForm, erroDeMigration } from '$lib/clientes';
 import { exigirPermissao } from '$lib/server/permissao';
 import { selComErro } from '$lib/server/query';
 import type { Actions, PageServerLoad } from './$types';
@@ -30,7 +30,7 @@ export const actions: Actions = {
 		}
 		const { data, error } = await supabase.from('clientes').insert(values).select('id').single();
 		if (error) {
-			return fail(500, { error: error.message, values });
+			return fail(500, { error: erroDeMigration(error.message) ?? error.message, values });
 		}
 		throw redirect(303, `/clientes/${data.id}`);
 	}

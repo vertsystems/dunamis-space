@@ -1,13 +1,10 @@
 import { error, fail, redirect } from '@sveltejs/kit';
-import { clienteFromForm } from '$lib/clientes';
+import { clienteFromForm, erroDeMigration } from '$lib/clientes';
 import { carregarCalendario } from '$lib/server/calendario';
 import { exigirPermissao } from '$lib/server/permissao';
 import { sel } from '$lib/server/query';
 import { podeVerValores, preservarValores } from '$lib/valores';
 import type { Actions, PageServerLoad } from './$types';
-
-/** Erro de coluna inexistente → migration 0006 ainda não aplicada. */
-const PENDENTE_RX = /does not exist|column|schema cache|relation/i;
 
 export const load: PageServerLoad = async ({ params, url, locals: { supabase, permissoes } }) => {
 	const [{ data: cliente, error: e }, calendario] = await Promise.all([
@@ -67,10 +64,7 @@ export const actions: Actions = {
 			.update({ ...patch, updated_at: new Date().toISOString() })
 			.eq('id', params.id);
 		if (e) {
-			const msg = PENDENTE_RX.test(e.message)
-				? 'Módulo ainda não ativado. Aplique a migration 0006_administrativo.sql no Supabase.'
-				: e.message;
-			return fail(500, { error: msg, values });
+			return fail(500, { error: erroDeMigration(e.message) ?? e.message, values });
 		}
 		return { saved: true };
 	},

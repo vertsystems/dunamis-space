@@ -4,7 +4,10 @@
 	import { page } from '$app/state';
 	import { CLIENTE_STATUS } from '$lib/clientes';
 	import { VALOR_MASCARA } from '$lib/valores';
+	import { LOGO_MAX_PX, enviarLogo, validarLogo } from '$lib/logo';
+	import { toast } from '$lib/toast.svelte';
 	import { Button, Input, Select, Textarea } from '$lib/components/ui';
+	import Icon from '$lib/components/Icon.svelte';
 	import ResponsavelPicker from '$lib/components/ResponsavelPicker.svelte';
 
 	let {
@@ -31,6 +34,39 @@
 	const v = (k: string) => cliente?.[k] ?? '';
 	// Vem do +layout.server.ts, então vale em qualquer tela que abra este form.
 	const podeValores = $derived(page.data.podeValores !== false);
+
+	// --- Foto do cliente ---
+	// $state (não $derived): depois do primeiro upload quem manda é o que está na
+	// tela, não o `cliente` que veio do load.
+	let logoUrl = $state<string | null>((cliente?.logo_url as string | null) ?? null);
+	let arquivoInput = $state<HTMLInputElement | null>(null);
+	let enviandoLogo = $state(false);
+	let erroLogo = $state<string | null>(null);
+
+	async function escolherArquivo(e: Event) {
+		const input = e.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		// Zera o input para que reescolher o MESMO arquivo dispare o change de novo.
+		input.value = '';
+		if (!file) return;
+
+		erroLogo = null;
+		const problema = await validarLogo(file);
+		if (problema) {
+			erroLogo = problema;
+			return;
+		}
+
+		enviandoLogo = true;
+		const r = await enviarLogo(page.data.supabase, file);
+		enviandoLogo = false;
+		if ('erro' in r) {
+			erroLogo = r.erro;
+			return;
+		}
+		logoUrl = r.url;
+		toast.success('Foto enviada. Salve o cliente para confirmar.');
+	}
 </script>
 
 <form
@@ -56,6 +92,41 @@
 	{/if}
 
 	<div class="space-y-5">
+		<section>
+			<h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-grey">Foto</h3>
+			<!-- O upload acontece ao escolher o arquivo; o form só carrega a URL
+			     resultante neste hidden. -->
+			<input type="hidden" name="logo_url" value={logoUrl ?? ''} />
+			<div class="flex flex-wrap items-center gap-4">
+				{#if logoUrl}
+					<img src={logoUrl} alt="Foto do cliente" class="size-16 shrink-0 rounded-full object-cover shadow-sm" />
+				{:else}
+					<span class="grid size-16 shrink-0 place-items-center rounded-full bg-bg text-grey">
+						<Icon name="building" size={22} />
+					</span>
+				{/if}
+				<div class="flex flex-col gap-1.5">
+					<div class="flex flex-wrap items-center gap-2">
+						<Button type="button" size="sm" variant="secondary" loading={enviandoLogo} onclick={() => arquivoInput?.click()}>
+							{logoUrl ? 'Trocar foto' : 'Enviar foto'}
+						</Button>
+						{#if logoUrl}
+							<Button type="button" size="sm" variant="ghost" onclick={() => (logoUrl = null)}>Remover</Button>
+						{/if}
+					</div>
+					<p class="text-xs text-grey">Só WEBP, no máximo {LOGO_MAX_PX}x{LOGO_MAX_PX}px.</p>
+					{#if erroLogo}<p role="alert" class="text-xs text-brand-danger">{erroLogo}</p>{/if}
+				</div>
+				<input
+					bind:this={arquivoInput}
+					type="file"
+					accept="image/webp"
+					class="hidden"
+					onchange={escolherArquivo}
+				/>
+			</div>
+		</section>
+
 		<section>
 			<h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-grey">Geral</h3>
 			<div class="grid grid-cols-1 md:grid-cols-12 gap-4">

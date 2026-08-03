@@ -1,6 +1,6 @@
 import { colaboradoresAtivos } from '$lib/server/lookups';
 import { error, fail, redirect } from '@sveltejs/kit';
-import { clienteFromForm } from '$lib/clientes';
+import { clienteFromForm, erroDeMigration } from '$lib/clientes';
 import { exigirPermissao } from '$lib/server/permissao';
 import { podeVerValores, preservarValores } from '$lib/valores';
 import type { Actions, PageServerLoad } from './$types';
@@ -28,7 +28,7 @@ export const actions: Actions = {
 		// Sem permissão de valores o mrr sai do update, para não zerar o do banco.
 		const patch = preservarValores(values, podeVerValores(locals.permissoes), 'mrr');
 		const { error: e } = await supabase.from('clientes').update(patch).eq('id', params.id);
-		if (e) return fail(500, { error: e.message, values });
+		if (e) return fail(500, { error: erroDeMigration(e.message) ?? e.message, values });
 		return { saved: true };
 	},
 	delete: async ({ params, locals }) => {
