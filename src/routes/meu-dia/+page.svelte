@@ -183,9 +183,16 @@
 									onclick={() => toggle(it.id)}
 									class="flex w-full items-start gap-3 rounded-[var(--radius)] px-2.5 py-2 text-left transition-colors hover:bg-bg"
 								>
+									<!-- Pendente: bolinha de borda laranja e miolo laranja bem claro.
+									     Feita: o certo dentro de uma bolinha verde clara. A borda era
+									     `border-grey-300`, cor que NÃO existe no tema — sem cor ela cai
+									     em currentColor, que aqui é text-transparent, e a bolinha
+									     inteira ficava invisível. -->
 									<span
 										class="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border-2 transition-colors
-											{feito ? 'border-brand-green bg-brand-green text-white' : 'border-grey-300 text-transparent'}"
+											{feito
+												? 'border-brand-green bg-brand-green/15 text-brand-green'
+												: 'border-brand-amber bg-brand-amber/10 text-transparent'}"
 									>
 										<Icon name="check" size={12} />
 									</span>

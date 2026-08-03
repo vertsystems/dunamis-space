@@ -36,9 +36,21 @@
 	const podeValores = $derived(page.data.podeValores !== false);
 
 	// --- Foto do cliente ---
-	// $state (não $derived): depois do primeiro upload quem manda é o que está na
-	// tela, não o `cliente` que veio do load.
-	let logoUrl = $state<string | null>((cliente?.logo_url as string | null) ?? null);
+	// A foto escolhida agora vence a do banco; `undefined` = ainda não mexeu.
+	// Um $state puro travaria no valor inicial: reabrir o modal para OUTRO
+	// cliente mostraria a foto do anterior.
+	let escolhida = $state<string | null | undefined>(undefined);
+	let idAtual = $state<string | null>((cliente?.id as string | null) ?? null);
+	$effect(() => {
+		const id = (cliente?.id as string | null) ?? null;
+		if (id !== idAtual) {
+			idAtual = id;
+			escolhida = undefined;
+		}
+	});
+	const logoUrl = $derived(
+		escolhida !== undefined ? escolhida : ((cliente?.logo_url as string | null) ?? null)
+	);
 	let arquivoInput = $state<HTMLInputElement | null>(null);
 	let enviandoLogo = $state(false);
 	let erroLogo = $state<string | null>(null);
@@ -64,7 +76,7 @@
 			erroLogo = r.erro;
 			return;
 		}
-		logoUrl = r.url;
+		escolhida = r.url;
 		toast.success('Foto enviada. Salve o cliente para confirmar.');
 	}
 </script>
@@ -111,7 +123,7 @@
 							{logoUrl ? 'Trocar foto' : 'Enviar foto'}
 						</Button>
 						{#if logoUrl}
-							<Button type="button" size="sm" variant="ghost" onclick={() => (logoUrl = null)}>Remover</Button>
+							<Button type="button" size="sm" variant="ghost" onclick={() => (escolhida = null)}>Remover</Button>
 						{/if}
 					</div>
 					<p class="text-xs text-grey">Só WEBP, no máximo {LOGO_MAX_PX}x{LOGO_MAX_PX}px.</p>
