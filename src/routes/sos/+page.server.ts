@@ -9,11 +9,13 @@ export type SosChamado = {
 	autor_nome: string | null;
 	autor_email: string | null;
 	rota: string | null;
-	status: 'aberto' | 'em_andamento' | 'resolvido';
+	// 'em_andamento' saiu do fluxo; ainda pode chegar do banco enquanto a
+	// migration 0043 não roda — a tela trata esses chamados como abertos.
+	status: 'aberto' | 'resolvido' | 'em_andamento';
 	created_at: string;
 };
 
-const STATUS = ['aberto', 'em_andamento', 'resolvido'];
+const STATUS = ['aberto', 'resolvido'];
 const COLUNAS = 'id, titulo, descricao, autor_nome, autor_email, rota, status, created_at';
 
 export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
@@ -24,7 +26,10 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		.from('sos_chamados')
 		.select(COLUNAS)
 		.order('created_at', { ascending: false });
-	if (filtro) query = query.eq('status', filtro);
+	// "Aberto" é tudo que não foi resolvido — assim o filtro e a contagem também
+	// alcançam os chamados legados em 'em_andamento'.
+	if (filtro === 'resolvido') query = query.eq('status', 'resolvido');
+	else if (filtro === 'aberto') query = query.neq('status', 'resolvido');
 
 	const { data, error } = await query;
 
@@ -38,7 +43,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		const { count } = await supabase
 			.from('sos_chamados')
 			.select('id', { count: 'exact', head: true })
-			.eq('status', 'aberto');
+			.neq('status', 'resolvido');
 		abertos = count ?? 0;
 	}
 

@@ -14,14 +14,24 @@
 
 	const STATUS_META: Record<string, { label: string; tone: BadgeTone }> = {
 		aberto: { label: 'Aberto', tone: 'danger' },
-		em_andamento: { label: 'Em andamento', tone: 'warning' },
 		resolvido: { label: 'Resolvido', tone: 'success' }
 	};
+
+	// O chamado só tem dois estados. Chamados gravados antes disso podem ter
+	// 'em_andamento' no banco até a migration 0043 rodar — tratamos como aberto.
+	function statusDe(c: SosChamado): 'aberto' | 'resolvido' {
+		return c.status === 'resolvido' ? 'resolvido' : 'aberto';
+	}
+
+	// Cor da caixa do chamado: vermelho claro em aberto, verde claro resolvido.
+	const CARD_COR = {
+		aberto: 'bg-brand-danger/10! border-brand-danger/40!',
+		resolvido: 'bg-brand-green/10! border-brand-green/40!'
+	} as const;
 
 	const FILTROS = [
 		{ value: '', label: 'Todos' },
 		{ value: 'aberto', label: 'Abertos' },
-		{ value: 'em_andamento', label: 'Em andamento' },
 		{ value: 'resolvido', label: 'Resolvidos' }
 	];
 
@@ -99,7 +109,8 @@
 {:else}
 	<div class="space-y-3">
 		{#each data.itens as c (c.id)}
-			<Card>
+			{@const st = statusDe(c)}
+			<Card class={CARD_COR[st]}>
 				<div class="flex items-start gap-3">
 					<span
 						class="grid size-9 shrink-0 place-items-center rounded-full bg-navy/10 text-sm font-bold text-navy"
@@ -111,9 +122,7 @@
 					<div class="min-w-0 flex-1">
 						<div class="flex flex-wrap items-center gap-2">
 							<h3 class="font-semibold text-navy">{c.titulo}</h3>
-							<Badge tone={STATUS_META[c.status]?.tone ?? 'neutral'}>
-								{STATUS_META[c.status]?.label ?? c.status}
-							</Badge>
+							<Badge tone={STATUS_META[st].tone}>{STATUS_META[st].label}</Badge>
 						</div>
 
 						{#if c.descricao}
@@ -138,13 +147,12 @@
 								<input type="hidden" name="id" value={c.id} />
 								<select
 									name="status"
-									value={c.status}
+									value={st}
 									onchange={(e) => e.currentTarget.form?.requestSubmit()}
 									class="h-8 rounded-[var(--radius)] border border-grey-200 bg-surface px-2 text-xs text-navy-900 shadow-xs transition-colors hover:border-grey focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25 focus-visible:outline-none"
 									aria-label="Alterar status"
 								>
 									<option value="aberto">Aberto</option>
-									<option value="em_andamento">Em andamento</option>
 									<option value="resolvido">Resolvido</option>
 								</select>
 							</form>
