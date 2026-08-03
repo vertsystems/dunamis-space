@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { CONTRATO_STATUS } from '$lib/contratos';
+	import { VALOR_MASCARA } from '$lib/valores';
 	import { Button, Input, Select, Checkbox } from '$lib/components/ui';
 
 	let {
@@ -29,8 +31,13 @@
 	let saving = $state(false);
 	let planoId = $state(contrato?.plano_id ?? '');
 	let valor = $state(contrato?.valor_mensal ?? '');
+	// Vem do +layout.server.ts (módulo de permissão 'valores').
+	const podeValores = $derived(page.data.podeValores !== false);
 
 	function onPlanoChange() {
+		// Sem permissão o valor do plano nem chega ao navegador (vem null), então
+		// não há o que sugerir — o campo fica mascarado e o banco decide.
+		if (!podeValores) return;
 		const p = planos.find((x) => x.id === planoId);
 		if (p && (valor === '' || Number(valor) === 0)) valor = String(p.valor_mensal);
 	}
@@ -70,7 +77,19 @@
 			{/each}
 		</Select>
 
-		<Input label="Valor mensal (R$)" type="number" step="0.01" name="valor_mensal" bind:value={valor} wrapperClass="md:col-span-4" />
+		{#if podeValores}
+			<Input label="Valor mensal (R$)" type="number" step="0.01" name="valor_mensal" bind:value={valor} wrapperClass="md:col-span-4" />
+		{:else}
+			<!-- Sem `name`: não entra no FormData; a action também ignora o campo. -->
+			<Input
+				label="Valor mensal (R$)"
+				value={VALOR_MASCARA}
+				disabled
+				readonly
+				title="Só CEO e Administrador veem os valores"
+				wrapperClass="md:col-span-4"
+			/>
+		{/if}
 		<Input label="Início" type="date" name="data_inicio" value={contrato?.data_inicio ?? ''} wrapperClass="md:col-span-4" />
 		<Input label="Fim" type="date" name="data_fim" value={contrato?.data_fim ?? ''} wrapperClass="md:col-span-4" />
 

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import { VALOR_MASCARA } from '$lib/valores';
 	import { Button, Input, Textarea, Checkbox } from '$lib/components/ui';
 
 	let {
@@ -23,6 +25,8 @@
 
 	let saving = $state(false);
 	const v = (k: string) => plano?.[k] ?? '';
+	// Vem do +layout.server.ts (módulo de permissão 'valores').
+	const podeValores = $derived(page.data.podeValores !== false);
 </script>
 
 <form
@@ -47,7 +51,19 @@
 
 	<div class="grid grid-cols-1 md:grid-cols-12 gap-4">
 		<Input label="Nome do plano *" name="nome" required value={v('nome')} placeholder="Starter, Gold, Premium…" wrapperClass="md:col-span-8" />
-		<Input label="Valor mensal (R$)" type="number" step="0.01" name="valor_mensal" value={v('valor_mensal')} wrapperClass="md:col-span-4" />
+		{#if podeValores}
+			<Input label="Valor mensal (R$)" type="number" step="0.01" name="valor_mensal" value={v('valor_mensal')} wrapperClass="md:col-span-4" />
+		{:else}
+			<!-- Sem `name`: não entra no FormData; a action também ignora o campo. -->
+			<Input
+				label="Valor mensal (R$)"
+				value={VALOR_MASCARA}
+				disabled
+				readonly
+				title="Só CEO e Administrador veem os valores"
+				wrapperClass="md:col-span-4"
+			/>
+		{/if}
 
 		<Input label="Limite de posts" type="number" name="limite_posts" value={v('limite_posts')} wrapperClass="md:col-span-4" />
 		<Input label="Limite de stories" type="number" name="limite_stories" value={v('limite_stories')} wrapperClass="md:col-span-4" />

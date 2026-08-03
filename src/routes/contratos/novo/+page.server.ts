@@ -2,14 +2,18 @@ import { clientesLite } from '$lib/server/lookups';
 import { fail, redirect } from '@sveltejs/kit';
 import { contratoFromForm } from '$lib/contratos';
 import { exigirPermissao } from '$lib/server/permissao';
+import { ocultarValores, podeVerValores } from '$lib/valores';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals: { supabase } }) => {
+export const load: PageServerLoad = async ({ locals: { supabase, permissoes } }) => {
 	const [{ data: clientes }, { data: planos }] = await Promise.all([
 		clientesLite(supabase),
 		supabase.from('planos').select('id, nome, valor_mensal').eq('ativo', true).order('valor_mensal')
 	]);
-	return { clientes: clientes ?? [], planos: planos ?? [] };
+	return {
+		clientes: clientes ?? [],
+		planos: ocultarValores(planos ?? [], podeVerValores(permissoes), 'valor_mensal')
+	};
 };
 
 export const actions: Actions = {

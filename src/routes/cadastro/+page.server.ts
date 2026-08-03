@@ -1,7 +1,8 @@
 import { colaboradoresAtivos } from '$lib/server/lookups';
+import { ocultarValores, podeVerValores } from '$lib/valores';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
+export const load: PageServerLoad = async ({ locals: { supabase, permissoes }, url }) => {
 	const q = url.searchParams.get('q')?.trim() ?? '';
 
 	let query = supabase
@@ -22,8 +23,13 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	const pendente =
 		!!error && /adm_|does not exist|column|schema cache|relation/i.test(error?.message ?? '');
 
+	const podeValores = podeVerValores(permissoes);
+
 	return {
-		clientes: pendente ? [] : (data ?? []),
+		// O mrr sai da resposta para quem não pode ver valores — a máscara na tela
+		// não bastaria, o número viajaria no __data.json da navegação. A flag
+		// `podeValores` para a UI vem do +layout.server.ts.
+		clientes: pendente ? [] : ocultarValores(data ?? [], podeValores, 'mrr'),
 		colaboradores: colaboradores ?? [],
 		q,
 		pendente,

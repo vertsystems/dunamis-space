@@ -1,3 +1,4 @@
+import { podeVerValores } from '$lib/valores';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({
@@ -39,6 +40,10 @@ export const load: LayoutServerLoad = async ({
 		aprovacoesPendentes,
 		sosAbertos,
 		perfil,
-		permissoes
+		permissoes,
+		// Sai daqui (e não de cada página) para nenhuma tela esquecer de repassar.
+		// Como `data` da página já traz o do layout, `data.podeValores` funciona
+		// em qualquer rota. Não custa query: vem das permissões já carregadas.
+		podeValores: podeVerValores(permissoes)
 	};
 };

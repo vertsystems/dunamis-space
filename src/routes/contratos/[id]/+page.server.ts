@@ -2,16 +2,22 @@ import { clientesLite } from '$lib/server/lookups';
 import { error, fail, redirect } from '@sveltejs/kit';
 import { contratoFromForm } from '$lib/contratos';
 import { exigirPermissao } from '$lib/server/permissao';
+import { ocultarValores, podeVerValores, preservarValores } from '$lib/valores';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, locals: { supabase } }) => {
+export const load: PageServerLoad = async ({ params, locals: { supabase, permissoes } }) => {
 	const [{ data: contrato, error: e }, { data: clientes }, { data: planos }] = await Promise.all([
 		supabase.from('contratos').select('*, cliente:clientes(nome)').eq('id', params.id).single(),
 		clientesLite(supabase),
 		supabase.from('planos').select('id, nome, valor_mensal').order('valor_mensal')
 	]);
 	if (e || !contrato) throw error(404, 'Contrato não encontrado');
-	return { contrato, clientes: clientes ?? [], planos: planos ?? [] };
+	const podeValores = podeVerValores(permissoes);
+	return {
+		contrato: { ...contrato, valor_mensal: podeValores ? contrato.valor_mensal : null },
+		clientes: clientes ?? [],
+		planos: ocultarValores(planos ?? [], podeValores, 'valor_mensal')
+	};
 };
 
 export const actions: Actions = {
@@ -19,7 +25,9 @@ export const actions: Actions = {
 		exigirPermissao(locals, 'contratos', 'editar');
 		const values = contratoFromForm(await request.formData());
 		if (!values.cliente_id) return fail(400, { error: 'Selecione um cliente.', values });
-		const { error: e } = await locals.supabase.from('contratos').update(values).eq('id', params.id);
+		// Sem permissão de valores, o valor_mensal sai do update (fica o do banco).
+		const patch = preservarValores(values, podeVerValores(locals.permissoes), 'valor_mensal');
+		const { error: e } = await locals.supabase.from('contratos').update(patch).eq('id', params.id);
 		if (e) return fail(500, { error: e.message, values });
 		return { saved: true };
 	},

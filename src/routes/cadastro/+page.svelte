@@ -2,7 +2,7 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
 	import { podeEditar } from '$lib/permissoes';
-	import { formatBRL } from '$lib/clientes';
+	import { valorBRL } from '$lib/valores';
 	import { Button, Card, Input, EmptyState, DataTable, Modal } from '$lib/components/ui';
 	import type { ColumnDef } from '$lib/components/ui';
 	import ClienteForm from '$lib/components/ClienteForm.svelte';
@@ -97,7 +97,7 @@
 						{c.cidade ?? '—'}{c.estado ? ` / ${c.estado}` : ''}
 					</td>
 					<td class="px-4 py-3 text-slate">{c.plano_ref ?? '—'}</td>
-					<td class="px-4 py-3 text-right tabular-nums text-navy">{formatBRL(c.mrr)}</td>
+					<td class="px-4 py-3 text-right tabular-nums text-navy">{valorBRL(c.mrr, data.podeValores)}</td>
 					<td class="px-4 py-3 text-right tabular-nums text-slate">
 						{c.dia_vencimento ?? '—'}
 					</td>

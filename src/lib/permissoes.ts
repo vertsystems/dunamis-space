@@ -45,7 +45,13 @@ export const MODULOS: Modulo[] = [
 	{ id: 'processos', label: 'Processos', grupo: 'marketing', rotas: ['/processos'] },
 	{ id: 'contratos', label: 'Contratos', grupo: 'administrativo', rotas: ['/contratos'] },
 	{ id: 'projetos', label: 'Projetos', grupo: 'marketing', rotas: ['/projetos'] },
-	{ id: 'pagsup', label: "Pag's Up", grupo: 'dtools', rotas: ['/dtools/pagsup'] }
+	{ id: 'pagsup', label: "Pag's Up", grupo: 'dtools', rotas: ['/dtools/pagsup'] },
+	// Módulo SEM rotas: não governa telas, e sim os valores em R$ dentro delas
+	// (cliente, plano, contrato). Quem não tem 'ver' enxerga a máscara ***** e
+	// nem recebe os números do servidor. ceo/admin ganham acesso pelo
+	// short-circuit de super-admin da perm_nivel_efetivo (0034), então não
+	// precisa de seed; para liberar a mais alguém, basta a tela de Permissões.
+	{ id: 'valores', label: 'Valores em R$', grupo: 'administrativo', rotas: [] }
 ];
 
 /** Lista de ids de módulo (para a chamada rpc perm_niveis). */

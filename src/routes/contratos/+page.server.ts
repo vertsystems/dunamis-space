@@ -1,8 +1,9 @@
 import { clientesLite } from '$lib/server/lookups';
 import { um } from '$lib/db';
+import { ocultarValores, podeVerValores } from '$lib/valores';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
+export const load: PageServerLoad = async ({ locals: { supabase, permissoes }, url }) => {
 	const status = url.searchParams.get('status') ?? '';
 
 	let query = supabase
@@ -20,6 +21,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		supabase.from('planos').select('id, nome, valor_mensal').eq('ativo', true).order('valor_mensal')
 	]);
 
+	const podeValores = podeVerValores(permissoes);
 	const contratos = (data ?? []).map((c) => ({
 		...c,
 		cliente: um(c.cliente),
@@ -27,9 +29,11 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	}));
 
 	return {
-		contratos,
+		// Some o valor dos contratos e o dos planos (que alimentam o formulário)
+		// para quem não pode vê-los — nem no payload da navegação.
+		contratos: ocultarValores(contratos, podeValores, 'valor_mensal'),
 		clientes: clientes ?? [],
-		planos: planos ?? [],
+		planos: ocultarValores(planos ?? [], podeValores, 'valor_mensal'),
 		status,
 		loadError: error?.message ?? null
 	};

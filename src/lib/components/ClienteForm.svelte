@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { CLIENTE_STATUS } from '$lib/clientes';
+	import { VALOR_MASCARA } from '$lib/valores';
 	import { Button, Input, Select, Textarea } from '$lib/components/ui';
 	import ResponsavelPicker from '$lib/components/ResponsavelPicker.svelte';
 
@@ -27,6 +29,8 @@
 
 	let saving = $state(false);
 	const v = (k: string) => cliente?.[k] ?? '';
+	// Vem do +layout.server.ts, então vale em qualquer tela que abra este form.
+	const podeValores = $derived(page.data.podeValores !== false);
 </script>
 
 <form
@@ -105,7 +109,20 @@
 			<h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-grey">Financeiro</h3>
 			<div class="grid grid-cols-1 md:grid-cols-12 gap-4">
 				<Input label="Plano" name="plano_ref" value={v('plano_ref')} wrapperClass="md:col-span-4" />
+				{#if podeValores}
 				<Input label="Valor mensal (R$)" type="number" step="0.01" name="mrr" value={v('mrr')} placeholder="0.00" wrapperClass="md:col-span-3" />
+			{:else}
+				<!-- Sem `name`: o campo não entra no FormData, e a action ainda ignora
+				     o mrr de quem não pode vê-lo. Duas travas, de propósito. -->
+				<Input
+					label="Valor mensal (R$)"
+					value={VALOR_MASCARA}
+					disabled
+					readonly
+					title="Só CEO e Administrador veem os valores"
+					wrapperClass="md:col-span-3"
+				/>
+			{/if}
 				<Input label="Dia de venc." type="number" min="1" max="31" name="dia_vencimento" value={v('dia_vencimento')} wrapperClass="md:col-span-2" />
 				<Input label="Forma de pagamento" name="forma_pagamento" value={v('forma_pagamento')} placeholder="Boleto, Pix, Cartão" wrapperClass="md:col-span-3" />
 			</div>

@@ -3,12 +3,13 @@ import { clienteFromForm } from '$lib/clientes';
 import { carregarCalendario } from '$lib/server/calendario';
 import { exigirPermissao } from '$lib/server/permissao';
 import { sel } from '$lib/server/query';
+import { podeVerValores, preservarValores } from '$lib/valores';
 import type { Actions, PageServerLoad } from './$types';
 
 /** Erro de coluna inexistente → migration 0006 ainda não aplicada. */
 const PENDENTE_RX = /does not exist|column|schema cache|relation/i;
 
-export const load: PageServerLoad = async ({ params, url, locals: { supabase } }) => {
+export const load: PageServerLoad = async ({ params, url, locals: { supabase, permissoes } }) => {
 	const [{ data: cliente, error: e }, calendario] = await Promise.all([
 		supabase.from('clientes').select('*').eq('id', params.id).single(),
 		carregarCalendario(supabase, url, { clienteFixo: params.id })
@@ -40,7 +41,14 @@ export const load: PageServerLoad = async ({ params, url, locals: { supabase } }
 	}
 
 	return {
-		cliente: { ...cliente, responsaveis },
+		// O mrr nem chega ao navegador de quem não pode ver valores; o formulário
+		// de edição preserva o que está no banco (ver a action update). A flag
+		// `podeValores` para a UI vem do +layout.server.ts.
+		cliente: {
+			...cliente,
+			mrr: podeVerValores(permissoes) ? cliente.mrr : null,
+			responsaveis
+		},
 		calendario
 	};
 };
@@ -51,9 +59,12 @@ export const actions: Actions = {
 		const { supabase } = locals;
 		const values = clienteFromForm(await request.formData());
 		if (!values.nome) return fail(400, { error: 'O nome é obrigatório.', values });
+		// Quem não vê o MRR também não o altera: o campo sai do update e a coluna
+		// fica como está no banco.
+		const patch = preservarValores(values, podeVerValores(locals.permissoes), 'mrr');
 		const { error: e } = await supabase
 			.from('clientes')
-			.update({ ...values, updated_at: new Date().toISOString() })
+			.update({ ...patch, updated_at: new Date().toISOString() })
 			.eq('id', params.id);
 		if (e) {
 			const msg = PENDENTE_RX.test(e.message)

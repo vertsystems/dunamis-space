@@ -8,6 +8,7 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import { Card, Badge, Button, Breadcrumb, Modal } from '$lib/components/ui';
 	import { statusTone, statusLabel, formatBRL } from '$lib/clientes';
+	import { VALOR_MASCARA } from '$lib/valores';
 	import { iniciais } from '$lib/crm';
 	import { toast } from '$lib/toast.svelte';
 
@@ -35,7 +36,12 @@
 			{ label: 'Razão social', value: c.razao_social },
 			{ label: 'CNPJ / CPF', value: c.cnpj_cpf },
 			{ label: 'Cliente desde', value: fmtData(c.data_inicio) },
-			{ label: 'MRR', value: c.mrr != null ? formatBRL(c.mrr) : null },
+			// Sem permissão a linha aparece mascarada em vez de sumir: some seria
+			// dizer "este cliente não tem valor", o que nem sempre é verdade.
+			{
+				label: 'MRR',
+				value: data.podeValores ? (c.mrr != null ? formatBRL(c.mrr) : null) : VALOR_MASCARA
+			},
 			{ label: 'Plano', value: c.plano_ref },
 			{ label: 'Forma de pagamento', value: c.forma_pagamento },
 			{ label: 'Dia de vencimento', value: c.dia_vencimento != null ? String(c.dia_vencimento) : null },

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
-	import { formatBRL } from '$lib/contratos';
+	import { valorBRL } from '$lib/valores';
 	import { Card, Badge, Button, Breadcrumb, EmptyState, DataTable, Modal } from '$lib/components/ui';
 	import type { ColumnDef } from '$lib/components/ui';
 	import PlanoForm from '$lib/components/PlanoForm.svelte';
@@ -60,7 +60,7 @@
 			{@const p = r.original}
 			<tr class="cursor-pointer border-b border-grey-200/60 last:border-0 hover:bg-bg" onclick={() => podeEditar(perms, 'contratos') && (editando = p)}>
 				<td class="px-4 py-3 font-medium text-navy">{p.nome}</td>
-				<td class="px-4 py-3 text-right tabular-nums">{formatBRL(p.valor_mensal)}</td>
+				<td class="px-4 py-3 text-right tabular-nums">{valorBRL(p.valor_mensal, data.podeValores)}</td>
 				<td class="px-4 py-3 text-center">{lim(p.limite_posts)}</td>
 				<td class="px-4 py-3 text-center">{lim(p.limite_stories)}</td>
 				<td class="px-4 py-3 text-center">{lim(p.limite_reels)}</td>

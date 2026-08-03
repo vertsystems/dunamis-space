@@ -2,9 +2,10 @@ import { colaboradoresAtivos } from '$lib/server/lookups';
 import { error, fail, redirect } from '@sveltejs/kit';
 import { clienteFromForm } from '$lib/clientes';
 import { exigirPermissao } from '$lib/server/permissao';
+import { podeVerValores, preservarValores } from '$lib/valores';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, locals: { supabase } }) => {
+export const load: PageServerLoad = async ({ params, locals: { supabase, permissoes } }) => {
 	const [{ data: cliente, error: e }, { data: colaboradores }] = await Promise.all([
 		supabase.from('clientes').select('*').eq('id', params.id).single(),
 		colaboradoresAtivos(supabase)
@@ -12,7 +13,10 @@ export const load: PageServerLoad = async ({ params, locals: { supabase } }) => 
 
 	if (e || !cliente) throw error(404, 'Cliente não encontrado');
 
-	return { cliente, colaboradores: colaboradores ?? [] };
+	return {
+		cliente: { ...cliente, mrr: podeVerValores(permissoes) ? cliente.mrr : null },
+		colaboradores: colaboradores ?? []
+	};
 };
 
 export const actions: Actions = {
@@ -21,7 +25,9 @@ export const actions: Actions = {
 		const { supabase } = locals;
 		const values = clienteFromForm(await request.formData());
 		if (!values.nome) return fail(400, { error: 'O nome é obrigatório.', values });
-		const { error: e } = await supabase.from('clientes').update(values).eq('id', params.id);
+		// Sem permissão de valores o mrr sai do update, para não zerar o do banco.
+		const patch = preservarValores(values, podeVerValores(locals.permissoes), 'mrr');
+		const { error: e } = await supabase.from('clientes').update(patch).eq('id', params.id);
 		if (e) return fail(500, { error: e.message, values });
 		return { saved: true };
 	},

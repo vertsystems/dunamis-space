@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
-	import { CONTRATO_STATUS, contratoStatusTone, contratoStatusLabel, formatBRL } from '$lib/contratos';
+	import { CONTRATO_STATUS, contratoStatusTone, contratoStatusLabel } from '$lib/contratos';
+	import { valorBRL } from '$lib/valores';
 	import { Card, Badge, Button, Select, EmptyState, DataTable, Modal } from '$lib/components/ui';
 	import type { ColumnDef } from '$lib/components/ui';
 	import ContratoForm from '$lib/components/ContratoForm.svelte';
@@ -95,7 +96,7 @@
 			>
 				<td class="px-4 py-3 font-medium text-navy">{c.cliente?.nome ?? '—'}</td>
 				<td class="px-4 py-3">{c.plano?.nome ?? '—'}</td>
-				<td class="px-4 py-3 text-right tabular-nums">{formatBRL(c.valor_mensal)}</td>
+				<td class="px-4 py-3 text-right tabular-nums">{valorBRL(c.valor_mensal, data.podeValores)}</td>
 				<td class="px-4 py-3 whitespace-nowrap">{fmtData(c.data_inicio)} → {fmtData(c.data_fim)}</td>
 				<td class="px-4 py-3">{c.renovacao_automatica ? 'Automática' : 'Manual'}</td>
 				<td class="px-4 py-3"><Badge tone={contratoStatusTone(c.status)}>{contratoStatusLabel(c.status)}</Badge></td>
