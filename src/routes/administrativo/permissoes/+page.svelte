@@ -123,7 +123,6 @@
 	}
 </script>
 
-<div class="perm-page">
 <div class="mb-4">
 	<h1 class="text-base font-semibold text-navy">Permissões</h1>
 	<p class="text-sm text-grey">
@@ -292,15 +291,12 @@
 		</Card>
 	{/if}
 {/if}
-</div>
 
 <style>
-	/* A matriz é larga (9 colunas): nas telas grandes ela "estoura" para a direita,
-	   proporcional à sobra lateral (o app é centralizado com max-width 1440px), para
-	   os nomes dos cargos não quebrarem. Nunca invade a esquerda (min(0px, …)). */
-	.perm-page {
-		margin-right: min(0px, calc(736px - 50vw));
-	}
+	/* A matriz já cabe na coluna do app (1600px), então esta tela não estoura mais
+	   para a direita: a margem direita é igual à esquerda, como no resto do app. Se
+	   um dia a matriz voltar a não caber, ela rola dentro do próprio Card
+	   (overflow-x-auto) — não na página. */
 	.nivel-sel {
 		width: 100%;
 		min-width: 108px;
