@@ -162,10 +162,18 @@ async function carregarPipeline(supabase: SupabaseClient) {
 /** Lista de clientes ativos para o painel de bolinhas na Visão Geral. */
 async function carregarClientes(supabase: SupabaseClient) {
 	const data = await sel(
-		supabase.from('clientes').select('id, nome').eq('status', 'ativo').order('nome', { ascending: true }),
+		supabase
+			.from('clientes')
+			.select('id, nome, logo_url')
+			.eq('status', 'ativo')
+			.order('nome', { ascending: true }),
 		'dashboard: clientes ativos'
 	);
-	return data.map((c) => ({ id: c.id as string, nome: c.nome as string }));
+	return data.map((c) => ({
+		id: c.id as string,
+		nome: c.nome as string,
+		logo_url: (c.logo_url as string | null) ?? null
+	}));
 }
 
 /** Bloco Operação: funil de conteúdo (a fazer / em andamento / backlog). */

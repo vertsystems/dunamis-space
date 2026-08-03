@@ -89,10 +89,18 @@
 					class="group flex flex-col items-center gap-1.5 text-center"
 					title={c.nome}
 				>
-					<span
-						class="grid size-12 place-items-center rounded-full text-sm font-bold text-white shadow-sm transition group-hover:scale-105 group-hover:shadow-md {corAvatar(c.nome)}"
-						>{iniciais(c.nome)}</span
-					>
+					{#if c.logo_url}
+						<img
+							src={c.logo_url}
+							alt={c.nome}
+							class="size-12 rounded-full object-cover shadow-sm transition group-hover:scale-105 group-hover:shadow-md"
+						/>
+					{:else}
+						<span
+							class="grid size-12 place-items-center rounded-full text-sm font-bold text-white shadow-sm transition group-hover:scale-105 group-hover:shadow-md {corAvatar(c.nome)}"
+							>{iniciais(c.nome)}</span
+						>
+					{/if}
 					<span class="w-full text-[0.7rem] leading-tight text-slate line-clamp-2">{c.nome}</span>
 				</a>
 			{/each}
