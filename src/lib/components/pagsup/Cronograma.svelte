@@ -5,11 +5,10 @@
 	import { Button, Card } from '$lib/components/ui';
 	import ClienteSelector from './ClienteSelector.svelte';
 	import { toast } from '$lib/toast.svelte';
-	import { Plus, Trash2, Calendar, DollarSign, Pencil, Check, X, FileSpreadsheet } from '@lucide/svelte';
+	import { Trash2, Calendar, DollarSign, Pencil, Check, X, FileSpreadsheet, Search } from '@lucide/svelte';
 
 	type SchedRow = ScheduledService & { provider: Provider };
 
-	let isAdding = $state(false);
 	let isAddingExtra = $state(false);
 	let showResetModal = $state(false);
 	let sendToFinanceDate = $state('');
@@ -21,11 +20,53 @@
 	const emptyExtra = () => ({ name: '', service: 'Carro de Som', region: '', cpf: '', pix: '', price: '' as number | '', notes: '' });
 	let extra = $state(emptyExtra());
 
-	const providersByCategory = $derived.by(() => {
-		const g: Record<string, Provider[]> = {};
-		for (const p of pagsup.filteredProviders) (g[p.service] ??= []).push(p);
-		return g;
+	// ---- Busca de prestador (entrou no lugar da grade de pré-selecionados) ----
+	let busca = $state('');
+	let campoBusca = $state<HTMLInputElement | null>(null);
+	let destaque = $state(0);
+
+	const MAX_RESULTADOS = 8;
+	const resultados = $derived.by(() => {
+		const q = busca.trim().toLowerCase();
+		if (!q) return [] as Provider[];
+		// Nome, região e categoria: é por um dos três que se procura alguém aqui.
+		return pagsup.filteredProviders
+			.filter(
+				(p) =>
+					p.name.toLowerCase().includes(q) ||
+					p.region.toLowerCase().includes(q) ||
+					p.service.toLowerCase().includes(q)
+			)
+			.slice(0, MAX_RESULTADOS);
 	});
+
+	function escalar(p: Provider) {
+		if (isScheduled(p.id)) {
+			toast.error(`${p.name} já está no cronograma.`);
+			return;
+		}
+		pagsup.scheduleProvider(p.id, '');
+		toast.success(`${p.name} escalado`);
+		busca = '';
+		destaque = 0;
+		campoBusca?.focus();
+	}
+
+	function teclaBusca(e: KeyboardEvent) {
+		if (!resultados.length) return;
+		if (e.key === 'ArrowDown') {
+			e.preventDefault();
+			destaque = (destaque + 1) % resultados.length;
+		} else if (e.key === 'ArrowUp') {
+			e.preventDefault();
+			destaque = (destaque - 1 + resultados.length) % resultados.length;
+		} else if (e.key === 'Enter') {
+			e.preventDefault();
+			escalar(resultados[destaque] ?? resultados[0]);
+		} else if (e.key === 'Escape') {
+			busca = '';
+		}
+	}
 
 	const groupedSchedule = $derived.by(() => {
 		const g: Record<string, SchedRow[]> = {};
@@ -45,11 +86,6 @@
 
 	function isScheduled(providerId: string): boolean {
 		return pagsup.filteredScheduledServices.some((s) => s.providerId === providerId);
-	}
-
-	function quickAdd(p: Provider) {
-		if (isScheduled(p.id)) return;
-		pagsup.scheduleProvider(p.id, '');
 	}
 
 	function addExtra() {
@@ -133,54 +169,76 @@
 				<p class="text-[10px] font-bold text-grey uppercase tracking-wider leading-none">Total</p>
 				<p class="text-sm font-bold text-navy leading-none tabular-nums">{formatBRL(grandTotal)}</p>
 			</div>
-			<Button variant="success" onclick={() => { isAddingExtra = false; isAdding = !isAdding; }}>Adic. Pagamento</Button>
-			<Button onclick={() => { isAdding = false; isAddingExtra = !isAddingExtra; }}>Novo Pagamento</Button>
+			<Button onclick={() => (isAddingExtra = !isAddingExtra)}>Novo Prestador</Button>
 			<ClienteSelector />
 		</div>
 	</div>
 
-	{#if isAdding}
-		<Card class="mb-6">
-			<div class="flex items-center justify-between mb-4">
-				<h3 class="text-sm font-semibold text-navy">Escalar Prestador para a Semana</h3>
-				<button onclick={() => (isAdding = false)} class="p-1 text-grey hover:text-navy transition-colors"><X size={20} /></button>
-			</div>
-			{#if pagsup.filteredProviders.length === 0}
-				<p class="text-center py-8 text-grey">Nenhum prestador cadastrado no sistema.</p>
-			{:else}
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-					{#each Object.entries(providersByCategory) as [category, list] (category)}
-						<div class="rounded-[var(--radius)] border border-grey-200 bg-bg/40 p-4">
-							<div class="flex items-center justify-between mb-3">
-								<h4 class="text-sm font-bold text-slate flex items-center gap-2">
-									<span class="w-1.5 h-4 rounded-full bg-brand"></span>{category}
-								</h4>
-								<span class="rounded-full bg-surface border border-grey-200 text-grey text-[10px] font-bold px-2 py-0.5">{list.length}</span>
-							</div>
-							<div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-								{#each list as p (p.id)}
-									{@const sched = isScheduled(p.id)}
-									<button
-										onclick={() => quickAdd(p)}
-										disabled={sched}
-										class="flex flex-col text-left p-2 rounded-[var(--radius-sm)] border transition-all {sched
-											? 'border-brand-green/30 bg-brand-green/[0.06] opacity-60 cursor-not-allowed'
-											: 'border-grey-200 bg-surface hover:border-brand hover:bg-brand/[0.04] hover:shadow-sm'}"
-									>
-										<span class="text-xs font-semibold leading-tight truncate {sched ? 'text-brand-green' : 'text-navy'}" title={p.name}>{p.name}</span>
-										<span class="text-[10px] mt-1 flex items-center gap-1 {sched ? 'text-brand-green/70' : 'text-grey'}" title={p.region}>
-											<span class="size-1 rounded-full shrink-0 {sched ? 'bg-brand-green' : 'bg-grey'}"></span>
-											<span class="truncate">{p.region}</span>
-										</span>
-									</button>
-								{/each}
-							</div>
-						</div>
-					{/each}
+	<!-- Busca: substituiu a grade com todos os prestadores pré-selecionados.
+	     Os prestadores continuam cadastrados (aba Prestadores) — só deixaram de
+	     ser listados em bloco aqui. -->
+	<Card class="mb-6">
+		<label for="busca-prestador" class="mb-1.5 block text-xs font-medium text-slate">
+			Escalar prestador
+		</label>
+		<div class="relative">
+			<span class="pointer-events-none absolute inset-y-0 left-0 grid w-10 place-items-center text-grey">
+				<Search size={17} />
+			</span>
+			<input
+				bind:this={campoBusca}
+				bind:value={busca}
+				onkeydown={teclaBusca}
+				id="busca-prestador"
+				type="search"
+				role="combobox"
+				aria-expanded={resultados.length > 0}
+				aria-controls="busca-resultados"
+				autocomplete="off"
+				placeholder="Buscar por nome, região ou categoria…"
+				class="{fieldCls} pl-10"
+			/>
+
+			{#if busca.trim()}
+				<div
+					id="busca-resultados"
+					role="listbox"
+					class="absolute z-20 mt-1.5 max-h-80 w-full overflow-y-auto rounded-[var(--radius)] border border-grey-200 bg-surface shadow-lg"
+				>
+					{#if resultados.length === 0}
+						<p class="px-4 py-3 text-sm text-grey">
+							Nenhum prestador encontrado. Use <b class="font-medium text-navy">Novo Prestador</b> para cadastrar.
+						</p>
+					{:else}
+						{#each resultados as p, i (p.id)}
+							{@const sched = isScheduled(p.id)}
+							<button
+								type="button"
+								role="option"
+								aria-selected={i === destaque}
+								onclick={() => escalar(p)}
+								onmouseenter={() => (destaque = i)}
+								disabled={sched}
+								class="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors {i === destaque && !sched
+									? 'bg-brand/[0.06]'
+									: ''} {sched ? 'cursor-not-allowed opacity-60' : 'hover:bg-brand/[0.06]'}"
+							>
+								<span class="min-w-0 flex-1">
+									<span class="block truncate text-sm font-medium text-navy">{p.name}</span>
+									<span class="block truncate text-xs text-grey">{p.service} · {p.region}</span>
+								</span>
+								{#if sched}
+									<span class="shrink-0 text-xs font-medium text-brand-green">no cronograma</span>
+								{:else}
+									<span class="shrink-0 text-xs font-medium text-brand">Escalar</span>
+								{/if}
+							</button>
+						{/each}
+					{/if}
 				</div>
 			{/if}
-		</Card>
-	{/if}
+		</div>
+	</Card>
 
 	{#if isAddingExtra}
 		<Card class="mb-6">
@@ -232,7 +290,7 @@
 			<span class="grid size-16 place-items-center rounded-full bg-bg text-grey mx-auto mb-4"><Calendar size={30} /></span>
 			<h3 class="text-base font-medium text-navy mb-1">Nenhum prestador escalado</h3>
 			<p class="text-sm text-grey max-w-sm mx-auto">Comece adicionando prestadores ao cronograma desta semana para calcular os custos.</p>
-			<button onclick={() => (isAdding = true)} class="mt-5 text-sm font-medium text-brand hover:underline">+ Escalar primeiro prestador</button>
+			<button onclick={() => campoBusca?.focus()} class="mt-5 text-sm font-medium text-brand hover:underline">+ Escalar primeiro prestador</button>
 		</Card>
 	{:else}
 		<div class="space-y-5">
