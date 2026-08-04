@@ -30,53 +30,45 @@
 	<title>Pag's Up | Dunamis Space</title>
 </svelte:head>
 
-<div>
-	<!-- Cabeçalho + abas no topo, no mesmo padrão do Calendário Editorial. Antes
-	     a navegação era um dock flutuante no rodapé, que cobria o conteúdo e
-	     exigia 6rem de respiro embaixo em toda tela do módulo. -->
-	<div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-		<div>
-			<h1 class="text-base font-semibold text-navy">Pag's Up</h1>
-			<p class="text-sm text-grey">Prestadores, cronograma da semana e pagamentos.</p>
-		</div>
-		<nav class="inline-flex self-start rounded-full bg-bg p-0.5" aria-label="Módulos do Pag's Up">
-			{#each NAV as item (item.id)}
-				{@const Ico = item.icon}
-				<button
-					type="button"
-					onclick={() => (active = item.id)}
-					aria-current={active === item.id ? 'page' : undefined}
-					class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors {active ===
-					item.id
-						? 'bg-surface text-navy shadow-sm'
-						: 'text-grey hover:text-navy'}"
-				>
-					<Ico size={15} />
-					<span class="hidden sm:inline">{item.label}</span>
-				</button>
-			{/each}
-		</nav>
-	</div>
+{#snippet abas()}
+	<!-- As abas ficam na MESMA linha das ações de cada módulo (Total, botões...),
+	     por isso são passadas como snippet em vez de renderizadas aqui: cada tela
+	     as coloca à esquerda da própria barra, no lugar do antigo título. -->
+	<nav class="inline-flex shrink-0 self-start rounded-full bg-bg p-0.5" aria-label="Módulos do Pag's Up">
+		{#each NAV as item (item.id)}
+			{@const Ico = item.icon}
+			<button
+				type="button"
+				onclick={() => (active = item.id)}
+				aria-current={active === item.id ? 'page' : undefined}
+				class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors {active ===
+				item.id
+					? 'bg-surface text-navy shadow-sm'
+					: 'text-grey hover:text-navy'}"
+			>
+				<Ico size={15} />
+				<span class="hidden sm:inline">{item.label}</span>
+			</button>
+		{/each}
+	</nav>
+{/snippet}
 
-	<div>
-		{#if pagsup.loading}
-			<div class="flex flex-col items-center justify-center py-24 text-grey">
-				<span class="size-8 rounded-full border-2 border-grey-200 border-t-brand animate-spin"></span>
-				<p class="mt-3 text-sm">Carregando dados…</p>
-			</div>
-		{:else if pagsup.error}
-			<div class="flex flex-col items-center justify-center py-24 text-center">
-				<p class="text-brand-danger mb-3">{pagsup.error}</p>
-				<Button variant="secondary" onclick={() => pagsup.load()}>Tentar novamente</Button>
-			</div>
-		{:else if active === 'cronograma'}
-			<Cronograma />
-		{:else if active === 'prestadores'}
-			<Prestadores />
-		{:else if active === 'negociacoes'}
-			<Negociacoes />
-		{:else}
-			<Configuracoes />
-		{/if}
+{#if pagsup.loading}
+	<div class="flex flex-col items-center justify-center py-24 text-grey">
+		<span class="size-8 rounded-full border-2 border-grey-200 border-t-brand animate-spin"></span>
+		<p class="mt-3 text-sm">Carregando dados…</p>
 	</div>
-</div>
+{:else if pagsup.error}
+	<div class="flex flex-col items-center justify-center py-24 text-center">
+		<p class="text-brand-danger mb-3">{pagsup.error}</p>
+		<Button variant="secondary" onclick={() => pagsup.load()}>Tentar novamente</Button>
+	</div>
+{:else if active === 'cronograma'}
+	<Cronograma {abas} />
+{:else if active === 'prestadores'}
+	<Prestadores {abas} />
+{:else if active === 'negociacoes'}
+	<Negociacoes {abas} />
+{:else}
+	<Configuracoes {abas} />
+{/if}

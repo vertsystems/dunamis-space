@@ -6,6 +6,9 @@
 	import { toast } from '$lib/toast.svelte';
 	import { Plus, Search, Trash2, Pencil, Check, X } from '@lucide/svelte';
 
+	// As abas do Pag's Up vêm do +page.svelte para ficarem nesta mesma barra.
+	let { abas }: { abas?: import('svelte').Snippet } = $props();
+
 	let searchTerm = $state('');
 	let isAdding = $state(false);
 	let editingId = $state<string | null>(null);
@@ -88,10 +91,7 @@
 
 <div>
 	<div class="flex flex-wrap items-center justify-between gap-3 mb-6">
-		<div>
-			<h2 class="text-base font-semibold text-navy tracking-tight">Prestadores de Serviço</h2>
-			<p class="text-sm text-grey mt-0.5">Gerencie a equipe de prestadores de serviço.</p>
-		</div>
+		{@render abas?.()}
 		<div class="flex items-center gap-2.5">
 			<Button onclick={() => (isAdding = !isAdding)}>
 				<Plus size={18} /> Novo Prestador

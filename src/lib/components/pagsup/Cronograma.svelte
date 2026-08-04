@@ -7,6 +7,9 @@
 	import { toast } from '$lib/toast.svelte';
 	import { Trash2, Calendar, DollarSign, Pencil, Check, X, FileSpreadsheet, Search } from '@lucide/svelte';
 
+	// As abas do Pag's Up vêm do +page.svelte para ficarem nesta mesma barra.
+	let { abas }: { abas?: import('svelte').Snippet } = $props();
+
 	type SchedRow = ScheduledService & { provider: Provider };
 
 	let isAddingExtra = $state(false);
@@ -159,10 +162,7 @@
 
 <div>
 	<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-		<div>
-			<h2 class="text-base font-semibold text-navy tracking-tight">Cronograma da Semana</h2>
-			<p class="text-sm text-grey mt-0.5">Selecione os prestadores e calcule os custos totais.</p>
-		</div>
+		{@render abas?.()}
 		<div class="flex flex-wrap items-center gap-2.5">
 			<div class="flex items-center gap-2.5 rounded-[var(--radius)] border border-grey-200 bg-surface px-4 h-10 shadow-xs">
 				<span class="grid size-6 place-items-center rounded-[var(--radius-sm)] bg-brand-green/12 text-brand-green"><DollarSign size={15} /></span>

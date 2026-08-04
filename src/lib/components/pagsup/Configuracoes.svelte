@@ -3,6 +3,9 @@
 	import { Settings, Layers } from '@lucide/svelte';
 
 	// Área de configurações (ainda ilustrativa — persistência virá com a fase de dados).
+	// As abas do Pag's Up vêm do +page.svelte para ficarem nesta mesma barra.
+	let { abas }: { abas?: import('svelte').Snippet } = $props();
+
 	let empresa = $state('');
 	let moeda = $state('BRL (R$)');
 	const modulos = $state([
@@ -14,8 +17,7 @@
 
 <div class="max-w-3xl">
 	<div class="mb-6">
-		<h2 class="text-base font-semibold text-navy tracking-tight">Configurações</h2>
-		<p class="text-sm text-grey mt-0.5">Gerencie as preferências e módulos do sistema.</p>
+		{@render abas?.()}
 	</div>
 
 	<div class="space-y-5">
