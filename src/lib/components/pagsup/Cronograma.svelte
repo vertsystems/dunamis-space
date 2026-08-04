@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { pagsup } from '$lib/pagsup/store.svelte';
-	import { SERVICE_CATEGORIES, LOJAS, type Provider, type ScheduledService } from '$lib/pagsup/types';
+	import { SERVICE_CATEGORIES, LOJAS, lojaNome, type Provider, type ScheduledService } from '$lib/pagsup/types';
 	import { formatBRL } from '$lib/clientes';
 	import { Button, Card } from '$lib/components/ui';
 	import ClienteSelector from './ClienteSelector.svelte';
@@ -20,6 +20,7 @@
 	let editingId = $state<string | null>(null);
 	let editPrice = $state<number | ''>('');
 	let editNotes = $state('');
+	let editLj = $state('');
 
 	const emptyExtra = () => ({ name: '', service: 'Carro de Som', region: '', cpf: '', pix: '', lj: '', price: '' as number | '', notes: '' });
 	let extra = $state(emptyExtra());
@@ -112,14 +113,27 @@
 		toast.success('Prestador adicionado ao cronograma');
 	}
 
-	function startEdit(item: ScheduledService) {
+	function startEdit(item: SchedRow) {
 		editingId = item.id;
 		editPrice = item.price;
 		editNotes = item.notes ?? '';
+		editLj = item.provider.lj ?? '';
 	}
-	function saveEdit(id: string) {
-		pagsup.updateScheduled(id, { price: editPrice, notes: editNotes });
+	function saveEdit(item: SchedRow) {
+		pagsup.updateScheduled(item.id, { price: editPrice, notes: editNotes });
+		// A LJ pertence ao prestador, não à escala: salvar aqui deixa o cadastro
+		// certo para as próximas semanas também.
+		if (editLj !== (item.provider.lj ?? '')) pagsup.updateProvider(item.providerId, { lj: editLj });
 		editingId = null;
+	}
+	/** Enter salva, Esc cancela — sem tirar as mãos do teclado. */
+	function teclaEdicao(e: KeyboardEvent, item: SchedRow) {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			saveEdit(item);
+		} else if (e.key === 'Escape') {
+			editingId = null;
+		}
 	}
 
 	// Data com que os itens entram na Planilha Mensal ao finalizar.
@@ -269,20 +283,20 @@
 					<input id="ex-reg" bind:value={extra.region} placeholder="Região/Cidade" class={fieldCls} />
 				</div>
 				<div>
-					<label for="ex-doc" class="block text-xs font-medium text-slate mb-1">CPF / CNPJ</label>
-					<input id="ex-doc" bind:value={extra.cpf} placeholder="000.000.000-00" class={fieldCls} />
-				</div>
-				<div>
-					<label for="ex-pix" class="block text-xs font-medium text-slate mb-1">Chave PIX</label>
-					<input id="ex-pix" bind:value={extra.pix} placeholder="Telefone, e-mail..." class={fieldCls} />
-				</div>
-				<div>
 					<!-- LJ: unidade onde o trabalho é feito; vai congelada no pagamento. -->
 					<label for="ex-lj" class="block text-xs font-medium text-slate mb-1">LJ (loja)</label>
 					<select id="ex-lj" bind:value={extra.lj} class={fieldCls}>
 						<option value="">—</option>
 						{#each LOJAS as l (l.sigla)}<option value={l.sigla} title={l.nome}>{l.sigla} · {l.nome}</option>{/each}
 					</select>
+				</div>
+				<div>
+					<label for="ex-doc" class="block text-xs font-medium text-slate mb-1">CPF / CNPJ</label>
+					<input id="ex-doc" bind:value={extra.cpf} placeholder="000.000.000-00" class={fieldCls} />
+				</div>
+				<div>
+					<label for="ex-pix" class="block text-xs font-medium text-slate mb-1">Chave PIX</label>
+					<input id="ex-pix" bind:value={extra.pix} placeholder="Telefone, e-mail..." class={fieldCls} />
 				</div>
 				<div>
 					<label for="ex-obs" class="block text-xs font-medium text-slate mb-1">Observações</label>
@@ -343,6 +357,7 @@
 								<tr class="text-grey text-xs uppercase tracking-wider border-b border-grey-200">
 									<th scope="col" class="px-5 py-3 font-semibold">Prestador</th>
 									<th scope="col" class="px-5 py-3 font-semibold">Região</th>
+									<th scope="col" class="w-20 px-5 py-3 font-semibold">LJ</th>
 									<th scope="col" class="px-5 py-3 font-semibold">Observações</th>
 									<th scope="col" class="px-5 py-3 font-semibold text-right">Valor</th>
 									<th scope="col" class="px-5 py-3 font-semibold text-right w-20"><span class="sr-only">Ações</span></th>
@@ -354,7 +369,13 @@
 										<tr class="bg-brand/[0.04]">
 											<td class="px-5 py-3 font-medium text-navy">{item.provider.name}</td>
 											<td class="px-5 py-3 text-slate text-sm">{item.provider.region}</td>
-											<td class="px-5 py-3"><input bind:value={editNotes} placeholder="Observações..." class="{fieldCls} h-9" /></td>
+											<td class="px-5 py-3">
+												<select bind:value={editLj} onkeydown={(e) => teclaEdicao(e, item)} aria-label="LJ (loja)" class="{fieldCls} h-9">
+													<option value="">—</option>
+													{#each LOJAS as l (l.sigla)}<option value={l.sigla} title={l.nome}>{l.sigla}</option>{/each}
+												</select>
+											</td>
+											<td class="px-5 py-3"><input bind:value={editNotes} onkeydown={(e) => teclaEdicao(e, item)} placeholder="Observações..." class="{fieldCls} h-9" /></td>
 											<td class="px-5 py-3">
 												<input type="number" min="0" step="0.01" value={editPrice}
 													oninput={(e) => (editPrice = e.currentTarget.value === '' ? '' : parseFloat(e.currentTarget.value))}
@@ -362,21 +383,35 @@
 											</td>
 											<td class="px-5 py-3">
 												<div class="flex justify-end gap-1">
-													<button onclick={() => saveEdit(item.id)} title="Salvar" class="p-2 rounded-[var(--radius-sm)] text-brand-green hover:bg-brand-green/10 transition-colors"><Check size={18} /></button>
+													<button onclick={() => saveEdit(item)} title="Salvar" class="p-2 rounded-[var(--radius-sm)] text-brand-green hover:bg-brand-green/10 transition-colors"><Check size={18} /></button>
 													<button onclick={() => (editingId = null)} title="Cancelar" class="p-2 rounded-[var(--radius-sm)] text-grey hover:bg-bg transition-colors"><X size={18} /></button>
 												</div>
 											</td>
 										</tr>
 									{:else}
-										<tr class="group hover:bg-bg/50 transition-colors">
+										<!-- A linha toda abre a edição; o lápis continua ali para
+										     quem procura o botão. -->
+										<tr
+											class="group cursor-pointer transition-colors hover:bg-bg/50"
+											onclick={() => startEdit(item)}
+											onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); startEdit(item); } }}
+											tabindex="0"
+											role="button"
+											aria-label="Editar {item.provider.name}"
+										>
 											<td class="px-5 py-3.5 font-medium text-navy">{item.provider.name}</td>
 											<td class="px-5 py-3.5 text-slate text-sm">{item.provider.region}</td>
+											<td class="px-5 py-3.5">
+												{#if item.provider.lj}
+													<span class="inline-flex items-center rounded-[var(--radius-sm)] bg-bg px-2 py-0.5 text-xs font-bold text-slate" title={lojaNome(item.provider.lj)}>{item.provider.lj}</span>
+												{:else}<span class="text-sm text-grey">-</span>{/if}
+											</td>
 											<td class="px-5 py-3.5 text-grey text-sm italic">{item.notes || '-'}</td>
 											<td class="px-5 py-3.5 text-right font-mono text-navy font-medium">{item.price === '' ? '-' : formatBRL(item.price)}</td>
 											<td class="px-5 py-3.5">
 												<div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
 													<button onclick={() => startEdit(item)} title="Editar" class="p-2 rounded-[var(--radius-sm)] text-grey hover:text-brand hover:bg-brand/10 transition-colors"><Pencil size={17} /></button>
-													<button onclick={() => pagsup.deleteScheduled(item.id)} title="Remover" class="p-2 rounded-[var(--radius-sm)] text-grey hover:text-brand-danger hover:bg-brand-danger/10 transition-colors"><Trash2 size={17} /></button>
+													<button onclick={(e) => { e.stopPropagation(); pagsup.deleteScheduled(item.id); }} title="Remover" class="p-2 rounded-[var(--radius-sm)] text-grey hover:text-brand-danger hover:bg-brand-danger/10 transition-colors"><Trash2 size={17} /></button>
 												</div>
 											</td>
 										</tr>

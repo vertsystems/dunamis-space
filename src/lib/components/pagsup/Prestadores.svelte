@@ -62,6 +62,16 @@
 		toast.success('Prestador adicionado');
 	}
 
+	/** Enter salva, Esc cancela — sem tirar as mãos do teclado. */
+	function teclaEdicao(e: KeyboardEvent, id: string) {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			saveEdit(id);
+		} else if (e.key === 'Escape') {
+			editingId = null;
+		}
+	}
+
 	function startEdit(p: Provider) {
 		editingId = p.id;
 		edit = {
@@ -189,24 +199,24 @@
 									{#if editingId === p.id}
 										<tr class="bg-brand/[0.04]">
 											<td class="px-5 py-3">
-												<input bind:value={edit.name} aria-label="Nome do prestador" class={fieldCls} />
+												<input onkeydown={(e) => teclaEdicao(e, p.id)} bind:value={edit.name} aria-label="Nome do prestador" class={fieldCls} />
 											</td>
 											<td class="px-5 py-3">
-												<select bind:value={edit.service} aria-label="Serviço" class={fieldCls}>
+												<select onkeydown={(e) => teclaEdicao(e, p.id)} bind:value={edit.service} aria-label="Serviço" class={fieldCls}>
 													{#each SERVICE_CATEGORIES as c (c)}<option value={c}>{c}</option>{/each}
 												</select>
 											</td>
 											<td class="px-5 py-3">
-												<input bind:value={edit.region} aria-label="Região" class={fieldCls} />
+												<input onkeydown={(e) => teclaEdicao(e, p.id)} bind:value={edit.region} aria-label="Região" class={fieldCls} />
 											</td>
 											<td class="px-5 py-3">
-												<input bind:value={edit.cpf} aria-label="CPF / CNPJ" class={fieldCls} placeholder="CPF / CNPJ" />
+												<input onkeydown={(e) => teclaEdicao(e, p.id)} bind:value={edit.cpf} aria-label="CPF / CNPJ" class={fieldCls} placeholder="CPF / CNPJ" />
 											</td>
 											<td class="px-5 py-3">
-												<input bind:value={edit.pix} aria-label="Chave PIX" class={fieldCls} placeholder="PIX" />
+												<input onkeydown={(e) => teclaEdicao(e, p.id)} bind:value={edit.pix} aria-label="Chave PIX" class={fieldCls} placeholder="PIX" />
 											</td>
 											<td class="px-5 py-3">
-												<select bind:value={edit.lj} aria-label="LJ (loja)" class={fieldCls}>
+												<select onkeydown={(e) => teclaEdicao(e, p.id)} bind:value={edit.lj} aria-label="LJ (loja)" class={fieldCls}>
 													<option value="">—</option>
 													{#each LOJAS as l (l.sigla)}<option value={l.sigla} title={l.nome}>{l.sigla}</option>{/each}
 												</select>
@@ -219,7 +229,15 @@
 											</td>
 										</tr>
 									{:else}
-										<tr class="group hover:bg-bg/50 transition-colors">
+										<!-- A linha toda abre a edição; o lápis continua ali. -->
+										<tr
+											class="group cursor-pointer transition-colors hover:bg-bg/50"
+											onclick={() => startEdit(p)}
+											onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); startEdit(p); } }}
+											tabindex="0"
+											role="button"
+											aria-label="Editar {p.name}"
+										>
 											<td class="px-5 py-3.5 font-medium text-navy">{p.name}</td>
 											<td class="px-5 py-3.5">
 												<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide {accent.chip}">{p.service}</span>
@@ -237,7 +255,7 @@
 											<td class="px-5 py-3.5">
 												<div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
 													<button onclick={() => startEdit(p)} title="Editar" class="p-2 rounded-[var(--radius-sm)] text-grey hover:text-brand hover:bg-brand/10 transition-colors"><Pencil size={17} /></button>
-													<button onclick={() => remove(p.id)} title="Excluir" class="p-2 rounded-[var(--radius-sm)] text-grey hover:text-brand-danger hover:bg-brand-danger/10 transition-colors"><Trash2 size={17} /></button>
+													<button onclick={(e) => { e.stopPropagation(); remove(p.id); }} title="Excluir" class="p-2 rounded-[var(--radius-sm)] text-grey hover:text-brand-danger hover:bg-brand-danger/10 transition-colors"><Trash2 size={17} /></button>
 												</div>
 											</td>
 										</tr>
