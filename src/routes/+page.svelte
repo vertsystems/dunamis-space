@@ -82,7 +82,8 @@
 	</div>
 
 	{#if data.clientes.length}
-		<div class="grid grid-cols-[repeat(auto-fill,minmax(76px,1fr))] gap-x-2 gap-y-4">
+		<!-- Bolinha, coluna e nome 30% maiores que o original (48px / 76px / 0.7rem). -->
+		<div class="grid grid-cols-[repeat(auto-fill,minmax(99px,1fr))] gap-x-2 gap-y-4">
 			{#each data.clientes as c (c.id)}
 				<a
 					href={`/cadastro/${c.id}`}
@@ -93,15 +94,15 @@
 						<img
 							src={c.logo_url}
 							alt={c.nome}
-							class="size-12 rounded-full object-cover shadow-sm transition group-hover:scale-105 group-hover:shadow-md"
+							class="size-[3.9rem] rounded-full object-cover shadow-sm transition group-hover:scale-105 group-hover:shadow-md"
 						/>
 					{:else}
 						<span
-							class="grid size-12 place-items-center rounded-full text-sm font-bold text-white shadow-sm transition group-hover:scale-105 group-hover:shadow-md {corAvatar(c.nome)}"
+							class="grid size-[3.9rem] place-items-center rounded-full text-base font-bold text-white shadow-sm transition group-hover:scale-105 group-hover:shadow-md {corAvatar(c.nome)}"
 							>{iniciais(c.nome)}</span
 						>
 					{/if}
-					<span class="w-full text-[0.7rem] leading-tight text-slate line-clamp-2">{c.nome}</span>
+					<span class="w-full text-[0.91rem] leading-tight text-slate line-clamp-2">{c.nome}</span>
 				</a>
 			{/each}
 		</div>
