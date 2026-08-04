@@ -296,7 +296,7 @@
 					<Button type="submit" block loading={loading} class="mt-2">Entrar</Button>
 					{#if perfis.length}
 						<button type="button" onclick={voltarAosPerfis} class="text-center text-sm font-medium text-slate hover:text-navy">
-							← Escolher pela foto
+							← Escolher usuário
 						</button>
 					{/if}
 				</form>
