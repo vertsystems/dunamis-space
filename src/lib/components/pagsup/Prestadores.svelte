@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { pagsup } from '$lib/pagsup/store.svelte';
-	import { SERVICE_CATEGORIES, type Provider } from '$lib/pagsup/types';
+	import { SERVICE_CATEGORIES, LOJAS, lojaNome, type Provider } from '$lib/pagsup/types';
 	import { Button, Card } from '$lib/components/ui';
 	import ClienteSelector from './ClienteSelector.svelte';
 	import { toast } from '$lib/toast.svelte';
@@ -13,8 +13,8 @@
 	let isAdding = $state(false);
 	let editingId = $state<string | null>(null);
 
-	type Form = { name: string; service: string; region: string; defaultPrice: number; cpf: string; pix: string };
-	const emptyForm = (): Form => ({ name: '', service: 'Carro de Som', region: '', defaultPrice: 0, cpf: '', pix: '' });
+	type Form = { name: string; service: string; region: string; defaultPrice: number; cpf: string; pix: string; lj: string };
+	const emptyForm = (): Form => ({ name: '', service: 'Carro de Som', region: '', defaultPrice: 0, cpf: '', pix: '', lj: '' });
 	let novo = $state<Form>(emptyForm());
 	let edit = $state<Form>(emptyForm());
 
@@ -69,6 +69,7 @@
 			service: p.service,
 			region: p.region,
 			defaultPrice: p.defaultPrice,
+			lj: p.lj ?? '',
 			cpf: p.cpf ?? '',
 			pix: p.pix ?? ''
 		};
@@ -103,7 +104,7 @@
 	{#if isAdding}
 		<Card class="mb-6">
 			<h3 class="text-sm font-semibold text-navy mb-4">Adicionar Novo Prestador</h3>
-			<form onsubmit={handleAdd} class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3 items-end">
+			<form onsubmit={handleAdd} class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-7 gap-3 items-end">
 				<div class="xl:col-span-1">
 					<label for="np-nome" class="block text-xs font-medium text-slate mb-1">Nome</label>
 					<input id="np-nome" required bind:value={novo.name} placeholder="Ex: João Silva" class={fieldCls} />
@@ -125,6 +126,14 @@
 				<div class="xl:col-span-1">
 					<label for="np-pix" class="block text-xs font-medium text-slate mb-1">Chave PIX</label>
 					<input id="np-pix" bind:value={novo.pix} placeholder="Telefone, e-mail..." class={fieldCls} />
+				</div>
+				<div class="xl:col-span-1">
+					<!-- LJ: unidade onde o trabalho é feito; vai congelada no pagamento. -->
+					<label for="np-lj" class="block text-xs font-medium text-slate mb-1">LJ (loja)</label>
+					<select id="np-lj" bind:value={novo.lj} class={fieldCls}>
+						<option value="">—</option>
+						{#each LOJAS as l (l.sigla)}<option value={l.sigla} title={l.nome}>{l.sigla} · {l.nome}</option>{/each}
+					</select>
 				</div>
 				<div class="xl:col-span-1 flex gap-2">
 					<Button type="submit" block>Salvar</Button>
@@ -171,6 +180,7 @@
 									<th scope="col" class="px-5 py-3 font-semibold">Região</th>
 									<th scope="col" class="px-5 py-3 font-semibold">CPF / CNPJ</th>
 									<th scope="col" class="px-5 py-3 font-semibold">Chave PIX</th>
+									<th scope="col" class="px-5 py-3 font-semibold w-20">LJ</th>
 									<th scope="col" class="px-5 py-3 font-semibold text-right w-28">Ações</th>
 								</tr>
 							</thead>
@@ -196,6 +206,12 @@
 												<input bind:value={edit.pix} aria-label="Chave PIX" class={fieldCls} placeholder="PIX" />
 											</td>
 											<td class="px-5 py-3">
+												<select bind:value={edit.lj} aria-label="LJ (loja)" class={fieldCls}>
+													<option value="">—</option>
+													{#each LOJAS as l (l.sigla)}<option value={l.sigla} title={l.nome}>{l.sigla}</option>{/each}
+												</select>
+											</td>
+											<td class="px-5 py-3">
 												<div class="flex justify-end gap-1">
 													<button onclick={() => saveEdit(p.id)} title="Salvar" class="p-2 rounded-[var(--radius-sm)] text-brand-green hover:bg-brand-green/10 transition-colors"><Check size={18} /></button>
 													<button onclick={() => (editingId = null)} title="Cancelar" class="p-2 rounded-[var(--radius-sm)] text-grey hover:bg-bg transition-colors"><X size={18} /></button>
@@ -212,6 +228,11 @@
 											<td class="px-5 py-3.5 text-slate text-sm font-mono">{p.cpf || '-'}</td>
 											<td class="px-5 py-3.5 text-slate text-sm">
 												{#if p.pix}<span class="block max-w-[150px] truncate" title={p.pix}>{p.pix}</span>{:else}-{/if}
+											</td>
+											<td class="px-5 py-3.5">
+												{#if p.lj}
+													<span class="inline-flex items-center rounded-[var(--radius-sm)] bg-bg px-2 py-0.5 text-xs font-bold text-slate" title={lojaNome(p.lj)}>{p.lj}</span>
+												{:else}<span class="text-sm text-grey">-</span>{/if}
 											</td>
 											<td class="px-5 py-3.5">
 												<div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

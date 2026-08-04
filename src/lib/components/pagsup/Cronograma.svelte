@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { pagsup } from '$lib/pagsup/store.svelte';
-	import { SERVICE_CATEGORIES, type Provider, type ScheduledService } from '$lib/pagsup/types';
+	import { SERVICE_CATEGORIES, LOJAS, type Provider, type ScheduledService } from '$lib/pagsup/types';
 	import { formatBRL } from '$lib/clientes';
 	import { Button, Card } from '$lib/components/ui';
 	import ClienteSelector from './ClienteSelector.svelte';
@@ -21,7 +21,7 @@
 	let editPrice = $state<number | ''>('');
 	let editNotes = $state('');
 
-	const emptyExtra = () => ({ name: '', service: 'Carro de Som', region: '', cpf: '', pix: '', price: '' as number | '', notes: '' });
+	const emptyExtra = () => ({ name: '', service: 'Carro de Som', region: '', cpf: '', pix: '', lj: '', price: '' as number | '', notes: '' });
 	let extra = $state(emptyExtra());
 
 	// ---- Busca de prestador (entrou no lugar da grade de pré-selecionados) ----
@@ -103,6 +103,7 @@
 			region: extra.region,
 			cpf: extra.cpf,
 			pix: extra.pix,
+			lj: extra.lj,
 			defaultPrice: typeof extra.price === 'number' ? extra.price : 0
 		});
 		pagsup.scheduleProvider(provider.id, extra.price, extra.notes);
@@ -274,6 +275,14 @@
 				<div>
 					<label for="ex-pix" class="block text-xs font-medium text-slate mb-1">Chave PIX</label>
 					<input id="ex-pix" bind:value={extra.pix} placeholder="Telefone, e-mail..." class={fieldCls} />
+				</div>
+				<div>
+					<!-- LJ: unidade onde o trabalho é feito; vai congelada no pagamento. -->
+					<label for="ex-lj" class="block text-xs font-medium text-slate mb-1">LJ (loja)</label>
+					<select id="ex-lj" bind:value={extra.lj} class={fieldCls}>
+						<option value="">—</option>
+						{#each LOJAS as l (l.sigla)}<option value={l.sigla} title={l.nome}>{l.sigla} · {l.nome}</option>{/each}
+					</select>
 				</div>
 				<div>
 					<label for="ex-obs" class="block text-xs font-medium text-slate mb-1">Observações</label>

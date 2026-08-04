@@ -18,6 +18,8 @@ export interface Provider {
 	defaultPrice: number;
 	cpf?: string;
 	pix?: string;
+	/** Sigla da unidade onde o trabalho é feito (LJ) — ver LOJAS. */
+	lj?: string;
 }
 
 export interface ScheduledService {
@@ -54,6 +56,8 @@ export interface Payment {
 	/** AAAA-MM-DD */
 	date: string;
 	notes?: string;
+	/** LJ copiada do prestador no ato do registro (ver Provider.lj). */
+	lj?: string;
 }
 
 export interface Negotiation {
@@ -66,6 +70,31 @@ export interface Negotiation {
 	pix: string; // Chave Pix
 	region: string; // Cidade / Região
 	dueDate: string; // DDV
+}
+
+/**
+ * Unidades (LJ) onde o trabalho é executado. Não confundir com o cliente do
+ * Pag's Up: um cliente (Lojas Mari) tem várias unidades.
+ */
+export const LOJAS = [
+	{ sigla: 'CDP', nome: 'Centro de Distribuição – Piedade' },
+	{ sigla: 'ADB', nome: 'Lojas Mari – Adhemar de Barros (Guarujá)' },
+	{ sigla: 'PIT', nome: 'Lojas Mari – Pitangueiras (Guarujá)' },
+	{ sigla: 'ENS', nome: 'Lojas Mari – Enseada (Guarujá)' },
+	{ sigla: 'REG1', nome: 'Lojas Mari – Registro 1' },
+	{ sigla: 'REG2', nome: 'Lojas Mari – Registro 2' },
+	{ sigla: 'PIE', nome: 'Lojas Mari – Piedade' },
+	{ sigla: 'IBI', nome: 'Lojas Mari – Ibiúna' },
+	{ sigla: 'PIL', nome: 'Lojas Mari – Pilar do Sul' },
+	{ sigla: 'ANG', nome: 'Lojas Mari – Angatuba' },
+	{ sigla: 'CAP', nome: 'Lojas Mari – Capela do Alto' },
+	{ sigla: 'SAL', nome: 'Lojas Mari – Salto de Pirapora' },
+	{ sigla: 'JUQ', nome: 'Lojas Mari – Juquiá' }
+] as const;
+
+/** Nome por extenso de uma sigla (para tooltip/legenda). */
+export function lojaNome(sigla: string | undefined | null): string {
+	return LOJAS.find((l) => l.sigla === sigla)?.nome ?? '';
 }
 
 /** Categorias de serviço usadas nos selects e na cor dos chips. */

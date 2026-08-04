@@ -395,6 +395,8 @@ export interface MonthlyExportItem {
 	providerName: string;
 	service: string;
 	region: string;
+	/** Sigla da unidade onde o trabalho foi feito (CDP, ADB, PIT…). */
+	lj: string;
 	date: string;
 	notes: string;
 	value: number;
@@ -412,7 +414,7 @@ export interface MonthlyExportGroup {
  */
 export async function exportMonthlyXlsx(
 	groups: MonthlyExportGroup[],
-	opts: { mesLabel: string; emitidoEm?: string }
+	opts: { mesLabel: string; ano: string; emitidoEm?: string }
 ): Promise<void> {
 	const grandTotal = groups
 		.flatMap((g) => g.itens)
@@ -428,14 +430,15 @@ export async function exportMonthlyXlsx(
 	ws.getColumn(1).width = 38; // Prestador
 	ws.getColumn(2).width = 24; // Serviço
 	ws.getColumn(3).width = 24; // Região
-	ws.getColumn(4).width = 16; // Dt pagto
-	ws.getColumn(5).width = 40; // Observações
-	ws.getColumn(6).width = 20; // Valor
+	ws.getColumn(4).width = 10; // LJ
+	ws.getColumn(5).width = 16; // Dt pagto
+	ws.getColumn(6).width = 36; // Observações
+	ws.getColumn(7).width = 20; // Valor
 
 	let startRow = 1;
 
-	const titleRow = ws.addRow(['Pgmtos Mensais Marketing LM']);
-	ws.mergeCells(`A${startRow}:F${startRow}`);
+	const titleRow = ws.addRow([`INVESTIMENTOS MARKETING | ${opts.ano}`]);
+	ws.mergeCells(`A${startRow}:G${startRow}`);
 	titleRow.getCell(1).font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
 	titleRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF111827' } };
 	titleRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' };
@@ -452,10 +455,11 @@ export async function exportMonthlyXlsx(
 		'',
 		'Emitido em:',
 		opts.emitidoEm ?? '',
+		'',
 		''
 	]);
 	ws.mergeCells(`B${startRow}:C${startRow}`);
-	ws.mergeCells(`E${startRow}:F${startRow}`);
+	ws.mergeCells(`E${startRow}:G${startRow}`);
 	infoRow.getCell(1).font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FF111827' } };
 	infoRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
 	infoRow.getCell(2).font = { name: 'Arial', size: 12, color: { argb: 'FF374151' } };
@@ -479,6 +483,7 @@ export async function exportMonthlyXlsx(
 		'Prestador de serviços',
 		'Serviço',
 		'Região',
+		'LJ',
 		'Dt Pagm.',
 		'Observações',
 		'Valor'
@@ -493,14 +498,14 @@ export async function exportMonthlyXlsx(
 	startRow++;
 
 	for (const group of groups) {
-		const spacerRow = ws.addRow(['', '', '', '', '', '']);
-		ws.mergeCells(`A${startRow}:F${startRow}`);
+		const spacerRow = ws.addRow(['', '', '', '', '', '', '']);
+		ws.mergeCells(`A${startRow}:G${startRow}`);
 		spacerRow.height = 24;
 		startRow++;
 
 		// Aqui o bloco é a LOJA (na semanal é a categoria de serviço).
 		const lojaRow = ws.addRow([group.loja.toUpperCase()]);
-		ws.mergeCells(`A${startRow}:F${startRow}`);
+		ws.mergeCells(`A${startRow}:G${startRow}`);
 		lojaRow.getCell(1).font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FF111827' } };
 		lojaRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCCCCC' } };
 		lojaRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
@@ -513,6 +518,7 @@ export async function exportMonthlyXlsx(
 				item.providerName,
 				item.service || '-',
 				item.region || '-',
+				item.lj || '-',
 				item.date,
 				item.notes || '-',
 				Number(item.value) || 0
@@ -522,11 +528,13 @@ export async function exportMonthlyXlsx(
 				cell.font = { name: 'Arial', size: 12, color: { argb: 'FF374151' } };
 				cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rowBgColor } };
 				cell.border = BORDER_THIN;
-				if (colNumber === 6) {
+				if (colNumber === 7) {
 					cell.numFmt = '"R$" #,##0.00';
 					cell.alignment = { vertical: 'middle', horizontal: 'right', indent: 1 };
-				} else if (colNumber === 4) {
+				} else if (colNumber === 4 || colNumber === 5) {
+					// LJ e data centralizadas: são colunas curtas.
 					cell.alignment = { vertical: 'middle', horizontal: 'center' };
+					if (colNumber === 4) cell.font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FF374151' } };
 				} else {
 					cell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
 				}
@@ -536,13 +544,13 @@ export async function exportMonthlyXlsx(
 		});
 	}
 
-	const resumoSpacer = ws.addRow(['', '', '', '', '', '']);
-	ws.mergeCells(`A${startRow}:F${startRow}`);
+	const resumoSpacer = ws.addRow(['', '', '', '', '', '', '']);
+	ws.mergeCells(`A${startRow}:G${startRow}`);
 	resumoSpacer.height = 17;
 	startRow++;
 
 	const resumoTitle = ws.addRow(['RESUMO POR LOJA']);
-	ws.mergeCells(`A${startRow}:F${startRow}`);
+	ws.mergeCells(`A${startRow}:G${startRow}`);
 	resumoTitle.getCell(1).font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
 	resumoTitle.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF111827' } };
 	resumoTitle.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' };
@@ -552,13 +560,13 @@ export async function exportMonthlyXlsx(
 
 	for (const group of groups) {
 		const subtotal = group.itens.reduce((sum, i) => sum + (Number(i.value) || 0), 0);
-		const row = ws.addRow(['', '', '', '', 'Total ' + group.loja, subtotal]);
-		ws.mergeCells(`A${startRow}:D${startRow}`);
-		row.getCell(5).font = { name: 'Arial', bold: true, size: 15, color: { argb: 'FF374151' } };
-		row.getCell(5).alignment = { vertical: 'middle', horizontal: 'right', indent: 1 };
-		row.getCell(6).numFmt = '"R$" #,##0.00';
-		row.getCell(6).font = { name: 'Arial', bold: true, size: 15, color: { argb: 'FF111827' } };
+		const row = ws.addRow(['', '', '', '', '', 'Total ' + group.loja, subtotal]);
+		ws.mergeCells(`A${startRow}:E${startRow}`);
+		row.getCell(6).font = { name: 'Arial', bold: true, size: 15, color: { argb: 'FF374151' } };
 		row.getCell(6).alignment = { vertical: 'middle', horizontal: 'right', indent: 1 };
+		row.getCell(7).numFmt = '"R$" #,##0.00';
+		row.getCell(7).font = { name: 'Arial', bold: true, size: 15, color: { argb: 'FF111827' } };
+		row.getCell(7).alignment = { vertical: 'middle', horizontal: 'right', indent: 1 };
 		row.eachCell((cell) => {
 			cell.border = BORDER_THIN;
 		});
@@ -566,28 +574,28 @@ export async function exportMonthlyXlsx(
 		startRow++;
 	}
 
-	const totalSpacer = ws.addRow(['', '', '', '', '', '']);
-	ws.mergeCells(`A${startRow}:F${startRow}`);
-	for (let i = 1; i <= 6; i++) {
+	const totalSpacer = ws.addRow(['', '', '', '', '', '', '']);
+	ws.mergeCells(`A${startRow}:G${startRow}`);
+	for (let i = 1; i <= 7; i++) {
 		totalSpacer.getCell(i).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCCCCC' } };
 	}
 	totalSpacer.height = 28;
 	startRow++;
 
-	const grandRow = ws.addRow(['', '', '', '', 'TOTAL DO MÊS', grandTotal]);
-	ws.mergeCells(`A${startRow}:D${startRow}`);
-	grandRow.getCell(5).font = { name: 'Arial', bold: true, size: 14, color: { argb: 'FF111827' } };
-	grandRow.getCell(5).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
-	grandRow.getCell(5).alignment = { vertical: 'middle', horizontal: 'right', indent: 1 };
-	grandRow.getCell(6).font = { name: 'Arial', bold: true, size: 14, color: { argb: 'FFF97316' } };
+	const grandRow = ws.addRow(['', '', '', '', '', 'TOTAL DO MÊS', grandTotal]);
+	ws.mergeCells(`A${startRow}:E${startRow}`);
+	grandRow.getCell(6).font = { name: 'Arial', bold: true, size: 14, color: { argb: 'FF111827' } };
 	grandRow.getCell(6).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
-	grandRow.getCell(6).numFmt = '"R$" #,##0.00';
 	grandRow.getCell(6).alignment = { vertical: 'middle', horizontal: 'right', indent: 1 };
+	grandRow.getCell(7).font = { name: 'Arial', bold: true, size: 14, color: { argb: 'FFF97316' } };
+	grandRow.getCell(7).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
+	grandRow.getCell(7).numFmt = '"R$" #,##0.00';
+	grandRow.getCell(7).alignment = { vertical: 'middle', horizontal: 'right', indent: 1 };
 	grandRow.eachCell((cell) => {
 		cell.border = BORDER_THIN;
 	});
 	grandRow.height = 46;
 
 	const buffer = await workbook.xlsx.writeBuffer();
-	download(new Blob([buffer]), `Pgmto Mensal Marketing — ${opts.mesLabel}.xlsx`);
+	download(new Blob([buffer]), `Investimentos Marketing — ${opts.mesLabel}.xlsx`);
 }

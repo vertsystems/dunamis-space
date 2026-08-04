@@ -2,7 +2,7 @@
 	// Fechamento do mês: junta tudo que foi pago (as semanas finalizadas no
 	// cronograma + lançamentos avulsos) e gera a planilha de prestação de contas.
 	import { pagsup } from '$lib/pagsup/store.svelte';
-	import type { Payment, Provider } from '$lib/pagsup/types';
+	import { LOJAS, lojaNome, type Payment, type Provider } from '$lib/pagsup/types';
 	import { formatBRL } from '$lib/clientes';
 	import { Button, Card } from '$lib/components/ui';
 	import { toast } from '$lib/toast.svelte';
@@ -47,6 +47,7 @@
 	let valor = $state<number | ''>('');
 	let data = $state(hojeISO());
 	let obs = $state('');
+	let lj = $state('');
 
 	const resultados = $derived.by(() => {
 		const q = busca.trim().toLowerCase();
@@ -69,6 +70,7 @@
 		busca = '';
 		valor = '';
 		obs = '';
+		lj = '';
 		// Cai no dia 1 do mês que está sendo fechado, não no de hoje: quase sempre
 		// se lança um pagamento do mês visto, não do atual.
 		data = mes === hojeISO().slice(0, 7) ? hojeISO() : `${mes}-01`;
@@ -91,7 +93,8 @@
 			region: escolhido.region,
 			value: Number(valor),
 			date: data,
-			notes: obs
+			notes: obs,
+			lj
 		});
 		toast.success(`Pagamento de ${escolhido.name} registrado`);
 		lancando = false;
@@ -113,10 +116,11 @@
 						region: p.region ?? '',
 						date: fmtData(p.date),
 						notes: p.notes ?? '',
+						lj: p.lj ?? '',
 						value: Number(p.value) || 0
 					}))
 				})),
-				{ mesLabel: rotuloMes(mes), emitidoEm: fmtData(hojeISO()) }
+				{ mesLabel: rotuloMes(mes), ano: mes.slice(0, 4), emitidoEm: fmtData(hojeISO()) }
 			);
 			toast.success('Planilha mensal gerada');
 		} catch {
@@ -187,7 +191,7 @@
 								{#each resultados as p (p.id)}
 									<button
 										type="button"
-										onclick={() => { escolhido = p; valor = p.defaultPrice || ''; }}
+										onclick={() => { escolhido = p; valor = p.defaultPrice || ''; lj = p.lj ?? ''; }}
 										class="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-brand/[0.06]"
 									>
 										<span class="min-w-0 flex-1">
@@ -202,7 +206,7 @@
 				</div>
 			{/if}
 
-			<div class="grid grid-cols-1 gap-3 md:grid-cols-4">
+			<div class="grid grid-cols-1 gap-3 md:grid-cols-5">
 				<div>
 					<label for="pg-valor" class="mb-1 block text-xs font-medium text-slate">Valor pago</label>
 					<input id="pg-valor" type="number" min="0" step="0.01" placeholder="R$ 0,00" value={valor}
@@ -212,6 +216,13 @@
 				<div>
 					<label for="pg-data" class="mb-1 block text-xs font-medium text-slate">Data do pagamento</label>
 					<input id="pg-data" type="date" bind:value={data} class={fieldCls} />
+				</div>
+				<div>
+					<label for="pg-lj" class="mb-1 block text-xs font-medium text-slate">LJ (loja)</label>
+					<select id="pg-lj" bind:value={lj} class={fieldCls}>
+						<option value="">—</option>
+						{#each LOJAS as l (l.sigla)}<option value={l.sigla} title={l.nome}>{l.sigla} · {l.nome}</option>{/each}
+					</select>
 				</div>
 				<div>
 					<label for="pg-obs" class="mb-1 block text-xs font-medium text-slate">Observações</label>
@@ -258,6 +269,7 @@
 									<th scope="col" class="px-5 py-3 font-semibold">Prestador</th>
 									<th scope="col" class="px-5 py-3 font-semibold">Serviço</th>
 									<th scope="col" class="px-5 py-3 font-semibold">Região</th>
+									<th scope="col" class="w-20 px-5 py-3 font-semibold">LJ</th>
 									<th scope="col" class="px-5 py-3 font-semibold">Data</th>
 									<th scope="col" class="px-5 py-3 text-right font-semibold">Valor</th>
 									<th scope="col" class="w-14 px-5 py-3"><span class="sr-only">Ações</span></th>
@@ -269,6 +281,11 @@
 										<td class="px-5 py-3 font-medium text-navy">{p.providerName}</td>
 										<td class="px-5 py-3 text-sm text-slate">{p.service}</td>
 										<td class="px-5 py-3 text-sm text-slate">{p.region || '-'}</td>
+										<td class="px-5 py-3">
+											{#if p.lj}
+												<span class="inline-flex items-center rounded-[var(--radius-sm)] bg-bg px-2 py-0.5 text-xs font-bold text-slate" title={lojaNome(p.lj)}>{p.lj}</span>
+											{:else}<span class="text-sm text-grey">-</span>{/if}
+										</td>
 										<td class="px-5 py-3 text-sm tabular-nums text-slate">{fmtData(p.date)}</td>
 										<td class="px-5 py-3 text-right font-mono font-medium text-navy">{formatBRL(p.value)}</td>
 										<td class="px-5 py-3">

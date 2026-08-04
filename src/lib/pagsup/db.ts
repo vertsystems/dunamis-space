@@ -35,7 +35,7 @@ export async function fetchAll(supabase: SupabaseClient): Promise<PagsupSnapshot
 		supabase.from('pagsup_clientes').select('id, nome').order('nome', { ascending: true }),
 		supabase
 			.from('pagsup_prestadores')
-			.select('id, cliente_id, nome, servico, regiao, valor_padrao, cpf, pix'),
+			.select('id, cliente_id, nome, servico, regiao, valor_padrao, cpf, pix, lj'),
 		supabase.from('pagsup_cronograma').select('id, cliente_id, prestador_id, data, valor, observacoes'),
 		supabase
 			.from('pagsup_negociacoes')
@@ -45,7 +45,7 @@ export async function fetchAll(supabase: SupabaseClient): Promise<PagsupSnapshot
 			.select('id, cliente_id, negociacao_id, data, valor, observacoes'),
 		supabase
 			.from('pagsup_pagamentos')
-			.select('id, cliente_id, prestador_id, prestador_nome, servico, regiao, valor, data_pagamento, observacoes')
+			.select('id, cliente_id, prestador_id, prestador_nome, servico, regiao, valor, data_pagamento, observacoes, lj')
 			.order('data_pagamento', { ascending: false })
 	]);
 
@@ -65,7 +65,8 @@ export async function fetchAll(supabase: SupabaseClient): Promise<PagsupSnapshot
 			region: p.regiao ?? '',
 			defaultPrice: Number(p.valor_padrao ?? 0),
 			cpf: p.cpf ?? '',
-			pix: p.pix ?? ''
+			pix: p.pix ?? '',
+			lj: p.lj ?? ''
 		})),
 		scheduledServices: (cron.data ?? []).map((s) => ({
 			id: s.id,
@@ -103,7 +104,8 @@ export async function fetchAll(supabase: SupabaseClient): Promise<PagsupSnapshot
 			region: p.regiao ?? '',
 			value: Number(p.valor ?? 0),
 			date: p.data_pagamento,
-			notes: p.observacoes ?? ''
+			notes: p.observacoes ?? '',
+			lj: p.lj ?? ''
 		}))
 	};
 }
@@ -120,7 +122,8 @@ function pagamentoRow(p: Payment) {
 		regiao: p.region ?? null,
 		valor: p.value,
 		data_pagamento: p.date,
-		observacoes: p.notes || null
+		observacoes: p.notes || null,
+		lj: p.lj || null
 	};
 }
 
@@ -172,7 +175,8 @@ export async function insertProvider(supabase: SupabaseClient, p: Provider): Pro
 		regiao: p.region,
 		valor_padrao: p.defaultPrice,
 		cpf: p.cpf || null,
-		pix: p.pix || null
+		pix: p.pix || null,
+		lj: p.lj || null
 	});
 	if (error) throw error;
 }
@@ -189,6 +193,7 @@ export async function updateProvider(
 	if (patch.defaultPrice !== undefined) row.valor_padrao = patch.defaultPrice;
 	if (patch.cpf !== undefined) row.cpf = patch.cpf || null;
 	if (patch.pix !== undefined) row.pix = patch.pix || null;
+	if (patch.lj !== undefined) row.lj = patch.lj || null;
 	const { error } = await supabase.from('pagsup_prestadores').update(row).eq('id', id);
 	if (error) throw error;
 }

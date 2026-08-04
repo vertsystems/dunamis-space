@@ -231,7 +231,8 @@ class PagsupStore {
 				region: prov?.region ?? '',
 				value: Number(s.price) || 0,
 				date: data,
-				notes: s.notes ?? ''
+				notes: s.notes ?? '',
+				lj: prov?.lj ?? ''
 			};
 		});
 
