@@ -396,6 +396,7 @@ export interface MonthlyExportItem {
 	service: string;
 	region: string;
 	date: string;
+	notes: string;
 	value: number;
 }
 
@@ -405,13 +406,13 @@ export interface MonthlyExportGroup {
 }
 
 /**
- * Fechamento do mês: um bloco por loja, com prestador, serviço, região, data e
- * valor, mais o subtotal de cada loja e o total geral. É o que vai ao financeiro
- * como prestação de contas do mês.
+ * Fechamento do mês: mesma identidade visual da planilha semanal (faixa preta,
+ * blocos, zebrado, resumo e total em laranja), mas agrupada por LOJA — é assim
+ * que a prestação de contas é lida no fim do mês.
  */
 export async function exportMonthlyXlsx(
 	groups: MonthlyExportGroup[],
-	opts: { mesLabel: string }
+	opts: { mesLabel: string; emitidoEm?: string }
 ): Promise<void> {
 	const grandTotal = groups
 		.flatMap((g) => g.itens)
@@ -419,77 +420,174 @@ export async function exportMonthlyXlsx(
 
 	const workbook = new ExcelJS.Workbook();
 	workbook.creator = "Pag's Up";
-	const ws = workbook.addWorksheet('Planilha Mensal');
-	ws.columns = [
-		{ width: 34 }, // Prestador
-		{ width: 22 }, // Serviço
-		{ width: 22 }, // Região
-		{ width: 14 }, // Data
-		{ width: 18 } // Valor
-	];
+	workbook.created = new Date();
 
-	const titleRow = ws.addRow([`Prestação de contas — ${opts.mesLabel}`]);
-	ws.mergeCells(`A${titleRow.number}:E${titleRow.number}`);
-	titleRow.getCell(1).font = { name: 'Arial', bold: true, size: 16, color: { argb: 'FF111827' } };
+	const ws = workbook.addWorksheet('Planilha Mensal');
+	ws.views = [{ showGridLines: false }];
+
+	ws.getColumn(1).width = 38; // Prestador
+	ws.getColumn(2).width = 24; // Serviço
+	ws.getColumn(3).width = 24; // Região
+	ws.getColumn(4).width = 16; // Dt pagto
+	ws.getColumn(5).width = 40; // Observações
+	ws.getColumn(6).width = 20; // Valor
+
+	let startRow = 1;
+
+	const titleRow = ws.addRow(['Pgmtos Mensais Marketing LM']);
+	ws.mergeCells(`A${startRow}:F${startRow}`);
+	titleRow.getCell(1).font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+	titleRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF111827' } };
 	titleRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' };
-	titleRow.height = 34;
+	titleRow.height = 46;
+	startRow++;
+
 	ws.addRow([]);
+	ws.getRow(startRow).height = 17;
+	startRow++;
+
+	const infoRow = ws.addRow([
+		'Mês de referência:',
+		opts.mesLabel,
+		'',
+		'Emitido em:',
+		opts.emitidoEm ?? '',
+		''
+	]);
+	ws.mergeCells(`B${startRow}:C${startRow}`);
+	ws.mergeCells(`E${startRow}:F${startRow}`);
+	infoRow.getCell(1).font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FF111827' } };
+	infoRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+	infoRow.getCell(2).font = { name: 'Arial', size: 12, color: { argb: 'FF374151' } };
+	infoRow.getCell(2).alignment = { vertical: 'middle', horizontal: 'left' };
+	infoRow.getCell(4).font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FF111827' } };
+	infoRow.getCell(4).alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+	infoRow.getCell(5).font = { name: 'Arial', size: 12, color: { argb: 'FF374151' } };
+	infoRow.getCell(5).alignment = { vertical: 'middle', horizontal: 'left' };
+	infoRow.eachCell((cell) => {
+		cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
+		cell.border = BORDER_THIN;
+	});
+	infoRow.height = 35;
+	startRow++;
+
+	ws.addRow([]);
+	ws.getRow(startRow).height = 17;
+	startRow++;
+
+	const headerRow = ws.addRow([
+		'Prestador de serviços',
+		'Serviço',
+		'Região',
+		'Dt Pagm.',
+		'Observações',
+		'Valor'
+	]);
+	headerRow.eachCell((cell) => {
+		cell.font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+		cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF111827' } };
+		cell.alignment = { vertical: 'middle', horizontal: 'center' };
+		cell.border = { ...BORDER_THIN, bottom: { style: 'medium', color: { argb: 'FFCCCCCC' } } };
+	});
+	headerRow.height = 37;
+	startRow++;
 
 	for (const group of groups) {
-		const subtotal = group.itens.reduce((s, i) => s + (Number(i.value) || 0), 0);
+		const spacerRow = ws.addRow(['', '', '', '', '', '']);
+		ws.mergeCells(`A${startRow}:F${startRow}`);
+		spacerRow.height = 24;
+		startRow++;
 
+		// Aqui o bloco é a LOJA (na semanal é a categoria de serviço).
 		const lojaRow = ws.addRow([group.loja.toUpperCase()]);
-		ws.mergeCells(`A${lojaRow.number}:E${lojaRow.number}`);
-		lojaRow.getCell(1).font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
-		lojaRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1C2534' } };
+		ws.mergeCells(`A${startRow}:F${startRow}`);
+		lojaRow.getCell(1).font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FF111827' } };
+		lojaRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCCCCC' } };
 		lojaRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+		lojaRow.getCell(1).border = BORDER_THIN;
 		lojaRow.height = 24;
+		startRow++;
 
-		const head = ws.addRow(['Prestador', 'Serviço', 'Região', 'Data', 'Valor pago']);
-		head.eachCell((cell) => {
-			cell.font = { name: 'Arial', bold: true, size: 10, color: { argb: 'FF374151' } };
-			cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
-			cell.border = BORDER_THIN;
-			cell.alignment = { vertical: 'middle', horizontal: 'center' };
-		});
-		head.height = 20;
-
-		for (const item of group.itens) {
-			const row = ws.addRow([item.providerName, item.service, item.region, item.date, item.value]);
-			row.eachCell((cell, col) => {
-				cell.font = { name: 'Arial', size: 10 };
+		group.itens.forEach((item, index) => {
+			const row = ws.addRow([
+				item.providerName,
+				item.service || '-',
+				item.region || '-',
+				item.date,
+				item.notes || '-',
+				Number(item.value) || 0
+			]);
+			const rowBgColor = index % 2 === 0 ? 'FFFFFFFF' : 'FFF9FAFB';
+			row.eachCell((cell, colNumber) => {
+				cell.font = { name: 'Arial', size: 12, color: { argb: 'FF374151' } };
+				cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rowBgColor } };
 				cell.border = BORDER_THIN;
-				cell.alignment = { vertical: 'middle', horizontal: col === 1 ? 'left' : 'center' };
+				if (colNumber === 6) {
+					cell.numFmt = '"R$" #,##0.00';
+					cell.alignment = { vertical: 'middle', horizontal: 'right', indent: 1 };
+				} else if (colNumber === 4) {
+					cell.alignment = { vertical: 'middle', horizontal: 'center' };
+				} else {
+					cell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+				}
 			});
-			row.getCell(5).numFmt = '"R$" #,##0.00';
-			row.height = 19;
-		}
-
-		const subRow = ws.addRow(['', '', '', `Total ${group.loja}`, subtotal]);
-		subRow.getCell(4).font = { name: 'Arial', bold: true, size: 10 };
-		subRow.getCell(5).font = { name: 'Arial', bold: true, size: 11, color: { argb: 'FF111827' } };
-		subRow.getCell(5).numFmt = '"R$" #,##0.00';
-		for (const col of [4, 5]) {
-			subRow.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9FAFB' } };
-			subRow.getCell(col).border = BORDER_THIN;
-			subRow.getCell(col).alignment = { vertical: 'middle', horizontal: 'center' };
-		}
-		subRow.height = 22;
-		ws.addRow([]);
+			row.height = 22;
+			startRow++;
+		});
 	}
 
-	const grandRow = ws.addRow(['', '', '', 'TOTAL DO MÊS', grandTotal]);
-	grandRow.getCell(4).font = { name: 'Arial', bold: true, size: 13, color: { argb: 'FF111827' } };
-	grandRow.getCell(5).font = { name: 'Arial', bold: true, size: 13, color: { argb: 'FFF97316' } };
-	grandRow.getCell(5).numFmt = '"R$" #,##0.00';
-	for (const col of [4, 5]) {
-		grandRow.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
-		grandRow.getCell(col).border = BORDER_THIN;
-		grandRow.getCell(col).alignment = { vertical: 'middle', horizontal: 'center' };
+	const resumoSpacer = ws.addRow(['', '', '', '', '', '']);
+	ws.mergeCells(`A${startRow}:F${startRow}`);
+	resumoSpacer.height = 17;
+	startRow++;
+
+	const resumoTitle = ws.addRow(['RESUMO POR LOJA']);
+	ws.mergeCells(`A${startRow}:F${startRow}`);
+	resumoTitle.getCell(1).font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+	resumoTitle.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF111827' } };
+	resumoTitle.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' };
+	resumoTitle.getCell(1).border = { ...BORDER_THIN, bottom: { style: 'medium', color: { argb: 'FFCCCCCC' } } };
+	resumoTitle.height = 22;
+	startRow++;
+
+	for (const group of groups) {
+		const subtotal = group.itens.reduce((sum, i) => sum + (Number(i.value) || 0), 0);
+		const row = ws.addRow(['', '', '', '', 'Total ' + group.loja, subtotal]);
+		ws.mergeCells(`A${startRow}:D${startRow}`);
+		row.getCell(5).font = { name: 'Arial', bold: true, size: 15, color: { argb: 'FF374151' } };
+		row.getCell(5).alignment = { vertical: 'middle', horizontal: 'right', indent: 1 };
+		row.getCell(6).numFmt = '"R$" #,##0.00';
+		row.getCell(6).font = { name: 'Arial', bold: true, size: 15, color: { argb: 'FF111827' } };
+		row.getCell(6).alignment = { vertical: 'middle', horizontal: 'right', indent: 1 };
+		row.eachCell((cell) => {
+			cell.border = BORDER_THIN;
+		});
+		row.height = 35;
+		startRow++;
 	}
-	grandRow.height = 34;
+
+	const totalSpacer = ws.addRow(['', '', '', '', '', '']);
+	ws.mergeCells(`A${startRow}:F${startRow}`);
+	for (let i = 1; i <= 6; i++) {
+		totalSpacer.getCell(i).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCCCCC' } };
+	}
+	totalSpacer.height = 28;
+	startRow++;
+
+	const grandRow = ws.addRow(['', '', '', '', 'TOTAL DO MÊS', grandTotal]);
+	ws.mergeCells(`A${startRow}:D${startRow}`);
+	grandRow.getCell(5).font = { name: 'Arial', bold: true, size: 14, color: { argb: 'FF111827' } };
+	grandRow.getCell(5).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
+	grandRow.getCell(5).alignment = { vertical: 'middle', horizontal: 'right', indent: 1 };
+	grandRow.getCell(6).font = { name: 'Arial', bold: true, size: 14, color: { argb: 'FFF97316' } };
+	grandRow.getCell(6).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
+	grandRow.getCell(6).numFmt = '"R$" #,##0.00';
+	grandRow.getCell(6).alignment = { vertical: 'middle', horizontal: 'right', indent: 1 };
+	grandRow.eachCell((cell) => {
+		cell.border = BORDER_THIN;
+	});
+	grandRow.height = 46;
 
 	const buffer = await workbook.xlsx.writeBuffer();
-	// Nome do arquivo com o mês: os fechamentos ficam ordenáveis na pasta.
-	download(new Blob([buffer]), `Planilha Mensal ${opts.mesLabel}.xlsx`);
+	download(new Blob([buffer]), `Pgmto Mensal Marketing — ${opts.mesLabel}.xlsx`);
 }

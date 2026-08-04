@@ -112,10 +112,11 @@
 						service: p.service,
 						region: p.region ?? '',
 						date: fmtData(p.date),
+						notes: p.notes ?? '',
 						value: Number(p.value) || 0
 					}))
 				})),
-				{ mesLabel: rotuloMes(mes) }
+				{ mesLabel: rotuloMes(mes), emitidoEm: fmtData(hojeISO()) }
 			);
 			toast.success('Planilha mensal gerada');
 		} catch {
