@@ -3,23 +3,21 @@
 	import Cronograma from '$lib/components/pagsup/Cronograma.svelte';
 	import Prestadores from '$lib/components/pagsup/Prestadores.svelte';
 	import Negociacoes from '$lib/components/pagsup/Negociacoes.svelte';
-	import Configuracoes from '$lib/components/pagsup/Configuracoes.svelte';
 	import PlanilhaMensal from '$lib/components/pagsup/PlanilhaMensal.svelte';
 	import { Button } from '$lib/components/ui';
-	import { Calendar, Users, Briefcase, Settings, FileSpreadsheet } from '@lucide/svelte';
+	import { Calendar, Users, Briefcase, FileSpreadsheet } from '@lucide/svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
-	type ModuleId = 'cronograma' | 'mensal' | 'prestadores' | 'negociacoes' | 'configuracoes';
+	type ModuleId = 'cronograma' | 'mensal' | 'prestadores' | 'negociacoes';
 	let active = $state<ModuleId>('cronograma');
 
 	const NAV = [
 		{ id: 'cronograma', label: 'Cronograma', icon: Calendar },
 		{ id: 'mensal', label: 'Planilha Mensal', icon: FileSpreadsheet },
 		{ id: 'prestadores', label: 'Prestadores', icon: Users },
-		{ id: 'negociacoes', label: 'Negociações', icon: Briefcase },
-		{ id: 'configuracoes', label: 'Configurações', icon: Settings }
+		{ id: 'negociacoes', label: 'Negociações', icon: Briefcase }
 	] as const;
 
 	// Inicializa o store com o cliente Supabase (autenticado) do layout.
@@ -71,8 +69,6 @@
 	<PlanilhaMensal {abas} />
 {:else if active === 'prestadores'}
 	<Prestadores {abas} />
-{:else if active === 'negociacoes'}
-	<Negociacoes {abas} />
 {:else}
-	<Configuracoes {abas} />
+	<Negociacoes {abas} />
 {/if}

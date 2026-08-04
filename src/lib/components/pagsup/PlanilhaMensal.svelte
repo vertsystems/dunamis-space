@@ -128,17 +128,28 @@
 </script>
 
 <div>
-	<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+	<!-- Três zonas: abas na esquerda, ações no centro, total + mês na direita. -->
+	<div class="mb-6 flex flex-col gap-4 md:flex-row md:items-center">
 		{@render abas?.()}
-		<div class="flex flex-wrap items-center gap-2.5">
-			<div class="flex items-center gap-2.5 rounded-[var(--radius)] border border-grey-200 bg-surface px-4 h-10 shadow-xs">
-				<span class="grid size-6 place-items-center rounded-[var(--radius-sm)] bg-brand-green/12 text-brand-green"><DollarSign size={15} /></span>
-				<p class="text-[10px] font-bold text-grey uppercase tracking-wider leading-none">Total do mês</p>
-				<p class="text-sm font-bold text-navy leading-none tabular-nums">{formatBRL(total)}</p>
-			</div>
-			<input type="month" bind:value={mes} aria-label="Mês da planilha" class="{fieldCls} w-auto" />
+
+		<div class="flex flex-1 flex-wrap items-center justify-center gap-2.5">
 			<Button variant="secondary" onclick={abrirLancamento}><Plus size={17} /> Lançar pagamento</Button>
 			<Button onclick={gerarPlanilha}><FileSpreadsheet size={17} /> Gerar Planilha</Button>
+		</div>
+
+		<!-- Total e mês no mesmo bloco: o valor só faz sentido junto do período a
+		     que se refere, e o seletor separado ficava do tamanho de um botão. -->
+		<div class="flex h-10 shrink-0 items-center gap-2.5 rounded-[var(--radius)] border border-grey-200 bg-surface pl-4 pr-1.5 shadow-xs">
+			<span class="grid size-6 place-items-center rounded-[var(--radius-sm)] bg-brand-green/12 text-brand-green"><DollarSign size={15} /></span>
+			<p class="text-[10px] font-bold uppercase leading-none tracking-wider text-grey">Total do mês</p>
+			<p class="text-sm font-bold leading-none tabular-nums text-navy">{formatBRL(total)}</p>
+			<span class="h-5 w-px bg-grey-200"></span>
+			<input
+				type="month"
+				bind:value={mes}
+				aria-label="Mês da planilha"
+				class="h-7 w-[7.5rem] rounded-[var(--radius-sm)] border-0 bg-transparent px-1 text-xs font-medium text-slate transition-colors hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/25"
+			/>
 		</div>
 	</div>
 
