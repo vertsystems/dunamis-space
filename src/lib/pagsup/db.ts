@@ -143,6 +143,7 @@ export async function updatePayment(
 	if (patch.date !== undefined) row.data_pagamento = patch.date;
 	if (patch.notes !== undefined) row.observacoes = patch.notes || null;
 	if (patch.service !== undefined) row.servico = patch.service;
+	if (patch.lj !== undefined) row.lj = patch.lj || null;
 	const { error } = await supabase.from('pagsup_pagamentos').update(row).eq('id', id);
 	if (error) throw error;
 }

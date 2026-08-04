@@ -126,6 +126,15 @@
 		if (editLj !== (item.provider.lj ?? '')) pagsup.updateProvider(item.providerId, { lj: editLj });
 		editingId = null;
 	}
+	/**
+	 * Em <select> o Enter pertence ao próprio campo (é ele que confirma a opção
+	 * destacada). Interceptar ali salvava com o valor ANTIGO e a escolha sumia,
+	 * então nos selects tratamos só o Esc.
+	 */
+	function escOuNada(e: KeyboardEvent) {
+		if (e.key === 'Escape') editingId = null;
+	}
+
 	/** Enter salva, Esc cancela — sem tirar as mãos do teclado. */
 	function teclaEdicao(e: KeyboardEvent, item: SchedRow) {
 		if (e.key === 'Enter') {
@@ -370,7 +379,7 @@
 											<td class="px-5 py-3 font-medium text-navy">{item.provider.name}</td>
 											<td class="px-5 py-3 text-slate text-sm">{item.provider.region}</td>
 											<td class="px-5 py-3">
-												<select bind:value={editLj} onkeydown={(e) => teclaEdicao(e, item)} aria-label="LJ (loja)" class="{fieldCls} h-9">
+												<select bind:value={editLj} onkeydown={escOuNada} aria-label="LJ (loja)" class="{fieldCls} h-9">
 													<option value="">—</option>
 													{#each LOJAS as l (l.sigla)}<option value={l.sigla} title={l.nome}>{l.sigla}</option>{/each}
 												</select>
@@ -379,6 +388,7 @@
 											<td class="px-5 py-3">
 												<input type="number" min="0" step="0.01" value={editPrice}
 													oninput={(e) => (editPrice = e.currentTarget.value === '' ? '' : parseFloat(e.currentTarget.value))}
+													onkeydown={(e) => teclaEdicao(e, item)}
 													class="{fieldCls} h-9 max-w-[120px] ml-auto text-right font-mono" />
 											</td>
 											<td class="px-5 py-3">

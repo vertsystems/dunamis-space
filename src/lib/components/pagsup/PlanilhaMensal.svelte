@@ -7,7 +7,7 @@
 	import { Button, Card } from '$lib/components/ui';
 	import { toast } from '$lib/toast.svelte';
 	import { hojeISO } from '$lib/datas';
-	import { Search, Trash2, FileSpreadsheet, Plus, X, DollarSign } from '@lucide/svelte';
+	import { Search, Trash2, FileSpreadsheet, Plus, X, DollarSign, Pencil, Check } from '@lucide/svelte';
 
 	// As abas do Pag's Up vêm do +page.svelte para ficarem nesta mesma barra.
 	let { abas }: { abas?: import('svelte').Snippet } = $props();
@@ -38,6 +38,46 @@
 	function fmtData(iso: string): string {
 		const [a, m, d] = (iso ?? '').split('-');
 		return a && m && d ? `${d}/${m}/${a}` : iso;
+	}
+
+	// ---- Editar um pagamento já registrado (LJ, data e valor) ----
+	// Nome, serviço e loja NÃO entram: são o retrato de quem prestou o serviço no
+	// dia. O que se corrige aqui é lançamento — unidade errada, data ou valor.
+	let editandoId = $state<string | null>(null);
+	let editLj = $state('');
+	let editData = $state('');
+	let editValor = $state<number | ''>('');
+
+	function abrirEdicao(p: Payment) {
+		editandoId = p.id;
+		editLj = p.lj ?? '';
+		editData = p.date;
+		editValor = p.value;
+	}
+
+	function salvarEdicao(id: string) {
+		if (editValor === '' || Number(editValor) < 0) {
+			toast.error('Informe um valor válido.');
+			return;
+		}
+		pagsup.updatePayment(id, { lj: editLj, date: editData, value: Number(editValor) });
+		editandoId = null;
+		toast.success('Pagamento atualizado');
+	}
+
+	/** Em <select> o Enter confirma a opção: interceptar ali perdia a escolha. */
+	function escOuNada(e: KeyboardEvent) {
+		if (e.key === 'Escape') editandoId = null;
+	}
+
+	/** Enter salva, Esc cancela. */
+	function teclaEdicao(e: KeyboardEvent, id: string) {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			salvarEdicao(id);
+		} else if (e.key === 'Escape') {
+			editandoId = null;
+		}
 	}
 
 	// ---- Lançar pagamento avulso (feito antes ou esquecido) ----
@@ -272,31 +312,79 @@
 									<th scope="col" class="w-20 px-5 py-3 font-semibold">LJ</th>
 									<th scope="col" class="px-5 py-3 font-semibold">Data</th>
 									<th scope="col" class="px-5 py-3 text-right font-semibold">Valor</th>
-									<th scope="col" class="w-14 px-5 py-3"><span class="sr-only">Ações</span></th>
+									<th scope="col" class="w-24 px-5 py-3"><span class="sr-only">Ações</span></th>
 								</tr>
 							</thead>
 							<tbody class="divide-y divide-grey-200/70">
 								{#each itens as p (p.id)}
-									<tr class="group transition-colors hover:bg-bg/50">
-										<td class="px-5 py-3 font-medium text-navy">{p.providerName}</td>
-										<td class="px-5 py-3 text-sm text-slate">{p.service}</td>
-										<td class="px-5 py-3 text-sm text-slate">{p.region || '-'}</td>
-										<td class="px-5 py-3">
-											{#if p.lj}
-												<span class="inline-flex items-center rounded-[var(--radius-sm)] bg-bg px-2 py-0.5 text-xs font-bold text-slate" title={lojaNome(p.lj)}>{p.lj}</span>
-											{:else}<span class="text-sm text-grey">-</span>{/if}
-										</td>
-										<td class="px-5 py-3 text-sm tabular-nums text-slate">{fmtData(p.date)}</td>
-										<td class="px-5 py-3 text-right font-mono font-medium text-navy">{formatBRL(p.value)}</td>
-										<td class="px-5 py-3">
-											<button
-												onclick={() => pagsup.deletePayment(p.id)}
-												title="Excluir pagamento"
-												aria-label="Excluir pagamento de {p.providerName}"
-												class="rounded-[var(--radius-sm)] p-2 text-grey opacity-0 transition-all hover:bg-brand-danger/10 hover:text-brand-danger group-hover:opacity-100"
-											><Trash2 size={17} /></button>
-										</td>
-									</tr>
+									{#if editandoId === p.id}
+										<tr class="bg-brand/[0.04]">
+											<td class="px-5 py-3 font-medium text-navy">{p.providerName}</td>
+											<td class="px-5 py-3 text-sm text-slate">{p.service}</td>
+											<td class="px-5 py-3 text-sm text-slate">{p.region || '-'}</td>
+											<td class="px-5 py-3">
+												<select bind:value={editLj} onkeydown={escOuNada} aria-label="LJ (loja)" class="{fieldCls} h-9">
+													<option value="">—</option>
+													{#each LOJAS as l (l.sigla)}<option value={l.sigla} title={l.nome}>{l.sigla}</option>{/each}
+												</select>
+											</td>
+											<td class="px-5 py-3">
+												<input type="date" bind:value={editData} onkeydown={(e) => teclaEdicao(e, p.id)} aria-label="Data do pagamento" class="{fieldCls} h-9" />
+											</td>
+											<td class="px-5 py-3">
+												<input
+													type="number" min="0" step="0.01" value={editValor}
+													oninput={(e) => (editValor = e.currentTarget.value === '' ? '' : parseFloat(e.currentTarget.value))}
+													onkeydown={(e) => teclaEdicao(e, p.id)}
+													aria-label="Valor pago"
+													class="{fieldCls} ml-auto h-9 max-w-[130px] text-right font-mono"
+												/>
+											</td>
+											<td class="px-5 py-3">
+												<div class="flex justify-end gap-1">
+													<button onclick={() => salvarEdicao(p.id)} title="Salvar" class="rounded-[var(--radius-sm)] p-2 text-brand-green transition-colors hover:bg-brand-green/10"><Check size={18} /></button>
+													<button onclick={() => (editandoId = null)} title="Cancelar" class="rounded-[var(--radius-sm)] p-2 text-grey transition-colors hover:bg-bg"><X size={18} /></button>
+												</div>
+											</td>
+										</tr>
+									{:else}
+										<!-- A linha toda abre a edição, como no cronograma. -->
+										<tr
+											class="group cursor-pointer transition-colors hover:bg-bg/50"
+											onclick={() => abrirEdicao(p)}
+											onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); abrirEdicao(p); } }}
+											tabindex="0"
+											role="button"
+											aria-label="Editar pagamento de {p.providerName}"
+										>
+											<td class="px-5 py-3 font-medium text-navy">{p.providerName}</td>
+											<td class="px-5 py-3 text-sm text-slate">{p.service}</td>
+											<td class="px-5 py-3 text-sm text-slate">{p.region || '-'}</td>
+											<td class="px-5 py-3">
+												{#if p.lj}
+													<span class="inline-flex items-center rounded-[var(--radius-sm)] bg-bg px-2 py-0.5 text-xs font-bold text-slate" title={lojaNome(p.lj)}>{p.lj}</span>
+												{:else}<span class="text-sm text-grey">-</span>{/if}
+											</td>
+											<td class="px-5 py-3 text-sm tabular-nums text-slate">{fmtData(p.date)}</td>
+											<td class="px-5 py-3 text-right font-mono font-medium text-navy">{formatBRL(p.value)}</td>
+											<td class="px-5 py-3">
+												<div class="flex justify-end gap-1">
+													<button
+														onclick={(e) => { e.stopPropagation(); abrirEdicao(p); }}
+														title="Editar"
+														aria-label="Editar pagamento de {p.providerName}"
+														class="rounded-[var(--radius-sm)] p-2 text-grey opacity-0 transition-all hover:bg-brand/10 hover:text-brand group-hover:opacity-100"
+													><Pencil size={17} /></button>
+													<button
+														onclick={(e) => { e.stopPropagation(); pagsup.deletePayment(p.id); }}
+														title="Excluir pagamento"
+														aria-label="Excluir pagamento de {p.providerName}"
+														class="rounded-[var(--radius-sm)] p-2 text-grey opacity-0 transition-all hover:bg-brand-danger/10 hover:text-brand-danger group-hover:opacity-100"
+													><Trash2 size={17} /></button>
+												</div>
+											</td>
+										</tr>
+									{/if}
 								{/each}
 							</tbody>
 						</table>

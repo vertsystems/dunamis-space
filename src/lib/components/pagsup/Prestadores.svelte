@@ -62,6 +62,11 @@
 		toast.success('Prestador adicionado');
 	}
 
+	/** Em <select> o Enter confirma a opção: interceptar ali perdia a escolha. */
+	function escOuNada(e: KeyboardEvent) {
+		if (e.key === 'Escape') editingId = null;
+	}
+
 	/** Enter salva, Esc cancela — sem tirar as mãos do teclado. */
 	function teclaEdicao(e: KeyboardEvent, id: string) {
 		if (e.key === 'Enter') {
@@ -202,7 +207,7 @@
 												<input onkeydown={(e) => teclaEdicao(e, p.id)} bind:value={edit.name} aria-label="Nome do prestador" class={fieldCls} />
 											</td>
 											<td class="px-5 py-3">
-												<select onkeydown={(e) => teclaEdicao(e, p.id)} bind:value={edit.service} aria-label="Serviço" class={fieldCls}>
+												<select onkeydown={escOuNada} bind:value={edit.service} aria-label="Serviço" class={fieldCls}>
 													{#each SERVICE_CATEGORIES as c (c)}<option value={c}>{c}</option>{/each}
 												</select>
 											</td>
@@ -216,7 +221,7 @@
 												<input onkeydown={(e) => teclaEdicao(e, p.id)} bind:value={edit.pix} aria-label="Chave PIX" class={fieldCls} placeholder="PIX" />
 											</td>
 											<td class="px-5 py-3">
-												<select onkeydown={(e) => teclaEdicao(e, p.id)} bind:value={edit.lj} aria-label="LJ (loja)" class={fieldCls}>
+												<select onkeydown={escOuNada} bind:value={edit.lj} aria-label="LJ (loja)" class={fieldCls}>
 													<option value="">—</option>
 													{#each LOJAS as l (l.sigla)}<option value={l.sigla} title={l.nome}>{l.sigla}</option>{/each}
 												</select>
