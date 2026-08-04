@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
+	import { tick } from 'svelte';
 	import { Button } from '$lib/components/ui';
 	import logo from '$lib/assets/dspace-logo.svg';
 	import { Eye, EyeOff } from '@lucide/svelte';
@@ -8,13 +9,58 @@
 	let { data } = $props();
 	let { supabase } = $derived(data);
 
-	let modo = $state<'login' | 'reset'>('login');
+	type Perfil = { id: string; nome: string; email: string; avatar_url: string | null; funcao: string | null };
+	const perfis = $derived((data.perfis ?? []) as Perfil[]);
+
+	// 'perfis' é o caminho principal; cai direto no formulário de e-mail quando
+	// não há nenhum perfil (migration 0045 pendente, ou equipe sem cadastro).
+	let modo = $state<'perfis' | 'login' | 'reset'>('perfis');
+	let escolhido = $state<Perfil | null>(null);
+	let campoSenha = $state<HTMLInputElement | null>(null);
 	let email = $state('');
 	let password = $state('');
 	let mostrarSenha = $state(false);
 	let loading = $state(false);
 	let error = $state('');
 	let aviso = $state('');
+
+	const telaPerfis = $derived(modo === 'perfis' && perfis.length > 0);
+
+	function iniciais(nome: string): string {
+		const p = (nome ?? '').trim().split(/\s+/).filter(Boolean);
+		return ((p.length >= 2 ? p[0][0] + p[1][0] : (nome ?? '?').slice(0, 2)) || '?').toUpperCase();
+	}
+
+	async function escolher(p: Perfil) {
+		escolhido = p;
+		email = p.email;
+		password = '';
+		error = '';
+		// O campo só existe depois que o Svelte redesenha com o perfil escolhido.
+		await tick();
+		campoSenha?.focus();
+	}
+
+	function trocarPerfil() {
+		escolhido = null;
+		password = '';
+		error = '';
+	}
+
+	function irParaEmail() {
+		modo = 'login';
+		escolhido = null;
+		email = '';
+		password = '';
+		error = '';
+	}
+
+	function voltarAosPerfis() {
+		modo = 'perfis';
+		escolhido = null;
+		password = '';
+		error = '';
+	}
 
 	// Efeito máquina de escrever na citação do painel direito.
 	let digitado = $state('');
@@ -36,7 +82,8 @@
 		const { error: err } = await supabase.auth.signInWithPassword({ email, password });
 		if (err) {
 			loading = false;
-			error = 'E-mail ou senha inválidos.';
+			// Com o perfil escolhido o e-mail é certo, então o que falhou foi a senha.
+			error = escolhido ? 'Senha incorreta.' : 'E-mail ou senha inválidos.';
 			return;
 		}
 		// Mantém loading=true até a navegação concluir (evita duplo submit / flash do botão).
@@ -67,7 +114,8 @@
 		aviso = '';
 	}
 	function voltarLogin() {
-		modo = 'login';
+		// Volta para de onde a pessoa veio: a grade de perfis é a tela inicial.
+		modo = perfis.length ? 'perfis' : 'login';
 		error = '';
 		aviso = '';
 	}
@@ -81,7 +129,99 @@
 				<img src={logo} alt="Dunamis Space" class="h-[23px] w-auto" />
 			</div>
 
-			{#if modo === 'login'}
+			{#if telaPerfis}
+				<div class="mb-7">
+					<h1 class="text-2xl font-bold tracking-tight text-navy">Quem está entrando?</h1>
+					<p class="mt-1.5 text-sm text-grey">
+						{escolhido ? 'Digite sua senha para acessar.' : 'Escolha seu perfil para continuar.'}
+					</p>
+				</div>
+
+				<div class="grid grid-cols-[repeat(auto-fill,minmax(78px,1fr))] gap-x-2 gap-y-4">
+					{#each perfis as p (p.id)}
+						{@const ativo = escolhido?.id === p.id}
+						<button
+							type="button"
+							onclick={() => escolher(p)}
+							aria-pressed={ativo}
+							class="group flex flex-col items-center gap-1.5 text-center focus-visible:outline-none"
+						>
+							{#if p.avatar_url}
+								<img
+									src={p.avatar_url}
+									alt=""
+									class="size-16 rounded-full object-cover shadow-sm transition group-hover:scale-105 group-focus-visible:ring-2 group-focus-visible:ring-brand/50 {ativo
+										? 'ring-2 ring-brand ring-offset-2'
+										: 'outline-2 outline-offset-1 outline-dotted outline-grey'}"
+								/>
+							{:else}
+								<span
+									class="grid size-16 place-items-center rounded-full bg-navy text-base font-bold text-white shadow-sm transition group-hover:scale-105 {ativo
+										? 'ring-2 ring-brand ring-offset-2'
+										: 'outline-2 outline-offset-1 outline-dotted outline-grey'}"
+								>{iniciais(p.nome)}</span>
+							{/if}
+							<span class="w-full text-xs leading-tight {ativo ? 'font-semibold text-navy' : 'text-slate'}">
+								{p.nome}
+							</span>
+						</button>
+					{/each}
+				</div>
+
+				{#if escolhido}
+					<!-- Campo de senha do perfil escolhido, logo abaixo das bolinhas. -->
+					<form onsubmit={handleLogin} class="mt-6 flex flex-col gap-3">
+						<div class="grid gap-2">
+							<div class="flex items-center justify-between">
+								<label for="senha-perfil" class="text-sm font-medium text-navy">
+									Senha de {escolhido.nome.split(' ')[0]}
+								</label>
+								<button type="button" onclick={irParaReset} class="text-xs font-medium text-brand hover:underline">
+									Esqueceu sua senha?
+								</button>
+							</div>
+							<div class="relative">
+								<input
+									bind:this={campoSenha}
+									id="senha-perfil"
+									name="password"
+									type={mostrarSenha ? 'text' : 'password'}
+									placeholder="••••••••"
+									bind:value={password}
+									required
+									autocomplete="current-password"
+									aria-invalid={error ? 'true' : undefined}
+									aria-describedby={error ? 'perfil-erro' : undefined}
+									class="h-11 w-full rounded-[var(--radius)] border border-grey-200 bg-surface px-3.5 pe-11 text-sm text-navy-900 shadow-xs placeholder:text-grey/80 transition-colors hover:border-grey focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25"
+								/>
+								<button
+									type="button"
+									onclick={() => (mostrarSenha = !mostrarSenha)}
+									aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
+									class="absolute inset-y-0 end-0 grid w-11 place-items-center rounded-[var(--radius)] text-grey transition-colors hover:text-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35"
+								>
+									{#if mostrarSenha}<EyeOff size={18} />{:else}<Eye size={18} />{/if}
+								</button>
+							</div>
+						</div>
+
+						{#if error}
+							<div id="perfil-erro" role="alert" class="rounded-[var(--radius)] bg-brand-danger/10 px-3.5 py-2.5 text-sm text-brand-danger">
+								{error}
+							</div>
+						{/if}
+
+						<Button type="submit" block loading={loading}>Entrar</Button>
+						<button type="button" onclick={trocarPerfil} class="text-center text-sm font-medium text-slate hover:text-navy">
+							← Escolher outro perfil
+						</button>
+					</form>
+				{/if}
+
+				<button type="button" onclick={irParaEmail} class="mt-6 text-sm font-medium text-slate hover:text-navy">
+					Entrar com e-mail
+				</button>
+			{:else if modo === 'login' || modo === 'perfis'}
 				<div class="mb-7">
 					<h1 class="text-2xl font-bold tracking-tight text-navy">Entrar na sua conta</h1>
 					<p class="mt-1.5 text-sm text-grey">Informe seu e-mail abaixo para acessar.</p>
@@ -154,6 +294,11 @@
 					{/if}
 
 					<Button type="submit" block loading={loading} class="mt-2">Entrar</Button>
+					{#if perfis.length}
+						<button type="button" onclick={voltarAosPerfis} class="text-center text-sm font-medium text-slate hover:text-navy">
+							← Escolher pela foto
+						</button>
+					{/if}
 				</form>
 			{:else}
 				<div class="mb-7">
