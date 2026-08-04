@@ -38,6 +38,24 @@ export interface ScheduledNegotiation {
 	notes?: string;
 }
 
+/**
+ * Pagamento já efetuado — o que alimenta a Planilha Mensal.
+ * Nome/serviço/região ficam congelados no momento do registro: prestação de
+ * contas não pode mudar porque o cadastro do prestador foi editado depois.
+ */
+export interface Payment {
+	id: string;
+	clientId: string;
+	providerId?: string | null;
+	providerName: string;
+	service: string;
+	region?: string;
+	value: number;
+	/** AAAA-MM-DD */
+	date: string;
+	notes?: string;
+}
+
 export interface Negotiation {
 	id: string;
 	clientId?: string;

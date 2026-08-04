@@ -4,7 +4,14 @@
 // A seleção de cliente fica em localStorage só por conveniência de UX.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Provider, ScheduledService, Negotiation, ScheduledNegotiation, Client } from './types';
+import type {
+	Provider,
+	ScheduledService,
+	Negotiation,
+	ScheduledNegotiation,
+	Client,
+	Payment
+} from './types';
 import { toast } from '$lib/toast.svelte';
 import * as db from './db';
 import { hojeISO } from '$lib/datas';
@@ -37,6 +44,8 @@ class PagsupStore {
 	scheduledServices = $state<ScheduledService[]>([]);
 	negotiations = $state<Negotiation[]>([]);
 	scheduledNegotiations = $state<ScheduledNegotiation[]>([]);
+	/** Pagamentos já efetuados (histórico) — base da Planilha Mensal. */
+	payments = $state<Payment[]>([]);
 
 	// ---- Derivados filtrados pelo cliente selecionado ----------------------
 	filteredProviders = $derived(this.providers.filter((p) => p.clientId === this.selectedClientId));
@@ -73,6 +82,7 @@ class PagsupStore {
 			this.scheduledServices = snap.scheduledServices;
 			this.negotiations = snap.negotiations;
 			this.scheduledNegotiations = snap.scheduledNegotiations;
+			this.payments = snap.payments;
 
 			const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(K_CLIENT) : null;
 			this.selectedClientId =
@@ -199,14 +209,83 @@ class PagsupStore {
 		);
 	}
 
-	clearScheduleForCurrentClient() {
+	/**
+	 * Finaliza o cronograma do cliente: cada item vira um pagamento no histórico
+	 * (é isso que a Planilha Mensal soma no fim do mês) e o cronograma é limpo.
+	 * Antes os itens eram simplesmente apagados e o mês ficava sem rastro.
+	 */
+	clearScheduleForCurrentClient(dataPagamento?: string) {
 		const cid = this.selectedClientId;
-		const snapshot = this.scheduledServices;
+		const data = dataPagamento || hoje();
+		const doCliente = this.scheduledServices.filter((s) => s.clientId === cid);
+
+		const novos: Payment[] = doCliente.map((s) => {
+			const prov = this.providers.find((p) => p.id === s.providerId);
+			return {
+				id: uid(),
+				clientId: cid,
+				providerId: s.providerId,
+				// Congelado no ato: editar o cadastro depois não reescreve o passado.
+				providerName: prov?.name ?? '(prestador removido)',
+				service: prov?.service ?? '',
+				region: prov?.region ?? '',
+				value: Number(s.price) || 0,
+				date: data,
+				notes: s.notes ?? ''
+			};
+		});
+
+		const snapSchedule = this.scheduledServices;
+		const snapPayments = this.payments;
+		this.payments = [...novos, ...this.payments];
 		this.scheduledServices = this.scheduledServices.filter((s) => s.clientId !== cid);
+
 		this.#persist(
-			() => db.clearScheduledForClient(this.supabase!, cid),
-			() => (this.scheduledServices = snapshot),
+			async () => {
+				await db.insertPayments(this.supabase!, novos);
+				await db.clearScheduledForClient(this.supabase!, cid);
+			},
+			() => {
+				this.scheduledServices = snapSchedule;
+				this.payments = snapPayments;
+			},
 			'Falha ao finalizar cronograma.'
+		);
+		return novos.length;
+	}
+
+	// ---- Pagamentos (Planilha Mensal) --------------------------------------
+
+	/** Lança um pagamento avulso — o que foi pago antes ou esquecido de registrar. */
+	addPayment(data: Omit<Payment, 'id'>): Payment {
+		const item: Payment = { ...data, id: uid() };
+		const snapshot = this.payments;
+		this.payments = [item, ...this.payments];
+		this.#persist(
+			() => db.insertPayments(this.supabase!, [item]),
+			() => (this.payments = snapshot),
+			'Falha ao registrar o pagamento.'
+		);
+		return item;
+	}
+
+	updatePayment(id: string, patch: Partial<Payment>) {
+		const snapshot = this.payments;
+		this.payments = this.payments.map((p) => (p.id === id ? { ...p, ...patch } : p));
+		this.#persist(
+			() => db.updatePayment(this.supabase!, id, patch),
+			() => (this.payments = snapshot),
+			'Falha ao salvar o pagamento.'
+		);
+	}
+
+	deletePayment(id: string) {
+		const snapshot = this.payments;
+		this.payments = this.payments.filter((p) => p.id !== id);
+		this.#persist(
+			() => db.deletePayment(this.supabase!, id),
+			() => (this.payments = snapshot),
+			'Falha ao excluir o pagamento.'
 		);
 	}
 

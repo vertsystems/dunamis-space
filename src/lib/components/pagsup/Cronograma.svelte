@@ -5,6 +5,7 @@
 	import { Button, Card } from '$lib/components/ui';
 	import ClienteSelector from './ClienteSelector.svelte';
 	import { toast } from '$lib/toast.svelte';
+	import { hojeISO } from '$lib/datas';
 	import { Trash2, Calendar, DollarSign, Pencil, Check, X, FileSpreadsheet, Search } from '@lucide/svelte';
 
 	// As abas do Pag's Up vêm do +page.svelte para ficarem nesta mesma barra.
@@ -120,12 +121,17 @@
 		editingId = null;
 	}
 
+	// Data com que os itens entram na Planilha Mensal ao finalizar.
+	let dataFinalizacao = $state(hojeISO());
+
 	function finalizar() {
-		pagsup.clearScheduleForCurrentClient();
+		const n = pagsup.clearScheduleForCurrentClient(dataFinalizacao);
 		sendToFinanceDate = '';
 		paymentDate = '';
 		showResetModal = false;
-		toast.success('Cronograma finalizado');
+		toast.success(
+			n ? `Cronograma finalizado — ${n} ${n === 1 ? 'pagamento foi' : 'pagamentos foram'} para a Planilha Mensal` : 'Cronograma finalizado'
+		);
 	}
 
 	async function gerarPlanilha() {
@@ -385,7 +391,15 @@
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-navy-900/50 p-4">
 		<Card class="max-w-md w-full shadow-xl">
 			<h3 class="text-sm font-semibold text-navy mb-2">Finalizar Cronograma</h3>
-			<p class="text-slate mb-6">Tem certeza que deseja finalizar? Isso irá zerar o cronograma atual para que você possa iniciar um novo.</p>
+			<p class="text-slate mb-4">
+				Os {pagsup.filteredScheduledServices.length}
+				{pagsup.filteredScheduledServices.length === 1 ? 'item vai' : 'itens vão'} para a
+				<b class="font-medium text-navy">Planilha Mensal</b> como pagamentos, e o cronograma fica limpo para a próxima semana.
+			</p>
+			<div class="mb-6">
+				<label for="fin-data" class="mb-1 block text-xs font-medium text-slate">Data do pagamento</label>
+				<input id="fin-data" type="date" bind:value={dataFinalizacao} class={fieldCls} />
+			</div>
 			<div class="flex justify-end gap-3">
 				<Button variant="ghost" onclick={() => (showResetModal = false)}>Cancelar</Button>
 				<Button onclick={finalizar}>Sim, finalizar</Button>

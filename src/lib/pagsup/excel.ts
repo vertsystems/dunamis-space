@@ -388,3 +388,108 @@ export async function exportNegociacoesXlsx(
 	const buffer = await workbook.xlsx.writeBuffer();
 	download(new Blob([buffer]), 'Negociacoes Mensais Lojas Mari.xlsx');
 }
+
+// ---- Planilha Mensal (prestação de contas do mês) -------------------------
+
+export interface MonthlyExportItem {
+	providerName: string;
+	service: string;
+	region: string;
+	date: string;
+	value: number;
+}
+
+export interface MonthlyExportGroup {
+	loja: string;
+	itens: MonthlyExportItem[];
+}
+
+/**
+ * Fechamento do mês: um bloco por loja, com prestador, serviço, região, data e
+ * valor, mais o subtotal de cada loja e o total geral. É o que vai ao financeiro
+ * como prestação de contas do mês.
+ */
+export async function exportMonthlyXlsx(
+	groups: MonthlyExportGroup[],
+	opts: { mesLabel: string }
+): Promise<void> {
+	const grandTotal = groups
+		.flatMap((g) => g.itens)
+		.reduce((sum, i) => sum + (Number(i.value) || 0), 0);
+
+	const workbook = new ExcelJS.Workbook();
+	workbook.creator = "Pag's Up";
+	const ws = workbook.addWorksheet('Planilha Mensal');
+	ws.columns = [
+		{ width: 34 }, // Prestador
+		{ width: 22 }, // Serviço
+		{ width: 22 }, // Região
+		{ width: 14 }, // Data
+		{ width: 18 } // Valor
+	];
+
+	const titleRow = ws.addRow([`Prestação de contas — ${opts.mesLabel}`]);
+	ws.mergeCells(`A${titleRow.number}:E${titleRow.number}`);
+	titleRow.getCell(1).font = { name: 'Arial', bold: true, size: 16, color: { argb: 'FF111827' } };
+	titleRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' };
+	titleRow.height = 34;
+	ws.addRow([]);
+
+	for (const group of groups) {
+		const subtotal = group.itens.reduce((s, i) => s + (Number(i.value) || 0), 0);
+
+		const lojaRow = ws.addRow([group.loja.toUpperCase()]);
+		ws.mergeCells(`A${lojaRow.number}:E${lojaRow.number}`);
+		lojaRow.getCell(1).font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+		lojaRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1C2534' } };
+		lojaRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+		lojaRow.height = 24;
+
+		const head = ws.addRow(['Prestador', 'Serviço', 'Região', 'Data', 'Valor pago']);
+		head.eachCell((cell) => {
+			cell.font = { name: 'Arial', bold: true, size: 10, color: { argb: 'FF374151' } };
+			cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
+			cell.border = BORDER_THIN;
+			cell.alignment = { vertical: 'middle', horizontal: 'center' };
+		});
+		head.height = 20;
+
+		for (const item of group.itens) {
+			const row = ws.addRow([item.providerName, item.service, item.region, item.date, item.value]);
+			row.eachCell((cell, col) => {
+				cell.font = { name: 'Arial', size: 10 };
+				cell.border = BORDER_THIN;
+				cell.alignment = { vertical: 'middle', horizontal: col === 1 ? 'left' : 'center' };
+			});
+			row.getCell(5).numFmt = '"R$" #,##0.00';
+			row.height = 19;
+		}
+
+		const subRow = ws.addRow(['', '', '', `Total ${group.loja}`, subtotal]);
+		subRow.getCell(4).font = { name: 'Arial', bold: true, size: 10 };
+		subRow.getCell(5).font = { name: 'Arial', bold: true, size: 11, color: { argb: 'FF111827' } };
+		subRow.getCell(5).numFmt = '"R$" #,##0.00';
+		for (const col of [4, 5]) {
+			subRow.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9FAFB' } };
+			subRow.getCell(col).border = BORDER_THIN;
+			subRow.getCell(col).alignment = { vertical: 'middle', horizontal: 'center' };
+		}
+		subRow.height = 22;
+		ws.addRow([]);
+	}
+
+	const grandRow = ws.addRow(['', '', '', 'TOTAL DO MÊS', grandTotal]);
+	grandRow.getCell(4).font = { name: 'Arial', bold: true, size: 13, color: { argb: 'FF111827' } };
+	grandRow.getCell(5).font = { name: 'Arial', bold: true, size: 13, color: { argb: 'FFF97316' } };
+	grandRow.getCell(5).numFmt = '"R$" #,##0.00';
+	for (const col of [4, 5]) {
+		grandRow.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
+		grandRow.getCell(col).border = BORDER_THIN;
+		grandRow.getCell(col).alignment = { vertical: 'middle', horizontal: 'center' };
+	}
+	grandRow.height = 34;
+
+	const buffer = await workbook.xlsx.writeBuffer();
+	// Nome do arquivo com o mês: os fechamentos ficam ordenáveis na pasta.
+	download(new Blob([buffer]), `Planilha Mensal ${opts.mesLabel}.xlsx`);
+}

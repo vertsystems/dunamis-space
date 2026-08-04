@@ -7,7 +7,8 @@ import type {
 	Provider,
 	ScheduledService,
 	Negotiation,
-	ScheduledNegotiation
+	ScheduledNegotiation,
+	Payment
 } from './types';
 
 /** `valor` no banco: null representa "A definir" (''). */
@@ -26,10 +27,11 @@ export interface PagsupSnapshot {
 	scheduledServices: ScheduledService[];
 	negotiations: Negotiation[];
 	scheduledNegotiations: ScheduledNegotiation[];
+	payments: Payment[];
 }
 
 export async function fetchAll(supabase: SupabaseClient): Promise<PagsupSnapshot> {
-	const [cli, prest, cron, neg, negAg] = await Promise.all([
+	const [cli, prest, cron, neg, negAg, pag] = await Promise.all([
 		supabase.from('pagsup_clientes').select('id, nome').order('nome', { ascending: true }),
 		supabase
 			.from('pagsup_prestadores')
@@ -40,11 +42,18 @@ export async function fetchAll(supabase: SupabaseClient): Promise<PagsupSnapshot
 			.select('id, cliente_id, empresa, servico, fornecedor, valor_contrato, pix, regiao, ddv'),
 		supabase
 			.from('pagsup_negociacoes_agendadas')
-			.select('id, cliente_id, negociacao_id, data, valor, observacoes')
+			.select('id, cliente_id, negociacao_id, data, valor, observacoes'),
+		supabase
+			.from('pagsup_pagamentos')
+			.select('id, cliente_id, prestador_id, prestador_nome, servico, regiao, valor, data_pagamento, observacoes')
+			.order('data_pagamento', { ascending: false })
 	]);
 
 	const err = cli.error || prest.error || cron.error || neg.error || negAg.error;
 	if (err) throw err;
+	// Pagamentos à parte: se a migration 0046 ainda não rodou, o resto do Pag's
+	// Up continua funcionando e só a Planilha Mensal fica vazia.
+	if (pag.error) console.error('[pagsup] pagamentos', pag.error);
 
 	return {
 		clients: (cli.data ?? []).map((c) => ({ id: c.id, name: c.nome })),
@@ -84,8 +93,60 @@ export async function fetchAll(supabase: SupabaseClient): Promise<PagsupSnapshot
 			date: s.data ?? '',
 			price: toPrice(s.valor),
 			notes: s.observacoes ?? ''
+		})),
+		payments: (pag.data ?? []).map((p) => ({
+			id: p.id,
+			clientId: p.cliente_id,
+			providerId: p.prestador_id,
+			providerName: p.prestador_nome,
+			service: p.servico,
+			region: p.regiao ?? '',
+			value: Number(p.valor ?? 0),
+			date: p.data_pagamento,
+			notes: p.observacoes ?? ''
 		}))
 	};
+}
+
+// ---- Pagamentos (Planilha Mensal) ---------------------------------------
+
+function pagamentoRow(p: Payment) {
+	return {
+		id: p.id,
+		cliente_id: p.clientId,
+		prestador_id: p.providerId ?? null,
+		prestador_nome: p.providerName,
+		servico: p.service,
+		regiao: p.region ?? null,
+		valor: p.value,
+		data_pagamento: p.date,
+		observacoes: p.notes || null
+	};
+}
+
+export async function insertPayments(supabase: SupabaseClient, ps: Payment[]): Promise<void> {
+	if (!ps.length) return;
+	const { error } = await supabase.from('pagsup_pagamentos').insert(ps.map(pagamentoRow));
+	if (error) throw error;
+}
+
+export async function updatePayment(
+	supabase: SupabaseClient,
+	id: string,
+	patch: Partial<Payment>
+): Promise<void> {
+	const row: Record<string, unknown> = {};
+	if (patch.value !== undefined) row.valor = patch.value;
+	if (patch.date !== undefined) row.data_pagamento = patch.date;
+	if (patch.notes !== undefined) row.observacoes = patch.notes || null;
+	if (patch.service !== undefined) row.servico = patch.service;
+	const { error } = await supabase.from('pagsup_pagamentos').update(row).eq('id', id);
+	if (error) throw error;
+}
+
+export async function deletePayment(supabase: SupabaseClient, id: string): Promise<void> {
+	const { error } = await supabase.from('pagsup_pagamentos').delete().eq('id', id);
+	if (error) throw error;
 }
 
 // ---- Clientes ------------------------------------------------------------
