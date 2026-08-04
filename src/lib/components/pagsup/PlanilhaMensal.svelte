@@ -128,14 +128,9 @@
 </script>
 
 <div>
-	<!-- Três zonas: abas na esquerda, ações no centro, total + mês na direita. -->
-	<div class="mb-6 flex flex-col gap-4 md:flex-row md:items-center">
+	<!-- Linha 1: abas à esquerda, total + mês à direita. -->
+	<div class="mb-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 		{@render abas?.()}
-
-		<div class="flex flex-1 flex-wrap items-center justify-center gap-2.5">
-			<Button variant="secondary" onclick={abrirLancamento}><Plus size={17} /> Lançar pagamento</Button>
-			<Button onclick={gerarPlanilha}><FileSpreadsheet size={17} /> Gerar Planilha</Button>
-		</div>
 
 		<!-- Total e mês no mesmo bloco: o valor só faz sentido junto do período a
 		     que se refere, e o seletor separado ficava do tamanho de um botão. -->
@@ -151,6 +146,12 @@
 				class="h-7 w-[7.5rem] rounded-[var(--radius-sm)] border-0 bg-transparent px-1 text-xs font-medium text-slate transition-colors hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/25"
 			/>
 		</div>
+	</div>
+
+	<!-- Linha 2: as duas ações do mês, centralizadas e em tamanho grande. -->
+	<div class="mb-6 flex flex-wrap items-center justify-center gap-3">
+		<Button size="lg" variant="secondary" onclick={abrirLancamento}><Plus size={18} /> Lançar pagamento</Button>
+		<Button size="lg" onclick={gerarPlanilha}><FileSpreadsheet size={18} /> Gerar Planilha</Button>
 	</div>
 
 	{#if lancando}
