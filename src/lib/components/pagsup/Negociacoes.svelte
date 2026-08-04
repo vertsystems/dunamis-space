@@ -5,7 +5,7 @@
 	import { Button, Card } from '$lib/components/ui';
 	import ClienteSelector from './ClienteSelector.svelte';
 	import { toast } from '$lib/toast.svelte';
-	import { Plus, Trash2, Calendar, DollarSign, Pencil, Check, X, FileSpreadsheet } from '@lucide/svelte';
+	import { Plus, Trash2, Calendar, DollarSign, Pencil, Check, X, FileSpreadsheet, Search } from '@lucide/svelte';
 
 	type SchedNegRow = ScheduledNegotiation & { negotiation: Negotiation };
 
@@ -40,6 +40,63 @@
 	});
 
 	const grandTotal = $derived(scheduledList.reduce((sum, i) => sum + (Number(i.price) || 0), 0));
+
+	// ---- Busca de serviço mensal (mesmo padrão do Cronograma) ----
+	let busca = $state('');
+	let campoBusca = $state<HTMLInputElement | null>(null);
+	let destaque = $state(0);
+
+	const resultados = $derived.by(() => {
+		const q = busca.trim().toLowerCase();
+		if (!q) return [] as Negotiation[];
+		return pagsup.filteredNegotiations
+			.filter(
+				(n) =>
+					n.company.toLowerCase().includes(q) ||
+					n.service.toLowerCase().includes(q) ||
+					(n.supplier ?? '').toLowerCase().includes(q) ||
+					(n.region ?? '').toLowerCase().includes(q)
+			)
+			.slice(0, 8);
+	});
+
+	function escalar(n: Negotiation) {
+		if (isScheduled(n.id)) {
+			toast.error(`${n.company} já está neste mês.`);
+			return;
+		}
+		pagsup.scheduleNegotiation(n.id, n.contractValue);
+		toast.success(`${n.company} adicionado ao mês`);
+		busca = '';
+		destaque = 0;
+		campoBusca?.focus();
+	}
+
+	function teclaBusca(e: KeyboardEvent) {
+		if (!resultados.length) return;
+		if (e.key === 'ArrowDown') {
+			e.preventDefault();
+			destaque = (destaque + 1) % resultados.length;
+		} else if (e.key === 'ArrowUp') {
+			e.preventDefault();
+			destaque = (destaque - 1 + resultados.length) % resultados.length;
+		} else if (e.key === 'Enter') {
+			e.preventDefault();
+			escalar(resultados[destaque] ?? resultados[0]);
+		} else if (e.key === 'Escape') {
+			busca = '';
+		}
+	}
+
+	// ---- Tirar do cadastro (deixa de ser fixo dos próximos meses) ----
+	let excluindo = $state<Negotiation | null>(null);
+	function confirmarExclusao() {
+		if (!excluindo) return;
+		const nome = excluindo.company;
+		pagsup.deleteNegotiation(excluindo.id);
+		excluindo = null;
+		toast.success(`${nome} saiu dos serviços mensais`);
+	}
 
 	function isScheduled(id: string): boolean {
 		return pagsup.filteredScheduledNegotiations.some((s) => s.negotiationId === id);
@@ -130,6 +187,66 @@
 			<ClienteSelector />
 		</div>
 	</div>
+
+	<!-- Busca: acha o serviço mensal sem precisar varrer a grade inteira. -->
+	<Card class="mb-6">
+		<label for="busca-neg" class="mb-1.5 block text-xs font-medium text-slate">Adicionar serviço mensal</label>
+		<div class="relative">
+			<span class="pointer-events-none absolute inset-y-0 left-0 grid w-10 place-items-center text-grey"><Search size={17} /></span>
+			<input
+				bind:this={campoBusca}
+				bind:value={busca}
+				onkeydown={teclaBusca}
+				id="busca-neg"
+				type="search"
+				autocomplete="off"
+				placeholder="Buscar por empresa, serviço, fornecedor ou região…"
+				class="{fieldCls} pl-10"
+			/>
+			{#if busca.trim()}
+				<div class="absolute z-20 mt-1.5 max-h-80 w-full overflow-y-auto rounded-[var(--radius)] border border-grey-200 bg-surface shadow-lg">
+					{#if resultados.length === 0}
+						<p class="px-4 py-3 text-sm text-grey">
+							Nenhum serviço encontrado. Use <b class="font-medium text-navy">Novo Pagamento</b> para cadastrar.
+						</p>
+					{:else}
+						{#each resultados as n, i (n.id)}
+							{@const sched = isScheduled(n.id)}
+							<div
+								class="flex items-center gap-2 px-2 transition-colors {i === destaque ? 'bg-brand/[0.06]' : ''}"
+								role="presentation"
+								onmouseenter={() => (destaque = i)}
+							>
+								<button
+									type="button"
+									onclick={() => escalar(n)}
+									disabled={sched}
+									class="flex min-w-0 flex-1 items-center gap-3 px-2 py-2.5 text-left {sched ? 'cursor-not-allowed opacity-60' : ''}"
+								>
+									<span class="min-w-0 flex-1">
+										<span class="block truncate text-sm font-medium text-navy">{n.company}</span>
+										<span class="block truncate text-xs text-grey">{n.service}{n.region ? ` · ${n.region}` : ''} · DDV {n.dueDate || '-'}</span>
+									</span>
+									{#if sched}
+										<span class="shrink-0 text-xs font-medium text-brand-green">no mês</span>
+									{:else}
+										<span class="shrink-0 text-xs font-medium text-brand">Adicionar</span>
+									{/if}
+								</button>
+								<button
+									type="button"
+									onclick={() => (excluindo = n)}
+									title="Tirar dos serviços mensais"
+									aria-label="Tirar {n.company} dos serviços mensais"
+									class="shrink-0 rounded-[var(--radius-sm)] p-2 text-grey transition-colors hover:bg-brand-danger/10 hover:text-brand-danger"
+								><Trash2 size={16} /></button>
+							</div>
+						{/each}
+					{/if}
+				</div>
+			{/if}
+		</div>
+	</Card>
 
 	{#if isAdding}
 		<Card class="mb-6">
@@ -319,6 +436,25 @@
 			<div class="flex justify-end gap-3">
 				<Button variant="ghost" onclick={() => (showResetModal = false)}>Cancelar</Button>
 				<Button onclick={finalizar}>Sim, finalizar</Button>
+			</div>
+		</Card>
+	</div>
+{/if}
+
+<!-- Tirar do cadastro é diferente de tirar do mês: some da lista de fixos e de
+     todos os meses em que estava escalado. Por isso confirma. -->
+{#if excluindo}
+	<div class="fixed inset-0 z-50 flex items-center justify-center bg-navy-900/50 p-4">
+		<Card class="w-full max-w-md shadow-xl">
+			<h3 class="mb-2 text-sm font-semibold text-navy">Tirar dos serviços mensais</h3>
+			<p class="mb-6 text-slate">
+				<b class="font-medium text-navy">{excluindo.company}</b> deixa de aparecer na lista de fixos —
+				neste mês e nos próximos — e sai das escalações onde estava. O que já foi
+				pago e registrado na Planilha Mensal não muda.
+			</p>
+			<div class="flex justify-end gap-3">
+				<Button variant="ghost" onclick={() => (excluindo = null)}>Cancelar</Button>
+				<Button variant="danger" onclick={confirmarExclusao}>Sim, remover</Button>
 			</div>
 		</Card>
 	</div>

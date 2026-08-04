@@ -302,6 +302,25 @@ class PagsupStore {
 		return negotiation;
 	}
 
+	/**
+	 * Tira um serviço mensal do cadastro. Sem isto a lista de fixos só crescia:
+	 * o que entrava uma vez ficava "padrão" para sempre.
+	 */
+	deleteNegotiation(id: string) {
+		const snapNeg = this.negotiations;
+		const snapSched = this.scheduledNegotiations;
+		this.negotiations = this.negotiations.filter((n) => n.id !== id);
+		this.scheduledNegotiations = this.scheduledNegotiations.filter((s) => s.negotiationId !== id);
+		this.#persist(
+			() => db.deleteNegotiation(this.supabase!, id),
+			() => {
+				this.negotiations = snapNeg;
+				this.scheduledNegotiations = snapSched;
+			},
+			'Falha ao remover a negociação.'
+		);
+	}
+
 	scheduleNegotiation(negotiationId: string, price: number | '', notes = '') {
 		const item: ScheduledNegotiation = {
 			id: uid(),

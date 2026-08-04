@@ -260,6 +260,18 @@ export async function insertNegotiation(supabase: SupabaseClient, n: Negotiation
 	if (error) throw error;
 }
 
+export async function deleteNegotiation(supabase: SupabaseClient, id: string): Promise<void> {
+	// As escalas saem junto: uma negociação fora do cadastro não pode continuar
+	// escalada em mês nenhum.
+	const { error: e1 } = await supabase
+		.from('pagsup_negociacoes_agendadas')
+		.delete()
+		.eq('negociacao_id', id);
+	if (e1) throw e1;
+	const { error } = await supabase.from('pagsup_negociacoes').delete().eq('id', id);
+	if (error) throw error;
+}
+
 export async function insertScheduledNeg(
 	supabase: SupabaseClient,
 	s: ScheduledNegotiation
