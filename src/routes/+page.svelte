@@ -94,11 +94,11 @@
 						<img
 							src={c.logo_url}
 							alt={c.nome}
-							class="size-[3.9rem] rounded-full object-cover shadow-sm transition group-hover:scale-105 group-hover:shadow-md"
+							class="size-[3.9rem] rounded-full object-cover shadow-sm outline-2 outline-offset-1 outline-dotted outline-grey transition group-hover:scale-105 group-hover:shadow-md"
 						/>
 					{:else}
 						<span
-							class="grid size-[3.9rem] place-items-center rounded-full text-base font-bold text-white shadow-sm transition group-hover:scale-105 group-hover:shadow-md {corAvatar(c.nome)}"
+							class="grid size-[3.9rem] place-items-center rounded-full text-base font-bold text-white shadow-sm outline-2 outline-offset-1 outline-dotted outline-grey transition group-hover:scale-105 group-hover:shadow-md {corAvatar(c.nome)}"
 							>{iniciais(c.nome)}</span
 						>
 					{/if}
