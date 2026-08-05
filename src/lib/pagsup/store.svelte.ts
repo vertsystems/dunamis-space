@@ -95,14 +95,36 @@ class PagsupStore {
 		}
 	}
 
+	/**
+	 * Criações ainda em voo, por id. Cronograma e negociações agendadas têm FK
+	 * obrigatória para o prestador/negociação: cadastrar e escalar no mesmo clique
+	 * disparava os dois inserts em paralelo e, quando o filho chegava primeiro, o
+	 * banco recusava por FK — o prestador ficava salvo e a escala sumia da tela.
+	 */
+	#emVoo = new Map<string, Promise<void>>();
+
 	/** Executa a persistência em segundo plano; reverte + avisa se falhar. */
-	#persist(action: () => Promise<void>, rollback: () => void, errMsg: string) {
-		if (!this.supabase) return;
-		action().catch((e) => {
+	#persist(action: () => Promise<void>, rollback: () => void, errMsg: string): Promise<void> {
+		if (!this.supabase) return Promise.resolve();
+		return action().catch((e) => {
 			console.error('[pagsup]', errMsg, e);
 			rollback();
 			toast.error(errMsg);
 		});
+	}
+
+	/** Marca a criação de `id` como em voo enquanto ela não termina. */
+	#registrar(id: string, p: Promise<void>) {
+		this.#emVoo.set(id, p);
+		p.finally(() => {
+			if (this.#emVoo.get(id) === p) this.#emVoo.delete(id);
+		});
+	}
+
+	/** Espera o pai existir no banco antes de inserir quem depende dele. */
+	async #esperarPai(id: string | undefined) {
+		const pendente = id ? this.#emVoo.get(id) : undefined;
+		if (pendente) await pendente;
 	}
 
 	// ---- Cliente -----------------------------------------------------------
@@ -137,10 +159,13 @@ class PagsupStore {
 			clientId: this.selectedClientId
 		};
 		this.providers = [...this.providers, provider];
-		this.#persist(
-			() => db.insertProvider(this.supabase!, provider),
-			() => (this.providers = this.providers.filter((p) => p.id !== provider.id)),
-			'Falha ao salvar prestador.'
+		this.#registrar(
+			provider.id,
+			this.#persist(
+				() => db.insertProvider(this.supabase!, provider),
+				() => (this.providers = this.providers.filter((p) => p.id !== provider.id)),
+				'Falha ao salvar prestador.'
+			)
 		);
 		return provider;
 	}
@@ -183,7 +208,10 @@ class PagsupStore {
 		};
 		this.scheduledServices = [...this.scheduledServices, item];
 		this.#persist(
-			() => db.insertScheduled(this.supabase!, item),
+			async () => {
+				await this.#esperarPai(providerId);
+				await db.insertScheduled(this.supabase!, item);
+			},
 			() => (this.scheduledServices = this.scheduledServices.filter((s) => s.id !== item.id)),
 			'Falha ao escalar prestador.'
 		);
@@ -243,6 +271,11 @@ class PagsupStore {
 
 		this.#persist(
 			async () => {
+				// pagsup_pagamentos.prestador_id também referencia o prestador: quem foi
+				// cadastrado agora pode não ter chegado ao banco ainda.
+				await Promise.all(
+					[...new Set(doCliente.map((s) => s.providerId))].map((id) => this.#esperarPai(id))
+				);
 				await db.insertPayments(this.supabase!, novos);
 				await db.clearScheduledForClient(this.supabase!, cid);
 			},
@@ -263,7 +296,10 @@ class PagsupStore {
 		const snapshot = this.payments;
 		this.payments = [item, ...this.payments];
 		this.#persist(
-			() => db.insertPayments(this.supabase!, [item]),
+			async () => {
+				await this.#esperarPai(item.providerId ?? undefined);
+				await db.insertPayments(this.supabase!, [item]);
+			},
 			() => (this.payments = snapshot),
 			'Falha ao registrar o pagamento.'
 		);
@@ -294,10 +330,13 @@ class PagsupStore {
 	addNegotiation(data: Omit<Negotiation, 'id' | 'clientId'>): Negotiation {
 		const negotiation: Negotiation = { ...data, id: uid(), clientId: this.selectedClientId };
 		this.negotiations = [...this.negotiations, negotiation];
-		this.#persist(
-			() => db.insertNegotiation(this.supabase!, negotiation),
-			() => (this.negotiations = this.negotiations.filter((n) => n.id !== negotiation.id)),
-			'Falha ao salvar negociação.'
+		this.#registrar(
+			negotiation.id,
+			this.#persist(
+				() => db.insertNegotiation(this.supabase!, negotiation),
+				() => (this.negotiations = this.negotiations.filter((n) => n.id !== negotiation.id)),
+				'Falha ao salvar negociação.'
+			)
 		);
 		return negotiation;
 	}
@@ -332,7 +371,10 @@ class PagsupStore {
 		};
 		this.scheduledNegotiations = [...this.scheduledNegotiations, item];
 		this.#persist(
-			() => db.insertScheduledNeg(this.supabase!, item),
+			async () => {
+				await this.#esperarPai(negotiationId);
+				await db.insertScheduledNeg(this.supabase!, item);
+			},
 			() =>
 				(this.scheduledNegotiations = this.scheduledNegotiations.filter((s) => s.id !== item.id)),
 			'Falha ao escalar negociação.'
