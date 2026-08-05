@@ -450,7 +450,7 @@ export interface MonthlyExportItem {
 }
 
 export interface MonthlyExportGroup {
-	/** Categoria do serviço: Carro de Som, Locução Loja, Influenciadores… */
+	/** Categoria do serviço: Carros e Veículos de Som, Locução Loja, Influenciadores… */
 	categoria: string;
 	itens: MonthlyExportItem[];
 }

@@ -14,7 +14,7 @@
 	let editingId = $state<string | null>(null);
 
 	type Form = { name: string; service: string; region: string; defaultPrice: number; cpf: string; pix: string; lj: string };
-	const emptyForm = (): Form => ({ name: '', service: 'Carro de Som', region: '', defaultPrice: 0, cpf: '', pix: '', lj: '' });
+	const emptyForm = (): Form => ({ name: '', service: 'Carros e Veículos de Som', region: '', defaultPrice: 0, cpf: '', pix: '', lj: '' });
 	let novo = $state<Form>(emptyForm());
 	let edit = $state<Form>(emptyForm());
 
@@ -38,7 +38,7 @@
 
 	function catAccent(cat: string): { bar: string; chip: string } {
 		switch (cat) {
-			case 'Carro de Som':
+			case 'Carros e Veículos de Som':
 				return { bar: 'bg-brand', chip: 'bg-brand/10 text-brand' };
 			case 'Locução Loja':
 				return { bar: 'bg-brand-amber', chip: 'bg-brand-amber/15 text-brand-brown' };

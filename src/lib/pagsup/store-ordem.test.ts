@@ -41,7 +41,7 @@ describe("Pag's Up — ordem dos inserts ao cadastrar já escalando", () => {
 	it('só insere no cronograma depois que o prestador chega ao banco', async () => {
 		const p = pagsup.addProvider({
 			name: 'Fulano',
-			service: 'Carro de Som',
+			service: 'Carros e Veículos de Som',
 			region: 'Piedade',
 			cpf: '',
 			pix: '',

@@ -18,7 +18,7 @@ describe('Pag\'s Up — LJ ao cadastrar prestador pelo cronograma', () => {
 	it('guarda a LJ no prestador criado', () => {
 		const p = pagsup.addProvider({
 			name: 'Fulano',
-			service: 'Carro de Som',
+			service: 'Carros e Veículos de Som',
 			region: 'Piedade',
 			cpf: '123.456.789-00',
 			pix: 'x',
@@ -32,7 +32,7 @@ describe('Pag\'s Up — LJ ao cadastrar prestador pelo cronograma', () => {
 	it('a linha do cronograma enxerga a LJ do prestador recém-criado', () => {
 		const p = pagsup.addProvider({
 			name: 'Fulano',
-			service: 'Carro de Som',
+			service: 'Carros e Veículos de Som',
 			region: 'Piedade',
 			cpf: '',
 			pix: '',
@@ -50,7 +50,7 @@ describe('Pag\'s Up — LJ ao cadastrar prestador pelo cronograma', () => {
 	it('editar a LJ na linha atualiza o cadastro', () => {
 		const p = pagsup.addProvider({
 			name: 'Fulano',
-			service: 'Carro de Som',
+			service: 'Carros e Veículos de Som',
 			region: 'Piedade',
 			cpf: '',
 			pix: '',

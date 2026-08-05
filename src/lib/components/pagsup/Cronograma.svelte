@@ -23,7 +23,7 @@
 	let editNotes = $state('');
 	let editLj = $state('');
 
-	const emptyExtra = () => ({ name: '', service: 'Carro de Som', region: '', cpf: '', pix: '', lj: '', price: '' as number | '', notes: '' });
+	const emptyExtra = () => ({ name: '', service: 'Carros e Veículos de Som', region: '', cpf: '', pix: '', lj: '', price: '' as number | '', notes: '' });
 	let extra = $state(emptyExtra());
 
 	// ---- Busca de prestador (entrou no lugar da grade de pré-selecionados) ----

@@ -2,7 +2,7 @@
 // Sistema de gestão de pagamentos de marketing (carro de som, locução, rádios,
 // influenciadores, negociações mensais) por cliente.
 
-export type ServiceType = 'Carro de Som' | 'Locução Loja' | string;
+export type ServiceType = 'Carros e Veículos de Som' | 'Locução Loja' | string;
 
 export interface Client {
 	id: string;
@@ -106,7 +106,7 @@ export function lojaNome(sigla: string | undefined | null): string {
 
 /** Categorias de serviço usadas nos selects e na cor dos chips. */
 export const SERVICE_CATEGORIES = [
-	'Carro de Som',
+	'Carros e Veículos de Som',
 	'Locução Loja',
 	'Influenciadores',
 	'Gráficas',
