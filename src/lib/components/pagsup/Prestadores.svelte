@@ -195,7 +195,7 @@
 									<th scope="col" class="px-5 py-3 font-semibold">Região</th>
 									<th scope="col" class="px-5 py-3 font-semibold">CPF / CNPJ</th>
 									<th scope="col" class="px-5 py-3 font-semibold">Chave PIX</th>
-									<th scope="col" class="px-5 py-3 font-semibold w-20">LJ</th>
+									<th scope="col" class="px-5 py-3 font-semibold w-32">LJ</th>
 									<th scope="col" class="px-5 py-3 font-semibold text-right w-28">Ações</th>
 								</tr>
 							</thead>
@@ -221,7 +221,7 @@
 												<input onkeydown={(e) => teclaEdicao(e, p.id)} bind:value={edit.pix} aria-label="Chave PIX" class={fieldCls} placeholder="PIX" />
 											</td>
 											<td class="px-5 py-3">
-												<select onkeydown={escOuNada} bind:value={edit.lj} aria-label="LJ (loja)" class={fieldCls}>
+												<select onkeydown={escOuNada} bind:value={edit.lj} aria-label="LJ (loja)" class="h-9 w-full rounded-[var(--radius)] border border-grey-200 bg-surface px-2 text-sm text-navy-900 shadow-xs transition-colors hover:border-grey focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25">
 													<option value="">—</option>
 													{#each LOJAS as l (l.sigla)}<option value={l.sigla} title={l.nome}>{l.sigla}</option>{/each}
 												</select>

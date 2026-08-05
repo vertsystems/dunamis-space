@@ -366,7 +366,7 @@
 								<tr class="text-grey text-xs uppercase tracking-wider border-b border-grey-200">
 									<th scope="col" class="px-5 py-3 font-semibold">Prestador</th>
 									<th scope="col" class="px-5 py-3 font-semibold">Região</th>
-									<th scope="col" class="w-20 px-5 py-3 font-semibold">LJ</th>
+									<th scope="col" class="w-32 px-5 py-3 font-semibold">LJ</th>
 									<th scope="col" class="px-5 py-3 font-semibold">Observações</th>
 									<th scope="col" class="px-5 py-3 font-semibold text-right">Valor</th>
 									<th scope="col" class="px-5 py-3 font-semibold text-right w-20"><span class="sr-only">Ações</span></th>
@@ -379,7 +379,7 @@
 											<td class="px-5 py-3 font-medium text-navy">{item.provider.name}</td>
 											<td class="px-5 py-3 text-slate text-sm">{item.provider.region}</td>
 											<td class="px-5 py-3">
-												<select bind:value={editLj} onkeydown={escOuNada} aria-label="LJ (loja)" class="{fieldCls} h-9">
+												<select bind:value={editLj} onkeydown={escOuNada} aria-label="LJ (loja)" class="h-9 w-full rounded-[var(--radius)] border border-grey-200 bg-surface px-2 text-sm text-navy-900 shadow-xs transition-colors hover:border-grey focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25">
 													<option value="">—</option>
 													{#each LOJAS as l (l.sigla)}<option value={l.sigla} title={l.nome}>{l.sigla}</option>{/each}
 												</select>
