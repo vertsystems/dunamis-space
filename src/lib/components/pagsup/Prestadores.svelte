@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { pagsup } from '$lib/pagsup/store.svelte';
 	import { LOJAS, lojaNome, type Provider } from '$lib/pagsup/types';
+	import { caberEmUmaLinha } from '$lib/caberEmUmaLinha';
 	import { Button, Card } from '$lib/components/ui';
 	import ClienteSelector from './ClienteSelector.svelte';
 	import { toast } from '$lib/toast.svelte';
@@ -245,7 +246,13 @@
 										>
 											<td class="px-5 py-3.5 font-medium text-navy">{p.name}</td>
 											<td class="px-5 py-3.5">
-												<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide {accent.chip}">{p.service}</span>
+												<!-- max-w-full + overflow-hidden + nowrap: é o que permite a ação
+												     medir o estouro e encolher a fonte em vez de quebrar a linha. -->
+												<span
+													use:caberEmUmaLinha={{ max: 11, min: 8 }}
+													class="inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-full px-2.5 py-0.5 align-middle text-[11px] font-bold uppercase tracking-wide {accent.chip}"
+													title={p.service}>{p.service}</span
+												>
 											</td>
 											<td class="px-5 py-3.5 text-slate text-sm">{p.region}</td>
 											<td class="px-5 py-3.5 text-slate text-sm font-mono">{p.cpf || '-'}</td>
