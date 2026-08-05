@@ -393,7 +393,8 @@ export async function exportNegociacoesXlsx(
 
 export interface MonthlyExportItem {
 	providerName: string;
-	service: string;
+	/** Cliente do pagamento (Lojas Mari, Rede Bazzar…). */
+	cliente: string;
 	region: string;
 	/** Sigla da unidade onde o trabalho foi feito (CDP, ADB, PIT…). */
 	lj: string;
@@ -403,14 +404,19 @@ export interface MonthlyExportItem {
 }
 
 export interface MonthlyExportGroup {
-	loja: string;
+	/** Categoria do serviço: Carro de Som, Locução Loja, Influenciadores… */
+	categoria: string;
 	itens: MonthlyExportItem[];
 }
 
 /**
- * Fechamento do mês: mesma identidade visual da planilha semanal (faixa preta,
- * blocos, zebrado, resumo e total em laranja), mas agrupada por LOJA — é assim
- * que a prestação de contas é lida no fim do mês.
+ * Fechamento do mês, dividido por categoria de serviço — a mesma leitura da
+ * planilha semanal, e com a mesma identidade visual (faixa preta, blocos,
+ * zebrado, resumo e total em laranja).
+ *
+ * O cliente vira COLUNA em vez de bloco: agrupando por categoria, sem essa
+ * coluna não daria para saber de quem é cada pagamento (a LJ só cobre as
+ * unidades da Lojas Mari).
  */
 export async function exportMonthlyXlsx(
 	groups: MonthlyExportGroup[],
@@ -428,7 +434,7 @@ export async function exportMonthlyXlsx(
 	ws.views = [{ showGridLines: false }];
 
 	ws.getColumn(1).width = 38; // Prestador
-	ws.getColumn(2).width = 24; // Serviço
+	ws.getColumn(2).width = 24; // Cliente
 	ws.getColumn(3).width = 24; // Região
 	ws.getColumn(4).width = 10; // LJ
 	ws.getColumn(5).width = 16; // Dt pagto
@@ -481,7 +487,7 @@ export async function exportMonthlyXlsx(
 
 	const headerRow = ws.addRow([
 		'Prestador de serviços',
-		'Serviço',
+		'Cliente',
 		'Região',
 		'LJ',
 		'Dt Pagm.',
@@ -503,20 +509,19 @@ export async function exportMonthlyXlsx(
 		spacerRow.height = 24;
 		startRow++;
 
-		// Aqui o bloco é a LOJA (na semanal é a categoria de serviço).
-		const lojaRow = ws.addRow([group.loja.toUpperCase()]);
+		const catRow = ws.addRow([group.categoria.toUpperCase()]);
 		ws.mergeCells(`A${startRow}:G${startRow}`);
-		lojaRow.getCell(1).font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FF111827' } };
-		lojaRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCCCCC' } };
-		lojaRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
-		lojaRow.getCell(1).border = BORDER_THIN;
-		lojaRow.height = 24;
+		catRow.getCell(1).font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FF111827' } };
+		catRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCCCCC' } };
+		catRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+		catRow.getCell(1).border = BORDER_THIN;
+		catRow.height = 24;
 		startRow++;
 
 		group.itens.forEach((item, index) => {
 			const row = ws.addRow([
 				item.providerName,
-				item.service || '-',
+				item.cliente || '-',
 				item.region || '-',
 				item.lj || '-',
 				item.date,
@@ -549,7 +554,7 @@ export async function exportMonthlyXlsx(
 	resumoSpacer.height = 17;
 	startRow++;
 
-	const resumoTitle = ws.addRow(['RESUMO POR LOJA']);
+	const resumoTitle = ws.addRow(['RESUMO DOS PAGAMENTOS']);
 	ws.mergeCells(`A${startRow}:G${startRow}`);
 	resumoTitle.getCell(1).font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
 	resumoTitle.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF111827' } };
@@ -560,7 +565,7 @@ export async function exportMonthlyXlsx(
 
 	for (const group of groups) {
 		const subtotal = group.itens.reduce((sum, i) => sum + (Number(i.value) || 0), 0);
-		const row = ws.addRow(['', '', '', '', '', 'Total ' + group.loja, subtotal]);
+		const row = ws.addRow(['', '', '', '', '', 'Total ' + group.categoria, subtotal]);
 		ws.mergeCells(`A${startRow}:E${startRow}`);
 		row.getCell(6).font = { name: 'Arial', bold: true, size: 15, color: { argb: 'FF374151' } };
 		row.getCell(6).alignment = { vertical: 'middle', horizontal: 'right', indent: 1 };

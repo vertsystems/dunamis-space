@@ -140,6 +140,17 @@
 		lancando = false;
 	}
 
+	/**
+	 * A planilha sai dividida por CATEGORIA de serviço (a tela continua agrupada
+	 * por loja, que é como se confere o mês). Sem cliente como bloco, ele vira
+	 * coluna — senão não dá para saber de quem é cada pagamento.
+	 */
+	const porCategoria = $derived.by(() => {
+		const g: Record<string, Payment[]> = {};
+		for (const p of doMes) (g[p.service || 'Sem categoria'] ??= []).push(p);
+		return Object.entries(g).sort(([a], [b]) => a.localeCompare(b));
+	});
+
 	async function gerarPlanilha() {
 		if (!doMes.length) {
 			toast.error('Não há pagamentos neste mês para gerar a planilha.');
@@ -148,11 +159,11 @@
 		try {
 			const { exportMonthlyXlsx } = await import('$lib/pagsup/excel');
 			await exportMonthlyXlsx(
-				porLoja.map(([loja, itens]) => ({
-					loja,
+				porCategoria.map(([categoria, itens]) => ({
+					categoria,
 					itens: itens.map((p) => ({
 						providerName: p.providerName,
-						service: p.service,
+						cliente: nomeLoja(p.clientId),
 						region: p.region ?? '',
 						date: fmtData(p.date),
 						notes: p.notes ?? '',
