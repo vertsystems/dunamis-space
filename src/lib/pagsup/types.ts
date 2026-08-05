@@ -31,6 +31,11 @@ export interface ScheduledService {
 	notes?: string;
 }
 
+/**
+ * Negociação fixa na lista mensal. Diferente do cronograma de prestadores, esta
+ * lista NÃO zera: entra uma vez e fica até ser removida — são os serviços que se
+ * repetem todo mês (rádio, agência, contratos).
+ */
 export interface ScheduledNegotiation {
 	id: string;
 	clientId?: string;
@@ -38,6 +43,8 @@ export interface ScheduledNegotiation {
 	date: string;
 	price: number | '';
 	notes?: string;
+	/** Último mês (AAAA-MM) lançado na Planilha Mensal — evita fechar duas vezes. */
+	closedMonth?: string;
 }
 
 /**

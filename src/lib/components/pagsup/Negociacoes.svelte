@@ -5,7 +5,8 @@
 	import { Button, Card } from '$lib/components/ui';
 	import ClienteSelector from './ClienteSelector.svelte';
 	import { toast } from '$lib/toast.svelte';
-	import { Plus, Trash2, Calendar, DollarSign, Pencil, Check, X, FileSpreadsheet, Search } from '@lucide/svelte';
+	import { hojeISO } from '$lib/datas';
+	import { Plus, Trash2, Calendar, DollarSign, Pencil, Check, X, FileSpreadsheet, Search, Pin } from '@lucide/svelte';
 
 	type SchedNegRow = ScheduledNegotiation & { negotiation: Negotiation };
 
@@ -41,6 +42,17 @@
 
 	const grandTotal = $derived(scheduledList.reduce((sum, i) => sum + (Number(i.price) || 0), 0));
 
+	// A lista é fixa: fica de um mês para o outro. Por isso a tela precisa dizer
+	// de que mês ela está falando e o que já foi lançado na Planilha Mensal.
+	const mesVigente = hojeISO().slice(0, 7);
+	const mesLabel = new Date(
+		Number(mesVigente.slice(0, 4)),
+		Number(mesVigente.slice(5, 7)) - 1,
+		1
+	).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+	const pendentes = $derived(scheduledList.filter((i) => i.closedMonth !== mesVigente));
+	const mesFechado = $derived(scheduledList.length > 0 && pendentes.length === 0);
+
 	// ---- Busca de serviço mensal (mesmo padrão do Cronograma) ----
 	let busca = $state('');
 	let campoBusca = $state<HTMLInputElement | null>(null);
@@ -62,11 +74,11 @@
 
 	function escalar(n: Negotiation) {
 		if (isScheduled(n.id)) {
-			toast.error(`${n.company} já está neste mês.`);
+			toast.error(`${n.company} já está na lista.`);
 			return;
 		}
 		pagsup.scheduleNegotiation(n.id, n.contractValue);
-		toast.success(`${n.company} adicionado ao mês`);
+		toast.success(`${n.company} entrou na lista fixa`);
 		busca = '';
 		destaque = 0;
 		campoBusca?.focus();
@@ -136,11 +148,18 @@
 		editingId = null;
 	}
 
-	function finalizar() {
-		pagsup.clearScheduledNegForCurrentClient();
-		paymentDate = '';
+	/**
+	 * Fecha o mês: lança cada negociação como pagamento na Planilha Mensal e
+	 * MANTÉM a lista — ela é fixa, e o mês seguinte começa com tudo no lugar.
+	 */
+	function fecharMes() {
+		const n = pagsup.closeNegotiationsMonth();
 		showResetModal = false;
-		toast.success('Negociações finalizadas');
+		if (n === 0) {
+			toast.error('Nada novo para lançar: este mês já foi fechado.');
+			return;
+		}
+		toast.success(`${n} ${n === 1 ? 'negociação lançada' : 'negociações lançadas'} na Planilha Mensal`);
 	}
 
 	async function gerarPlanilha() {
@@ -228,7 +247,7 @@
 										<span class="block truncate text-xs text-grey">{n.service}{n.region ? ` · ${n.region}` : ''} · DDV {n.dueDate || '-'}</span>
 									</span>
 									{#if sched}
-										<span class="shrink-0 text-xs font-medium text-brand-green">no mês</span>
+										<span class="shrink-0 text-xs font-medium text-brand-green">na lista</span>
 									{:else}
 										<span class="shrink-0 text-xs font-medium text-brand">Adicionar</span>
 									{/if}
@@ -341,8 +360,8 @@
 	{#if scheduledList.length === 0}
 		<Card class="border-dashed text-center py-12">
 			<span class="grid size-16 place-items-center rounded-full bg-bg text-grey mx-auto mb-4"><Calendar size={30} /></span>
-			<h3 class="text-base font-medium text-navy mb-1">Nenhuma negociação escalada</h3>
-			<p class="text-sm text-grey max-w-sm mx-auto mb-4">Adicione uma negociação para começar a montar a lista de pagamentos mensais.</p>
+			<h3 class="text-base font-medium text-navy mb-1">Nenhum serviço mensal na lista</h3>
+			<p class="text-sm text-grey max-w-sm mx-auto mb-4">Adicione uma negociação para montar a lista de pagamentos mensais. O que entrar aqui fica salvo mês a mês, até você remover.</p>
 			<button onclick={() => (isAdding = true)} class="text-sm font-medium text-brand hover:underline">Adic. Pagamento</button>
 		</Card>
 	{:else}
@@ -358,9 +377,17 @@
 			</Card>
 
 			<Card padding="none" class="overflow-hidden">
-				<div class="px-5 py-3.5 border-b border-grey-200 bg-bg/50 flex items-center gap-3">
+				<div class="px-5 py-3.5 border-b border-grey-200 bg-bg/50 flex flex-wrap items-center gap-x-3 gap-y-2">
 					<span class="w-1.5 h-6 rounded-full bg-brand"></span>
-					<h3 class="font-bold text-navy text-base">Negociações Escaladas ({scheduledList.length})</h3>
+					<h3 class="font-bold text-navy text-base">Serviços Mensais Fixos ({scheduledList.length})</h3>
+					<span class="inline-flex items-center gap-1.5 rounded-full bg-brand/10 text-brand text-[10px] font-bold uppercase tracking-wider px-2.5 py-1">
+						<Pin size={11} /> Fica salvo para os próximos meses
+					</span>
+					{#if mesFechado}
+						<span class="inline-flex items-center gap-1.5 rounded-full bg-brand-green/12 text-brand-green text-[10px] font-bold uppercase tracking-wider px-2.5 py-1">
+							<Check size={11} /> {mesLabel} fechado
+						</span>
+					{/if}
 				</div>
 				<div class="divide-y divide-grey-200/70">
 					{#each scheduledList as item (item.id)}
@@ -420,8 +447,15 @@
 				</div>
 			</Card>
 
-			<div class="flex flex-wrap justify-end gap-3 pt-2">
-				<Button variant="danger" onclick={() => (showResetModal = true)}><Check size={18} /> Finalizar</Button>
+			<div class="flex flex-wrap items-center justify-end gap-3 pt-2">
+				{#if mesFechado}
+					<p class="mr-auto text-xs text-grey">
+						{mesLabel} já foi lançado na Planilha Mensal. A lista continua aqui para o mês que vem.
+					</p>
+				{/if}
+				<Button variant="secondary" disabled={mesFechado} onclick={() => (showResetModal = true)}>
+					<Check size={18} /> Fechar o Mês
+				</Button>
 				<Button onclick={gerarPlanilha}><FileSpreadsheet size={18} /> Gerar Planilha</Button>
 			</div>
 		</div>
@@ -431,11 +465,16 @@
 {#if showResetModal}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-navy-900/50 p-4">
 		<Card class="max-w-md w-full shadow-xl">
-			<h3 class="text-sm font-semibold text-navy mb-2">Finalizar Cronograma</h3>
-			<p class="text-slate mb-6">Tem certeza que deseja finalizar? Isso irá zerar a escalação atual para que você possa iniciar um novo mês.</p>
+			<h3 class="text-sm font-semibold text-navy mb-2">Fechar o mês de {mesLabel}</h3>
+			<p class="text-slate mb-6">
+				{pendentes.length}
+				{pendentes.length === 1 ? 'negociação vai ser lançada' : 'negociações vão ser lançadas'} na
+				Planilha Mensal, somando <b class="font-medium text-navy">{formatBRL(pendentes.reduce((s, i) => s + (Number(i.price) || 0), 0))}</b>.
+				A lista continua aqui do jeito que está — no mês que vem é só conferir os valores.
+			</p>
 			<div class="flex justify-end gap-3">
 				<Button variant="ghost" onclick={() => (showResetModal = false)}>Cancelar</Button>
-				<Button onclick={finalizar}>Sim, finalizar</Button>
+				<Button onclick={fecharMes}>Sim, fechar o mês</Button>
 			</div>
 		</Card>
 	</div>

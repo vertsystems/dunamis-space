@@ -361,15 +361,64 @@ class PagsupStore {
 		);
 	}
 
-	clearScheduledNegForCurrentClient() {
+	/**
+	 * Fecha o mês das negociações: cada linha escalada vira um pagamento no
+	 * histórico (Planilha Mensal) e a lista CONTINUA — são serviços fixos, que se
+	 * repetem todo mês. Antes daqui a lista era apagada e o dia 01 começava com
+	 * o trabalho de re-adicionar tudo à mão.
+	 *
+	 * O mês fechado fica carimbado em cada linha: sem isso, nada impediria lançar
+	 * o mesmo mês duas vezes (antes, a lista vazia é que era a proteção). Só entra
+	 * quem ainda não foi fechado neste mês — assim, fechar de novo depois de
+	 * incluir um serviço novo lança apenas o que faltava.
+	 */
+	closeNegotiationsMonth(): number {
 		const cid = this.selectedClientId;
-		const snapshot = this.scheduledNegotiations;
-		this.scheduledNegotiations = this.scheduledNegotiations.filter((s) => s.clientId !== cid);
-		this.#persist(
-			() => db.clearScheduledNegForClient(this.supabase!, cid),
-			() => (this.scheduledNegotiations = snapshot),
-			'Falha ao finalizar negociações.'
+		const data = hoje();
+		const mes = data.slice(0, 7);
+		const escaladas = this.scheduledNegotiations.filter(
+			(s) => s.clientId === cid && s.closedMonth !== mes
 		);
+		if (!escaladas.length) return 0;
+
+		const novos: Payment[] = escaladas.map((s) => {
+			const neg = this.negotiations.find((n) => n.id === s.negotiationId);
+			return {
+				id: uid(),
+				clientId: cid,
+				providerId: null,
+				// Congelado no ato, igual ao cronograma: mexer no cadastro depois não
+				// pode reescrever um mês já prestado.
+				providerName: neg?.company ?? '(negociação removida)',
+				service: neg?.service ?? '',
+				region: neg?.region ?? '',
+				value: Number(s.price) || 0,
+				date: data,
+				notes: s.notes ?? '',
+				lj: ''
+			};
+		});
+
+		const ids = new Set(escaladas.map((s) => s.id));
+		const snapPayments = this.payments;
+		const snapSched = this.scheduledNegotiations;
+		this.payments = [...novos, ...this.payments];
+		this.scheduledNegotiations = this.scheduledNegotiations.map((s) =>
+			ids.has(s.id) ? { ...s, closedMonth: mes } : s
+		);
+
+		this.#persist(
+			async () => {
+				await db.insertPayments(this.supabase!, novos);
+				await db.markScheduledNegClosed(this.supabase!, [...ids], mes);
+			},
+			() => {
+				this.payments = snapPayments;
+				this.scheduledNegotiations = snapSched;
+			},
+			'Falha ao fechar o mês das negociações.'
+		);
+		return novos.length;
 	}
 }
 

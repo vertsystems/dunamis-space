@@ -3,6 +3,7 @@
 // depender de file-saver.
 
 import ExcelJS from 'exceljs';
+import { hojeISO } from '$lib/datas';
 
 export interface ScheduleExportItem {
 	providerName: string;
@@ -33,6 +34,20 @@ const LARANJA_ESCURO = 'FFC2410C';
 
 /** Cinza escuro da faixa do mês de referência. */
 const CINZA_ESCURO = 'FF374151';
+
+/**
+ * Mês corrente no fuso de São Paulo, no mesmo formato que a Planilha Mensal
+ * recebe de fora ("agosto de 2026" + "2026"). Passa por hojeISO porque
+ * `new Date().getMonth()` erra o mês na virada quando o relógio é UTC.
+ */
+function mesVigente(agora: Date = new Date()): { mesLabel: string; ano: string } {
+	const [ano, mm] = hojeISO(agora).split('-');
+	const mesLabel = new Date(Number(ano), Number(mm) - 1, 1).toLocaleDateString('pt-BR', {
+		month: 'long',
+		year: 'numeric'
+	});
+	return { mesLabel, ano };
+}
 
 const BORDER_THIN = {
 	bottom: { style: 'thin' as const, color: { argb: 'FFCCCCCC' } },
@@ -237,18 +252,26 @@ export async function exportScheduleXlsx(
 	download(new Blob([buffer]), 'Pgmto Semanal Marketing Lojas Mari.xlsx');
 }
 
-/** Planilha mensal das Negociações (rádios, agências, serviços fixos). */
+/**
+ * Planilha mensal das Negociações (rádios, agências, serviços fixos).
+ *
+ * A lista de negociações é fixa e não zera de um mês para o outro, então a
+ * planilha é sempre do MÊS VIGENTE — o mês é calculado aqui (fuso de SP), não
+ * pedido a quem exporta, para não haver como gerar o mês errado.
+ */
 export async function exportNegociacoesXlsx(
 	items: NegExportItem[],
 	opts: { paymentDate: string }
 ): Promise<void> {
 	const grandTotal = items.reduce((sum, i) => sum + (Number(i.price) || 0), 0);
+	const { mesLabel, ano } = mesVigente();
+	const mesTitulo = `${mesPorExtenso(mesLabel)} ${ano}`.trim();
 
 	const workbook = new ExcelJS.Workbook();
 	workbook.creator = "Pag's Up";
 	workbook.created = new Date();
 
-	const ws = workbook.addWorksheet('Negociações');
+	const ws = workbook.addWorksheet(nomeAbaMes('Negociações', mesLabel, ano, 'Negociações'));
 	ws.views = [{ showGridLines: false }];
 
 	ws.getColumn(1).width = 32;
@@ -261,7 +284,7 @@ export async function exportNegociacoesXlsx(
 
 	let startRow = 1;
 
-	const titleRow = ws.addRow(['Pgmtos Mensais e Negociações LM']);
+	const titleRow = ws.addRow([`Pgmtos Mensais e Negociações LM | ${mesTitulo.toUpperCase()}`]);
 	ws.mergeCells(`A${startRow}:G${startRow}`);
 	titleRow.getCell(1).font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
 	titleRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF111827' } };
@@ -273,25 +296,42 @@ export async function exportNegociacoesXlsx(
 	ws.getRow(startRow).height = 17;
 	startRow++;
 
-	if (opts.paymentDate.trim()) {
-		const infoPagm = opts.paymentDate.trim() || '-';
-		const row = ws.addRow(['Data pgmto (Todos):', infoPagm, '', '', '', '', '']);
-		ws.mergeCells(`B${startRow}:G${startRow}`);
-		row.getCell(1).font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FF111827' } };
-		row.getCell(1).alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
-		row.getCell(2).font = { name: 'Arial', size: 12, color: { argb: 'FF374151' } };
-		row.getCell(2).alignment = { vertical: 'middle', horizontal: 'left' };
-		row.eachCell((cell) => {
-			cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
-			cell.border = BORDER_THIN;
-		});
-		row.height = 35;
-		startRow++;
-
-		ws.addRow([]);
-		ws.getRow(startRow).height = 17;
-		startRow++;
+	// Mês de referência sempre presente (mesma faixa da Planilha Mensal); a data
+	// de pagamento é opcional e divide a linha quando existe.
+	const infoRow = ws.addRow([
+		'Mês de referência:',
+		mesTitulo,
+		'',
+		opts.paymentDate.trim() ? 'Data pgmto (Todos):' : '',
+		'',
+		opts.paymentDate.trim(),
+		''
+	]);
+	ws.mergeCells(`B${startRow}:C${startRow}`);
+	ws.mergeCells(`D${startRow}:E${startRow}`);
+	ws.mergeCells(`F${startRow}:G${startRow}`);
+	infoRow.eachCell((cell) => {
+		cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
+		cell.border = BORDER_THIN;
+	});
+	for (let col = 1; col <= 3; col++) {
+		infoRow.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: CINZA_ESCURO } };
+		infoRow.getCell(col).border = BORDER_THIN;
 	}
+	infoRow.getCell(1).font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+	infoRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+	infoRow.getCell(2).font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+	infoRow.getCell(2).alignment = { vertical: 'middle', horizontal: 'left' };
+	infoRow.getCell(4).font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FF111827' } };
+	infoRow.getCell(4).alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+	infoRow.getCell(6).font = { name: 'Arial', size: 12, color: { argb: 'FF374151' } };
+	infoRow.getCell(6).alignment = { vertical: 'middle', horizontal: 'left' };
+	infoRow.height = 35;
+	startRow++;
+
+	ws.addRow([]);
+	ws.getRow(startRow).height = 17;
+	startRow++;
 
 	const headerRow = ws.addRow([
 		'Empresa/Prestador',
@@ -316,7 +356,7 @@ export async function exportNegociacoesXlsx(
 	spacerRow.height = 24;
 	startRow++;
 
-	const catRow = ws.addRow(['NEGOCIAÇÕES MENSAIS']);
+	const catRow = ws.addRow([`NEGOCIAÇÕES MENSAIS — ${mesTitulo.toUpperCase()}`]);
 	ws.mergeCells(`A${startRow}:G${startRow}`);
 	catRow.getCell(1).font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FF111827' } };
 	catRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCCCCC' } };
@@ -392,7 +432,7 @@ export async function exportNegociacoesXlsx(
 	grandRow.height = 46;
 
 	const buffer = await workbook.xlsx.writeBuffer();
-	download(new Blob([buffer]), 'Negociacoes Mensais Lojas Mari.xlsx');
+	download(new Blob([buffer]), `Negociacoes Mensais Lojas Mari — ${mesTitulo}.xlsx`);
 }
 
 // ---- Planilha Mensal (prestação de contas do mês) -------------------------
@@ -428,15 +468,19 @@ export interface MonthlyExportGroup {
  * Nome da aba com o mês e o ano — quem abre a planilha vê de que mês ela é já
  * pela guia, sem precisar rolar até o cabeçalho.
  *
- * O mesLabel chega como "agosto de 2026"; aqui vira "Planilha Agosto 2026". O
- * Excel recusa aba com mais de 31 caracteres ou com : \ / ? * [ ], então o
- * nome é higienizado antes de entrar.
+ * O mesLabel chega como "agosto de 2026"; com prefixo "Planilha" isso vira
+ * "Planilha Agosto 2026". O Excel recusa aba com mais de 31 caracteres ou com
+ * : \ / ? * [ ], então o nome é higienizado antes de entrar.
  */
-function nomeAbaMensal(mesLabel: string, ano: string): string {
+function nomeAbaMes(prefixo: string, mesLabel: string, ano: string, fallback: string): string {
+	const nome = [prefixo, mesPorExtenso(mesLabel), ano].filter(Boolean).join(' ');
+	return nome.replace(/[:\\/?*[\]]/g, '-').slice(0, 31) || fallback;
+}
+
+/** "agosto de 2026" -> "Agosto". */
+function mesPorExtenso(mesLabel: string): string {
 	const mes = (mesLabel ?? '').replace(/\s+de\s+\d{4}\s*$/i, '').trim();
-	const mesCap = mes ? mes.charAt(0).toUpperCase() + mes.slice(1) : '';
-	const nome = ['Planilha', mesCap, ano].filter(Boolean).join(' ');
-	return nome.replace(/[:\\/?*[\]]/g, '-').slice(0, 31) || 'Planilha Mensal';
+	return mes ? mes.charAt(0).toUpperCase() + mes.slice(1) : '';
 }
 
 export async function exportMonthlyXlsx(
@@ -451,7 +495,9 @@ export async function exportMonthlyXlsx(
 	workbook.creator = "Pag's Up";
 	workbook.created = new Date();
 
-	const ws = workbook.addWorksheet(nomeAbaMensal(opts.mesLabel, opts.ano));
+	const ws = workbook.addWorksheet(
+		nomeAbaMes('Planilha', opts.mesLabel, opts.ano, 'Planilha Mensal')
+	);
 	ws.views = [{ showGridLines: false }];
 
 	ws.getColumn(1).width = 38; // Prestador

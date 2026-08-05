@@ -40,9 +40,10 @@ export async function fetchAll(supabase: SupabaseClient): Promise<PagsupSnapshot
 		supabase
 			.from('pagsup_negociacoes')
 			.select('id, cliente_id, empresa, servico, fornecedor, valor_contrato, pix, regiao, ddv'),
-		supabase
-			.from('pagsup_negociacoes_agendadas')
-			.select('id, cliente_id, negociacao_id, data, valor, observacoes'),
+		// select('*') e não a lista de colunas: pedir mes_fechado pelo nome faz o
+		// PostgREST devolver erro enquanto a migration 0048 não roda, e aí o Pag's
+		// Up inteiro deixa de carregar. Com '*', a coluna aparece quando existir.
+		supabase.from('pagsup_negociacoes_agendadas').select('*'),
 		supabase
 			.from('pagsup_pagamentos')
 			.select('id, cliente_id, prestador_id, prestador_nome, servico, regiao, valor, data_pagamento, observacoes, lj')
@@ -93,7 +94,8 @@ export async function fetchAll(supabase: SupabaseClient): Promise<PagsupSnapshot
 			negotiationId: s.negociacao_id,
 			date: s.data ?? '',
 			price: toPrice(s.valor),
-			notes: s.observacoes ?? ''
+			notes: s.observacoes ?? '',
+			closedMonth: s.mes_fechado ?? ''
 		})),
 		payments: (pag.data ?? []).map((p) => ({
 			id: p.id,
@@ -304,13 +306,20 @@ export async function deleteScheduledNeg(supabase: SupabaseClient, id: string): 
 	if (error) throw error;
 }
 
-export async function clearScheduledNegForClient(
+/**
+ * Carimba o mês fechado nas linhas escaladas. Substituiu o antigo
+ * clearScheduledNegForClient: a lista não é mais apagada no fim do mês, só
+ * marcada — quem se repete todo mês continua lá.
+ */
+export async function markScheduledNegClosed(
 	supabase: SupabaseClient,
-	clientId: string
+	ids: string[],
+	mes: string
 ): Promise<void> {
+	if (!ids.length) return;
 	const { error } = await supabase
 		.from('pagsup_negociacoes_agendadas')
-		.delete()
-		.eq('cliente_id', clientId);
+		.update({ mes_fechado: mes })
+		.in('id', ids);
 	if (error) throw error;
 }
