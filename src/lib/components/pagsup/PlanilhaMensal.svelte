@@ -2,6 +2,7 @@
 	// Fechamento do mês: junta tudo que foi pago (as semanas finalizadas no
 	// cronograma + lançamentos avulsos) e gera a planilha de prestação de contas.
 	import { pagsup } from '$lib/pagsup/store.svelte';
+	import { carregarExcel, erroExport } from '$lib/pagsup/exportacao';
 	import { LOJAS, lojaNome, type Payment, type Provider } from '$lib/pagsup/types';
 	import { formatBRL } from '$lib/clientes';
 	import { Button, Card } from '$lib/components/ui';
@@ -157,7 +158,7 @@
 			return;
 		}
 		try {
-			const { exportMonthlyXlsx } = await import('$lib/pagsup/excel');
+			const { exportMonthlyXlsx } = await carregarExcel();
 			await exportMonthlyXlsx(
 				porCategoria.map(([categoria, itens]) => ({
 					categoria,
@@ -174,8 +175,8 @@
 				{ mesLabel: rotuloMes(mes), ano: mes.slice(0, 4), emitidoEm: fmtData(hojeISO()) }
 			);
 			toast.success('Planilha mensal gerada');
-		} catch {
-			toast.error('Falha ao gerar a planilha.');
+		} catch (e) {
+			toast.error(erroExport(e));
 		}
 	}
 
