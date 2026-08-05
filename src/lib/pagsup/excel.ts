@@ -31,6 +31,9 @@ export interface NegExportItem {
 /** Laranja escuro das faixas da Planilha Mensal (mesma família do laranja do total). */
 const LARANJA_ESCURO = 'FFC2410C';
 
+/** Cinza escuro da faixa do mês de referência. */
+const CINZA_ESCURO = 'FF374151';
+
 const BORDER_THIN = {
 	bottom: { style: 'thin' as const, color: { argb: 'FFCCCCCC' } },
 	top: { style: 'thin' as const, color: { argb: 'FFCCCCCC' } },
@@ -421,6 +424,21 @@ export interface MonthlyExportGroup {
  * coluna não daria para saber de quem é cada pagamento (a LJ só cobre as
  * unidades da Lojas Mari).
  */
+/**
+ * Nome da aba com o mês e o ano — quem abre a planilha vê de que mês ela é já
+ * pela guia, sem precisar rolar até o cabeçalho.
+ *
+ * O mesLabel chega como "agosto de 2026"; aqui vira "Planilha Agosto 2026". O
+ * Excel recusa aba com mais de 31 caracteres ou com : \ / ? * [ ], então o
+ * nome é higienizado antes de entrar.
+ */
+function nomeAbaMensal(mesLabel: string, ano: string): string {
+	const mes = (mesLabel ?? '').replace(/\s+de\s+\d{4}\s*$/i, '').trim();
+	const mesCap = mes ? mes.charAt(0).toUpperCase() + mes.slice(1) : '';
+	const nome = ['Planilha', mesCap, ano].filter(Boolean).join(' ');
+	return nome.replace(/[:\\/?*[\]]/g, '-').slice(0, 31) || 'Planilha Mensal';
+}
+
 export async function exportMonthlyXlsx(
 	groups: MonthlyExportGroup[],
 	opts: { mesLabel: string; ano: string; emitidoEm?: string }
@@ -433,7 +451,7 @@ export async function exportMonthlyXlsx(
 	workbook.creator = "Pag's Up";
 	workbook.created = new Date();
 
-	const ws = workbook.addWorksheet('Planilha Mensal');
+	const ws = workbook.addWorksheet(nomeAbaMensal(opts.mesLabel, opts.ano));
 	ws.views = [{ showGridLines: false }];
 
 	ws.getColumn(1).width = 38; // Prestador
@@ -472,18 +490,24 @@ export async function exportMonthlyXlsx(
 	// pega D:E, e o valor vai para F:G.
 	ws.mergeCells(`D${startRow}:E${startRow}`);
 	ws.mergeCells(`F${startRow}:G${startRow}`);
-	infoRow.getCell(1).font = { name: 'Arial', bold: true, size: 12, color: { argb: LARANJA_ESCURO } };
+	infoRow.eachCell((cell) => {
+		cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
+		cell.border = BORDER_THIN;
+	});
+	// O mês de referência sai em faixa cinza escura com letra branca (A até C, que
+	// é o rótulo mais o valor mesclado) — o "Emitido em:" fica no cinza claro.
+	for (let col = 1; col <= 3; col++) {
+		infoRow.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: CINZA_ESCURO } };
+		infoRow.getCell(col).border = BORDER_THIN;
+	}
+	infoRow.getCell(1).font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
 	infoRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
-	infoRow.getCell(2).font = { name: 'Arial', bold: true, size: 12, color: { argb: LARANJA_ESCURO } };
+	infoRow.getCell(2).font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
 	infoRow.getCell(2).alignment = { vertical: 'middle', horizontal: 'left' };
 	infoRow.getCell(4).font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FF111827' } };
 	infoRow.getCell(4).alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
 	infoRow.getCell(6).font = { name: 'Arial', size: 12, color: { argb: 'FF374151' } };
 	infoRow.getCell(6).alignment = { vertical: 'middle', horizontal: 'left' };
-	infoRow.eachCell((cell) => {
-		cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
-		cell.border = BORDER_THIN;
-	});
 	infoRow.height = 35;
 	startRow++;
 
