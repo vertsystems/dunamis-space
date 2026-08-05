@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { pagsup } from '$lib/pagsup/store.svelte';
 	import { carregarExcel, erroExport } from '$lib/pagsup/exportacao';
-	import { SERVICE_CATEGORIES, LOJAS, lojaNome, type Provider, type ScheduledService } from '$lib/pagsup/types';
+	import { LOJAS, lojaNome, type Provider, type ScheduledService } from '$lib/pagsup/types';
 	import { formatBRL } from '$lib/clientes';
 	import { Button, Card } from '$lib/components/ui';
 	import ClienteSelector from './ClienteSelector.svelte';
@@ -278,7 +278,7 @@
 				<div>
 					<label for="ex-cat" class="block text-xs font-medium text-slate mb-1">Categoria</label>
 					<select id="ex-cat" bind:value={extra.service} class={fieldCls}>
-						{#each SERVICE_CATEGORIES as c (c)}<option value={c}>{c}</option>{/each}
+						{#each pagsup.serviceOptions as c (c)}<option value={c}>{c}</option>{/each}
 					</select>
 				</div>
 				<div>

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { pagsup } from '$lib/pagsup/store.svelte';
-	import { SERVICE_CATEGORIES, LOJAS, lojaNome, type Provider } from '$lib/pagsup/types';
+	import { LOJAS, lojaNome, type Provider } from '$lib/pagsup/types';
 	import { Button, Card } from '$lib/components/ui';
 	import ClienteSelector from './ClienteSelector.svelte';
 	import { toast } from '$lib/toast.svelte';
@@ -127,7 +127,7 @@
 				<div class="xl:col-span-1">
 					<label for="np-serv" class="block text-xs font-medium text-slate mb-1">Serviço</label>
 					<select id="np-serv" bind:value={novo.service} class={fieldCls}>
-						{#each SERVICE_CATEGORIES as c (c)}<option value={c}>{c}</option>{/each}
+						{#each pagsup.serviceOptions as c (c)}<option value={c}>{c}</option>{/each}
 					</select>
 				</div>
 				<div class="xl:col-span-1">
@@ -208,7 +208,7 @@
 											</td>
 											<td class="px-5 py-3">
 												<select onkeydown={escOuNada} bind:value={edit.service} aria-label="Serviço" class={fieldCls}>
-													{#each SERVICE_CATEGORIES as c (c)}<option value={c}>{c}</option>{/each}
+													{#each pagsup.serviceOptions as c (c)}<option value={c}>{c}</option>{/each}
 												</select>
 											</td>
 											<td class="px-5 py-3">

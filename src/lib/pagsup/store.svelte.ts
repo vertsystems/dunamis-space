@@ -12,6 +12,7 @@ import type {
 	Client,
 	Payment
 } from './types';
+import { SERVICE_CATEGORIES } from './types';
 import { toast } from '$lib/toast.svelte';
 import * as db from './db';
 import { hojeISO } from '$lib/datas';
@@ -58,6 +59,18 @@ class PagsupStore {
 	filteredScheduledNegotiations = $derived(
 		this.scheduledNegotiations.filter((sn) => sn.clientId === this.selectedClientId)
 	);
+
+	/**
+	 * Opções do select de serviço: as categorias fixas mais tudo que já está
+	 * cadastrado. A lista fixa sozinha não dava conta — quem foi cadastrado como
+	 * "Pintura Facial" ou "Rádios & Portais" abria o select sem a própria
+	 * categoria e, ao salvar, trocava de serviço sem querer.
+	 */
+	serviceOptions = $derived.by(() => {
+		const set = new Set<string>(SERVICE_CATEGORIES);
+		for (const p of this.providers) if (p.service?.trim()) set.add(p.service.trim());
+		return [...set].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+	});
 
 	get selectedClientName(): string {
 		return this.clients.find((c) => c.id === this.selectedClientId)?.name ?? '';
