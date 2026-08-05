@@ -28,6 +28,9 @@ export interface NegExportItem {
 	price: number | '';
 }
 
+/** Laranja escuro das faixas da Planilha Mensal (mesma família do laranja do total). */
+const LARANJA_ESCURO = 'FFC2410C';
+
 const BORDER_THIN = {
 	bottom: { style: 'thin' as const, color: { argb: 'FFCCCCCC' } },
 	top: { style: 'thin' as const, color: { argb: 'FFCCCCCC' } },
@@ -443,7 +446,7 @@ export async function exportMonthlyXlsx(
 
 	let startRow = 1;
 
-	const titleRow = ws.addRow([`INVESTIMENTOS MARKETING | ${opts.ano}`]);
+	const titleRow = ws.addRow([`LOJAS MARI | INVESTIMENTOS MARKETING | ${opts.ano}`]);
 	ws.mergeCells(`A${startRow}:G${startRow}`);
 	titleRow.getCell(1).font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
 	titleRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF111827' } };
@@ -460,20 +463,23 @@ export async function exportMonthlyXlsx(
 		opts.mesLabel,
 		'',
 		'Emitido em:',
-		opts.emitidoEm ?? '',
 		'',
+		opts.emitidoEm ?? '',
 		''
 	]);
 	ws.mergeCells(`B${startRow}:C${startRow}`);
-	ws.mergeCells(`E${startRow}:G${startRow}`);
-	infoRow.getCell(1).font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FF111827' } };
+	// "Emitido em:" ocupava só a coluna da LJ (width 10) e saía cortado; agora
+	// pega D:E, e o valor vai para F:G.
+	ws.mergeCells(`D${startRow}:E${startRow}`);
+	ws.mergeCells(`F${startRow}:G${startRow}`);
+	infoRow.getCell(1).font = { name: 'Arial', bold: true, size: 12, color: { argb: LARANJA_ESCURO } };
 	infoRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
-	infoRow.getCell(2).font = { name: 'Arial', size: 12, color: { argb: 'FF374151' } };
+	infoRow.getCell(2).font = { name: 'Arial', bold: true, size: 12, color: { argb: LARANJA_ESCURO } };
 	infoRow.getCell(2).alignment = { vertical: 'middle', horizontal: 'left' };
 	infoRow.getCell(4).font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FF111827' } };
 	infoRow.getCell(4).alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
-	infoRow.getCell(5).font = { name: 'Arial', size: 12, color: { argb: 'FF374151' } };
-	infoRow.getCell(5).alignment = { vertical: 'middle', horizontal: 'left' };
+	infoRow.getCell(6).font = { name: 'Arial', size: 12, color: { argb: 'FF374151' } };
+	infoRow.getCell(6).alignment = { vertical: 'middle', horizontal: 'left' };
 	infoRow.eachCell((cell) => {
 		cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
 		cell.border = BORDER_THIN;
@@ -496,7 +502,7 @@ export async function exportMonthlyXlsx(
 	]);
 	headerRow.eachCell((cell) => {
 		cell.font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
-		cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF111827' } };
+		cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: LARANJA_ESCURO } };
 		cell.alignment = { vertical: 'middle', horizontal: 'center' };
 		cell.border = { ...BORDER_THIN, bottom: { style: 'medium', color: { argb: 'FFCCCCCC' } } };
 	});
@@ -557,7 +563,7 @@ export async function exportMonthlyXlsx(
 	const resumoTitle = ws.addRow(['RESUMO DOS PAGAMENTOS']);
 	ws.mergeCells(`A${startRow}:G${startRow}`);
 	resumoTitle.getCell(1).font = { name: 'Arial', bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
-	resumoTitle.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF111827' } };
+	resumoTitle.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: LARANJA_ESCURO } };
 	resumoTitle.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' };
 	resumoTitle.getCell(1).border = { ...BORDER_THIN, bottom: { style: 'medium', color: { argb: 'FFCCCCCC' } } };
 	resumoTitle.height = 22;
