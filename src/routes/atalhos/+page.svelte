@@ -7,7 +7,6 @@
 		{ href: '/clientes/novo', label: 'Novo cliente', desc: 'Cadastrar cliente / lead', icon: 'contact' },
 		{ href: '/crm', label: 'Novo negócio', desc: 'Abrir o CRM e criar oportunidade', icon: 'funnel' },
 		{ href: '/conteudo/novo', label: 'Novo conteúdo', desc: 'Criar post no calendário', icon: 'edit' },
-		{ href: '/conteudo/novo', label: 'Novo conteúdo', desc: 'Planejar publicação', icon: 'edit' },
 		{ href: '/financeiro/novo', label: 'Nova transação', desc: 'Registrar receita ou despesa', icon: 'dollar' },
 		{ href: '/contratos/novo', label: 'Novo contrato', desc: 'Cadastrar contrato', icon: 'file' }
 	];
@@ -24,7 +23,10 @@
 
 {#snippet grade(itens: Atalho[])}
 	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-		{#each itens as a (a.href + a.label)}
+		<!-- Chave pelo índice: a lista é fixa, e chavear por href+label derrubava a
+		     página inteira quando dois atalhos coincidiam (o Svelte trata chave
+		     repetida como erro de runtime, e a hidratação caía na tela de erro). -->
+		{#each itens as a, i (i)}
 			<a
 				href={a.href}
 				class="group flex items-center gap-3 bg-surface border border-grey-200 rounded-[var(--radius-lg)] p-4 hover:border-brand hover:shadow-sm transition-colors"
