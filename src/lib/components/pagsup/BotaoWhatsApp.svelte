@@ -8,15 +8,23 @@
 	let {
 		prestador,
 		nome,
-		size = 17
+		size = 17,
+		reservaEspaco = false
 	}: {
 		prestador: { whatsapp?: string | null; pix?: string | null };
 		nome: string;
 		size?: number;
+		/** Mantém o vão do ícone quando não há número — usado em coluna de tabela,
+		 *  onde a ausência desalinharia o texto das outras linhas. */
+		reservaEspaco?: boolean;
 	} = $props();
 
 	const numero = $derived(whatsappDoPrestador(prestador));
 </script>
+
+{#if !numero && reservaEspaco}
+	<span class="inline-block size-8 shrink-0" aria-hidden="true"></span>
+{/if}
 
 {#if numero}
 	<a
@@ -26,7 +34,7 @@
 		onclick={(e) => e.stopPropagation()}
 		title="Conversar com {nome} no WhatsApp — {formataWhatsApp(numero)}"
 		aria-label="Conversar com {nome} no WhatsApp"
-		class="inline-grid size-8 place-items-center rounded-[var(--radius-sm)] text-[#1c8c4c] transition-colors hover:bg-[#25d366]/15"
+		class="inline-grid size-8 shrink-0 place-items-center rounded-[var(--radius-sm)] text-[#1c8c4c] transition-colors hover:bg-[#25d366]/15"
 	>
 		<!-- Logo do WhatsApp: o @lucide/svelte não traz marcas. -->
 		<svg viewBox="0 0 24 24" width={size} height={size} fill="currentColor" aria-hidden="true">

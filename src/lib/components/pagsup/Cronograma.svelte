@@ -413,7 +413,12 @@
 											role="button"
 											aria-label="Editar {item.provider.name}"
 										>
-											<td class="px-5 py-3.5 font-medium text-navy">{item.provider.name}</td>
+											<td class="px-5 py-3.5">
+												<div class="flex items-center gap-2">
+													<BotaoWhatsApp prestador={item.provider} nome={item.provider.name} size={16} reservaEspaco />
+													<span class="line-clamp-2 font-medium text-navy" title={item.provider.name}>{item.provider.name}</span>
+												</div>
+											</td>
 											<td class="px-5 py-3.5 text-slate text-sm">{item.provider.region}</td>
 											<td class="px-5 py-3.5">
 												{#if item.provider.lj}
@@ -424,9 +429,6 @@
 											<td class="px-5 py-3.5 text-right font-mono text-navy font-medium">{item.price === '' ? '-' : formatBRL(item.price)}</td>
 											<td class="px-5 py-3.5">
 												<div class="flex items-center justify-end gap-1">
-													<!-- Sempre visível: avisar o prestador escalado é parte da rotina
-													     da semana, não uma ação de edição. -->
-													<BotaoWhatsApp prestador={item.provider} nome={item.provider.name} />
 													<div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
 														<button onclick={() => startEdit(item)} title="Editar" class="p-2 rounded-[var(--radius-sm)] text-grey hover:text-brand hover:bg-brand/10 transition-colors"><Pencil size={17} /></button>
 														<button onclick={(e) => { e.stopPropagation(); pagsup.deleteScheduled(item.id); }} title="Remover" class="p-2 rounded-[var(--radius-sm)] text-grey hover:text-brand-danger hover:bg-brand-danger/10 transition-colors"><Trash2 size={17} /></button>

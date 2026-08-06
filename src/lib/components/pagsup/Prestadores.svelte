@@ -198,7 +198,7 @@
 						<table class="w-full text-left border-collapse">
 							<thead>
 								<tr class="text-grey text-xs uppercase tracking-wider border-b border-grey-200">
-									<th scope="col" class="px-5 py-3 font-semibold">Nome</th>
+									<th scope="col" class="px-5 py-3 font-semibold w-[260px]">Nome</th>
 									<th scope="col" class="px-5 py-3 font-semibold">Serviço</th>
 									<th scope="col" class="px-5 py-3 font-semibold">Região</th>
 									<th scope="col" class="px-5 py-3 font-semibold">CPF / CNPJ</th>
@@ -255,7 +255,14 @@
 											role="button"
 											aria-label="Editar {p.name}"
 										>
-											<td class="px-5 py-3.5 font-medium text-navy">{p.name}</td>
+											<td class="px-5 py-3.5">
+												<div class="flex items-center gap-2">
+													<BotaoWhatsApp prestador={p} nome={p.name} size={16} reservaEspaco />
+													<!-- line-clamp-2: nome comprido para em duas linhas com reticências,
+													     em vez de esticar a altura da linha inteira. -->
+													<span class="line-clamp-2 font-medium text-navy" title={p.name}>{p.name}</span>
+												</div>
+											</td>
 											<td class="px-5 py-3.5">
 												<!-- max-w-full + overflow-hidden + nowrap: é o que permite a ação
 												     medir o estouro e encolher a fonte em vez de quebrar a linha. -->
@@ -278,9 +285,6 @@
 											</td>
 											<td class="px-5 py-3.5">
 												<div class="flex items-center justify-end gap-1">
-													<!-- Fora do grupo que só aparece no hover: falar com o prestador é
-													     rotina, e o ícone também informa quem tem contato cadastrado. -->
-													<BotaoWhatsApp prestador={p} nome={p.name} />
 													<div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
 														<button onclick={() => startEdit(p)} title="Editar" class="p-2 rounded-[var(--radius-sm)] text-grey hover:text-brand hover:bg-brand/10 transition-colors"><Pencil size={17} /></button>
 														<button onclick={(e) => { e.stopPropagation(); remove(p.id); }} title="Excluir" class="p-2 rounded-[var(--radius-sm)] text-grey hover:text-brand-danger hover:bg-brand-danger/10 transition-colors"><Trash2 size={17} /></button>
