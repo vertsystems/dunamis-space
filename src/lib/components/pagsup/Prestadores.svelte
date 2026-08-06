@@ -2,6 +2,8 @@
 	import { pagsup } from '$lib/pagsup/store.svelte';
 	import { LOJAS, lojaNome, type Provider } from '$lib/pagsup/types';
 	import { caberEmUmaLinha } from '$lib/caberEmUmaLinha';
+	import BotaoWhatsApp from './BotaoWhatsApp.svelte';
+	import { whatsappLegivel } from '$lib/pagsup/whatsapp';
 	import { Button, Card } from '$lib/components/ui';
 	import ClienteSelector from './ClienteSelector.svelte';
 	import { toast } from '$lib/toast.svelte';
@@ -14,8 +16,8 @@
 	let isAdding = $state(false);
 	let editingId = $state<string | null>(null);
 
-	type Form = { name: string; service: string; region: string; defaultPrice: number; cpf: string; pix: string; lj: string };
-	const emptyForm = (): Form => ({ name: '', service: 'Carros e Veículos de Som', region: '', defaultPrice: 0, cpf: '', pix: '', lj: '' });
+	type Form = { name: string; service: string; region: string; defaultPrice: number; cpf: string; pix: string; whatsapp: string; lj: string };
+	const emptyForm = (): Form => ({ name: '', service: 'Carros e Veículos de Som', region: '', defaultPrice: 0, cpf: '', pix: '', whatsapp: '', lj: '' });
 	let novo = $state<Form>(emptyForm());
 	let edit = $state<Form>(emptyForm());
 
@@ -87,7 +89,8 @@
 			defaultPrice: p.defaultPrice,
 			lj: p.lj ?? '',
 			cpf: p.cpf ?? '',
-			pix: p.pix ?? ''
+			pix: p.pix ?? '',
+			whatsapp: p.whatsapp ?? ''
 		};
 	}
 
@@ -120,7 +123,7 @@
 	{#if isAdding}
 		<Card class="mb-6">
 			<h3 class="text-sm font-semibold text-navy mb-4">Adicionar Novo Prestador</h3>
-			<form onsubmit={handleAdd} class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-7 gap-3 items-end">
+			<form onsubmit={handleAdd} class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-8 gap-3 items-end">
 				<div class="xl:col-span-1">
 					<label for="np-nome" class="block text-xs font-medium text-slate mb-1">Nome</label>
 					<input id="np-nome" required bind:value={novo.name} placeholder="Ex: João Silva" class={fieldCls} />
@@ -142,6 +145,10 @@
 				<div class="xl:col-span-1">
 					<label for="np-pix" class="block text-xs font-medium text-slate mb-1">Chave PIX</label>
 					<input id="np-pix" bind:value={novo.pix} placeholder="Telefone, e-mail..." class={fieldCls} />
+				</div>
+				<div class="xl:col-span-1">
+					<label for="np-zap" class="block text-xs font-medium text-slate mb-1">WhatsApp</label>
+					<input id="np-zap" bind:value={novo.whatsapp} placeholder="(15) 99999-9999" class={fieldCls} />
 				</div>
 				<div class="xl:col-span-1">
 					<!-- LJ: unidade onde o trabalho é feito; vai congelada no pagamento. -->
@@ -196,6 +203,7 @@
 									<th scope="col" class="px-5 py-3 font-semibold">Região</th>
 									<th scope="col" class="px-5 py-3 font-semibold">CPF / CNPJ</th>
 									<th scope="col" class="px-5 py-3 font-semibold">Chave PIX</th>
+									<th scope="col" class="px-5 py-3 font-semibold">WhatsApp</th>
 									<th scope="col" class="px-5 py-3 font-semibold w-32">LJ</th>
 									<th scope="col" class="px-5 py-3 font-semibold text-right w-28">Ações</th>
 								</tr>
@@ -220,6 +228,9 @@
 											</td>
 											<td class="px-5 py-3">
 												<input onkeydown={(e) => teclaEdicao(e, p.id)} bind:value={edit.pix} aria-label="Chave PIX" class={fieldCls} placeholder="PIX" />
+											</td>
+											<td class="px-5 py-3">
+												<input onkeydown={(e) => teclaEdicao(e, p.id)} bind:value={edit.whatsapp} aria-label="WhatsApp" class={fieldCls} placeholder="(15) 99999-9999" />
 											</td>
 											<td class="px-5 py-3">
 												<select onkeydown={escOuNada} bind:value={edit.lj} aria-label="LJ (loja)" class="h-9 w-full rounded-[var(--radius)] border border-grey-200 bg-surface px-2 text-sm text-navy-900 shadow-xs transition-colors hover:border-grey focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25">
@@ -259,15 +270,21 @@
 											<td class="px-5 py-3.5 text-slate text-sm">
 												{#if p.pix}<span class="block max-w-[150px] truncate" title={p.pix}>{p.pix}</span>{:else}-{/if}
 											</td>
+											<td class="px-5 py-3.5 text-slate text-sm whitespace-nowrap">{whatsappLegivel(p)}</td>
 											<td class="px-5 py-3.5">
 												{#if p.lj}
 													<span class="inline-flex items-center rounded-[var(--radius-sm)] bg-bg px-2 py-0.5 text-xs font-bold text-slate" title={lojaNome(p.lj)}>{p.lj}</span>
 												{:else}<span class="text-sm text-grey">-</span>{/if}
 											</td>
 											<td class="px-5 py-3.5">
-												<div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-													<button onclick={() => startEdit(p)} title="Editar" class="p-2 rounded-[var(--radius-sm)] text-grey hover:text-brand hover:bg-brand/10 transition-colors"><Pencil size={17} /></button>
-													<button onclick={(e) => { e.stopPropagation(); remove(p.id); }} title="Excluir" class="p-2 rounded-[var(--radius-sm)] text-grey hover:text-brand-danger hover:bg-brand-danger/10 transition-colors"><Trash2 size={17} /></button>
+												<div class="flex items-center justify-end gap-1">
+													<!-- Fora do grupo que só aparece no hover: falar com o prestador é
+													     rotina, e o ícone também informa quem tem contato cadastrado. -->
+													<BotaoWhatsApp prestador={p} nome={p.name} />
+													<div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+														<button onclick={() => startEdit(p)} title="Editar" class="p-2 rounded-[var(--radius-sm)] text-grey hover:text-brand hover:bg-brand/10 transition-colors"><Pencil size={17} /></button>
+														<button onclick={(e) => { e.stopPropagation(); remove(p.id); }} title="Excluir" class="p-2 rounded-[var(--radius-sm)] text-grey hover:text-brand-danger hover:bg-brand-danger/10 transition-colors"><Trash2 size={17} /></button>
+													</div>
 												</div>
 											</td>
 										</tr>

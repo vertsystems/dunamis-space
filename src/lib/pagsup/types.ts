@@ -18,6 +18,8 @@ export interface Provider {
 	defaultPrice: number;
 	cpf?: string;
 	pix?: string;
+	/** Telefone de contato (WhatsApp). Separado do pix: chave Pix nem sempre é telefone. */
+	whatsapp?: string;
 	/** Sigla da unidade onde o trabalho é feito (LJ) — ver LOJAS. */
 	lj?: string;
 }

@@ -35,7 +35,7 @@ export async function fetchAll(supabase: SupabaseClient): Promise<PagsupSnapshot
 		supabase.from('pagsup_clientes').select('id, nome').order('nome', { ascending: true }),
 		supabase
 			.from('pagsup_prestadores')
-			.select('id, cliente_id, nome, servico, regiao, valor_padrao, cpf, pix, lj'),
+			.select('id, cliente_id, nome, servico, regiao, valor_padrao, cpf, pix, whatsapp, lj'),
 		supabase.from('pagsup_cronograma').select('id, cliente_id, prestador_id, data, valor, observacoes'),
 		supabase
 			.from('pagsup_negociacoes')
@@ -67,6 +67,7 @@ export async function fetchAll(supabase: SupabaseClient): Promise<PagsupSnapshot
 			defaultPrice: Number(p.valor_padrao ?? 0),
 			cpf: p.cpf ?? '',
 			pix: p.pix ?? '',
+			whatsapp: p.whatsapp ?? '',
 			lj: p.lj ?? ''
 		})),
 		scheduledServices: (cron.data ?? []).map((s) => ({
@@ -179,6 +180,7 @@ export async function insertProvider(supabase: SupabaseClient, p: Provider): Pro
 		valor_padrao: p.defaultPrice,
 		cpf: p.cpf || null,
 		pix: p.pix || null,
+		whatsapp: p.whatsapp || null,
 		lj: p.lj || null
 	});
 	if (error) throw error;
@@ -196,6 +198,7 @@ export async function updateProvider(
 	if (patch.defaultPrice !== undefined) row.valor_padrao = patch.defaultPrice;
 	if (patch.cpf !== undefined) row.cpf = patch.cpf || null;
 	if (patch.pix !== undefined) row.pix = patch.pix || null;
+	if (patch.whatsapp !== undefined) row.whatsapp = patch.whatsapp || null;
 	if (patch.lj !== undefined) row.lj = patch.lj || null;
 	const { error } = await supabase.from('pagsup_prestadores').update(row).eq('id', id);
 	if (error) throw error;

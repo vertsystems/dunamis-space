@@ -2,6 +2,7 @@
 	import { pagsup } from '$lib/pagsup/store.svelte';
 	import { carregarExcel, erroExport } from '$lib/pagsup/exportacao';
 	import { LOJAS, lojaNome, type Provider, type ScheduledService } from '$lib/pagsup/types';
+	import BotaoWhatsApp from './BotaoWhatsApp.svelte';
 	import { formatBRL } from '$lib/clientes';
 	import { Button, Card } from '$lib/components/ui';
 	import ClienteSelector from './ClienteSelector.svelte';
@@ -23,7 +24,7 @@
 	let editNotes = $state('');
 	let editLj = $state('');
 
-	const emptyExtra = () => ({ name: '', service: 'Carros e Veículos de Som', region: '', cpf: '', pix: '', lj: '', price: '' as number | '', notes: '' });
+	const emptyExtra = () => ({ name: '', service: 'Carros e Veículos de Som', region: '', cpf: '', pix: '', whatsapp: '', lj: '', price: '' as number | '', notes: '' });
 	let extra = $state(emptyExtra());
 
 	// ---- Busca de prestador (entrou no lugar da grade de pré-selecionados) ----
@@ -105,6 +106,7 @@
 			region: extra.region,
 			cpf: extra.cpf,
 			pix: extra.pix,
+			whatsapp: extra.whatsapp,
 			lj: extra.lj,
 			defaultPrice: typeof extra.price === 'number' ? extra.price : 0
 		});
@@ -306,6 +308,10 @@
 					<input id="ex-pix" bind:value={extra.pix} placeholder="Telefone, e-mail..." class={fieldCls} />
 				</div>
 				<div>
+					<label for="ex-zap" class="block text-xs font-medium text-slate mb-1">WhatsApp</label>
+					<input id="ex-zap" bind:value={extra.whatsapp} placeholder="(15) 99999-9999" class={fieldCls} />
+				</div>
+				<div>
 					<label for="ex-obs" class="block text-xs font-medium text-slate mb-1">Observações</label>
 					<input id="ex-obs" bind:value={extra.notes} placeholder="Opcional..." class={fieldCls} />
 				</div>
@@ -417,9 +423,14 @@
 											<td class="px-5 py-3.5 text-grey text-sm italic">{item.notes || '-'}</td>
 											<td class="px-5 py-3.5 text-right font-mono text-navy font-medium">{item.price === '' ? '-' : formatBRL(item.price)}</td>
 											<td class="px-5 py-3.5">
-												<div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-													<button onclick={() => startEdit(item)} title="Editar" class="p-2 rounded-[var(--radius-sm)] text-grey hover:text-brand hover:bg-brand/10 transition-colors"><Pencil size={17} /></button>
-													<button onclick={(e) => { e.stopPropagation(); pagsup.deleteScheduled(item.id); }} title="Remover" class="p-2 rounded-[var(--radius-sm)] text-grey hover:text-brand-danger hover:bg-brand-danger/10 transition-colors"><Trash2 size={17} /></button>
+												<div class="flex items-center justify-end gap-1">
+													<!-- Sempre visível: avisar o prestador escalado é parte da rotina
+													     da semana, não uma ação de edição. -->
+													<BotaoWhatsApp prestador={item.provider} nome={item.provider.name} />
+													<div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+														<button onclick={() => startEdit(item)} title="Editar" class="p-2 rounded-[var(--radius-sm)] text-grey hover:text-brand hover:bg-brand/10 transition-colors"><Pencil size={17} /></button>
+														<button onclick={(e) => { e.stopPropagation(); pagsup.deleteScheduled(item.id); }} title="Remover" class="p-2 rounded-[var(--radius-sm)] text-grey hover:text-brand-danger hover:bg-brand-danger/10 transition-colors"><Trash2 size={17} /></button>
+													</div>
 												</div>
 											</td>
 										</tr>
