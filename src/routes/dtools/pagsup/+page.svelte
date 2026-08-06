@@ -11,14 +11,31 @@
 	let { data }: { data: PageData } = $props();
 
 	type ModuleId = 'cronograma' | 'mensal' | 'prestadores' | 'negociacoes';
-	let active = $state<ModuleId>('cronograma');
 
 	const NAV = [
 		{ id: 'cronograma', label: 'Cronograma', icon: Calendar },
+		{ id: 'negociacoes', label: 'Negociações', icon: Briefcase },
 		{ id: 'mensal', label: 'Planilha Mensal', icon: FileSpreadsheet },
-		{ id: 'prestadores', label: 'Prestadores', icon: Users },
-		{ id: 'negociacoes', label: 'Negociações', icon: Briefcase }
+		{ id: 'prestadores', label: 'Prestadores', icon: Users }
 	] as const;
+
+	// A aba sobrevive ao F5 — atualizar a página no meio de um lançamento jogava
+	// de volta no Cronograma. Mesmo lugar onde o cliente selecionado é guardado.
+	// (Sem SSR nesta rota, dá para ler o localStorage já na inicialização.)
+	const K_ABA = 'pagsup_aba';
+
+	function abaSalva(): ModuleId {
+		if (typeof localStorage === 'undefined') return 'cronograma';
+		const salva = localStorage.getItem(K_ABA);
+		return NAV.some((n) => n.id === salva) ? (salva as ModuleId) : 'cronograma';
+	}
+
+	let active = $state<ModuleId>(abaSalva());
+
+	function abrir(id: ModuleId) {
+		active = id;
+		if (typeof localStorage !== 'undefined') localStorage.setItem(K_ABA, id);
+	}
 
 	// Inicializa o store com o cliente Supabase (autenticado) do layout.
 	$effect(() => {
@@ -39,7 +56,7 @@
 			{@const Ico = item.icon}
 			<button
 				type="button"
-				onclick={() => (active = item.id)}
+				onclick={() => abrir(item.id)}
 				aria-current={active === item.id ? 'page' : undefined}
 				class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors {active ===
 				item.id
