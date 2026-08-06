@@ -126,20 +126,10 @@
 			// só o atalho na sidebar foi removido, então links vindos do dashboard,
 			// de notificações e de outras telas seguem abrindo normalmente.
 			areas: [{ href: '/calendario', label: 'Calendário Editorial', icon: 'calendar' }]
-		},
-		{
-			id: 'dtools',
-			label: 'DTools',
-			icon: 'dtools',
-			href: '/dtools',
-			base: '/dtools',
-			areas: DTOOLS_FERRAMENTAS.map((f) => ({
-				href: f.href,
-				label: f.label,
-				icon: f.icon,
-				subitens: f.subitens
-			}))
 		}
+		// O departamento DTools saiu do topo: as ferramentas moram na Home (ver
+		// areasFerramentas acima). As rotas /dtools/* continuam existindo, inclusive
+		// a visão geral em /dtools — só não há mais atalho para elas no menu.
 	];
 
 	function areaAtiva(href: string | undefined): boolean {
