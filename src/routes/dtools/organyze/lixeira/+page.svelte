@@ -50,7 +50,7 @@
 	</div>
 {:else if !organyze.colaboradorId}
 	<!-- Seleção de perfil (compartilhada com Tarefas/Metas) -->
-	<div class="flex max-w-3xl flex-col items-start px-4 py-10">
+	<div class="flex flex-col items-start py-10">
 		<div class="mb-10 text-left">
 			<h1 class="text-3xl font-bold text-navy">Quem é você?</h1>
 			<p class="mt-2 text-slate">Escolha seu perfil para ver as tarefas excluídas.</p>
@@ -87,7 +87,8 @@
 	</div>
 {:else}
 	{@const c = organyze.colaborador}
-	<div class="max-w-4xl space-y-4">
+	<!-- Mesma largura das outras telas: quem manda é a coluna do shell. -->
+	<div class="space-y-4">
 		<!-- Cabeçalho: perfil + trocar -->
 		<div class="flex items-center gap-3">
 			<span class="relative inline-block">
