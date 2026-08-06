@@ -50,12 +50,6 @@ export interface Tarefa {
 	deletedAt?: string | null; // preenchido só nas tarefas vindas da Lixeira (soft delete)
 }
 
-/** Recorte enxuto da tarefa — o que o card do Organyze na Visão Geral precisa. */
-export type TarefaHoje = Pick<
-	Tarefa,
-	'id' | 'titulo' | 'status' | 'data' | 'posicao' | 'prioridade' | 'prazo'
->;
-
 // Ordem de exibição das seções (topo → base).
 export const STATUS_ORDEM: Status[] = ['nao_iniciado', 'em_execucao', 'concluida'];
 

@@ -3,9 +3,7 @@ import type { PageServerLoad } from './$types';
 import { DIAS_CONTRATO_VENCENDO, DIAS_SEM_INTERACAO } from '$lib/alertas';
 import { cached, chaveDoUsuario } from '$lib/server/cache';
 import { CONTEUDO_STATUS } from '$lib/conteudo';
-import { hojeSP } from '$lib/rotina';
 import { sel } from '$lib/server/query';
-import type { Prioridade, Status, TarefaHoje } from '$lib/organyze/types';
 
 // O módulo de Tarefas foi aposentado: a operação do dashboard passou a ser
 // medida pelo funil de CONTEÚDO, usando os grupos que já existem em conteudo.ts.
@@ -212,83 +210,6 @@ async function carregarOperacao(supabase: SupabaseClient) {
 	};
 }
 
-/**
- * Organyze na Visão Geral: as tarefas do dia de QUEM está logado.
- * Pendentes de dias anteriores entram junto — é o mesmo efeito do rollover que o
- * app faz ao abrir (lá ele reescreve a data; aqui só lê, para o dashboard não ter
- * efeito colateral no banco).
- */
-async function carregarOrganyze(
-	supabase: SupabaseClient,
-	user: Parameters<PageServerLoad>[0]['locals']['user']
-) {
-	const hoje = hojeSP().data;
-	const vazio = { colaboradorId: null as string | null, hoje, tarefas: [] as TarefaHoje[] };
-	if (!user) return vazio;
-
-	// Mesmo casamento do /meu-dia: vínculo direto e, na falta dele, pelo e-mail.
-	let { data: colab } = await supabase
-		.from('colaboradores')
-		.select('id')
-		.eq('auth_user_id', user.id)
-		.maybeSingle();
-	if (!colab && user.email) {
-		({ data: colab } = await supabase
-			.from('colaboradores')
-			.select('id')
-			.eq('email', user.email)
-			.maybeSingle());
-	}
-	const meuId = (colab?.id as string | undefined) ?? null;
-	if (!meuId) return vazio;
-
-	const COLS = 'id, titulo, status, data, posicao, prioridade, prazo';
-	// Tarefas do colaborador (dono) OU compartilhadas com ele.
-	const minhas = `colaborador_id.eq.${meuId},responsaveis.cs.{${meuId}}`;
-	const [pendentes, feitas] = await Promise.all([
-		supabase
-			.from('organyze_tarefas')
-			.select(COLS)
-			.or(minhas)
-			.is('deleted_at', null)
-			.neq('status', 'concluida')
-			.lte('data', hoje)
-			.order('data', { ascending: true })
-			.order('posicao', { ascending: true })
-			.limit(50),
-		// As concluídas de hoje ficam na lista para o progresso fazer sentido e para
-		// desmarcar por engano ser reversível ali mesmo.
-		supabase
-			.from('organyze_tarefas')
-			.select(COLS)
-			.or(minhas)
-			.is('deleted_at', null)
-			.eq('status', 'concluida')
-			.eq('data', hoje)
-			.order('posicao', { ascending: true })
-			.limit(50)
-	]);
-
-	// Organyze ainda não migrado no banco: o dashboard não pode quebrar por isso.
-	if (pendentes.error || feitas.error) return vazio;
-
-	const linha = (r: Record<string, unknown>): TarefaHoje => ({
-		id: r.id as string,
-		titulo: r.titulo as string,
-		status: r.status as Status,
-		data: r.data as string,
-		posicao: (r.posicao as number) ?? 0,
-		prioridade: (r.prioridade as Prioridade) ?? 'media',
-		prazo: (r.prazo as string | null) ?? null
-	});
-
-	return {
-		colaboradorId: meuId,
-		hoje,
-		tarefas: [...(pendentes.data ?? []), ...(feitas.data ?? [])].map(linha)
-	};
-}
-
 export const load: PageServerLoad = async ({ locals: { supabase, user } }) => {
 	// As três queries cacheadas leem via `locals.supabase`, então o resultado já
 	// vem filtrado pela RLS de QUEM pediu. Com chave global, um perfil servia os
@@ -310,9 +231,6 @@ export const load: PageServerLoad = async ({ locals: { supabase, user } }) => {
 		operacao,
 		clientes,
 		// Alertas: cacheados 60s + Promise não-aguardada → streaming com skeleton.
-		alertas: cached(k('dashboard:alertas'), 60, () => carregarAlertas(supabase)),
-		// Também streamed, mas SEM cache: a lista é marcada e criada na própria tela,
-		// e 60s de TTL fariam um F5 logo depois ressuscitar o estado antigo.
-		organyze: carregarOrganyze(supabase, user)
+		alertas: cached(k('dashboard:alertas'), 60, () => carregarAlertas(supabase))
 	};
 };

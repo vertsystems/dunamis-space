@@ -4,7 +4,6 @@
 	import { diasAte, formatDateBR, prazoContratoLabel } from '$lib/alertas';
 	import { Card, Badge, Skeleton } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
-	import TarefasHoje from '$lib/components/organyze/TarefasHoje.svelte';
 
 	let { data } = $props();
 
@@ -72,38 +71,22 @@
 	{/each}
 </div>
 
-<!-- Organyze — a lista de hoje de quem está logado (streamed, como os alertas).
-     O app completo continua em /dtools/organyze. -->
-<div class="mt-6">
-	{#await data.organyze}
-		<Card>
-			<div class="mb-4 flex items-center justify-between">
-				<Skeleton class="h-4 w-56" />
-				<Skeleton class="h-4 w-24" />
-			</div>
-			<Skeleton class="h-2 w-full" rounded="full" />
-			<div class="mt-4 space-y-3">
-				{#each Array(3) as _, i (i)}
-					<Skeleton class="h-4 w-3/4" />
-				{/each}
-			</div>
-		</Card>
-	{:then organyze}
-		<TarefasHoje
-			supabase={data.supabase}
-			colaboradorId={organyze.colaboradorId}
-			hoje={organyze.hoje}
-			tarefas={organyze.tarefas}
-		/>
-	{:catch}
-		<Card>
-			<p class="text-sm text-brand-danger">
-				Não foi possível carregar suas tarefas do Organyze.
-				<a class="text-brand hover:underline" href="/dtools/organyze">Abrir o Organyze</a>.
-			</p>
-		</Card>
-	{/await}
-</div>
+<!-- Organyze — atalho para o app completo (/dtools/organyze). -->
+<a
+	href="/dtools/organyze"
+	class="mt-6 flex items-center gap-4 rounded-[var(--radius-lg)] border border-grey-200 bg-surface p-5 no-underline shadow-sm transition-all hover:border-brand/40 hover:shadow-md"
+>
+	<span class="grid size-11 shrink-0 place-items-center rounded-[var(--radius)] bg-brand text-white">
+		<Icon name="organyze" size={22} />
+	</span>
+	<span class="min-w-0 flex-1">
+		<span class="block text-sm font-semibold text-navy">Organyze</span>
+		<span class="block text-sm text-grey">
+			Suas tarefas do dia: anote o que precisa fazer e vá marcando o que concluiu.
+		</span>
+	</span>
+	<span class="shrink-0 text-grey"><Icon name="chevron" size={18} /></span>
+</a>
 
 <!-- Clientes (bolinhas com iniciais) -->
 <Card class="mt-6">

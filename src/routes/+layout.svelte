@@ -68,6 +68,15 @@
 		areas: Area[];
 	};
 
+	// Organyze e Pag's Up também moram na sidebar da Home, logo abaixo de Meu Dia:
+	// são ferramentas do dia a dia de qualquer pessoa, e não um departamento à
+	// parte. A fonte continua sendo DTOOLS_FERRAMENTAS — a ordem aqui é a do menu.
+	const FERRAMENTAS_NA_HOME = ['/dtools/organyze', '/dtools/pagsup'];
+	const areasFerramentas: Area[] = FERRAMENTAS_NA_HOME.flatMap((href) => {
+		const f = DTOOLS_FERRAMENTAS.find((x) => x.href === href);
+		return f ? [{ href: f.href, label: f.label, icon: f.icon, subitens: f.subitens }] : [];
+	});
+
 	const departamentos: Departamento[] = [
 		{
 			id: 'home',
@@ -77,6 +86,7 @@
 			areas: [
 				{ href: '/', label: 'Visão Geral', icon: 'home' },
 				{ href: '/meu-dia', label: 'Meu Dia', icon: 'calendar' },
+				...areasFerramentas,
 				{ href: '/desempenho', label: 'Desempenho', icon: 'chart' },
 				{ href: '/atalhos', label: 'Atalhos', icon: 'zap' },
 				{ href: '/notificacoes', label: 'Notificações', icon: 'bell' },
