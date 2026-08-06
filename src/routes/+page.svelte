@@ -4,6 +4,8 @@
 	import { diasAte, formatDateBR, prazoContratoLabel } from '$lib/alertas';
 	import { Card, Badge, Skeleton } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
+	import OrganyzeResumo from '$lib/components/organyze/ResumoHome.svelte';
+	import PagsupResumo from '$lib/components/pagsup/ResumoHome.svelte';
 
 	let { data } = $props();
 
@@ -71,22 +73,41 @@
 	{/each}
 </div>
 
-<!-- Organyze — atalho para o app completo (/dtools/organyze). -->
-<a
-	href="/dtools/organyze"
-	class="mt-6 flex items-center gap-4 rounded-[var(--radius-lg)] border border-grey-200 bg-surface p-5 no-underline shadow-sm transition-all hover:border-brand/40 hover:shadow-md"
->
-	<span class="grid size-11 shrink-0 place-items-center rounded-[var(--radius)] bg-brand text-white">
-		<Icon name="organyze" size={22} />
-	</span>
-	<span class="min-w-0 flex-1">
-		<span class="block text-sm font-semibold text-navy">Organyze</span>
-		<span class="block text-sm text-grey">
-			Suas tarefas do dia: anote o que precisa fazer e vá marcando o que concluiu.
-		</span>
-	</span>
-	<span class="shrink-0 text-grey"><Icon name="chevron" size={18} /></span>
-</a>
+<!-- Ferramentas (Organyze e Pag's Up) — streamed, como os alertas. Mesmo formato
+     e largura dos painéis temáticos lá embaixo. -->
+{#await data.ferramentas}
+	<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
+		{#each Array(2) as _, i (i)}
+			<Card>
+				<Skeleton class="h-4 w-32" />
+				<div class="mt-4 grid grid-cols-3 gap-2">
+					{#each Array(3) as _, j (j)}
+						<Skeleton class="h-14 w-full" />
+					{/each}
+				</div>
+				<div class="mt-4 space-y-3">
+					<Skeleton class="h-3 w-full" />
+					<Skeleton class="h-3 w-4/5" />
+					<Skeleton class="h-3 w-2/3" />
+				</div>
+			</Card>
+		{/each}
+	</div>
+{:then f}
+	<div class="grid grid-cols-1 gap-4 mt-6 {f.pagsup ? 'lg:grid-cols-2' : ''}">
+		<OrganyzeResumo resumo={f.organyze} hoje={f.hoje} />
+		{#if f.pagsup}
+			<PagsupResumo resumo={f.pagsup} hoje={f.hoje} />
+		{/if}
+	</div>
+{:catch}
+	<Card class="mt-6">
+		<p class="text-sm text-brand-danger">
+			Não foi possível carregar o resumo das ferramentas.
+			<a class="text-brand hover:underline" href="/dtools/organyze">Abrir o Organyze</a>.
+		</p>
+	</Card>
+{/await}
 
 <!-- Clientes (bolinhas com iniciais) -->
 <Card class="mt-6">

@@ -50,6 +50,16 @@ export interface Tarefa {
 	deletedAt?: string | null; // preenchido só nas tarefas vindas da Lixeira (soft delete)
 }
 
+/** Resumo do dia mostrado no bloco do Organyze na Visão Geral (só leitura). */
+export type OrganyzeResumo = {
+	/** Login sem colaborador correspondente: não há de quem mostrar tarefas. */
+	semVinculo: boolean;
+	pendentes: number;
+	concluidas: number;
+	atrasadas: number;
+	proximas: { id: string; titulo: string; prazo: string | null; prioridade: Prioridade }[];
+};
+
 // Ordem de exibição das seções (topo → base).
 export const STATUS_ORDEM: Status[] = ['nao_iniciado', 'em_execucao', 'concluida'];
 

@@ -3,6 +3,10 @@ import type { PageServerLoad } from './$types';
 import { DIAS_CONTRATO_VENCENDO, DIAS_SEM_INTERACAO } from '$lib/alertas';
 import { cached, chaveDoUsuario } from '$lib/server/cache';
 import { CONTEUDO_STATUS } from '$lib/conteudo';
+import { hojeSP } from '$lib/rotina';
+import { podeVer, type Permissoes } from '$lib/permissoes';
+import type { OrganyzeResumo, Prioridade } from '$lib/organyze/types';
+import type { PagsupResumo } from '$lib/pagsup/types';
 import { sel } from '$lib/server/query';
 
 // O módulo de Tarefas foi aposentado: a operação do dashboard passou a ser
@@ -210,7 +214,164 @@ async function carregarOperacao(supabase: SupabaseClient) {
 	};
 }
 
-export const load: PageServerLoad = async ({ locals: { supabase, user } }) => {
+// ---- Blocos das ferramentas (Organyze e Pag's Up) -------------------------
+
+/**
+ * Organyze do usuário logado. Pendentes de dias anteriores contam junto — é o
+ * mesmo efeito do rollover que o app faz ao abrir (lá ele reescreve a data; aqui
+ * só lê, para o dashboard não ter efeito colateral no banco).
+ */
+async function carregarOrganyze(
+	supabase: SupabaseClient,
+	user: Parameters<PageServerLoad>[0]['locals']['user'],
+	hoje: string
+): Promise<OrganyzeResumo> {
+	const vazio: OrganyzeResumo = {
+		semVinculo: true,
+		pendentes: 0,
+		concluidas: 0,
+		atrasadas: 0,
+		proximas: []
+	};
+	if (!user) return vazio;
+
+	// Mesmo casamento do /meu-dia: vínculo direto e, na falta dele, pelo e-mail.
+	let { data: colab } = await supabase
+		.from('colaboradores')
+		.select('id')
+		.eq('auth_user_id', user.id)
+		.maybeSingle();
+	if (!colab && user.email) {
+		({ data: colab } = await supabase
+			.from('colaboradores')
+			.select('id')
+			.eq('email', user.email)
+			.maybeSingle());
+	}
+	const meuId = (colab?.id as string | undefined) ?? null;
+	if (!meuId) return vazio;
+
+	// Tarefas do colaborador (dono) OU compartilhadas com ele.
+	const minhas = `colaborador_id.eq.${meuId},responsaveis.cs.{${meuId}}`;
+	const [pend, feitas] = await Promise.all([
+		supabase
+			.from('organyze_tarefas')
+			.select('id, titulo, prazo, prioridade, data, posicao')
+			.or(minhas)
+			.is('deleted_at', null)
+			.neq('status', 'concluida')
+			.lte('data', hoje)
+			.order('data', { ascending: true })
+			.order('posicao', { ascending: true })
+			.limit(100),
+		supabase
+			.from('organyze_tarefas')
+			.select('id', { count: 'exact', head: true })
+			.or(minhas)
+			.is('deleted_at', null)
+			.eq('status', 'concluida')
+			.eq('data', hoje)
+	]);
+
+	// Organyze ainda não migrado no banco: o dashboard não pode quebrar por isso.
+	if (pend.error) return vazio;
+
+	const linhas = pend.data ?? [];
+	return {
+		semVinculo: false,
+		pendentes: linhas.length,
+		concluidas: feitas.count ?? 0,
+		atrasadas: linhas.filter((t) => t.prazo && (t.prazo as string) < hoje).length,
+		// Prazo mais apertado primeiro; sem prazo vai para o fim (mantém a ordem do quadro).
+		proximas: [...linhas]
+			.sort((a, b) => (a.prazo ?? '9999').localeCompare(b.prazo ?? '9999'))
+			.slice(0, 5)
+			.map((t) => ({
+				id: t.id as string,
+				titulo: t.titulo as string,
+				prazo: (t.prazo as string | null) ?? null,
+				prioridade: ((t.prioridade as Prioridade) ?? 'media') as Prioridade
+			}))
+	};
+}
+
+/**
+ * Pag's Up: quanto já saiu no mês, o que vence na semana e os próximos serviços
+ * do cronograma. Só é chamado para quem tem o módulo liberado.
+ */
+async function carregarPagsup(supabase: SupabaseClient, hoje: string): Promise<PagsupResumo | null> {
+	const inicioMes = `${hoje.slice(0, 7)}-01`;
+	const [y, m] = hoje.split('-').map(Number);
+	const fimMes = `${hoje.slice(0, 7)}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
+	const em7 = new Date(`${hoje}T12:00:00Z`);
+	em7.setUTCDate(em7.getUTCDate() + 7);
+	const limite7 = em7.toISOString().slice(0, 10);
+
+	const [pagos, mes, proximos] = await Promise.all([
+		supabase
+			.from('pagsup_pagamentos')
+			.select('valor')
+			.gte('data_pagamento', inicioMes)
+			.lte('data_pagamento', fimMes),
+		supabase
+			.from('pagsup_cronograma')
+			.select('id', { count: 'exact', head: true })
+			.gte('data', inicioMes)
+			.lte('data', fimMes),
+		supabase
+			.from('pagsup_cronograma')
+			.select('id, data, valor, prestador_id')
+			.gte('data', hoje)
+			.lte('data', limite7)
+			.order('data', { ascending: true })
+			.limit(20)
+	]);
+
+	// Pag's Up sem migration/sem acesso: o bloco simplesmente não aparece.
+	if (proximos.error) return null;
+
+	const linhas = proximos.data ?? [];
+	// Nome do prestador em query própria: sem embed, um cronograma órfão (prestador
+	// excluído) não derruba a consulta inteira.
+	const ids = [...new Set(linhas.map((s) => s.prestador_id as string).filter(Boolean))];
+	const { data: prestadores } = ids.length
+		? await supabase.from('pagsup_prestadores').select('id, nome, servico').in('id', ids)
+		: { data: [] as { id: string; nome: string; servico: string }[] };
+	const porId = new Map((prestadores ?? []).map((p) => [p.id as string, p]));
+
+	return {
+		pagoMes: (pagos.data ?? []).reduce((s, p) => s + Number(p.valor ?? 0), 0),
+		aPagar7: linhas.reduce((s, l) => s + Number(l.valor ?? 0), 0),
+		servicosMes: mes.count ?? 0,
+		proximos: linhas.slice(0, 5).map((l) => {
+			const p = porId.get(l.prestador_id as string);
+			return {
+				id: l.id as string,
+				data: l.data as string,
+				nome: p?.nome ?? 'Prestador removido',
+				servico: p?.servico ?? '',
+				// null = "A definir" no Pag's Up; o bloco mostra o mesmo rótulo.
+				valor: l.valor === null || l.valor === undefined ? null : Number(l.valor)
+			};
+		})
+	};
+}
+
+/** Os dois blocos juntos: uma Promise só, para os cards aparecerem lado a lado. */
+async function carregarFerramentas(
+	supabase: SupabaseClient,
+	user: Parameters<PageServerLoad>[0]['locals']['user'],
+	perms: Permissoes
+) {
+	const hoje = hojeSP().data;
+	const [organyze, pagsup] = await Promise.all([
+		carregarOrganyze(supabase, user, hoje),
+		podeVer(perms, 'pagsup') ? carregarPagsup(supabase, hoje) : Promise.resolve(null)
+	]);
+	return { hoje, organyze, pagsup };
+}
+
+export const load: PageServerLoad = async ({ locals: { supabase, user, permissoes } }) => {
 	// As três queries cacheadas leem via `locals.supabase`, então o resultado já
 	// vem filtrado pela RLS de QUEM pediu. Com chave global, um perfil servia os
 	// dados de outro durante os 60s de TTL — daí o namespace por usuário.
@@ -231,6 +392,9 @@ export const load: PageServerLoad = async ({ locals: { supabase, user } }) => {
 		operacao,
 		clientes,
 		// Alertas: cacheados 60s + Promise não-aguardada → streaming com skeleton.
-		alertas: cached(k('dashboard:alertas'), 60, () => carregarAlertas(supabase))
+		alertas: cached(k('dashboard:alertas'), 60, () => carregarAlertas(supabase)),
+		// Também streamed, mas SEM cache: são listas que a pessoa acabou de mexer nas
+		// telas das ferramentas, e 60s de TTL fariam o dashboard mostrar o estado velho.
+		ferramentas: carregarFerramentas(supabase, user, (permissoes ?? {}) as Permissoes)
 	};
 };
