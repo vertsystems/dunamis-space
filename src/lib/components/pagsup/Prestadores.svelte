@@ -16,8 +16,8 @@
 	let isAdding = $state(false);
 	let editingId = $state<string | null>(null);
 
-	type Form = { name: string; service: string; region: string; defaultPrice: number; cpf: string; pix: string; whatsapp: string; lj: string };
-	const emptyForm = (): Form => ({ name: '', service: 'Carros e Veículos de Som', region: '', defaultPrice: 0, cpf: '', pix: '', whatsapp: '', lj: '' });
+	type Form = { name: string; service: string; region: string; defaultPrice: number; cpf: string; pix: string; whatsapp: string; especialidade: string; lj: string };
+	const emptyForm = (): Form => ({ name: '', service: 'Carros e Veículos de Som', region: '', defaultPrice: 0, cpf: '', pix: '', whatsapp: '', especialidade: '', lj: '' });
 	let novo = $state<Form>(emptyForm());
 	let edit = $state<Form>(emptyForm());
 
@@ -90,7 +90,8 @@
 			lj: p.lj ?? '',
 			cpf: p.cpf ?? '',
 			pix: p.pix ?? '',
-			whatsapp: p.whatsapp ?? ''
+			whatsapp: p.whatsapp ?? '',
+			especialidade: p.especialidade ?? ''
 		};
 	}
 
@@ -123,7 +124,7 @@
 	{#if isAdding}
 		<Card class="mb-6">
 			<h3 class="text-sm font-semibold text-navy mb-4">Adicionar Novo Prestador</h3>
-			<form onsubmit={handleAdd} class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-8 gap-3 items-end">
+			<form onsubmit={handleAdd} class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-9 gap-3 items-end">
 				<div class="xl:col-span-1">
 					<label for="np-nome" class="block text-xs font-medium text-slate mb-1">Nome</label>
 					<input id="np-nome" required bind:value={novo.name} placeholder="Ex: João Silva" class={fieldCls} />
@@ -137,6 +138,11 @@
 				<div class="xl:col-span-1">
 					<label for="np-reg" class="block text-xs font-medium text-slate mb-1">Região</label>
 					<input id="np-reg" required bind:value={novo.region} placeholder="Ex: Sorocaba SP" class={fieldCls} />
+				</div>
+				<div class="xl:col-span-1">
+					<!-- O select acima agrupa; aqui vai o que a pessoa faz de fato. -->
+					<label for="np-esp" class="block text-xs font-medium text-slate mb-1">Descrição</label>
+					<input id="np-esp" bind:value={novo.especialidade} placeholder="Ex: Pintura Facial" class={fieldCls} />
 				</div>
 				<div class="xl:col-span-1">
 					<label for="np-doc" class="block text-xs font-medium text-slate mb-1">CPF / CNPJ</label>
@@ -216,9 +222,12 @@
 												<input onkeydown={(e) => teclaEdicao(e, p.id)} bind:value={edit.name} aria-label="Nome do prestador" class={fieldCls} />
 											</td>
 											<td class="px-5 py-3">
-												<select onkeydown={escOuNada} bind:value={edit.service} aria-label="Serviço" class={fieldCls}>
-													{#each pagsup.serviceOptions as c (c)}<option value={c}>{c}</option>{/each}
-												</select>
+												<div class="flex flex-col gap-1.5">
+													<select onkeydown={escOuNada} bind:value={edit.service} aria-label="Categoria" class={fieldCls}>
+														{#each pagsup.serviceOptions as c (c)}<option value={c}>{c}</option>{/each}
+													</select>
+													<input onkeydown={(e) => teclaEdicao(e, p.id)} bind:value={edit.especialidade} aria-label="Descrição do serviço" class={fieldCls} placeholder="Descrição (opcional)" />
+												</div>
 											</td>
 											<td class="px-5 py-3">
 												<input onkeydown={(e) => teclaEdicao(e, p.id)} bind:value={edit.region} aria-label="Região" class={fieldCls} />
@@ -269,7 +278,8 @@
 												<span
 													use:caberEmUmaLinha={{ max: 11, min: 8 }}
 													class="inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-full px-2.5 py-0.5 align-middle text-[11px] font-bold uppercase tracking-wide {accent.chip}"
-													title={p.service}>{p.service}</span
+													title={p.especialidade ? `${p.especialidade} · ${p.service}` : p.service}
+													>{p.especialidade || p.service}</span
 												>
 											</td>
 											<td class="px-5 py-3.5 text-slate text-sm">{p.region}</td>

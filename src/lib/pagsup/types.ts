@@ -20,6 +20,11 @@ export interface Provider {
 	pix?: string;
 	/** Telefone de contato (WhatsApp). Separado do pix: chave Pix nem sempre é telefone. */
 	whatsapp?: string;
+	/**
+	 * O que faz dentro da categoria (ex.: "Pintura Facial" em Eventos Indoor).
+	 * `service` agrupa; esta descreve. Vazia = a própria categoria já descreve.
+	 */
+	especialidade?: string;
 	/** Sigla da unidade onde o trabalho é feito (LJ) — ver LOJAS. */
 	lj?: string;
 }

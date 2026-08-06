@@ -24,7 +24,7 @@
 	let editNotes = $state('');
 	let editLj = $state('');
 
-	const emptyExtra = () => ({ name: '', service: 'Carros e Veículos de Som', region: '', cpf: '', pix: '', whatsapp: '', lj: '', price: '' as number | '', notes: '' });
+	const emptyExtra = () => ({ name: '', service: 'Carros e Veículos de Som', region: '', cpf: '', pix: '', whatsapp: '', especialidade: '', lj: '', price: '' as number | '', notes: '' });
 	let extra = $state(emptyExtra());
 
 	// ---- Busca de prestador (entrou no lugar da grade de pré-selecionados) ----
@@ -107,6 +107,7 @@
 			cpf: extra.cpf,
 			pix: extra.pix,
 			whatsapp: extra.whatsapp,
+			especialidade: extra.especialidade,
 			lj: extra.lj,
 			defaultPrice: typeof extra.price === 'number' ? extra.price : 0
 		});
@@ -172,7 +173,8 @@
 				providerName: it.provider.name,
 				region: it.provider.region,
 				cpf: it.provider.cpf ?? '',
-				description: it.notes || it.provider.service,
+				// A descrição específica diz mais ao cliente que o nome do grupo.
+				description: it.notes || it.provider.especialidade || it.provider.service,
 				pix: it.provider.pix ?? '',
 				price: it.price
 			}))
@@ -255,7 +257,7 @@
 							>
 								<span class="min-w-0 flex-1">
 									<span class="block truncate text-sm font-medium text-navy">{p.name}</span>
-									<span class="block truncate text-xs text-grey">{p.service} · {p.region}</span>
+									<span class="block truncate text-xs text-grey">{p.especialidade || p.service} · {p.region}</span>
 								</span>
 								{#if sched}
 									<span class="shrink-0 text-xs font-medium text-brand-green">no cronograma</span>
@@ -298,6 +300,10 @@
 						<option value="">—</option>
 						{#each LOJAS as l (l.sigla)}<option value={l.sigla} title={l.nome}>{l.sigla} · {l.nome}</option>{/each}
 					</select>
+				</div>
+				<div>
+					<label for="ex-esp" class="block text-xs font-medium text-slate mb-1">Descrição</label>
+					<input id="ex-esp" bind:value={extra.especialidade} placeholder="Ex: Pintura Facial" class={fieldCls} />
 				</div>
 				<div>
 					<label for="ex-doc" class="block text-xs font-medium text-slate mb-1">CPF / CNPJ</label>
