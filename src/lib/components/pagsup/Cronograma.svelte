@@ -435,7 +435,7 @@
 											<td class="px-5 py-3.5 text-right font-mono text-navy font-medium">{item.price === '' ? '-' : formatBRL(item.price)}</td>
 											<td class="px-5 py-3.5">
 												<div class="flex items-center justify-end gap-1">
-													<div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+													<div class="flex gap-1 opacity-40 transition-opacity group-hover:opacity-100">
 														<button onclick={() => startEdit(item)} title="Editar" class="p-2 rounded-[var(--radius-sm)] text-grey hover:text-brand hover:bg-brand/10 transition-colors"><Pencil size={17} /></button>
 														<button onclick={(e) => { e.stopPropagation(); pagsup.deleteScheduled(item.id); }} title="Remover" class="p-2 rounded-[var(--radius-sm)] text-grey hover:text-brand-danger hover:bg-brand-danger/10 transition-colors"><Trash2 size={17} /></button>
 													</div>

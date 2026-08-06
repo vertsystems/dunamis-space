@@ -429,7 +429,7 @@
 								</div>
 								<div class="md:col-span-1 flex justify-end">
 									{#if editingId !== item.id}
-										<div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+										<div class="flex gap-1 opacity-40 transition-opacity group-hover:opacity-100">
 											<button onclick={() => startEdit(item)} title="Editar" class="p-2 rounded-[var(--radius-sm)] text-grey hover:text-brand hover:bg-brand/10 transition-colors"><Pencil size={16} /></button>
 											<button onclick={() => pagsup.removeScheduledNeg(item.id)} title="Remover" class="p-2 rounded-[var(--radius-sm)] text-grey hover:text-brand-danger hover:bg-brand-danger/10 transition-colors"><Trash2 size={16} /></button>
 										</div>
