@@ -23,6 +23,7 @@
 	import type { Categoria, Status, Tarefa } from '$lib/organyze/types';
 	import { Button, Modal } from '$lib/components/ui';
 	import CargoBadge from '$lib/components/CargoBadge.svelte';
+	import Abas from '$lib/components/organyze/Abas.svelte';
 	import RichText from '$lib/components/organyze/RichText.svelte';
 	import {
 		ChevronLeft,
@@ -429,6 +430,7 @@
 				<div class="text-lg font-bold leading-tight text-navy">{c?.nome}</div>
 				<div class="text-xs text-grey">Tarefas do dia</div>
 			</div>
+			<Abas />
 			<Button variant="secondary" size="sm" onclick={() => organyze.sair()}>
 				<LogOut size={15} /> Trocar
 			</Button>

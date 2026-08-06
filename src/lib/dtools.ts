@@ -27,12 +27,9 @@ export const DTOOLS_FERRAMENTAS: Ferramenta[] = [
 		href: '/dtools/organyze',
 		label: 'Organyze',
 		icon: 'organyze',
-		descricao: 'Lista de tarefas do dia: adicione o que precisa fazer e vá marcando o que concluiu.',
-		subitens: [
-			{ href: '/dtools/organyze', label: 'Tarefas', letra: 'T' },
-			{ href: '/dtools/organyze/metas', label: 'Metas do Mês', letra: 'M' },
-			{ href: '/dtools/organyze/lixeira', label: 'Lixeira', letra: 'L' }
-		]
+		descricao: 'Lista de tarefas do dia: adicione o que precisa fazer e vá marcando o que concluiu.'
+		// Sem `subitens`: Tarefas, Metas do Mês e Lixeira agora são abas no topo da
+		// própria tela (components/organyze/Abas.svelte), como no Pag's Up.
 	}
 ];
 

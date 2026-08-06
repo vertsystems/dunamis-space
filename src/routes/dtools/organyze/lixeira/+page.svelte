@@ -3,6 +3,7 @@
 	import { corPrioridade, STATUS_LABEL } from '$lib/organyze/types';
 	import { Button } from '$lib/components/ui';
 	import CargoBadge from '$lib/components/CargoBadge.svelte';
+	import Abas from '$lib/components/organyze/Abas.svelte';
 	import { Trash2, RotateCcw, LogOut } from '@lucide/svelte';
 	import type { PageData } from './$types';
 
@@ -112,6 +113,7 @@
 				<div class="text-lg font-bold leading-tight text-navy">{c?.nome}</div>
 				<div class="text-xs text-grey">Lixeira</div>
 			</div>
+			<Abas />
 			<Button variant="secondary" size="sm" onclick={() => organyze.sair()}>
 				<LogOut size={15} /> Trocar
 			</Button>

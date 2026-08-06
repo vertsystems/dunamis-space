@@ -5,6 +5,7 @@
 	import type { Meta } from '$lib/organyze/types';
 	import { Button } from '$lib/components/ui';
 	import CargoBadge from '$lib/components/CargoBadge.svelte';
+	import Abas from '$lib/components/organyze/Abas.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import {
 		ChevronLeft,
@@ -214,6 +215,7 @@
 				<div class="text-lg font-bold leading-tight text-navy">{c?.nome}</div>
 				<div class="text-xs text-grey">Metas do mês</div>
 			</div>
+			<Abas />
 			<Button variant="secondary" size="sm" onclick={() => organyze.sair()}>
 				<LogOut size={15} /> Trocar
 			</Button>
