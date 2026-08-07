@@ -16,7 +16,16 @@ export default defineConfig({
 			// adapter-auto only supports some environments, see https://svelte.dev/docs/kit/adapter-auto for a list.
 			// If your environment is not supported, or you settled on a specific environment, switch out the adapter.
 			// See https://svelte.dev/docs/kit/adapters for more information about adapters.
-			adapter: adapter()
+			//
+			// regions: o banco Supabase fica em us-west-2 (Oregon) e as funções
+			// nasciam em iad1 (Washington) — cada consulta cruzava os EUA. Medido em
+			// produção pela rota /api/_diag: 123 ms POR consulta, 650 ms para cinco
+			// em série. pdx1 é a região da Vercel na mesma casa do banco.
+			//
+			// O troco é ~60 ms a mais entre o usuário e a função (uma vez por
+			// requisição) contra 100+ ms economizados em CADA consulta — e uma tela
+			// como a Visão Geral faz mais de dez.
+			adapter: adapter({ regions: ['pdx1'] })
 		})
 	]
 });
