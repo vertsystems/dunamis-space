@@ -73,42 +73,6 @@
 	{/each}
 </div>
 
-<!-- Ferramentas (Organyze e Pag's Up) — streamed, como os alertas. Mesmo formato
-     e largura dos painéis temáticos lá embaixo. -->
-{#await data.ferramentas}
-	<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
-		{#each Array(2) as _, i (i)}
-			<Card>
-				<Skeleton class="h-4 w-32" />
-				<div class="mt-4 grid grid-cols-3 gap-2">
-					{#each Array(3) as _, j (j)}
-						<Skeleton class="h-14 w-full" />
-					{/each}
-				</div>
-				<div class="mt-4 space-y-3">
-					<Skeleton class="h-3 w-full" />
-					<Skeleton class="h-3 w-4/5" />
-					<Skeleton class="h-3 w-2/3" />
-				</div>
-			</Card>
-		{/each}
-	</div>
-{:then f}
-	<div class="grid grid-cols-1 gap-4 mt-6 {f.pagsup ? 'lg:grid-cols-2' : ''}">
-		<OrganyzeResumo resumo={f.organyze} hoje={f.hoje} />
-		{#if f.pagsup}
-			<PagsupResumo resumo={f.pagsup} hoje={f.hoje} />
-		{/if}
-	</div>
-{:catch}
-	<Card class="mt-6">
-		<p class="text-sm text-brand-danger">
-			Não foi possível carregar o resumo das ferramentas.
-			<a class="text-brand hover:underline" href="/dtools/organyze">Abrir o Organyze</a>.
-		</p>
-	</Card>
-{/await}
-
 <!-- Clientes (bolinhas com iniciais) -->
 <Card class="mt-6">
 	<div class="flex items-center justify-between gap-2 mb-4">
@@ -148,6 +112,42 @@
 		<p class="text-sm text-grey">Nenhum cliente ativo ainda.</p>
 	{/if}
 </Card>
+
+<!-- Ferramentas (Organyze e Pag's Up) — streamed, como os alertas. Mesmo formato
+     e largura dos painéis temáticos lá embaixo. -->
+{#await data.ferramentas}
+	<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
+		{#each Array(2) as _, i (i)}
+			<Card>
+				<Skeleton class="h-4 w-32" />
+				<div class="mt-4 grid grid-cols-3 gap-2">
+					{#each Array(3) as _, j (j)}
+						<Skeleton class="h-14 w-full" />
+					{/each}
+				</div>
+				<div class="mt-4 space-y-3">
+					<Skeleton class="h-3 w-full" />
+					<Skeleton class="h-3 w-4/5" />
+					<Skeleton class="h-3 w-2/3" />
+				</div>
+			</Card>
+		{/each}
+	</div>
+{:then f}
+	<div class="grid grid-cols-1 gap-4 mt-6 {f.pagsup ? 'lg:grid-cols-2' : ''}">
+		<OrganyzeResumo resumo={f.organyze} hoje={f.hoje} />
+		{#if f.pagsup}
+			<PagsupResumo resumo={f.pagsup} hoje={f.hoje} />
+		{/if}
+	</div>
+{:catch}
+	<Card class="mt-6">
+		<p class="text-sm text-brand-danger">
+			Não foi possível carregar o resumo das ferramentas.
+			<a class="text-brand hover:underline" href="/dtools/organyze">Abrir o Organyze</a>.
+		</p>
+	</Card>
+{/await}
 
 <!-- Blocos temáticos -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6 items-start">
