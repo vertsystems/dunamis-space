@@ -6,10 +6,10 @@
 	import { invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
 	import { podeEditar, podeExcluir } from '$lib/permissoes';
-	import { Badge, Button, Card, Modal } from '$lib/components/ui';
+	import { Button, Card, Modal } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
 	import VaultForm from '$lib/components/VaultForm.svelte';
-	import { Copy, Eye, EyeOff, Pencil, Trash2, ExternalLink } from '@lucide/svelte';
+	import { Copy, Eye, EyeOff, Info, Pencil, Trash2, ExternalLink } from '@lucide/svelte';
 	import { urlAbsoluta, urlCurta } from '$lib/vault';
 	import type { VaultItem } from '$lib/vault';
 	import { toast } from '$lib/toast.svelte';
@@ -96,75 +96,84 @@
 			só para quem tem o Vault liberado.
 		</p>
 	{:else}
-		<ul class="space-y-2">
-			{#each vault.itens as it (it.id)}
-				{@const resp = nomeResp(it.responsavel_id)}
-				{@const link = urlAbsoluta(it.url)}
-				<li
-					class="rounded-[var(--radius)] border border-grey-200 bg-surface px-4 py-3 shadow-xs transition-colors hover:border-grey"
-				>
-					<div class="flex flex-wrap items-start justify-between gap-2">
-						<div class="min-w-0">
-							<div class="flex flex-wrap items-center gap-2">
-								<span class="text-sm font-semibold text-navy">{it.titulo}</span>
-								{#if it.categoria}<Badge tone="neutral">{it.categoria}</Badge>{/if}
-							</div>
+		<!-- Uma linha por acesso: com 10+ contas por cliente, o cartão por item fazia
+		     a lista virar rolagem. O que sobrava em altura (URL, observações,
+		     responsável) foi para a mesma linha, como ícone com dica. -->
+		<div class="overflow-hidden rounded-[var(--radius)] border border-grey-200">
+			<!-- Cabeçalho: os rótulos Login/Senha saem de dentro de cada linha. -->
+			<div
+				class="hidden border-b border-grey-200 bg-bg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-grey sm:grid sm:grid-cols-[minmax(0,1.7fr)_minmax(0,1.2fr)_minmax(0,1fr)_auto]"
+			>
+				<span>Acesso</span>
+				<span>Login</span>
+				<span>Senha</span>
+				<span class="sr-only">Ações</span>
+			</div>
+
+			<ul class="divide-y divide-grey-200/70">
+				{#each vault.itens as it (it.id)}
+					{@const resp = nomeResp(it.responsavel_id)}
+					{@const link = urlAbsoluta(it.url)}
+					{@const nota = [resp ? `Responsável: ${resp}` : null, it.observacoes]
+						.filter(Boolean)
+						.join('\n')}
+					<li
+						class="grid items-center gap-x-3 gap-y-1 px-3 py-1.5 transition-colors hover:bg-bg/60 sm:grid-cols-[minmax(0,1.7fr)_minmax(0,1.2fr)_minmax(0,1fr)_auto]"
+					>
+						<!-- Acesso: nome, categoria, link e nota (tudo numa linha) -->
+						<div class="flex min-w-0 items-center gap-1.5">
+							<span class="truncate text-sm font-semibold text-navy" title={it.titulo}>
+								{it.titulo}
+							</span>
+							{#if it.categoria}
+								<span
+									class="shrink-0 rounded-full bg-bg px-1.5 py-0.5 text-[10px] font-medium text-slate"
+								>
+									{it.categoria}
+								</span>
+							{/if}
 							{#if link}
 								<a
 									href={link}
 									target="_blank"
 									rel="noopener"
-									class="mt-0.5 inline-flex items-center gap-1 text-xs text-brand hover:underline"
+									class="shrink-0 text-grey transition-colors hover:text-brand"
+									title={urlCurta(it.url)}
+									aria-label="Abrir {urlCurta(it.url)}"
 								>
-									<ExternalLink size={12} />{urlCurta(it.url)}
+									<ExternalLink size={13} />
 								</a>
 							{/if}
+							{#if nota}
+								<span class="shrink-0 text-grey" title={nota}>
+									<Info size={13} />
+									<span class="sr-only">{nota}</span>
+								</span>
+							{/if}
 						</div>
-						{#if podeMexer || podeApagar}
-							<div class="flex shrink-0 items-center gap-1">
-								{#if podeMexer}
-									<button
-										class="grid size-8 place-items-center rounded-[var(--radius-sm)] text-grey transition-colors hover:bg-bg hover:text-navy"
-										aria-label="Editar acesso"
-										title="Editar"
-										onclick={() => (editando = it)}
-									>
-										<Pencil size={15} />
-									</button>
-								{/if}
-								{#if podeApagar}
-									<button
-										class="grid size-8 place-items-center rounded-[var(--radius-sm)] text-grey transition-colors hover:bg-brand-danger/10 hover:text-brand-danger"
-										aria-label="Excluir acesso"
-										title="Excluir"
-										onclick={() => (excluindo = it)}
-									>
-										<Trash2 size={15} />
-									</button>
-								{/if}
-							</div>
-						{/if}
-					</div>
 
-					<div class="mt-2 grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
-						<div class="flex items-center gap-2">
-							<span class="w-14 shrink-0 text-xs text-grey">Login</span>
-							<span class="min-w-0 flex-1 truncate text-sm text-navy">{it.login || '—'}</span>
+						<!-- Login -->
+						<div class="flex min-w-0 items-center gap-1">
+							<span class="w-12 shrink-0 text-[11px] text-grey sm:hidden">Login</span>
+							<span class="min-w-0 flex-1 truncate text-sm text-slate" title={it.login ?? ''}>
+								{it.login || '—'}
+							</span>
 							{#if it.login}
 								<button
-									class="grid size-7 shrink-0 place-items-center rounded-[var(--radius-sm)] text-grey transition-colors hover:bg-bg hover:text-navy"
+									class="grid size-6 shrink-0 place-items-center rounded-[var(--radius-sm)] text-grey/70 transition-colors hover:bg-bg hover:text-navy"
 									aria-label="Copiar login"
 									title="Copiar login"
 									onclick={() => copiar(it.login, 'Login')}
 								>
-									<Copy size={14} />
+									<Copy size={13} />
 								</button>
 							{/if}
 						</div>
 
-						<div class="flex items-center gap-2">
-							<span class="w-14 shrink-0 text-xs text-grey">Senha</span>
-							<span class="min-w-0 flex-1 truncate font-mono text-sm text-navy">
+						<!-- Senha -->
+						<div class="flex min-w-0 items-center gap-1">
+							<span class="w-12 shrink-0 text-[11px] text-grey sm:hidden">Senha</span>
+							<span class="min-w-0 flex-1 truncate font-mono text-sm text-slate">
 								{#if !it.senha}
 									—
 								{:else if reveladas[it.id]}
@@ -175,34 +184,51 @@
 							</span>
 							{#if it.senha}
 								<button
-									class="grid size-7 shrink-0 place-items-center rounded-[var(--radius-sm)] text-grey transition-colors hover:bg-bg hover:text-navy"
+									class="grid size-6 shrink-0 place-items-center rounded-[var(--radius-sm)] text-grey/70 transition-colors hover:bg-bg hover:text-navy"
 									aria-label={reveladas[it.id] ? 'Ocultar senha' : 'Mostrar senha'}
 									title={reveladas[it.id] ? 'Ocultar' : 'Mostrar'}
 									onclick={() => (reveladas = { ...reveladas, [it.id]: !reveladas[it.id] })}
 								>
-									{#if reveladas[it.id]}<EyeOff size={14} />{:else}<Eye size={14} />{/if}
+									{#if reveladas[it.id]}<EyeOff size={13} />{:else}<Eye size={13} />{/if}
 								</button>
 								<button
-									class="grid size-7 shrink-0 place-items-center rounded-[var(--radius-sm)] text-grey transition-colors hover:bg-bg hover:text-navy"
+									class="grid size-6 shrink-0 place-items-center rounded-[var(--radius-sm)] text-grey/70 transition-colors hover:bg-bg hover:text-navy"
 									aria-label="Copiar senha"
 									title="Copiar senha"
 									onclick={() => copiar(it.senha, 'Senha')}
 								>
-									<Copy size={14} />
+									<Copy size={13} />
 								</button>
 							{/if}
 						</div>
-					</div>
 
-					{#if it.observacoes || resp}
-						<div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-grey">
-							{#if resp}<span>Responsável: {resp}</span>{/if}
-							{#if it.observacoes}<span class="whitespace-pre-line">{it.observacoes}</span>{/if}
+						<!-- Ações: sempre à vista, discretas (mesmo padrão do Pag's Up). -->
+						<div class="flex shrink-0 items-center gap-0.5 justify-self-end">
+							{#if podeMexer}
+								<button
+									class="grid size-6 place-items-center rounded-[var(--radius-sm)] text-grey/70 transition-colors hover:bg-bg hover:text-navy"
+									aria-label="Editar acesso"
+									title="Editar"
+									onclick={() => (editando = it)}
+								>
+									<Pencil size={13} />
+								</button>
+							{/if}
+							{#if podeApagar}
+								<button
+									class="grid size-6 place-items-center rounded-[var(--radius-sm)] text-grey/70 transition-colors hover:bg-brand-danger/10 hover:text-brand-danger"
+									aria-label="Excluir acesso"
+									title="Excluir"
+									onclick={() => (excluindo = it)}
+								>
+									<Trash2 size={13} />
+								</button>
+							{/if}
 						</div>
-					{/if}
-				</li>
-			{/each}
-		</ul>
+					</li>
+				{/each}
+			</ul>
+		</div>
 	{/if}
 </Card>
 
