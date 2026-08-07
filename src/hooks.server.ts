@@ -48,7 +48,10 @@ const authGuard: Handle = async ({ event, resolve }) => {
 	const publicRoute =
 		event.url.pathname.startsWith('/login') ||
 		event.url.pathname.startsWith('/redefinir-senha') ||
-		event.url.pathname.startsWith('/aprovar');
+		event.url.pathname.startsWith('/aprovar') ||
+		// TEMPORÁRIO — medição de latência função↔banco (a própria rota exige
+		// chave e não devolve dado nenhum). Remover junto com /api/_diag.
+		event.url.pathname.startsWith('/api/_diag');
 
 	// getSession() só lê e decodifica o cookie — é local, sem rede. As duas
 	// chamadas CARAS são getUser() (valida no servidor de auth) e o RPC de
