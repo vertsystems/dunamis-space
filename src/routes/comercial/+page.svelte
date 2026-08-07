@@ -9,6 +9,8 @@
 	import CrmRankingResumo from '$lib/components/crm/CrmRankingResumo.svelte';
 	import CrmFechamentos from '$lib/components/crm/CrmFechamentos.svelte';
 	import CrmAgenda from '$lib/components/crm/CrmAgenda.svelte';
+	import CrmAtividades from '$lib/components/crm/CrmAtividades.svelte';
+	import { Modal } from '$lib/components/ui';
 	import {
 		computeAgenda,
 		computeFechamentos,
@@ -38,6 +40,10 @@
 	const fechamentos = $derived(computeFechamentos(loja.negocios));
 	const agenda = $derived(computeAgenda(loja.atividades));
 
+	// A agenda mostra os próximos dias; a lista completa (com filtro por
+	// responsável e as já concluídas) abre daqui, sem virar item de menu.
+	let todasAsAtividades = $state(false);
+
 	const mesLabel = $derived(
 		new Date(mesRef.ano, mesRef.mes - 1, 1).toLocaleDateString('pt-BR', {
 			month: 'long',
@@ -66,6 +72,28 @@
 			onToggle={(id, feita) => loja.concluirAtividade(id, feita)}
 			onAbrirNegocio={(id) => loja.abrirNegocio(id)}
 			onAbrirContato={(id) => loja.abrirContato(id)}
+			onVerTodas={() => (todasAsAtividades = true)}
 		/>
 	</div>
 </div>
+
+<Modal
+	open={todasAsAtividades}
+	title="Todas as atividades"
+	size="xl"
+	onClose={() => (todasAsAtividades = false)}
+>
+	<CrmAtividades
+		atividades={loja.atividades}
+		colaboradores={loja.dados.colaboradores}
+		onToggle={(id, feita) => loja.concluirAtividade(id, feita)}
+		onOpenNegocio={(id) => {
+			todasAsAtividades = false;
+			loja.abrirNegocio(id);
+		}}
+		onOpenContato={(id) => {
+			todasAsAtividades = false;
+			loja.abrirContato(id);
+		}}
+	/>
+</Modal>

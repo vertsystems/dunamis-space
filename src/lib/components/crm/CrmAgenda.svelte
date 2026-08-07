@@ -9,12 +9,15 @@
 		agenda,
 		onToggle,
 		onAbrirNegocio,
-		onAbrirContato
+		onAbrirContato,
+		/** Abre a lista completa (com filtros e concluídas). */
+		onVerTodas
 	}: {
 		agenda: Agenda;
 		onToggle: (id: string, concluida: boolean) => void;
 		onAbrirNegocio: (id: string) => void;
 		onAbrirContato: (id: string) => void;
+		onVerTodas?: () => void;
 	} = $props();
 
 	const totalNaSemana = $derived(agenda.dias.reduce((s, d) => s + d.atividades.length, 0));
@@ -56,7 +59,14 @@
 	<div class="flex items-center justify-between gap-2 border-b border-grey-200 px-5 py-3.5">
 		<div>
 			<h2 class="text-sm font-semibold text-navy">Agenda</h2>
-			<p class="text-xs text-grey">Próximos 7 dias</p>
+			<p class="text-xs text-grey">
+				Próximos 7 dias
+				{#if onVerTodas}
+					· <button class="font-medium text-brand hover:underline" onclick={onVerTodas}>
+						ver todas
+					</button>
+				{/if}
+			</p>
 		</div>
 		{#if agenda.atrasadas.length}
 			<Badge tone="danger">{agenda.atrasadas.length} atrasada{agenda.atrasadas.length > 1 ? 's' : ''}</Badge>
