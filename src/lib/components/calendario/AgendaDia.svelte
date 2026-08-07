@@ -3,7 +3,12 @@
 	import { Button, Modal, toneClasses } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
 	import { diaLongo } from '$lib/calendario';
-	import { conteudoTipoLabel, conteudoStatusLabel, conteudoStatusTone } from '$lib/conteudo';
+	import {
+		conteudoTipoLabel,
+		conteudoStatusLabel,
+		conteudoStatusTone,
+		conteudoStatusFundo
+	} from '$lib/conteudo';
 
 	let {
 		/** Chave do dia aberto (AAAA-MM-DD); null fecha. */
@@ -34,7 +39,9 @@
 					<button
 						type="button"
 						onclick={() => onEditar(c)}
-						class="flex w-full flex-col gap-1 rounded-[var(--radius)] border border-grey-200 bg-surface px-3 py-2 text-left transition-colors hover:bg-bg"
+						class="flex w-full flex-col gap-1 rounded-[var(--radius)] border px-3 py-2 text-left transition-colors {conteudoStatusFundo(
+							c.status
+						)}"
 					>
 						<span class="flex items-center gap-2">
 							<span class="shrink-0 tabular-nums text-xs text-brand">{c.hora}</span>

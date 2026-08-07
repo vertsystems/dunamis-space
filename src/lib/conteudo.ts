@@ -103,6 +103,29 @@ export function conteudoStatusTone(
 	}
 }
 
+/**
+ * Fundo do card no calendário, na cor do status — bem lavado.
+ *
+ * A opacidade é baixa de propósito: o card tem texto escuro por cima e precisa
+ * continuar legível, então a cor serve para bater o olho e reconhecer o estado
+ * do post, não para gritar. O selo colorido do status continua no card; isto
+ * só estende a mesma cor ao fundo. O hover escurece o próprio tom (antes ia
+ * para cinza, o que apagava a cor justamente quando o mouse estava em cima).
+ */
+const STATUS_FUNDO: Record<ReturnType<typeof conteudoStatusTone>, string> = {
+	neutral: 'border-grey-200/70 bg-surface hover:bg-bg',
+	brand: 'border-brand/25 bg-brand/[0.06] hover:bg-brand/[0.12]',
+	info: 'border-navy/20 bg-navy/[0.05] hover:bg-navy/[0.10]',
+	warning: 'border-brand-amber/30 bg-brand-amber/[0.10] hover:bg-brand-amber/[0.18]',
+	success: 'border-brand-green/30 bg-brand-green/[0.08] hover:bg-brand-green/[0.15]',
+	danger: 'border-brand-danger/25 bg-brand-danger/[0.06] hover:bg-brand-danger/[0.12]'
+};
+
+/** Classes de borda + fundo do card de conteúdo, conforme o status. */
+export function conteudoStatusFundo(status: string): string {
+	return STATUS_FUNDO[conteudoStatusTone(status)];
+}
+
 export function conteudoStatusLabel(status: string): string {
 	return CONTEUDO_STATUS.find((s) => s.value === status)?.label ?? status;
 }

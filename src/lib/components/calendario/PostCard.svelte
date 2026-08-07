@@ -3,7 +3,12 @@
 	// status (com a bolinha que avança para o próximo), tipos, cliente e excluir.
 	import { toneClasses } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
-	import { conteudoTipoLabel, conteudoStatusLabel, conteudoStatusTone } from '$lib/conteudo';
+	import {
+		conteudoTipoLabel,
+		conteudoStatusLabel,
+		conteudoStatusTone,
+		conteudoStatusFundo
+	} from '$lib/conteudo';
 
 	let {
 		conteudo: c,
@@ -25,6 +30,8 @@
 	} = $props();
 
 	const tipos = $derived(c.tipos?.length ? c.tipos : c.tipo ? [c.tipo] : []);
+	// O card inteiro veste a cor do status, bem lavada.
+	const fundo = $derived(conteudoStatusFundo(c.status));
 </script>
 
 <div
@@ -44,7 +51,7 @@
 		}
 	}}
 	title={`${conteudoTipoLabel(c.tipo)} · ${conteudoStatusLabel(c.status)}${c.cliente_nome ? ' · ' + c.cliente_nome : ''}`}
-	class="relative flex w-full cursor-grab flex-col gap-0.5 rounded-[var(--radius-sm)] border border-grey-200/70 bg-surface px-1.5 py-1 pr-5 text-left transition-colors hover:bg-bg active:cursor-grabbing"
+	class="relative flex w-full cursor-grab flex-col gap-0.5 rounded-[var(--radius-sm)] border px-1.5 py-1 pr-5 text-left transition-colors active:cursor-grabbing {fundo}"
 >
 	<span class="flex items-baseline gap-1">
 		<span class="truncate text-[0.68rem] font-semibold leading-tight text-navy-900">
