@@ -13,6 +13,7 @@ import type { Recurso, RecursoDePagina } from './crud';
 import { clienteFromForm, erroDeMigration } from '$lib/clientes';
 import { acessoFromForm, ferramentaFromForm, fornecedorFromForm } from '$lib/adm';
 import { vaultFromForm } from '$lib/vault';
+import { atividadeFromForm, contatoFromForm } from '$lib/crm';
 import { projetoFromForm } from '$lib/projetos';
 import { processoFromForm } from '$lib/processos';
 import { contratoFromForm, planoFromForm } from '$lib/contratos';
@@ -167,6 +168,29 @@ export const acessos = naPagina({
 	fromForm: acessoFromForm,
 	validar: (v) => (!v.plataforma ? 'A plataforma é obrigatória.' : null),
 	idInvalido: 'Acesso inválido.',
+	tocarUpdatedAt: true
+});
+
+export const crmContatos = naPagina({
+	tabela: 'crm_contatos',
+	modulo: 'crm',
+	fromForm: contatoFromForm,
+	validar: (v) => (!v.nome ? 'O nome do contato é obrigatório.' : null),
+	idInvalido: 'Contato inválido.',
+	tocarUpdatedAt: true
+});
+
+export const crmAtividades = naPagina({
+	tabela: 'crm_atividades',
+	modulo: 'crm',
+	fromForm: atividadeFromForm,
+	validar: (v) => {
+		// Uma nota pode não ter título (o texto está na descrição); o resto precisa.
+		if (!v.titulo && v.tipo !== 'nota') return 'Descreva a atividade.';
+		if (!v.negocio_id && !v.contato_id && !v.titulo) return 'Dados insuficientes.';
+		return null;
+	},
+	idInvalido: 'Atividade inválida.',
 	tocarUpdatedAt: true
 });
 

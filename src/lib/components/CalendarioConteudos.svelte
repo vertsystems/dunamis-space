@@ -1,11 +1,28 @@
 <script lang="ts">
+	// Calendário editorial: mês, semana e lista, com arrastar-e-soltar entre dias.
+	// O desenho de cada post está em calendario/PostCard, e as duas janelas
+	// (agenda do dia e mover/copiar) são componentes — aqui fica a grade e o
+	// estado que elas compartilham.
 	import { goto, invalidateAll } from '$app/navigation';
-	import { deserialize } from '$app/forms';
-	import { Card, Button, Select, Modal, toneClasses } from '$lib/components/ui';
+	import { Card, Button, Select, Modal } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
 	import ConteudoForm from '$lib/components/ConteudoForm.svelte';
-	import { SEMANA, MESES, chaveDia, celulasMes, colunaSemana, inicioDaSemana } from '$lib/calendario';
-	import { conteudoTipoLabel, conteudoStatusLabel, conteudoStatusTone } from '$lib/conteudo';
+	import PostCard from '$lib/components/calendario/PostCard.svelte';
+	import AgendaDia from '$lib/components/calendario/AgendaDia.svelte';
+	import MoverOuCopiar from '$lib/components/calendario/MoverOuCopiar.svelte';
+	import {
+		SEMANA,
+		MESES,
+		addDias,
+		chaveDia,
+		celulasMes,
+		colunaSemana,
+		diaLongo,
+		inicioDaSemana,
+		parseChave
+	} from '$lib/calendario';
+	import { conteudoTipoLabel, conteudoStatusLabel } from '$lib/conteudo';
+	import { chamarAction } from '$lib/acoesRemotas';
 	import { toast } from '$lib/toast.svelte';
 
 	let {
@@ -31,7 +48,10 @@
 	function abrirNovo(key: string) {
 		const [a, m, d] = key.split('-').map(Number);
 		const dt = new Date(a, m - 1, d, 9, 0, 0);
-		novoConteudo = { data_publicacao: dt.toISOString(), cliente_id: data.clienteFiltro || clienteFixo || '' };
+		novoConteudo = {
+			data_publicacao: dt.toISOString(),
+			cliente_id: data.clienteFiltro || clienteFixo || ''
+		};
 	}
 	function aposCriar() {
 		novoConteudo = null;
@@ -46,27 +66,21 @@
 		toast.success('Conteúdo salvo');
 		invalidateAll();
 	}
+
 	async function excluir(c: Record<string, any> | null, e?: Event) {
 		e?.stopPropagation();
 		if (!c || processando) return;
 		processando = true;
+		// Sem o finally, uma queda de rede deixava `processando` travado em true e o
+		// calendário parava de aceitar qualquer ação até recarregar a página.
 		try {
-			const fd = new FormData();
-			fd.set('id', c.id);
-			const resp = await fetch(`${ACTION}?/excluir`, { method: 'POST', body: fd });
-			const result = deserialize(await resp.text());
-			if (result.type === 'success') {
-				if (editando?.id === c.id) editando = null;
-				toast.success('Conteúdo excluído');
-				invalidateAll();
-			} else if (result.type === 'failure') {
-				toast.error((result.data?.error as string) ?? 'Falha ao excluir');
-			}
-		} catch {
-			toast.error('Falha de conexão. Tente novamente.');
+			const ok = await chamarAction(
+				`${ACTION}?/excluir`,
+				{ id: c.id },
+				{ ok: 'Conteúdo excluído', erro: 'Falha ao excluir' }
+			);
+			if (ok && editando?.id === c.id) editando = null;
 		} finally {
-			// Sem o finally, uma queda de rede deixava `processando` travado em true
-			// e o calendário parava de aceitar qualquer ação até recarregar a página.
 			processando = false;
 		}
 	}
@@ -93,19 +107,11 @@
 		if (!alvo || processando) return;
 		processando = true;
 		try {
-			const fd = new FormData();
-			fd.set('id', alvo.c.id);
-			fd.set('data_publicacao', alvo.novaISO);
-			const resp = await fetch(`${ACTION}?/${acao}`, { method: 'POST', body: fd });
-			const result = deserialize(await resp.text());
-			if (result.type === 'success') {
-				toast.success(acao === 'mover' ? 'Post movido' : 'Post copiado');
-				invalidateAll();
-			} else if (result.type === 'failure') {
-				toast.error((result.data?.error as string) ?? 'Falha na operação');
-			}
-		} catch {
-			toast.error('Falha de conexão. Tente novamente.');
+			await chamarAction(
+				`${ACTION}?/${acao}`,
+				{ id: alvo.c.id, data_publicacao: alvo.novaISO },
+				{ ok: acao === 'mover' ? 'Post movido' : 'Post copiado', erro: 'Falha na operação' }
+			);
 		} finally {
 			processando = false;
 			moverCopiar = null;
@@ -116,17 +122,11 @@
 	async function definirStatusRapido(c: Record<string, any>, status: string, e?: Event) {
 		e?.stopPropagation();
 		if (c.status === status) return;
-		const fd = new FormData();
-		fd.set('id', c.id);
-		fd.set('status', status);
-		const resp = await fetch(`${ACTION}?/definirStatus`, { method: 'POST', body: fd });
-		const result = deserialize(await resp.text());
-		if (result.type === 'success') {
-			toast.success(`Status: ${conteudoStatusLabel(status)}`);
-			invalidateAll();
-		} else if (result.type === 'failure') {
-			toast.error((result.data?.error as string) ?? 'Falha ao alterar status');
-		}
+		await chamarAction(
+			`${ACTION}?/definirStatus`,
+			{ id: c.id, status },
+			{ ok: `Status: ${conteudoStatusLabel(status)}`, erro: 'Falha ao alterar status' }
+		);
 	}
 
 	// --- Agenda do dia (clique no quadrado) ---
@@ -151,7 +151,7 @@
 	const MAX_CELULA = 3;
 
 	const conteudosPorDia = $derived.by(() => {
-		const m = new Map<string, typeof data.conteudos>();
+		const m = new Map<string, Record<string, any>[]>();
 		for (const c of data.conteudos) {
 			const arr = m.get(c.dia) ?? [];
 			arr.push(c);
@@ -159,11 +159,7 @@
 		}
 		return m;
 	});
-	const tiposDe = (c: { tipos?: string[]; tipo?: string }) =>
-		c.tipos?.length ? c.tipos : c.tipo ? [c.tipo] : [];
-	function acoesDoDia(key: string) {
-		return (conteudosPorDia.get(key) ?? []).map((c: any) => ({ k: 'c' as const, c }));
-	}
+	const doDia = (key: string) => conteudosPorDia.get(key) ?? [];
 
 	const hojeKey = $derived(data.hojeKey);
 	const semCliente = $derived(!data.clienteFiltro);
@@ -175,9 +171,7 @@
 	});
 	const mesAtual = $derived(`${data.ano}-${String(data.mes + 1).padStart(2, '0')}`);
 	const diasComAcoes = $derived.by(() =>
-		[...conteudosPorDia.keys()]
-			.filter((k) => k.startsWith(mesAtual + '-'))
-			.sort()
+		[...conteudosPorDia.keys()].filter((k) => k.startsWith(mesAtual + '-')).sort()
 	);
 
 	// --- URLs / navegação ---
@@ -192,19 +186,13 @@
 		}
 		return basePath + '?' + p.toString();
 	}
-	function parseKey(k: string) {
-		const [a, m, d] = k.split('-').map(Number);
-		return new Date(a, m - 1, d);
-	}
-	function addDias(k: string, n: number) {
-		const [a, m, d] = k.split('-').map(Number);
-		return chaveDia(new Date(a, m - 1, d + n));
-	}
 	// Ao trocar para a aba Semana: a semana (segunda→domingo) de hoje, ou a da
 	// primeira semana do mês que está sendo visto.
 	const semanaSwitch = $derived.by(() => {
 		if (data.view === 'semana') return data.semanaInicio;
-		const base = hojeKey.startsWith(mesAtual + '-') ? parseKey(hojeKey) : new Date(data.ano, data.mes, 1);
+		const base = hojeKey.startsWith(mesAtual + '-')
+			? parseChave(hojeKey)
+			: new Date(data.ano, data.mes, 1);
 		return chaveDia(inicioDaSemana(base));
 	});
 	const navPrev = $derived(
@@ -226,104 +214,59 @@
 		);
 	}
 
-	function fmtData(k: string) {
-		const [, m, d] = k.split('-');
-		return `${d}/${m}`;
-	}
-	function diaLongo(k: string) {
-		const [a, m, d] = k.split('-').map(Number);
-		return new Date(a, m - 1, d).toLocaleDateString('pt-BR', {
-			weekday: 'long',
-			day: '2-digit',
-			month: 'long'
-		});
-	}
 	const periodoLabel = $derived.by(() => {
 		if (data.view === 'semana' && diasDaSemana.length) {
 			const f = (dt: Date, ano = false) =>
-				dt.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', ...(ano ? { year: 'numeric' } : {}) });
+				dt.toLocaleDateString('pt-BR', {
+					day: '2-digit',
+					month: 'short',
+					...(ano ? { year: 'numeric' } : {})
+				});
 			return `${f(diasDaSemana[0])} – ${f(diasDaSemana[6], true)}`;
 		}
 		return `${MESES[data.mes]} ${data.ano}`;
 	});
+
+	/** Handlers de solta, iguais nas visões mês e semana. */
+	function dropProps(key: string) {
+		return {
+			ondragover: (e: DragEvent) => {
+				if (!arrastando) return;
+				e.preventDefault();
+				sobreDia = key;
+			},
+			ondragleave: () => {
+				if (sobreDia === key) sobreDia = null;
+			},
+			ondrop: (e: DragEvent) => {
+				e.preventDefault();
+				soltarEm(key);
+			}
+		};
+	}
 </script>
 
+<!-- Os posts do dia; `cap` limita quantos cabem na célula do mês. -->
 {#snippet pills(key: string, cap: number)}
-	{@const itens = acoesDoDia(key)}
+	{@const itens = doDia(key)}
 	{@const limite = cap && itens.length > cap ? cap - 1 : itens.length}
-	{#each itens.slice(0, limite) as a (a.k + (a.k === 'c' ? a.c.id : a.t.id))}
-		{#if a.k === 'c'}
-			<div
-				role="button"
-				tabindex="0"
-				draggable="true"
-				ondragstart={(e) => {
-					arrastando = a.c;
-					e.dataTransfer?.setData('text/plain', a.c.id);
-					if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copyMove';
-				}}
-				ondragend={() => {
-					arrastando = null;
-					sobreDia = null;
-				}}
-				onclick={(e) => {
-					e.stopPropagation();
-					editando = a.c;
-				}}
-				onkeydown={(e) => {
-					if (e.key === 'Enter' || e.key === ' ') {
-						e.preventDefault();
-						editando = a.c;
-					}
-				}}
-				title={`${conteudoTipoLabel(a.c.tipo)} · ${conteudoStatusLabel(a.c.status)}${a.c.cliente_nome ? ' · ' + a.c.cliente_nome : ''}`}
-				class="relative flex w-full cursor-grab flex-col gap-0.5 rounded-[var(--radius-sm)] border border-grey-200/70 bg-surface px-1.5 py-1 pr-5 text-left transition-colors hover:bg-bg active:cursor-grabbing"
-			>
-				<span class="flex items-baseline gap-1">
-					<span class="truncate text-[0.68rem] font-semibold leading-tight text-navy-900">{a.c.titulo ?? conteudoTipoLabel(a.c.tipo)}</span>
-					<span class="ml-auto shrink-0 tabular-nums text-[0.6rem] text-brand">{a.c.hora}</span>
-				</span>
-				<span class="flex items-center gap-1">
-					<span class="inline-flex items-center rounded-full px-1 py-px text-[0.56rem] font-medium leading-tight {toneClasses[conteudoStatusTone(a.c.status)]}">{conteudoStatusLabel(a.c.status)}</span>
-					<!-- As bolinhas têm 12px: o ::after invisível (inset -8px) leva o alvo de
-					     toque a 28px sem mudar o desenho — antes errar a mira abria o modal. -->
-					{#if a.c.status !== 'programar' && a.c.status !== 'publicado'}
-						<button
-							type="button"
-							onclick={(e) => definirStatusRapido(a.c, 'programar', e)}
-							title="Marcar como Programar"
-							aria-label="Marcar como Programar"
-							class="relative size-3 shrink-0 rounded-full border border-brand-amber bg-brand-amber/30 transition-colors after:absolute after:-inset-2 after:content-[''] hover:bg-brand-amber"
-						></button>
-					{:else if a.c.status === 'programar'}
-						<button
-							type="button"
-							onclick={(e) => definirStatusRapido(a.c, 'publicado', e)}
-							title="Marcar como Publicado"
-							aria-label="Marcar como Publicado"
-							class="relative size-3 shrink-0 rounded-full border border-brand-green bg-brand-green/30 transition-colors after:absolute after:-inset-2 after:content-[''] hover:bg-brand-green"
-						></button>
-					{/if}
-				</span>
-				<span class="flex flex-wrap gap-0.5">
-					{#each tiposDe(a.c) as tp (tp)}
-						<span class="inline-flex items-center rounded-full bg-bg px-1 py-px text-[0.56rem] font-medium leading-tight text-slate">{conteudoTipoLabel(tp)}</span>
-					{/each}
-				</span>
-				{#if semCliente && a.c.cliente_nome}
-					<span class="flex items-center gap-0.5 truncate text-[0.56rem] leading-tight text-grey">
-						<Icon name="building" size={9} /><span class="truncate">{a.c.cliente_nome}</span>
-					</span>
-				{/if}
-				<button
-					type="button"
-					onclick={(e) => excluir(a.c, e)}
-					title="Excluir conteúdo"
-					aria-label="Excluir conteúdo"
-					class="absolute bottom-1 right-1 grid size-4 place-items-center rounded-full bg-brand-danger/15 text-brand-danger transition-colors hover:bg-brand-danger hover:text-white"
-				><Icon name="trash" size={9} /></button>
-			</div>
-		{/if}
+	{#each itens.slice(0, limite) as c (c.id)}
+		<PostCard
+			conteudo={c}
+			mostrarCliente={semCliente}
+			onAbrir={() => (editando = c)}
+			onExcluir={(e) => excluir(c, e)}
+			onStatus={(status, e) => definirStatusRapido(c, status, e)}
+			onDragStart={(e) => {
+				arrastando = c;
+				e.dataTransfer?.setData('text/plain', c.id);
+				if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copyMove';
+			}}
+			onDragEnd={() => {
+				arrastando = null;
+				sobreDia = null;
+			}}
+		/>
 	{/each}
 	{#if cap && itens.length > cap}
 		<button
@@ -333,7 +276,8 @@
 				diaAberto = key;
 			}}
 			class="mt-auto text-left text-[0.7rem] font-medium text-grey hover:text-navy"
-		>+{itens.length - limite} mais</button>
+			>+{itens.length - limite} mais</button
+		>
 	{/if}
 {/snippet}
 
@@ -409,18 +353,7 @@
 				<div
 					role="group"
 					aria-label={`Dia ${key}`}
-					ondragover={(e) => {
-						if (!arrastando) return;
-						e.preventDefault();
-						sobreDia = key;
-					}}
-					ondragleave={() => {
-						if (sobreDia === key) sobreDia = null;
-					}}
-					ondrop={(e) => {
-						e.preventDefault();
-						soltarEm(key);
-					}}
+					{...dropProps(key)}
 					class="relative isolate flex min-h-40 cursor-pointer flex-col gap-1 overflow-hidden rounded-[var(--radius-sm)] border p-1.5 text-left transition-colors hover:border-brand/50 {foraDoMes
 						? 'border-grey-200/60 bg-bg'
 						: 'border-grey-200 bg-surface'} {key === hojeKey ? 'ring-1 ring-brand' : ''} {arrastando &&
@@ -438,7 +371,9 @@
 					     botão de fundo, mantendo o comportamento de "clicar em qualquer
 					     lugar abre o dia". -->
 					<div class="pointer-events-none flex items-center justify-between leading-none">
-						<span class="text-xs font-semibold {foraDoMes ? 'text-grey-200' : 'text-slate'}">{d.getDate()}</span>
+						<span class="text-xs font-semibold {foraDoMes ? 'text-grey-200' : 'text-slate'}">
+							{d.getDate()}
+						</span>
 						{#if !foraDoMes}
 							<button
 								type="button"
@@ -465,18 +400,7 @@
 				<div
 					role="group"
 					aria-label={`Dia ${key}`}
-					ondragover={(e) => {
-						if (!arrastando) return;
-						e.preventDefault();
-						sobreDia = key;
-					}}
-					ondragleave={() => {
-						if (sobreDia === key) sobreDia = null;
-					}}
-					ondrop={(e) => {
-						e.preventDefault();
-						soltarEm(key);
-					}}
+					{...dropProps(key)}
 					class="flex min-h-20 flex-col gap-1 rounded-[var(--radius-sm)] border bg-surface p-2 md:min-h-40 {arrastando &&
 					sobreDia === key
 						? 'border-brand ring-2 ring-brand/40'
@@ -485,7 +409,9 @@
 							: 'border-grey-200'}"
 				>
 					<div class="mb-1 flex items-baseline justify-between border-b border-grey-200/60 pb-1">
-						<span class="text-xs font-semibold uppercase tracking-wide text-grey">{SEMANA[colunaSemana(d)]}</span>
+						<span class="text-xs font-semibold uppercase tracking-wide text-grey">
+							{SEMANA[colunaSemana(d)]}
+						</span>
 						<span class="flex items-center gap-1.5">
 							<button
 								type="button"
@@ -494,7 +420,9 @@
 								aria-label={`Adicionar post em ${key}`}
 								class="grid size-5 shrink-0 place-items-center self-center rounded-full bg-brand text-white shadow-sm transition-opacity hover:opacity-90"
 							><Icon name="plus" size={13} /></button>
-							<span class="text-sm font-bold {key === hojeKey ? 'text-brand' : 'text-navy'}">{d.getDate()}</span>
+							<span class="text-sm font-bold {key === hojeKey ? 'text-brand' : 'text-navy'}">
+								{d.getDate()}
+							</span>
 						</span>
 					</div>
 					{@render pills(key, 0)}
@@ -510,20 +438,28 @@
 			<div class="flex flex-col divide-y divide-grey-200/60">
 				{#each diasComAcoes as key (key)}
 					<div class="py-3 first:pt-0 last:pb-0">
-						<div class="mb-1.5 text-xs font-semibold uppercase tracking-wide text-grey first-letter:uppercase">
+						<div
+							class="mb-1.5 text-xs font-semibold uppercase tracking-wide text-grey first-letter:uppercase"
+						>
 							{diaLongo(key)}{key === hojeKey ? ' · hoje' : ''}
 						</div>
 						<div class="flex flex-col gap-1">
-							{#each conteudosPorDia.get(key) ?? [] as c (c.id)}
+							{#each doDia(key) as c (c.id)}
 								<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 								<div
 									onclick={() => editarDoDia(c)}
 									class="group flex cursor-pointer items-center gap-2 rounded-[var(--radius)] px-2 py-1 text-sm transition-colors hover:bg-bg"
 								>
-									<span class="grid size-6 shrink-0 place-items-center rounded-[var(--radius-sm)] bg-brand/10 text-brand"><Icon name="edit" size={13} /></span>
+									<span
+										class="grid size-6 shrink-0 place-items-center rounded-[var(--radius-sm)] bg-brand/10 text-brand"
+									><Icon name="edit" size={13} /></span>
 									<span class="w-10 shrink-0 tabular-nums text-xs text-grey">{c.hora}</span>
-									<span class="min-w-0 flex-1 truncate text-navy">{c.titulo ?? conteudoTipoLabel(c.tipo)}</span>
-									{#if semCliente && c.cliente_nome}<span class="shrink-0 text-xs text-slate">{c.cliente_nome}</span>{/if}
+									<span class="min-w-0 flex-1 truncate text-navy">
+										{c.titulo ?? conteudoTipoLabel(c.tipo)}
+									</span>
+									{#if semCliente && c.cliente_nome}
+										<span class="shrink-0 text-xs text-slate">{c.cliente_nome}</span>
+									{/if}
 									<button
 										type="button"
 										onclick={(e) => excluir(c, e)}
@@ -578,59 +514,20 @@
 	{/if}
 </Modal>
 
-<Modal open={!!diaAberto} title={diaAberto ? diaLongo(diaAberto) : ''} size="md" onClose={() => (diaAberto = null)}>
-	{#if diaAberto}
-		{@const cs = conteudosPorDia.get(diaAberto) ?? []}
-		<div class="flex flex-col gap-3">
-			{#if cs.length === 0}
-				<p class="text-sm text-grey">Nada programado neste dia.</p>
-			{:else}
-				<div class="flex flex-col gap-1.5">
-					{#each cs as c (c.id)}
-						<button
-							type="button"
-							onclick={() => editarDoDia(c)}
-							class="flex w-full flex-col gap-1 rounded-[var(--radius)] border border-grey-200 bg-surface px-3 py-2 text-left transition-colors hover:bg-bg"
-						>
-							<span class="flex items-center gap-2">
-								<span class="shrink-0 tabular-nums text-xs text-brand">{c.hora}</span>
-								<span class="truncate font-medium text-navy">{c.titulo ?? conteudoTipoLabel(c.tipo)}</span>
-							</span>
-							<span class="flex flex-wrap items-center gap-1">
-								<span class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[0.7rem] font-medium {toneClasses[conteudoStatusTone(c.status)]}">{conteudoStatusLabel(c.status)}</span>
-								{#each tiposDe(c) as tp (tp)}
-									<span class="inline-flex items-center rounded-full bg-bg px-1.5 py-0.5 text-[0.7rem] font-medium text-slate">{conteudoTipoLabel(tp)}</span>
-								{/each}
-								{#if semCliente && c.cliente_nome}<span class="inline-flex items-center gap-0.5 text-[0.7rem] text-grey"><Icon name="building" size={11} />{c.cliente_nome}</span>{/if}
-							</span>
-						</button>
-					{/each}
-				</div>
-			{/if}
-			<Button onclick={novoNoDia}><Icon name="plus" size={15} /> Novo post</Button>
-		</div>
-	{/if}
-</Modal>
+<AgendaDia
+	bind:dia={diaAberto}
+	conteudos={diaAberto ? doDia(diaAberto) : []}
+	mostrarCliente={semCliente}
+	onEditar={editarDoDia}
+	onNovo={novoNoDia}
+/>
 
-<Modal
-	open={!!moverCopiar}
-	title="Mover ou copiar?"
-	size="sm"
-	onClose={() => !processando && (moverCopiar = null)}
->
-	{#if moverCopiar}
-		<p class="text-sm text-grey">
-			<span class="font-medium text-navy">{moverCopiar.c.titulo ?? conteudoTipoLabel(moverCopiar.c.tipo)}</span>
-			para <span class="font-medium text-navy">{diaLongo(moverCopiar.novaData)}</span> às {moverCopiar.c.hora}.
-		</p>
-		<div class="mt-4 flex flex-wrap gap-2">
-			<Button variant="primary" loading={processando} onclick={() => executar('mover')}>Mover</Button>
-			<Button variant="secondary" loading={processando} onclick={() => executar('copiar')}>Copiar</Button>
-			<Button variant="ghost" onclick={() => (moverCopiar = null)}>Cancelar</Button>
-		</div>
-	{/if}
-</Modal>
-
+<MoverOuCopiar
+	alvo={moverCopiar}
+	{processando}
+	onEscolher={executar}
+	onCancelar={() => (moverCopiar = null)}
+/>
 
 <div class="mt-4 flex flex-wrap items-center gap-4 text-xs text-grey">
 	<span class="flex items-center gap-1.5"><span class="size-2.5 rounded-full bg-brand"></span> Conteúdo</span>

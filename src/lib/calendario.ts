@@ -28,6 +28,27 @@ export function chaveDia(d: Date): string {
 	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+/** Data local a partir da chave "AAAA-MM-DD". */
+export function parseChave(k: string): Date {
+	const [a, m, d] = k.split('-').map(Number);
+	return new Date(a, m - 1, d);
+}
+
+/** A chave N dias depois (N negativo anda para trás). */
+export function addDias(k: string, n: number): string {
+	const [a, m, d] = k.split('-').map(Number);
+	return chaveDia(new Date(a, m - 1, d + n));
+}
+
+/** "segunda-feira, 07 de agosto" — o título da agenda do dia. */
+export function diaLongo(k: string): string {
+	return parseChave(k).toLocaleDateString('pt-BR', {
+		weekday: 'long',
+		day: '2-digit',
+		month: 'long'
+	});
+}
+
 /** "AAAA-MM" a partir de ano + mês (0-11). */
 export function fmtMes(ano: number, mes: number): string {
 	return `${ano}-${String(mes + 1).padStart(2, '0')}`;

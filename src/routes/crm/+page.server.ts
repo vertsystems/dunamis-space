@@ -1,18 +1,9 @@
-import { colaboradoresAtivos, clientesLite } from '$lib/server/lookups';
-import { um } from '$lib/db';
 import { fail } from '@sveltejs/kit';
 import { exigirPermissao } from '$lib/server/permissao';
-import {
-	contatoFromForm,
-	negocioFromForm,
-	atividadeFromForm,
-	type Negocio,
-	type Contato,
-	type Atividade,
-	type Stage,
-	type Pipeline,
-	type Meta
-} from '$lib/crm';
+import { acoesNaPagina } from '$lib/server/crud';
+import { crmAtividades, crmContatos } from '$lib/server/recursos';
+import { carregarCrm } from '$lib/server/crm';
+import { negocioFromForm } from '$lib/crm';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { mesRefSP } from '$lib/datas';
 import type { Actions, PageServerLoad } from './$types';
@@ -40,210 +31,7 @@ async function resolverContatoRapido(
 	return null;
 }
 
-export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
-	// "Mês corrente" no fuso do negócio (Brasil), não no fuso do servidor (Vercel = UTC),
-	// para bater com o mês local do cliente na virada do mês. Fonte única propagada ao client.
-	const partesBR = new Intl.DateTimeFormat('en-CA', {
-		timeZone: 'America/Sao_Paulo',
-		year: 'numeric',
-		month: 'numeric'
-	}).formatToParts(new Date());
-	const mesRef = {
-		ano: Number(partesBR.find((p) => p.type === 'year')?.value),
-		mes: Number(partesBR.find((p) => p.type === 'month')?.value)
-	};
-
-	// Funis primeiro — serve também para detectar migration não aplicada.
-	const { data: pipelinesRaw, error: pErr } = await supabase
-		.from('crm_pipelines')
-		.select('id, nome, ordem')
-		.eq('ativo', true)
-		.order('ordem', { ascending: true });
-
-	if (pErr) {
-		const crmPendente = /crm_|does not exist|schema cache|relation/i.test(pErr.message);
-		return {
-			crmPendente,
-			loadError: pErr.message,
-			pipelines: [] as Pipeline[],
-			stages: [] as Stage[],
-			pipelineAtivoId: null as string | null,
-			negocios: [] as Negocio[],
-			contatos: [] as Contato[],
-			atividades: [] as Atividade[],
-			colaboradores: [] as { id: string; nome: string }[],
-			clientes: [] as { id: string; nome: string }[],
-			metas: [] as Meta[],
-			metasPendente: false,
-			mesRef
-		};
-	}
-
-	const pipelines = (pipelinesRaw ?? []).map((p) => ({
-		id: p.id as string,
-		nome: p.nome as string,
-		ordem: p.ordem as number
-	}));
-	const pedido = url.searchParams.get('pipeline');
-	const pipelineAtivoId = pipelines.find((p) => p.id === pedido)?.id ?? pipelines[0]?.id ?? null;
-
-	const [stagesRes, negociosRes, contatosRes, atividadesRes, colabRes, clientesRes] =
-		await Promise.all([
-		supabase
-			.from('crm_stages')
-			.select('id, pipeline_id, nome, ordem, cor, probabilidade')
-			.order('ordem', { ascending: true }),
-		supabase
-			.from('crm_negocios')
-			.select(
-				'id, titulo, valor, status, stage_id, pipeline_id, ordem, previsao_fechamento, motivo_perda, observacoes, ganho_em, perdido_em, created_at, contato_id, responsavel_id, contato:crm_contatos(id, nome, empresa), responsavel:colaboradores(id, nome)'
-			)
-			.order('ordem', { ascending: true })
-			.order('created_at', { ascending: false }),
-		supabase
-			.from('crm_contatos')
-			.select(
-				'id, nome, empresa, cargo, email, telefone, whatsapp, instagram, site, origem, segmento, tags, observacoes, cliente_id, created_at, responsavel_id, responsavel:colaboradores(id, nome), negocios:crm_negocios(id, valor, status)'
-			)
-			.order('created_at', { ascending: false }),
-		supabase
-			.from('crm_atividades')
-			.select(
-				'id, tipo, titulo, descricao, data_hora, concluida, concluida_em, created_at, negocio_id, contato_id, responsavel_id, negocio:crm_negocios(id, titulo), contato:crm_contatos(id, nome), responsavel:colaboradores(id, nome)'
-			)
-			.order('data_hora', { ascending: true, nullsFirst: false }),
-		colaboradoresAtivos(supabase),
-		clientesLite(supabase)
-	]);
-
-	const stages = (stagesRes.data ?? []).map((s) => ({
-		id: s.id as string,
-		pipeline_id: s.pipeline_id as string,
-		nome: s.nome as string,
-		ordem: s.ordem as number,
-		cor: s.cor as string,
-		probabilidade: s.probabilidade as number
-	}));
-	// Próxima atividade pendente por negócio (menor data_hora entre pendentes com data).
-	const proxPorNegocio = new Map<string, string>();
-	for (const a of atividadesRes.data ?? []) {
-		if (a.concluida || !a.data_hora || !a.negocio_id) continue;
-		const atual = proxPorNegocio.get(a.negocio_id as string);
-		if (!atual || (a.data_hora as string) < atual) {
-			proxPorNegocio.set(a.negocio_id as string, a.data_hora as string);
-		}
-	}
-
-	const negocios: Negocio[] = (negociosRes.data ?? []).map((n) => {
-		const contato = um<{ id: string; nome: string; empresa: string | null }>(n.contato);
-		const resp = um<{ id: string; nome: string }>(n.responsavel);
-		return {
-			id: n.id as string,
-			titulo: n.titulo as string,
-			valor: Number(n.valor ?? 0),
-			status: n.status as Negocio['status'],
-			stage_id: (n.stage_id as string | null) ?? null,
-			pipeline_id: n.pipeline_id as string,
-			ordem: Number(n.ordem ?? 0),
-			previsao_fechamento: (n.previsao_fechamento as string | null) ?? null,
-			motivo_perda: (n.motivo_perda as string | null) ?? null,
-			observacoes: (n.observacoes as string | null) ?? null,
-			ganho_em: (n.ganho_em as string | null) ?? null,
-			perdido_em: (n.perdido_em as string | null) ?? null,
-			created_at: n.created_at as string,
-			contato_id: (n.contato_id as string | null) ?? null,
-			contato_nome: contato?.nome ?? null,
-			contato_empresa: contato?.empresa ?? null,
-			responsavel_id: (n.responsavel_id as string | null) ?? null,
-			responsavel_nome: resp?.nome ?? null,
-			prox_atividade: proxPorNegocio.get(n.id as string) ?? null
-		};
-	});
-
-	const contatos: Contato[] = (contatosRes.data ?? []).map((c) => {
-		const resp = um<{ id: string; nome: string }>(c.responsavel);
-		const negs = (c.negocios ?? []) as { id: string; valor: number; status: string }[];
-		return {
-			id: c.id as string,
-			nome: c.nome as string,
-			empresa: (c.empresa as string | null) ?? null,
-			cargo: (c.cargo as string | null) ?? null,
-			email: (c.email as string | null) ?? null,
-			telefone: (c.telefone as string | null) ?? null,
-			whatsapp: (c.whatsapp as string | null) ?? null,
-			instagram: (c.instagram as string | null) ?? null,
-			site: (c.site as string | null) ?? null,
-			origem: (c.origem as string | null) ?? null,
-			segmento: (c.segmento as string | null) ?? null,
-			tags: (c.tags as string[] | null) ?? [],
-			observacoes: (c.observacoes as string | null) ?? null,
-			cliente_id: (c.cliente_id as string | null) ?? null,
-			created_at: c.created_at as string,
-			responsavel_id: (c.responsavel_id as string | null) ?? null,
-			responsavel_nome: resp?.nome ?? null,
-			negocios_qtd: negs.length,
-			valor_total: negs.reduce((s, x) => s + Number(x.valor ?? 0), 0)
-		};
-	});
-
-	const atividades: Atividade[] = (atividadesRes.data ?? []).map((a) => {
-		const neg = um<{ id: string; titulo: string }>(a.negocio);
-		const cont = um<{ id: string; nome: string }>(a.contato);
-		const resp = um<{ id: string; nome: string }>(a.responsavel);
-		return {
-			id: a.id as string,
-			tipo: a.tipo as Atividade['tipo'],
-			titulo: (a.titulo as string | null) ?? null,
-			descricao: (a.descricao as string | null) ?? null,
-			data_hora: (a.data_hora as string | null) ?? null,
-			concluida: !!a.concluida,
-			concluida_em: (a.concluida_em as string | null) ?? null,
-			created_at: a.created_at as string,
-			negocio_id: (a.negocio_id as string | null) ?? null,
-			negocio_titulo: neg?.titulo ?? null,
-			contato_id: (a.contato_id as string | null) ?? null,
-			contato_nome: cont?.nome ?? null,
-			responsavel_id: (a.responsavel_id as string | null) ?? null,
-			responsavel_nome: resp?.nome ?? null
-		};
-	});
-
-	// Metas do mês corrente (tabela nova — degrada se a migration 0007 não foi aplicada).
-	const { data: metasRaw, error: metasErr } = await supabase
-		.from('crm_metas')
-		.select('colaborador_id, valor_meta')
-		.eq('ano', mesRef.ano)
-		.eq('mes', mesRef.mes);
-	// Tabela ausente (migration 0007 não aplicada): PostgREST 'PGRST205' ou mensagem
-	// de schema-cache/inexistência. Só isso é "pendente"; outros erros são reais e sobem.
-	const metasPendente =
-		!!metasErr &&
-		(metasErr.code === 'PGRST205' ||
-			/schema cache|does not exist|could not find the table/i.test(metasErr.message ?? ''));
-	const metasErroReal = metasErr && !metasPendente ? metasErr.message : null;
-	const metas: Meta[] = metasErr
-		? []
-		: (metasRaw ?? []).map((m) => ({
-				colaborador_id: m.colaborador_id as string,
-				valor_meta: Number(m.valor_meta ?? 0)
-			}));
-
-	return {
-		crmPendente: false,
-		loadError: metasErroReal as string | null,
-		pipelines,
-		stages,
-		pipelineAtivoId,
-		negocios,
-		contatos,
-		atividades,
-		colaboradores: (colabRes.data ?? []) as { id: string; nome: string }[],
-		clientes: (clientesRes.data ?? []) as { id: string; nome: string }[],
-		metas,
-		metasPendente,
-		mesRef
-	};
-};
+export const load: PageServerLoad = ({ locals: { supabase }, url }) => carregarCrm(supabase, url);
 
 // ------------------------------------------------------------
 // Helpers de action
@@ -252,6 +40,9 @@ function idDe(fd: FormData, campo = 'id'): string | null {
 	const v = fd.get(campo);
 	return typeof v === 'string' && v ? v : null;
 }
+
+const contatos = acoesNaPagina(crmContatos);
+const atividades = acoesNaPagina(crmAtividades);
 
 export const actions: Actions = {
 	// ---------------- Negócios ----------------
@@ -446,65 +237,14 @@ export const actions: Actions = {
 		return { saved: true };
 	},
 
-	// ---------------- Contatos ----------------
-	contato_criar: async ({ request, locals }) => {
-		exigirPermissao(locals, 'crm', 'editar');
-		const { supabase } = locals;
-		const fd = await request.formData();
-		const v = contatoFromForm(fd);
-		if (!v.nome) return fail(400, { error: 'O nome do contato é obrigatório.' });
-		const { data, error } = await supabase.from('crm_contatos').insert(v).select('id').single();
-		if (error) return fail(500, { error: error.message });
-		return { saved: true, id: data?.id ?? null };
-	},
+	// ---------------- Contatos e atividades ----------------
+	// CRUD comum: a fábrica cuida de permissão, validação e mensagens.
+	contato_criar: contatos.criar,
+	contato_atualizar: contatos.atualizar,
+	contato_excluir: contatos.excluir,
 
-	contato_atualizar: async ({ request, locals }) => {
-		exigirPermissao(locals, 'crm', 'editar');
-		const { supabase } = locals;
-		const fd = await request.formData();
-		const id = idDe(fd);
-		if (!id) return fail(400, { error: 'Contato inválido.' });
-		const v = contatoFromForm(fd);
-		if (!v.nome) return fail(400, { error: 'O nome do contato é obrigatório.' });
-		const { error } = await supabase
-			.from('crm_contatos')
-			.update({ ...v, updated_at: new Date().toISOString() })
-			.eq('id', id);
-		if (error) return fail(500, { error: error.message });
-		return { saved: true };
-	},
-
-	contato_excluir: async ({ request, locals }) => {
-		exigirPermissao(locals, 'crm', 'excluir');
-		const { supabase } = locals;
-		const fd = await request.formData();
-		const id = idDe(fd);
-		if (!id) return fail(400, { error: 'Contato inválido.' });
-		const { error } = await supabase.from('crm_contatos').delete().eq('id', id);
-		if (error) return fail(500, { error: error.message });
-		return { deleted: true };
-	},
-
-	// ---------------- Atividades ----------------
-	atividade_criar: async ({ request, locals }) => {
-		exigirPermissao(locals, 'crm', 'editar');
-		const { supabase } = locals;
-		const fd = await request.formData();
-		const v = atividadeFromForm(fd);
-		if (!v.titulo && v.tipo !== 'nota') {
-			return fail(400, { error: 'Descreva a atividade.' });
-		}
-		if (!v.negocio_id && !v.contato_id && !v.titulo) {
-			return fail(400, { error: 'Dados insuficientes.' });
-		}
-		const { data, error } = await supabase
-			.from('crm_atividades')
-			.insert(v)
-			.select('id')
-			.single();
-		if (error) return fail(500, { error: error.message });
-		return { saved: true, id: data?.id ?? null };
-	},
+	atividade_criar: atividades.criar,
+	atividade_excluir: atividades.excluir,
 
 	atividade_concluir: async ({ request, locals }) => {
 		exigirPermissao(locals, 'crm', 'editar');
@@ -523,16 +263,5 @@ export const actions: Actions = {
 			.eq('id', id);
 		if (error) return fail(500, { error: error.message });
 		return { ok: true };
-	},
-
-	atividade_excluir: async ({ request, locals }) => {
-		exigirPermissao(locals, 'crm', 'excluir');
-		const { supabase } = locals;
-		const fd = await request.formData();
-		const id = idDe(fd);
-		if (!id) return fail(400, { error: 'Atividade inválida.' });
-		const { error } = await supabase.from('crm_atividades').delete().eq('id', id);
-		if (error) return fail(500, { error: error.message });
-		return { deleted: true };
 	}
 };
