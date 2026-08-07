@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { ACTIONS } from '$lib/comercial.svelte';
 	import { Button, Input, Select, Textarea } from '$lib/components/ui';
 	import ResponsavelPicker from '$lib/components/ResponsavelPicker.svelte';
 	import AutosaveStatus from '$lib/components/AutosaveStatus.svelte';
@@ -16,7 +17,7 @@
 		initialStageId = null,
 		error = null,
 		submitLabel = 'Salvar',
-		action = '?/negocio_criar',
+		action = `${ACTIONS}?/negocio_criar`,
 		podeEditar = true,
 		onSuccess,
 		onCancel

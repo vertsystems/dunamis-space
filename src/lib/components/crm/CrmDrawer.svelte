@@ -1,5 +1,10 @@
 <script lang="ts">
+	// As actions do módulo moram todas em /comercial (ver comercial.svelte.ts).
+	// Aqui elas PRECISAM ser absolutas: o drawer abre de qualquer tela do módulo,
+	// e um `?/acao` relativo resolveria para a rota atual — em /comercial/contatos
+	// isso vira uma rota sem action nenhuma, e salvar responde "Erro ao salvar".
 	import { enhance } from '$app/forms';
+	import { ACTIONS } from '$lib/comercial.svelte';
 	import { Badge, Button, Input, Select } from '$lib/components/ui';
 	import { toast } from '$lib/toast.svelte';
 	import Icon from '$lib/components/Icon.svelte';
@@ -176,7 +181,7 @@
 				<!-- Ganho / Perdido / Reabrir -->
 				<div class="flex flex-wrap gap-2">
 					{#if negocio.status !== 'ganho'}
-						<form method="POST" action="?/negocio_status" use:enhance={() => { statusSaving = true; return async ({ result, update }) => { await update(); statusSaving = false; if (result.type === 'failure') toast.error(erroDe(result)); }; }}>
+						<form method="POST" action="{ACTIONS}?/negocio_status" use:enhance={() => { statusSaving = true; return async ({ result, update }) => { await update(); statusSaving = false; if (result.type === 'failure') toast.error(erroDe(result)); }; }}>
 							<input type="hidden" name="id" value={negocio.id} />
 							<input type="hidden" name="status" value="ganho" />
 							<Button variant="success" size="sm" type="submit" loading={statusSaving}>
@@ -190,7 +195,7 @@
 						</Button>
 					{/if}
 					{#if negocio.status !== 'aberto'}
-						<form method="POST" action="?/negocio_status" use:enhance={() => { statusSaving = true; return async ({ result, update }) => { await update(); statusSaving = false; if (result.type === 'failure') toast.error(erroDe(result)); }; }}>
+						<form method="POST" action="{ACTIONS}?/negocio_status" use:enhance={() => { statusSaving = true; return async ({ result, update }) => { await update(); statusSaving = false; if (result.type === 'failure') toast.error(erroDe(result)); }; }}>
 							<input type="hidden" name="id" value={negocio.id} />
 							<input type="hidden" name="status" value="aberto" />
 							<Button variant="ghost" size="sm" type="submit">Reabrir</Button>
@@ -199,7 +204,7 @@
 				</div>
 
 				{#if perderMode && negocio.status === 'aberto'}
-					<form method="POST" action="?/negocio_status" class="flex items-end gap-2" use:enhance={() => { statusSaving = true; return async ({ result, update }) => { await update(); statusSaving = false; if (result.type === 'success') perderMode = false; else if (result.type === 'failure') toast.error(erroDe(result)); }; }}>
+					<form method="POST" action="{ACTIONS}?/negocio_status" class="flex items-end gap-2" use:enhance={() => { statusSaving = true; return async ({ result, update }) => { await update(); statusSaving = false; if (result.type === 'success') perderMode = false; else if (result.type === 'failure') toast.error(erroDe(result)); }; }}>
 						<input type="hidden" name="id" value={negocio.id} />
 						<input type="hidden" name="status" value="perdido" />
 						<Select label="Motivo da perda" name="motivo_perda" wrapperClass="flex-1">
@@ -262,7 +267,7 @@
 						stages={stagesDoNegocio}
 						contatos={contatos.map((c) => ({ id: c.id, nome: c.nome, empresa: c.empresa }))}
 						{colaboradores}
-						action="?/negocio_atualizar"
+						action="{ACTIONS}?/negocio_atualizar"
 						submitLabel="Salvar alterações"
 						{podeEditar}
 					/>
@@ -272,7 +277,7 @@
 				{@render blocoAtividades(negocio.id, null)}
 
 				<!-- Excluir -->
-				{@render zonaPerigo('?/negocio_excluir', negocio.id, 'Excluir negócio')}
+				{@render zonaPerigo(`${ACTIONS}?/negocio_excluir`, negocio.id, 'Excluir negócio')}
 			</div>
 		{:else if tipo === 'contato' && contato}
 			<!-- ===================== CONTATO ===================== -->
@@ -327,7 +332,7 @@
 						contato={contato}
 						{colaboradores}
 						{clientes}
-						action="?/contato_atualizar"
+						action="{ACTIONS}?/contato_atualizar"
 						submitLabel="Salvar alterações"
 						{podeEditar}
 					/>
@@ -337,7 +342,7 @@
 				{@render blocoAtividades(null, contato.id)}
 
 				<!-- Excluir -->
-				{@render zonaPerigo('?/contato_excluir', contato.id, 'Excluir contato')}
+				{@render zonaPerigo(`${ACTIONS}?/contato_excluir`, contato.id, 'Excluir contato')}
 			</div>
 		{/if}
 	</aside>
@@ -349,7 +354,7 @@
 
 		<form
 			method="POST"
-			action="?/atividade_criar"
+			action="{ACTIONS}?/atividade_criar"
 			class="rounded-[var(--radius-lg)] bg-bg p-3 grid grid-cols-1 sm:grid-cols-12 gap-2 mb-3"
 			use:enhance={({ formData }) => {
 				// datetime-local não carrega fuso; converte para instante ISO antes de gravar.
@@ -402,7 +407,7 @@
 							{/if}
 						</div>
 						{#if podeExcluir}
-							<form method="POST" action="?/atividade_excluir" use:enhance>
+							<form method="POST" action="{ACTIONS}?/atividade_excluir" use:enhance>
 								<input type="hidden" name="id" value={a.id} />
 								<button type="submit" class="text-grey hover:text-brand-danger" aria-label="Excluir atividade">
 									<Icon name="trash" size={14} />
