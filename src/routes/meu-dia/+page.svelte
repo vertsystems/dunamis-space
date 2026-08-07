@@ -375,7 +375,7 @@
 	<Card padding="none" class="overflow-hidden">
 		<div class="flex items-center justify-between gap-2 px-5 py-3.5 border-b border-grey-200">
 			<h2 class="font-semibold text-navy flex items-center gap-2"><Icon name="funnel" size={16} /> Atividades do CRM</h2>
-			<a class="text-xs text-brand hover:underline" href="/crm">Abrir CRM</a>
+			<a class="text-xs text-brand hover:underline" href="/comercial">Abrir Comercial</a>
 		</div>
 		<div class="p-3">
 			{#if !data.atividades.length}

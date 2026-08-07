@@ -39,7 +39,9 @@ export const MODULOS: Modulo[] = [
 	{ id: 'ferramentas', label: 'Ferramentas & Contas', grupo: 'administrativo', rotas: ['/ferramentas'] },
 	{ id: 'base_conhecimento', label: 'Base de Conhecimento', grupo: 'administrativo', rotas: ['/base-conhecimento'] },
 	{ id: 'sos', label: 'Central SOS', grupo: 'administrativo', rotas: ['/sos'] },
-	{ id: 'crm', label: 'CRM Master', grupo: 'comercial', rotas: ['/crm'] },
+	// '/crm' segue na lista: a rota antiga só redireciona para /comercial, mas
+	// quem não tem o módulo tem de bater na porta fechada antes do redirect.
+	{ id: 'crm', label: 'Comercial (CRM)', grupo: 'comercial', rotas: ['/comercial', '/crm'] },
 	{ id: 'financeiro', label: 'Financeiro', grupo: 'comercial', rotas: ['/financeiro'] },
 	{ id: 'calendario', label: 'Calendário', grupo: 'marketing', rotas: ['/calendario'] },
 	// '/calendario' NÃO entra aqui: já pertence ao módulo 'calendario', e duas

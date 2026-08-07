@@ -49,7 +49,7 @@
 			<h2 class="text-sm font-semibold text-navy">Funil de vendas</h2>
 			<p class="text-sm text-grey">Negócios em aberto por etapa</p>
 		</div>
-		<a class="text-sm text-brand hover:underline" href="/crm">Abrir CRM</a>
+		<a class="text-sm text-brand hover:underline" href="/comercial">Abrir Comercial</a>
 	</div>
 
 	{#if data.crmPendente}

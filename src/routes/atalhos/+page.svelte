@@ -5,14 +5,14 @@
 
 	const criar: Atalho[] = [
 		{ href: '/clientes/novo', label: 'Novo cliente', desc: 'Cadastrar cliente / lead', icon: 'contact' },
-		{ href: '/crm', label: 'Novo negócio', desc: 'Abrir o CRM e criar oportunidade', icon: 'funnel' },
+		{ href: '/comercial/kanban', label: 'Novo negócio', desc: 'Abrir o funil e criar oportunidade', icon: 'funnel' },
 		{ href: '/conteudo/novo', label: 'Novo conteúdo', desc: 'Criar post no calendário', icon: 'edit' },
 		{ href: '/financeiro/novo', label: 'Nova transação', desc: 'Registrar receita ou despesa', icon: 'dollar' },
 		{ href: '/contratos/novo', label: 'Novo contrato', desc: 'Cadastrar contrato', icon: 'file' }
 	];
 
 	const acessar: Atalho[] = [
-		{ href: '/crm', label: 'CRM Master', desc: 'Pipeline de vendas', icon: 'funnel' },
+		{ href: '/comercial', label: 'Comercial', desc: 'Dashboard, funil e metas', icon: 'funnel' },
 		{ href: '/cadastro', label: 'Clientes', desc: 'Base de clientes', icon: 'contact' },
 		{ href: '/calendario', label: 'Calendário Editorial', desc: 'Conteúdo, backlog e aprovações', icon: 'calendar' },
 		{ href: '/financeiro', label: 'Financeiro', desc: 'Receitas e despesas', icon: 'dollar' },

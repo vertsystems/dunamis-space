@@ -115,7 +115,15 @@
 			id: 'comercial',
 			label: 'Comercial',
 			icon: 'comercial',
-			areas: [{ href: '/crm', label: 'CRM Master', icon: 'funnel' }]
+			href: '/comercial',
+			base: '/comercial',
+			areas: [
+				{ href: '/comercial', label: 'Dashboard', icon: 'chart' },
+				{ href: '/comercial/kanban', label: 'Kanban', icon: 'funnel' },
+				{ href: '/comercial/contatos', label: 'Contatos', icon: 'contact' },
+				{ href: '/comercial/metas', label: 'Metas', icon: 'target' },
+				{ href: '/comercial/relatorios', label: 'Relatórios', icon: 'clipboard' }
+			]
 		},
 		{
 			id: 'marketing',

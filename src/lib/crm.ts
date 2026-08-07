@@ -657,6 +657,156 @@ export function computeFollowups(negocios: Negocio[], agora = new Date()): Follo
 	});
 }
 
+// ---------- Fechamentos recentes (o que entrou e o que saiu) ----------
+export type FechamentoLinha = {
+	id: string;
+	titulo: string;
+	valor: number;
+	contato: string | null;
+	responsavel_nome: string | null;
+	status: 'ganho' | 'perdido';
+	motivo_perda: string | null;
+	quando: string;
+};
+
+export type Fechamentos = {
+	dias: number;
+	ganhos_qtd: number;
+	ganhos_valor: number;
+	perdidos_qtd: number;
+	perdidos_valor: number;
+	/** Os mais recentes primeiro, ganhos e perdas misturados. */
+	recentes: FechamentoLinha[];
+};
+
+/**
+ * Negócios fechados nos últimos `dias`. Diferente do KPI "ganhos no mês", que
+ * corta na virada do mês: no dia 1º o painel do mês zera, e sem isto o
+ * dashboard não mostraria nada do que aconteceu na semana anterior.
+ */
+export function computeFechamentos(
+	negocios: Negocio[],
+	agora = new Date(),
+	dias = 30,
+	limite = 8
+): Fechamentos {
+	const corte = agora.getTime() - dias * 86_400_000;
+	const linhas: FechamentoLinha[] = [];
+	let ganhos_qtd = 0,
+		ganhos_valor = 0,
+		perdidos_qtd = 0,
+		perdidos_valor = 0;
+
+	for (const n of negocios) {
+		const quando = n.status === 'ganho' ? n.ganho_em : n.status === 'perdido' ? n.perdido_em : null;
+		if (!quando) continue;
+		const t = new Date(quando).getTime();
+		if (Number.isNaN(t) || t < corte) continue;
+		if (n.status === 'ganho') {
+			ganhos_qtd++;
+			ganhos_valor += n.valor;
+		} else {
+			perdidos_qtd++;
+			perdidos_valor += n.valor;
+		}
+		linhas.push({
+			id: n.id,
+			titulo: n.titulo,
+			valor: n.valor,
+			contato: n.contato_empresa ?? n.contato_nome,
+			responsavel_nome: n.responsavel_nome,
+			status: n.status as 'ganho' | 'perdido',
+			motivo_perda: n.motivo_perda,
+			quando
+		});
+	}
+
+	linhas.sort((a, b) => new Date(b.quando).getTime() - new Date(a.quando).getTime());
+	return {
+		dias,
+		ganhos_qtd,
+		ganhos_valor,
+		perdidos_qtd,
+		perdidos_valor,
+		recentes: linhas.slice(0, limite)
+	};
+}
+
+// ---------- Agenda: o que fazer nos próximos dias ----------
+export type DiaAgenda = {
+	iso: string;
+	/** "Hoje", "Amanhã" ou "seg, 11/08". */
+	rotulo: string;
+	hoje: boolean;
+	atividades: Atividade[];
+};
+
+export type Agenda = {
+	/** Pendentes com data já passada — sempre no topo. */
+	atrasadas: Atividade[];
+	dias: DiaAgenda[];
+	/** Quantas pendentes sem data nenhuma (ficam invisíveis na agenda). */
+	sem_data: number;
+};
+
+function chaveLocal(d: Date): string {
+	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Atividades pendentes dos próximos `dias` (contando hoje), agrupadas por dia. */
+export function computeAgenda(atividades: Atividade[], agora = new Date(), dias = 7): Agenda {
+	const hojeDt = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+	const hojeKey = chaveLocal(hojeDt);
+
+	const porDia = new Map<string, Atividade[]>();
+	const atrasadas: Atividade[] = [];
+	let sem_data = 0;
+
+	for (const a of atividades) {
+		if (a.concluida) continue;
+		if (!a.data_hora) {
+			sem_data++;
+			continue;
+		}
+		const d = new Date(a.data_hora);
+		if (Number.isNaN(d.getTime())) {
+			sem_data++;
+			continue;
+		}
+		const dia = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+		// Atrasada é por DIA: uma reunião das 9h ainda é "de hoje" às 14h, e some
+		// da agenda se for tratada como atrasada.
+		if (dia.getTime() < hojeDt.getTime()) {
+			atrasadas.push(a);
+			continue;
+		}
+		const k = chaveLocal(dia);
+		porDia.set(k, [...(porDia.get(k) ?? []), a]);
+	}
+
+	const ordena = (x: Atividade, y: Atividade) => (x.data_hora ?? '').localeCompare(y.data_hora ?? '');
+	atrasadas.sort(ordena);
+
+	const linhas: DiaAgenda[] = [];
+	for (let i = 0; i < dias; i++) {
+		const d = new Date(hojeDt.getFullYear(), hojeDt.getMonth(), hojeDt.getDate() + i);
+		const iso = chaveLocal(d);
+		linhas.push({
+			iso,
+			rotulo:
+				i === 0
+					? 'Hoje'
+					: i === 1
+						? 'Amanhã'
+						: d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }),
+			hoje: iso === hojeKey,
+			atividades: (porDia.get(iso) ?? []).sort(ordena)
+		});
+	}
+
+	return { atrasadas, dias: linhas, sem_data };
+}
+
 /** Iniciais para avatar (mesmo padrão do app shell). */
 export function iniciais(nome: string | null | undefined): string {
 	const n = (nome ?? '').trim();

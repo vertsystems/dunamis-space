@@ -132,8 +132,14 @@ function mapAtividades(linhas: Linha[]): Atividade[] {
 	});
 }
 
-/** Tudo o que a tela do CRM precisa, já no formato que ela consome. */
-export async function carregarCrm(supabase: Supa, url: URL) {
+/**
+ * Tudo o que o módulo Comercial precisa, já no formato que as telas consomem.
+ *
+ * Não recebe a URL de propósito: isto roda no `load` do LAYOUT, e um load que lê
+ * `url` volta a rodar a cada troca de tela — Dashboard → Kanban → Contatos
+ * recarregaria o CRM inteiro três vezes. O funil escolhido é estado do cliente.
+ */
+export async function carregarCrm(supabase: Supa) {
 	// Mês corrente no fuso do negócio (Brasil), não no do servidor (Vercel = UTC):
 	// na virada do mês os dois discordam. Mesma fonte usada pela action de metas.
 	const mesRef = mesRefSP();
@@ -172,8 +178,7 @@ export async function carregarCrm(supabase: Supa, url: URL) {
 		nome: p.nome as string,
 		ordem: p.ordem as number
 	}));
-	const pedido = url.searchParams.get('pipeline');
-	const pipelineAtivoId = pipelines.find((p) => p.id === pedido)?.id ?? pipelines[0]?.id ?? null;
+	const pipelineAtivoId = pipelines[0]?.id ?? null;
 
 	const [stagesRes, negociosRes, contatosRes, atividadesRes, colabRes, clientesRes] =
 		await Promise.all([

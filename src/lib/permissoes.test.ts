@@ -31,6 +31,20 @@ describe('moduloDaRota', () => {
 		expect(moduloDaRota('/crmXPTO')).not.toBe('crm');
 	});
 
+	it('as cinco telas do Comercial pedem o mesmo módulo do CRM', () => {
+		// Se uma delas escapasse do mapa, quem não tem o módulo abriria a tela —
+		// o RLS ainda protegeria os dados, mas a tela em si ficaria acessível.
+		for (const r of [
+			'/comercial',
+			'/comercial/kanban',
+			'/comercial/contatos',
+			'/comercial/metas',
+			'/comercial/relatorios'
+		]) {
+			expect(moduloDaRota(r)).toBe('crm');
+		}
+	});
+
 	it('trata rotas livres (pessoais) como sem módulo', () => {
 		for (const r of ['/', '/meu-dia', '/perfil', '/notificacoes', '/atalhos', '/desempenho']) {
 			expect(moduloDaRota(r)).toBeNull();

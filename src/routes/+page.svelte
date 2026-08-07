@@ -163,7 +163,7 @@
 		{:else}
 			<div class="flex items-center justify-between mb-2">
 				<h3 class="text-xs uppercase tracking-wide font-semibold text-grey">Resumo</h3>
-				<a class="text-xs text-brand hover:underline" href="/crm">Abrir CRM</a>
+				<a class="text-xs text-brand hover:underline" href="/comercial">Abrir Comercial</a>
 			</div>
 			<div class="grid grid-cols-3 gap-2 mb-4">
 				<div class="rounded-[var(--radius)] bg-bg p-3">

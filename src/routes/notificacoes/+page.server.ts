@@ -106,7 +106,8 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 					(a.data_hora
 						? ` · ${new Date(a.data_hora as string).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`
 						: ''),
-				href: '/crm',
+				// A atividade atrasada aparece na agenda do dashboard.
+				href: '/comercial',
 				peso: 80
 			});
 		}
