@@ -1,4 +1,3 @@
-import { clientesLite } from '$lib/server/lookups';
 import { um } from '$lib/db';
 import { str } from '$lib/form';
 import { fail } from '@sveltejs/kit';
@@ -27,23 +26,24 @@ function idDe(fd: FormData): string | null {
 }
 
 export const load: PageServerLoad = async ({ locals: { supabase } }) => {
-	const [ferrRes, acessosRes, colabRes, clientesRes] = await Promise.all([
+	const [ferrRes, acessosRes, colabRes] = await Promise.all([
 		supabase
 			.from('adm_ferramentas')
 			.select(
 				'id, nome, categoria, url, custo_mensal, ciclo, proxima_renovacao, responsavel_id, ativo, observacoes, responsavel:colaboradores(nome)'
 			)
 			.order('nome', { ascending: true }),
+		// Sem cliente_id: esta tela é só das contas da agência. Acesso de cliente
+		// mora no Vault, dentro da área do cliente (ver 0051/0052).
 		supabase
 			.from('adm_acessos')
 			.select(
-				'id, cliente_id, plataforma, login, url, local_senha, responsavel_id, observacoes, cliente:clientes(nome), responsavel:colaboradores(nome)'
+				'id, plataforma, login, url, local_senha, responsavel_id, observacoes, responsavel:colaboradores(nome)'
 			)
 			.order('plataforma', { ascending: true }),
 		// Sem filtro de ativo: um responsável desativado precisa continuar aparecendo
 		// no dropdown de itens existentes, senão a edição apagaria a atribuição.
-		supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').order('nome'),
-		clientesLite(supabase)
+		supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').order('nome')
 	]);
 
 	const errFerr = ferrRes.error;
@@ -71,12 +71,9 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 	});
 
 	const acessos = (acessosRes.data ?? []).map((a) => {
-		const cli = um<{ nome: string }>(a.cliente);
 		const resp = um<{ nome: string }>(a.responsavel);
 		return {
 			id: a.id as string,
-			cliente_id: (a.cliente_id as string | null) ?? null,
-			cliente_nome: cli?.nome ?? null,
 			plataforma: a.plataforma as string,
 			login: (a.login as string | null) ?? null,
 			url: (a.url as string | null) ?? null,
@@ -92,8 +89,7 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 		loadError,
 		ferramentas,
 		acessos,
-		colaboradores: (colabRes.data ?? []) as { id: string; nome: string }[],
-		clientes: (clientesRes.data ?? []) as { id: string; nome: string }[]
+		colaboradores: (colabRes.data ?? []) as { id: string; nome: string }[]
 	};
 };
 
@@ -163,7 +159,6 @@ export const actions: Actions = {
 		if (!plataforma) return fail(400, { error: 'A plataforma é obrigatória.' });
 		const { error } = await locals.supabase.from('adm_acessos').insert({
 			plataforma,
-			cliente_id: str(fd, 'cliente_id'),
 			login: str(fd, 'login'),
 			url: str(fd, 'url'),
 			local_senha: str(fd, 'local_senha'),
@@ -185,7 +180,6 @@ export const actions: Actions = {
 			.from('adm_acessos')
 			.update({
 				plataforma,
-				cliente_id: str(fd, 'cliente_id'),
 				login: str(fd, 'login'),
 				url: str(fd, 'url'),
 				local_senha: str(fd, 'local_senha'),

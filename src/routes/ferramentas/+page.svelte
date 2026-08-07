@@ -25,9 +25,10 @@
 		{ id: 'responsavel', accessorFn: (f) => f.responsavel_nome ?? '', meta: { label: 'Responsável' } }
 	];
 
+	// Sem coluna de cliente: esta tela é só das contas da agência. Os acessos de
+	// cliente ficam no Vault, dentro da área de cada cliente.
 	const acessoCols: ColumnDef<Acesso>[] = [
 		{ id: 'plataforma', accessorFn: (a) => a.plataforma, meta: { label: 'Plataforma' } },
-		{ id: 'cliente', accessorFn: (a) => (a.cliente_id ? (a.cliente_nome ?? '') : 'Agência'), meta: { label: 'Cliente' } },
 		{ id: 'login', accessorFn: (a) => a.login ?? '', meta: { label: 'Login' } },
 		{ id: 'local_senha', accessorFn: (a) => a.local_senha ?? '', meta: { label: 'Onde está a senha' } },
 		{ id: 'responsavel', accessorFn: (a) => a.responsavel_nome ?? '', meta: { label: 'Responsável' } }
@@ -164,7 +165,10 @@
 		<div class="flex flex-wrap items-end justify-between gap-3 mb-3">
 			<div>
 				<h2 class="text-sm font-semibold text-navy">Acessos / Contas</h2>
-				<p class="text-sm text-grey">Onde ficam os logins da agência e dos clientes.</p>
+				<p class="text-sm text-grey">
+					Onde ficam os logins da agência. Os acessos de cliente ficam no Vault, dentro da área de
+					cada cliente.
+				</p>
 			</div>
 			{#if podeEditar(perms, 'ferramentas')}
 				<Button size="sm" onclick={novoAcesso}>+ Novo acesso</Button>
@@ -197,13 +201,6 @@
 								{a.plataforma}
 							</button>
 						</td>
-						<td class="px-4 py-3">
-							{#if a.cliente_id}
-								<span class="text-slate">{a.cliente_nome ?? '—'}</span>
-							{:else}
-								<Badge tone="neutral">Agência</Badge>
-							{/if}
-						</td>
 						<td class="px-4 py-3 text-slate">{a.login ?? '—'}</td>
 						<td class="px-4 py-3">
 							{#if a.local_senha}
@@ -218,7 +215,7 @@
 					</tr>
 				{/snippet}
 				{#snippet empty()}
-					<tr><td colspan="5" class="px-2"><EmptyState icon="key" title="Nenhum acesso registrado" description="Registre os acessos e contas por cliente." /></td></tr>
+					<tr><td colspan="4" class="px-2"><EmptyState icon="key" title="Nenhum acesso registrado" description="Registre aqui as contas e logins da agência." /></td></tr>
 				{/snippet}
 			</DataTable>
 		</Card>
@@ -340,11 +337,6 @@
 		{#if a}<input type="hidden" name="id" value={a.id} />{/if}
 
 		<Input label="Plataforma *" name="plataforma" required value={a?.plataforma ?? ''} placeholder="Ex.: Meta Ads, Google" wrapperClass="md:col-span-6" />
-		<Select label="Cliente" name="cliente_id" value={a?.cliente_id ?? ''} wrapperClass="md:col-span-6">
-			<option value="">— Agência —</option>
-			{#each data.clientes as c (c.id)}<option value={c.id}>{c.nome}</option>{/each}
-		</Select>
-
 		<Input label="Login (usuário/e-mail)" name="login" value={a?.login ?? ''} placeholder="Não coloque a senha" wrapperClass="md:col-span-6" />
 		<Input label="URL" name="url" value={a?.url ?? ''} placeholder="https://" wrapperClass="md:col-span-6" />
 
