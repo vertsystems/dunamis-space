@@ -2,9 +2,9 @@
 	import { organyze } from '$lib/organyze/store.svelte';
 	import { corPrioridade, STATUS_LABEL } from '$lib/organyze/types';
 	import { Button } from '$lib/components/ui';
-	import CargoBadge from '$lib/components/CargoBadge.svelte';
-	import Abas from '$lib/components/organyze/Abas.svelte';
-	import { Trash2, RotateCcw, LogOut } from '@lucide/svelte';
+	import SelecaoPerfil from '$lib/components/organyze/SelecaoPerfil.svelte';
+	import CabecalhoPerfil from '$lib/components/organyze/CabecalhoPerfil.svelte';
+	import { Trash2, RotateCcw } from '@lucide/svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -18,17 +18,6 @@
 		void organyze.colaboradorId;
 		if (organyze.supabase && organyze.colaboradorId) organyze.carregarLixeira();
 	});
-
-	function iniciais(nome: string): string {
-		const p = nome.trim().split(/\s+/);
-		return ((p[0]?.[0] ?? '') + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase();
-	}
-	const CORES = ['#3b6ef6', '#17b26a', '#f5a524', '#f04438', '#8b5cf6', '#ec4899', '#0ea5e9'];
-	function corAvatar(id: string): string {
-		let h = 0;
-		for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-		return CORES[h % CORES.length];
-	}
 
 	/** Data/hora de exclusão em pt-BR (ex.: 07/07 às 14:30). */
 	function quando(iso: string | null | undefined): string {
@@ -50,74 +39,14 @@
 		<p class="mt-3 text-sm">Carregando…</p>
 	</div>
 {:else if !organyze.colaboradorId}
-	<!-- Seleção de perfil (compartilhada com Tarefas/Metas) -->
-	<div class="flex flex-col items-start py-10">
-		<div class="mb-10 text-left">
-			<h1 class="text-3xl font-bold text-navy">Quem é você?</h1>
-			<p class="mt-2 text-slate">Escolha seu perfil para ver as tarefas excluídas.</p>
-		</div>
-		{#if organyze.colaboradores.length === 0}
-			<p class="text-sm text-grey">Nenhum colaborador ativo encontrado.</p>
-		{:else}
-			<div class="flex flex-wrap items-start justify-start gap-x-6 gap-y-8">
-				{#each organyze.colaboradores as c (c.id)}
-					<button
-						class="avatar-btn flex w-24 flex-col items-center gap-2.5"
-						onclick={() => organyze.selecionarParaMetas(c.id)}
-					>
-						<span class="avatar-ring relative rounded-full">
-							{#if c.avatarUrl}
-								<img src={c.avatarUrl} alt={c.nome} class="size-20 rounded-full object-cover" />
-							{:else}
-								<span
-									class="grid size-20 place-items-center rounded-full text-2xl font-semibold text-white"
-									style="background: {corAvatar(c.id)}"
-								>
-									{iniciais(c.nome)}
-								</span>
-							{/if}
-							<span class="absolute -bottom-1.5 left-1/2 -translate-x-1/2">
-								<CargoBadge funcao={c.funcao} />
-							</span>
-						</span>
-						<span class="line-clamp-1 text-sm font-semibold text-navy">{c.nome}</span>
-					</button>
-				{/each}
-			</div>
-		{/if}
-	</div>
+	<SelecaoPerfil
+		subtitulo="Escolha seu perfil para ver as tarefas excluídas."
+		onEscolher={(id) => organyze.selecionarParaMetas(id)}
+	/>
 {:else}
-	{@const c = organyze.colaborador}
 	<!-- Mesma largura das outras telas: quem manda é a coluna do shell. -->
 	<div class="space-y-4">
-		<!-- Cabeçalho: perfil + trocar -->
-		<div class="flex items-center gap-3">
-			<span class="relative inline-block">
-				{#if c?.avatarUrl}
-					<img src={c.avatarUrl} alt={c.nome} class="size-11 rounded-full object-cover" />
-				{:else if c}
-					<span
-						class="grid size-11 place-items-center rounded-full text-sm font-semibold text-white"
-						style="background: {corAvatar(c.id)}"
-					>
-						{iniciais(c.nome)}
-					</span>
-				{/if}
-				{#if c}
-					<span class="absolute -bottom-1.5 left-1/2 -translate-x-1/2">
-						<CargoBadge funcao={c.funcao} />
-					</span>
-				{/if}
-			</span>
-			<div class="flex-1">
-				<div class="text-lg font-bold leading-tight text-navy">{c?.nome}</div>
-				<div class="text-xs text-grey">Lixeira</div>
-			</div>
-			<Abas />
-			<Button variant="secondary" size="sm" onclick={() => organyze.sair()}>
-				<LogOut size={15} /> Trocar
-			</Button>
-		</div>
+		<CabecalhoPerfil legenda="Lixeira" />
 
 		<!-- Barra de ações -->
 		<div
