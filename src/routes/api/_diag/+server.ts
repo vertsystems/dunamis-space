@@ -9,6 +9,7 @@
 // assim que a medição terminar.
 import { json, error } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
+import { cacheEnabled } from '$lib/server/cache';
 import type { RequestHandler } from './$types';
 
 const CHAVE = 'dspace-diag-2026';
@@ -38,6 +39,8 @@ export const GET: RequestHandler = async ({ url, locals: { supabase } }) => {
 
 	return json({
 		regiao_da_funcao: env.VERCEL_REGION ?? 'local',
+		// Só o liga/desliga do cache — nunca a URL nem o token.
+		cache_redis_ativo: cacheEnabled(),
 		ms: { uma, cinco_paralelas, cinco_sequenciais },
 		por_query_sequencial: Math.round(cinco_sequenciais / 5)
 	});
