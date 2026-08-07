@@ -28,6 +28,11 @@ export const MODULOS: Modulo[] = [
 	{ id: 'administrativo', label: 'Visão Geral (Admin)', grupo: 'administrativo', rotas: ['/administrativo'] },
 	{ id: 'permissoes', label: 'Permissões', grupo: 'administrativo', rotas: ['/administrativo/permissoes'] },
 	{ id: 'clientes', label: 'Clientes', grupo: 'administrativo', rotas: ['/clientes', '/cadastro'] },
+	// Sem rotas: não governa uma tela, e sim o cofre de acessos DENTRO da área do
+	// cliente. Ver o cliente não implica ver as senhas dele — por isso é módulo
+	// separado de 'clientes'. Como não entra no seed da 0034, nasce 'nenhum' para
+	// todos os cargos; só super-admin (ceo/admin) enxerga até alguém liberar.
+	{ id: 'vault', label: 'Vault (acessos do cliente)', grupo: 'administrativo', rotas: [] },
 	{ id: 'fornecedores', label: 'Fornecedores', grupo: 'administrativo', rotas: ['/fornecedores'] },
 	{ id: 'onboarding', label: 'Onboarding', grupo: 'administrativo', rotas: ['/onboarding'] },
 	{ id: 'equipe', label: 'Equipe', grupo: 'administrativo', rotas: ['/equipe'] },

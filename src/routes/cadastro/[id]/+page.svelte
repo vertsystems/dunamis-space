@@ -4,6 +4,7 @@
 	import { podeEditar, podeExcluir } from '$lib/permissoes';
 	import ClienteForm from '$lib/components/ClienteForm.svelte';
 	import CalendarioConteudos from '$lib/components/CalendarioConteudos.svelte';
+	import VaultCard from '$lib/components/VaultCard.svelte';
 	import CargoBadge from '$lib/components/CargoBadge.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import { Card, Badge, Button, Breadcrumb, Modal } from '$lib/components/ui';
@@ -150,6 +151,12 @@
 			{/each}
 		</dl>
 	</Card>
+{/if}
+
+<!-- Vault: acessos deste cliente. `data.vault` só vem preenchido para quem tem o
+     módulo 'vault' — sem permissão a seção nem existe. -->
+{#if data.vault}
+	<VaultCard vault={data.vault} colaboradores={data.calendario.colaboradores} {form} />
 {/if}
 
 <!-- Calendário de posts do cliente (mesmo do marketing, filtrado a este cliente) -->
