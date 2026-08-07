@@ -149,8 +149,9 @@
 	</Card>
 {/await}
 
-<!-- Blocos temáticos -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6 items-start">
+<!-- Blocos temáticos — sem items-start: os dois cards esticam até a mesma altura,
+     como os blocos das ferramentas acima. -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
 	<!-- Pipeline de vendas -->
 	<Card>
 		<h2 class="text-sm font-semibold text-navy flex items-center gap-2 mb-4"><Icon name="funnel" size={17} /> Pipeline de vendas</h2>
