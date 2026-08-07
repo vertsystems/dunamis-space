@@ -30,13 +30,43 @@ export interface PagsupSnapshot {
 	payments: Payment[];
 }
 
+/**
+ * A API do Supabase corta em 1000 linhas por resposta (max-rows), silenciosamente
+ * — sem erro, sem aviso. Cronograma e pagamentos crescem para sempre, então
+ * varremos em páginas: enquanto vier uma página cheia, pede a próxima.
+ *
+ * Verificado em produção (07/08/2026): o teto é mesmo 1000. A maior tabela tinha
+ * 74 linhas na época, então isto é prevenção — o dia em que estourar, a Planilha
+ * Mensal perderia os meses mais antigos sem ninguém perceber.
+ */
+const PAGINA = 1000;
+
+async function todasAsPaginas<T>(
+	montar: (de: number, ate: number) => PromiseLike<{ data: T[] | null; error: unknown }>
+): Promise<{ data: T[]; error: unknown }> {
+	const tudo: T[] = [];
+	for (let de = 0; ; de += PAGINA) {
+		const { data, error } = await montar(de, de + PAGINA - 1);
+		if (error) return { data: tudo, error };
+		const lote = data ?? [];
+		tudo.push(...lote);
+		if (lote.length < PAGINA) return { data: tudo, error: null };
+	}
+}
+
 export async function fetchAll(supabase: SupabaseClient): Promise<PagsupSnapshot> {
 	const [cli, prest, cron, neg, negAg, pag] = await Promise.all([
 		supabase.from('pagsup_clientes').select('id, nome').order('nome', { ascending: true }),
 		supabase
 			.from('pagsup_prestadores')
 			.select('id, cliente_id, nome, servico, regiao, valor_padrao, cpf, pix, whatsapp, especialidade, lj'),
-		supabase.from('pagsup_cronograma').select('id, cliente_id, prestador_id, data, valor, observacoes'),
+		todasAsPaginas((de, ate) =>
+			supabase
+				.from('pagsup_cronograma')
+				.select('id, cliente_id, prestador_id, data, valor, observacoes')
+				.order('data', { ascending: true })
+				.range(de, ate)
+		),
 		supabase
 			.from('pagsup_negociacoes')
 			.select('id, cliente_id, empresa, servico, fornecedor, valor_contrato, pix, regiao, ddv'),
@@ -44,10 +74,13 @@ export async function fetchAll(supabase: SupabaseClient): Promise<PagsupSnapshot
 		// PostgREST devolver erro enquanto a migration 0048 não roda, e aí o Pag's
 		// Up inteiro deixa de carregar. Com '*', a coluna aparece quando existir.
 		supabase.from('pagsup_negociacoes_agendadas').select('*'),
-		supabase
-			.from('pagsup_pagamentos')
-			.select('id, cliente_id, prestador_id, prestador_nome, servico, regiao, valor, data_pagamento, observacoes, lj')
-			.order('data_pagamento', { ascending: false })
+		todasAsPaginas((de, ate) =>
+			supabase
+				.from('pagsup_pagamentos')
+				.select('id, cliente_id, prestador_id, prestador_nome, servico, regiao, valor, data_pagamento, observacoes, lj')
+				.order('data_pagamento', { ascending: false })
+				.range(de, ate)
+		)
 	]);
 
 	const err = cli.error || prest.error || cron.error || neg.error || negAg.error;

@@ -37,6 +37,38 @@ export function cacheEnabled(): boolean {
 	return getClient() !== null;
 }
 
+// ---- Plano B: cache na memória da própria instância -----------------------
+// O Upstash nunca foi configurado em produção (verificado em 07/08/2026), então
+// na prática TODO `cached()` era só um fetcher direto. Enquanto o Redis não
+// existe, guardamos na memória do processo: some quando a instância recicla e
+// não é compartilhado entre instâncias, mas dentro do TTL evita repetir as ~15
+// consultas do dashboard a cada F5 — de graça e sem serviço externo.
+//
+// Isolamento entre usuários continua sendo responsabilidade da CHAVE (ver
+// chaveDoUsuario): uma instância serverless atende gente diferente.
+const memoria = new Map<string, { expira: number; valor: unknown }>();
+/** Teto de chaves, para o Map não virar vazamento de memória na instância. */
+const MEM_MAX = 500;
+
+function memGet<T>(key: string): T | undefined {
+	const item = memoria.get(key);
+	if (!item) return undefined;
+	if (item.expira <= Date.now()) {
+		memoria.delete(key);
+		return undefined;
+	}
+	return item.valor as T;
+}
+
+function memSet(key: string, valor: unknown, ttlSeconds: number): void {
+	if (memoria.size >= MEM_MAX) {
+		// Descarta a chave mais antiga (Map preserva a ordem de inserção).
+		const primeira = memoria.keys().next().value;
+		if (primeira !== undefined) memoria.delete(primeira);
+	}
+	memoria.set(key, { expira: Date.now() + ttlSeconds * 1000, valor });
+}
+
 /**
  * Retorna o valor cacheado em `key` ou executa `fetcher`, cacheando o
  * resultado por `ttlSeconds`. Falhas do Redis nunca quebram a request:
@@ -44,7 +76,14 @@ export function cacheEnabled(): boolean {
  */
 export async function cached<T>(key: string, ttlSeconds: number, fetcher: () => Promise<T>): Promise<T> {
 	const redis = getClient();
-	if (!redis) return fetcher();
+
+	if (!redis) {
+		const hit = memGet<T>(key);
+		if (hit !== undefined) return hit;
+		const fresh = await fetcher();
+		memSet(key, fresh, ttlSeconds);
+		return fresh;
+	}
 
 	try {
 		const hit = await redis.get<T>(key);
@@ -74,8 +113,12 @@ export function chaveDoUsuario(base: string, userId: string | undefined | null):
 
 /** Invalida uma ou mais chaves (ex.: após escrita que afeta um relatório cacheado). */
 export async function invalidate(...keys: string[]): Promise<void> {
+	if (keys.length === 0) return;
+	// Sempre limpa a memória local: com ou sem Redis, ela pode ter o valor velho.
+	for (const k of keys) memoria.delete(k);
+
 	const redis = getClient();
-	if (!redis || keys.length === 0) return;
+	if (!redis) return;
 	try {
 		await redis.del(...keys);
 	} catch {

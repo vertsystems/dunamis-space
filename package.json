@@ -15,7 +15,8 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test": "vitest run",
 		"test:watch": "vitest",
-		"imagens": "node scripts/otimiza-imagens.mjs"
+		"imagens": "node scripts/otimiza-imagens.mjs",
+		"tipos": "node scripts/gen-types.mjs"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^7.0.1",

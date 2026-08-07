@@ -1,11 +1,12 @@
 import { createServerClient } from '@supabase/ssr';
+import type { Database } from '$lib/database.types';
 import { type Handle, redirect } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { env } from '$env/dynamic/public';
 import { MODULO_IDS, podeAcessarRota, type Permissoes } from '$lib/permissoes';
 
 const supabase: Handle = async ({ event, resolve }) => {
-	event.locals.supabase = createServerClient(env.PUBLIC_SUPABASE_URL, env.PUBLIC_SUPABASE_ANON_KEY, {
+	event.locals.supabase = createServerClient<Database>(env.PUBLIC_SUPABASE_URL, env.PUBLIC_SUPABASE_ANON_KEY, {
 		cookies: {
 			getAll: () => event.cookies.getAll(),
 			setAll: (cookiesToSet) => {
@@ -48,10 +49,7 @@ const authGuard: Handle = async ({ event, resolve }) => {
 	const publicRoute =
 		event.url.pathname.startsWith('/login') ||
 		event.url.pathname.startsWith('/redefinir-senha') ||
-		event.url.pathname.startsWith('/aprovar') ||
-		// TEMPORÁRIO — medição de latência função↔banco (a própria rota exige
-		// chave e não devolve dado nenhum). Remover junto com /api/_diag.
-		event.url.pathname.startsWith('/api/_diag');
+		event.url.pathname.startsWith('/aprovar');
 
 	// getSession() só lê e decodifica o cookie — é local, sem rede. As duas
 	// chamadas CARAS são getUser() (valida no servidor de auth) e o RPC de

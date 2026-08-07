@@ -3,16 +3,18 @@ import { createBrowserClient, createServerClient, isBrowser } from '@supabase/ss
 // build passa em qualquer ambiente (ex.: Preview da Vercel sem as vars setadas);
 // os valores são lidos em runtime. Vars PUBLIC_ continuam expostas ao cliente.
 import { env } from '$env/dynamic/public';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '$lib/database.types';
 import type { LayoutLoad } from './$types';
 
 export const load: LayoutLoad = async ({ data, depends, fetch }) => {
 	depends('supabase:auth');
 
-	const supabase = isBrowser()
-		? createBrowserClient(env.PUBLIC_SUPABASE_URL, env.PUBLIC_SUPABASE_ANON_KEY, {
+	const supabase: SupabaseClient<Database> = isBrowser()
+		? createBrowserClient<Database>(env.PUBLIC_SUPABASE_URL, env.PUBLIC_SUPABASE_ANON_KEY, {
 				global: { fetch }
 			})
-		: createServerClient(env.PUBLIC_SUPABASE_URL, env.PUBLIC_SUPABASE_ANON_KEY, {
+		: createServerClient<Database>(env.PUBLIC_SUPABASE_URL, env.PUBLIC_SUPABASE_ANON_KEY, {
 				global: { fetch },
 				cookies: {
 					getAll: () => data.cookies
