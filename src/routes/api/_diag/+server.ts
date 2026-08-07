@@ -8,6 +8,7 @@
 // pede uma chave na query string para não ficar aberta, e DEVE ser removida
 // assim que a medição terminar.
 import { json, error } from '@sveltejs/kit';
+import { env } from '$env/dynamic/private';
 import type { RequestHandler } from './$types';
 
 const CHAVE = 'dspace-diag-2026';
@@ -36,7 +37,7 @@ export const GET: RequestHandler = async ({ url, locals: { supabase } }) => {
 	});
 
 	return json({
-		regiao_da_funcao: process.env.VERCEL_REGION ?? 'local',
+		regiao_da_funcao: env.VERCEL_REGION ?? 'local',
 		ms: { uma, cinco_paralelas, cinco_sequenciais },
 		por_query_sequencial: Math.round(cinco_sequenciais / 5)
 	});
