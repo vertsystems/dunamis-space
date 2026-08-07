@@ -1,8 +1,6 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
-	import { goto } from '$app/navigation';
 	import { PROJETO_TIPO, PROJETO_STATUS } from '$lib/projetos';
-	import { Button, Input, Select, Textarea, Checkbox } from '$lib/components/ui';
+	import { Input, Select, Textarea, Checkbox, FormShell } from '$lib/components/ui';
 	import ResponsavelPicker from '$lib/components/ResponsavelPicker.svelte';
 
 	let {
@@ -27,30 +25,10 @@
 		onDone?: () => void;
 	} = $props();
 
-	let saving = $state(false);
 	const v = (k: string) => projeto?.[k] ?? '';
 </script>
 
-<form
-	method="POST"
-	{action}
-	use:enhance={() => {
-		saving = true;
-		return async ({ result, update }) => {
-			if (onDone && (result.type === 'success' || result.type === 'redirect')) {
-				saving = false;
-				onDone();
-				return;
-			}
-			await update();
-			saving = false;
-		};
-	}}
->
-	{#if error}
-		<div role="alert" class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">{error}</div>
-	{/if}
-
+<FormShell {action} {error} {submitLabel} {onCancel} {onDone} cancelHref="/projetos">
 	<div class="grid grid-cols-1 md:grid-cols-12 gap-4">
 		<Input label="Nome do projeto *" name="nome" required value={v('nome')} wrapperClass="md:col-span-6" />
 		<Select label="Cliente *" name="cliente_id" required value={projeto?.cliente_id ?? ''} wrapperClass="md:col-span-6">
@@ -75,9 +53,4 @@
 
 		<Textarea label="Descrição" name="descricao" rows={3} value={v('descricao')} wrapperClass="md:col-span-12" />
 	</div>
-
-	<div class="flex gap-2 mt-4">
-		<Button type="submit" loading={saving}>{submitLabel}</Button>
-		<Button variant="secondary" onclick={() => (onCancel ? onCancel() : goto('/projetos'))}>Cancelar</Button>
-	</div>
-</form>
+</FormShell>

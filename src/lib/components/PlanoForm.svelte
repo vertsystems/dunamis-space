@@ -1,9 +1,7 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
-	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { VALOR_MASCARA } from '$lib/valores';
-	import { Button, Input, Textarea, Checkbox } from '$lib/components/ui';
+	import { Input, Textarea, Checkbox, FormShell } from '$lib/components/ui';
 
 	let {
 		plano = null,
@@ -23,32 +21,12 @@
 		onDone?: () => void;
 	} = $props();
 
-	let saving = $state(false);
 	const v = (k: string) => plano?.[k] ?? '';
 	// Vem do +layout.server.ts (módulo de permissão 'valores').
 	const podeValores = $derived(page.data.podeValores !== false);
 </script>
 
-<form
-	method="POST"
-	{action}
-	use:enhance={() => {
-		saving = true;
-		return async ({ result, update }) => {
-			if (onDone && (result.type === 'success' || result.type === 'redirect')) {
-				saving = false;
-				onDone();
-				return;
-			}
-			await update();
-			saving = false;
-		};
-	}}
->
-	{#if error}
-		<div role="alert" class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">{error}</div>
-	{/if}
-
+<FormShell {action} {error} {submitLabel} {onCancel} {onDone} cancelHref="/contratos/planos">
 	<div class="grid grid-cols-1 md:grid-cols-12 gap-4">
 		<Input label="Nome do plano *" name="nome" required value={v('nome')} placeholder="Starter, Gold, Premium…" wrapperClass="md:col-span-8" />
 		{#if podeValores}
@@ -75,9 +53,4 @@
 			<Checkbox label="Plano ativo (disponível para novos contratos)" name="ativo" checked={plano ? !!plano.ativo : true} />
 		</div>
 	</div>
-
-	<div class="flex gap-2 mt-4">
-		<Button type="submit" loading={saving}>{submitLabel}</Button>
-		<Button variant="secondary" onclick={() => (onCancel ? onCancel() : goto('/contratos/planos'))}>Cancelar</Button>
-	</div>
-</form>
+</FormShell>

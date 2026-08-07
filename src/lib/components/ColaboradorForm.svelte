@@ -1,8 +1,6 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
-	import { goto } from '$app/navigation';
 	import { FUNCAO } from '$lib/equipe';
-	import { Button, Input, Select, Checkbox } from '$lib/components/ui';
+	import { Input, Checkbox, FormShell } from '$lib/components/ui';
 
 	let {
 		colaborador = null,
@@ -22,30 +20,10 @@
 		onDone?: () => void;
 	} = $props();
 
-	let saving = $state(false);
 	const v = (k: string) => colaborador?.[k] ?? '';
 </script>
 
-<form
-	method="POST"
-	{action}
-	use:enhance={() => {
-		saving = true;
-		return async ({ result, update }) => {
-			if (onDone && (result.type === 'success' || result.type === 'redirect')) {
-				saving = false;
-				onDone();
-				return;
-			}
-			await update();
-			saving = false;
-		};
-	}}
->
-	{#if error}
-		<div role="alert" class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">{error}</div>
-	{/if}
-
+<FormShell {action} {error} {submitLabel} {onCancel} {onDone} cancelHref="/equipe">
 	<div class="grid grid-cols-1 md:grid-cols-12 gap-4">
 		<Input label="Nome *" name="nome" required value={v('nome')} wrapperClass="md:col-span-6" />
 		<Input label="E-mail *" type="email" name="email" required value={v('email')} wrapperClass="md:col-span-6" />
@@ -77,9 +55,4 @@
 			<Checkbox label="Ativo" name="ativo" checked={colaborador ? !!colaborador.ativo : true} />
 		</div>
 	</div>
-
-	<div class="flex gap-2 mt-4">
-		<Button type="submit" loading={saving}>{submitLabel}</Button>
-		<Button variant="secondary" onclick={() => (onCancel ? onCancel() : goto('/equipe'))}>Cancelar</Button>
-	</div>
-</form>
+</FormShell>

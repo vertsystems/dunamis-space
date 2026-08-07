@@ -1,8 +1,7 @@
 <script lang="ts">
 	// Formulário de um acesso do cofre do cliente (criar/editar em modal, padrão
 	// do sistema). Submete nativamente para as actions vault_* de /cadastro/[id].
-	import { enhance } from '$app/forms';
-	import { Button, Input, Textarea } from '$lib/components/ui';
+	import { Input, Textarea, FormShell } from '$lib/components/ui';
 	import ResponsavelPicker from '$lib/components/ResponsavelPicker.svelte';
 	import { Eye, EyeOff } from '@lucide/svelte';
 	import { VAULT_CATEGORIAS } from '$lib/vault';
@@ -32,36 +31,11 @@
 		onDone?: () => void;
 	} = $props();
 
-	let saving = $state(false);
 	let vendo = $state(false);
 	const v = (k: string) => (item?.[k as keyof typeof item] as string | null) ?? '';
 </script>
 
-<form
-	method="POST"
-	{action}
-	use:enhance={() => {
-		saving = true;
-		return async ({ result, update }) => {
-			if (onDone && (result.type === 'success' || result.type === 'redirect')) {
-				saving = false;
-				onDone();
-				return;
-			}
-			await update();
-			saving = false;
-		};
-	}}
->
-	{#if error}
-		<div
-			role="alert"
-			class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger"
-		>
-			{error}
-		</div>
-	{/if}
-
+<FormShell {action} {error} {submitLabel} {onCancel} {onDone} footerClass="mt-5">
 	{#if item?.id}
 		<input type="hidden" name="id" value={item.id as string} />
 	{/if}
@@ -142,9 +116,4 @@
 			wrapperClass="md:col-span-12"
 		/>
 	</div>
-
-	<div class="mt-5 flex justify-end gap-2">
-		<Button type="button" variant="secondary" onclick={() => onCancel?.()}>Cancelar</Button>
-		<Button type="submit" loading={saving}>{submitLabel}</Button>
-	</div>
-</form>
+</FormShell>

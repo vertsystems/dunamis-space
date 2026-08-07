@@ -1,8 +1,8 @@
 import { colaboradoresAtivos } from '$lib/server/lookups';
-import { error, fail, redirect } from '@sveltejs/kit';
-import { clienteFromForm, erroDeMigration } from '$lib/clientes';
-import { exigirPermissao } from '$lib/server/permissao';
-import { podeVerValores, preservarValores } from '$lib/valores';
+import { error } from '@sveltejs/kit';
+import { acoesDeItem } from '$lib/server/crud';
+import { clientes } from '$lib/server/recursos';
+import { podeVerValores } from '$lib/valores';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals: { supabase, permissoes } }) => {
@@ -19,23 +19,4 @@ export const load: PageServerLoad = async ({ params, locals: { supabase, permiss
 	};
 };
 
-export const actions: Actions = {
-	update: async ({ request, params, locals }) => {
-		exigirPermissao(locals, 'clientes', 'editar');
-		const { supabase } = locals;
-		const values = clienteFromForm(await request.formData());
-		if (!values.nome) return fail(400, { error: 'O nome é obrigatório.', values });
-		// Sem permissão de valores o mrr sai do update, para não zerar o do banco.
-		const patch = preservarValores(values, podeVerValores(locals.permissoes), 'mrr');
-		const { error: e } = await supabase.from('clientes').update(patch).eq('id', params.id);
-		if (e) return fail(500, { error: erroDeMigration(e.message) ?? e.message, values });
-		return { saved: true };
-	},
-	delete: async ({ params, locals }) => {
-		exigirPermissao(locals, 'clientes', 'excluir');
-		const { supabase } = locals;
-		const { error: e } = await supabase.from('clientes').delete().eq('id', params.id);
-		if (e) return fail(500, { error: e.message });
-		throw redirect(303, '/cadastro');
-	}
-};
+export const actions: Actions = acoesDeItem(clientes);

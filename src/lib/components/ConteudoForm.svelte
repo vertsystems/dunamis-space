@@ -1,8 +1,6 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
-	import { goto } from '$app/navigation';
 	import { CONTEUDO_TIPO, CONTEUDO_STATUS_GRUPOS, CONTEUDO_STATUS_PADRAO, CONTEUDO_REDE } from '$lib/conteudo';
-	import { Button, Input, Select, Textarea, Checkbox } from '$lib/components/ui';
+	import { Button, Input, Select, Textarea, Checkbox, FormShell } from '$lib/components/ui';
 	import ResponsavelPicker from '$lib/components/ResponsavelPicker.svelte';
 
 	let {
@@ -35,7 +33,6 @@
 		onDelete?: () => void;
 	} = $props();
 
-	let saving = $state(false);
 	const v = (k: string) => conteudo?.[k] ?? '';
 
 	// Grade de horários selecionáveis (30 em 30 min) — publicar é "só selecionar".
@@ -60,13 +57,9 @@
 	const horasOpcoes = $derived(
 		horaParte && !HORAS.includes(horaParte) ? [...HORAS, horaParte].sort() : HORAS
 	);
-</script>
 
-<form
-	method="POST"
-	{action}
-	use:enhance={({ formData }) => {
-		// Combina data + hora (local) em um instante UTC antes de enviar.
+	/** Combina data + hora (local) em um instante UTC antes de enviar. */
+	function combinarDataHora(formData: FormData) {
 		const d = formData.get('_data');
 		const h = formData.get('_hora');
 		formData.delete('_data');
@@ -78,22 +71,24 @@
 		} else {
 			formData.set('data_publicacao', '');
 		}
-		saving = true;
-		return async ({ result, update }) => {
-			if (onDone && (result.type === 'success' || result.type === 'redirect')) {
-				saving = false;
-				onDone();
-				return;
-			}
-			await update();
-			saving = false;
-		};
-	}}
->
-	{#if error}
-		<div role="alert" class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">{error}</div>
-	{/if}
+	}
+</script>
 
+<!-- Só entra no rodapé na edição (quem abriu o form passou o onDelete). -->
+{#snippet botaoExcluir()}
+	<Button variant="danger" type="button" onclick={() => onDelete?.()}>Excluir conteúdo</Button>
+{/snippet}
+
+<FormShell
+	{action}
+	{error}
+	{submitLabel}
+	{onCancel}
+	{onDone}
+	cancelHref="/calendario"
+	prepararEnvio={combinarDataHora}
+	acoes={onDelete ? botaoExcluir : undefined}
+>
 	<div class="grid grid-cols-1 md:grid-cols-12 gap-4">
 		<Select label="Cliente *" name="cliente_id" required value={conteudo?.cliente_id ?? ''} wrapperClass="md:col-span-4">
 			<option value="" disabled>Selecione um cliente</option>
@@ -181,12 +176,4 @@
 			<Checkbox label="Postado manualmente" name="publicado_manual" checked={!!conteudo?.publicado_manual} />
 		</div>
 	</div>
-
-	<div class="flex items-center gap-2 mt-4">
-		<Button type="submit" loading={saving}>{submitLabel}</Button>
-		<Button variant="secondary" onclick={() => (onCancel ? onCancel() : goto('/calendario'))}>Cancelar</Button>
-		{#if onDelete}
-			<Button variant="danger" type="button" onclick={onDelete} class="ml-auto">Excluir conteúdo</Button>
-		{/if}
-	</div>
-</form>
+</FormShell>

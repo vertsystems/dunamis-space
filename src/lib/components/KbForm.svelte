@@ -1,8 +1,6 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
-	import { goto } from '$app/navigation';
 	import { tagsToText } from '$lib/kb';
-	import { Button, Input, Select, Textarea } from '$lib/components/ui';
+	import { Input, Select, Textarea, FormShell } from '$lib/components/ui';
 
 	let {
 		artigo = null,
@@ -24,31 +22,11 @@
 		onDone?: () => void;
 	} = $props();
 
-	let saving = $state(false);
 	const v = (k: string) => artigo?.[k] ?? '';
 	const tags = artigo?.tags ? tagsToText(artigo.tags) : '';
 </script>
 
-<form
-	method="POST"
-	{action}
-	use:enhance={() => {
-		saving = true;
-		return async ({ result, update }) => {
-			if (onDone && (result.type === 'success' || result.type === 'redirect')) {
-				saving = false;
-				onDone();
-				return;
-			}
-			await update();
-			saving = false;
-		};
-	}}
->
-	{#if error}
-		<div role="alert" class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">{error}</div>
-	{/if}
-
+<FormShell {action} {error} {submitLabel} {onCancel} {onDone} cancelHref="/base-conhecimento">
 	<div class="grid grid-cols-1 md:grid-cols-12 gap-4">
 		<Input label="Título *" name="titulo" required value={v('titulo')} wrapperClass="md:col-span-8" />
 		<Input label="Categoria" name="categoria" value={v('categoria')} placeholder="Processos, Padrões…" wrapperClass="md:col-span-4" />
@@ -61,9 +39,4 @@
 
 		<Textarea label="Conteúdo" name="conteudo" rows={10} value={v('conteudo')} wrapperClass="md:col-span-12" />
 	</div>
-
-	<div class="flex gap-2 mt-4">
-		<Button type="submit" loading={saving}>{submitLabel}</Button>
-		<Button variant="secondary" onclick={() => (onCancel ? onCancel() : goto('/base-conhecimento'))}>Cancelar</Button>
-	</div>
-</form>
+</FormShell>

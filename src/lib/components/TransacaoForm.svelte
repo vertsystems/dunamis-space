@@ -1,8 +1,7 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
-	import { goto } from '$app/navigation';
 	import { TRANSACAO_TIPO, TRANSACAO_STATUS } from '$lib/financeiro';
-	import { Button, Input, Select, Checkbox } from '$lib/components/ui';
+	import { hojeISO } from '$lib/datas';
+	import { Input, Select, Checkbox, FormShell } from '$lib/components/ui';
 
 	let {
 		transacao = null,
@@ -24,32 +23,11 @@
 		onDone?: () => void;
 	} = $props();
 
-	let saving = $state(false);
-	import { hojeISO } from '$lib/datas';
 	const v = (k: string) => transacao?.[k] ?? '';
 	const today = hojeISO();
 </script>
 
-<form
-	method="POST"
-	{action}
-	use:enhance={() => {
-		saving = true;
-		return async ({ result, update }) => {
-			if (onDone && (result.type === 'success' || result.type === 'redirect')) {
-				saving = false;
-				onDone();
-				return;
-			}
-			await update();
-			saving = false;
-		};
-	}}
->
-	{#if error}
-		<div role="alert" class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">{error}</div>
-	{/if}
-
+<FormShell {action} {error} {submitLabel} {onCancel} {onDone} cancelHref="/financeiro">
 	<div class="grid grid-cols-1 md:grid-cols-12 gap-4">
 		<Select label="Tipo *" name="tipo" value={transacao?.tipo ?? 'receita'} wrapperClass="md:col-span-4">
 			{#each TRANSACAO_TIPO as t (t.value)}
@@ -79,9 +57,4 @@
 			<Checkbox label="Recorrente (se repete todo mês)" name="recorrente" checked={!!transacao?.recorrente} />
 		</div>
 	</div>
-
-	<div class="flex gap-2 mt-4">
-		<Button type="submit" loading={saving}>{submitLabel}</Button>
-		<Button variant="secondary" onclick={() => (onCancel ? onCancel() : goto('/financeiro'))}>Cancelar</Button>
-	</div>
-</form>
+</FormShell>

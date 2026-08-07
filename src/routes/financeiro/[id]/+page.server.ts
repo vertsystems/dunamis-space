@@ -1,7 +1,7 @@
 import { clientesLite } from '$lib/server/lookups';
-import { error, fail, redirect } from '@sveltejs/kit';
-import { transacaoFromForm } from '$lib/financeiro';
-import { exigirPermissao } from '$lib/server/permissao';
+import { error } from '@sveltejs/kit';
+import { acoesDeItem } from '$lib/server/crud';
+import { financeiro } from '$lib/server/recursos';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals: { supabase } }) => {
@@ -13,18 +13,4 @@ export const load: PageServerLoad = async ({ params, locals: { supabase } }) => 
 	return { transacao, clientes: clientes ?? [] };
 };
 
-export const actions: Actions = {
-	update: async ({ request, params, locals }) => {
-		exigirPermissao(locals, 'financeiro', 'editar');
-		const values = transacaoFromForm(await request.formData());
-		const { error: e } = await locals.supabase.from('transacoes').update(values).eq('id', params.id);
-		if (e) return fail(500, { error: e.message, values });
-		return { saved: true };
-	},
-	delete: async ({ params, locals }) => {
-		exigirPermissao(locals, 'financeiro', 'excluir');
-		const { error: e } = await locals.supabase.from('transacoes').delete().eq('id', params.id);
-		if (e) return fail(500, { error: e.message });
-		throw redirect(303, '/financeiro');
-	}
-};
+export const actions: Actions = acoesDeItem(financeiro);

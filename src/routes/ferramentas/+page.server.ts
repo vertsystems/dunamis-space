@@ -1,29 +1,10 @@
 import { um } from '$lib/db';
-import { str } from '$lib/form';
-import { fail } from '@sveltejs/kit';
-import { exigirPermissao } from '$lib/server/permissao';
+import { acoesNaPagina } from '$lib/server/crud';
+import { acessos as recursoAcessos, ferramentas as recursoFerramentas } from '$lib/server/recursos';
 import type { Actions, PageServerLoad } from './$types';
 
 /** Erro típico de tabela/coluna inexistente → migration 0006 ainda não aplicada. */
 const PENDENTE_RX = /adm_|does not exist|column|schema cache|relation/i;
-
-// ------------------------------------------------------------
-// Helpers de FormData
-// ------------------------------------------------------------
-function num(fd: FormData, k: string): number | null {
-	const raw = str(fd, k);
-	if (raw === null) return null;
-	const n = Number(raw.replace(/\./g, '').replace(',', '.'));
-	return Number.isNaN(n) ? null : n;
-}
-function bool(fd: FormData, k: string): boolean {
-	const v = fd.get(k);
-	return v === 'on' || v === 'true';
-}
-function idDe(fd: FormData): string | null {
-	const v = fd.get('id');
-	return typeof v === 'string' && v ? v : null;
-}
 
 export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 	const [ferrRes, acessosRes, colabRes] = await Promise.all([
@@ -93,112 +74,17 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 	};
 };
 
+// Duas listas na mesma tela: cada uma com suas três actions, nomeadas com o
+// prefixo que o formulário usa no `action`.
+const ferramenta = acoesNaPagina(recursoFerramentas);
+const acesso = acoesNaPagina(recursoAcessos);
+
 export const actions: Actions = {
-	// ---------------- Ferramentas ----------------
-	ferramenta_criar: async ({ request, locals }) => {
-		exigirPermissao(locals, 'ferramentas', 'editar');
-		const fd = await request.formData();
-		const nome = str(fd, 'nome');
-		if (!nome) return fail(400, { error: 'O nome da ferramenta é obrigatório.' });
-		const { error } = await locals.supabase.from('adm_ferramentas').insert({
-			nome,
-			categoria: str(fd, 'categoria'),
-			url: str(fd, 'url'),
-			custo_mensal: num(fd, 'custo_mensal') ?? 0,
-			ciclo: str(fd, 'ciclo') ?? 'mensal',
-			proxima_renovacao: str(fd, 'proxima_renovacao'),
-			responsavel_id: str(fd, 'responsavel_id'),
-			ativo: bool(fd, 'ativo'),
-			observacoes: str(fd, 'observacoes')
-		});
-		if (error) return fail(500, { error: error.message });
-		return { saved: true };
-	},
+	ferramenta_criar: ferramenta.criar,
+	ferramenta_atualizar: ferramenta.atualizar,
+	ferramenta_excluir: ferramenta.excluir,
 
-	ferramenta_atualizar: async ({ request, locals }) => {
-		exigirPermissao(locals, 'ferramentas', 'editar');
-		const fd = await request.formData();
-		const id = idDe(fd);
-		if (!id) return fail(400, { error: 'Ferramenta inválida.' });
-		const nome = str(fd, 'nome');
-		if (!nome) return fail(400, { error: 'O nome da ferramenta é obrigatório.' });
-		const { error } = await locals.supabase
-			.from('adm_ferramentas')
-			.update({
-				nome,
-				categoria: str(fd, 'categoria'),
-				url: str(fd, 'url'),
-				custo_mensal: num(fd, 'custo_mensal') ?? 0,
-				ciclo: str(fd, 'ciclo') ?? 'mensal',
-				proxima_renovacao: str(fd, 'proxima_renovacao'),
-				responsavel_id: str(fd, 'responsavel_id'),
-				ativo: bool(fd, 'ativo'),
-				observacoes: str(fd, 'observacoes'),
-				updated_at: new Date().toISOString()
-			})
-			.eq('id', id);
-		if (error) return fail(500, { error: error.message });
-		return { saved: true };
-	},
-
-	ferramenta_excluir: async ({ request, locals }) => {
-		exigirPermissao(locals, 'ferramentas', 'excluir');
-		const fd = await request.formData();
-		const id = idDe(fd);
-		if (!id) return fail(400, { error: 'Ferramenta inválida.' });
-		const { error } = await locals.supabase.from('adm_ferramentas').delete().eq('id', id);
-		if (error) return fail(500, { error: error.message });
-		return { deleted: true };
-	},
-
-	// ---------------- Acessos ----------------
-	acesso_criar: async ({ request, locals }) => {
-		exigirPermissao(locals, 'ferramentas', 'editar');
-		const fd = await request.formData();
-		const plataforma = str(fd, 'plataforma');
-		if (!plataforma) return fail(400, { error: 'A plataforma é obrigatória.' });
-		const { error } = await locals.supabase.from('adm_acessos').insert({
-			plataforma,
-			login: str(fd, 'login'),
-			url: str(fd, 'url'),
-			local_senha: str(fd, 'local_senha'),
-			responsavel_id: str(fd, 'responsavel_id'),
-			observacoes: str(fd, 'observacoes')
-		});
-		if (error) return fail(500, { error: error.message });
-		return { saved: true };
-	},
-
-	acesso_atualizar: async ({ request, locals }) => {
-		exigirPermissao(locals, 'ferramentas', 'editar');
-		const fd = await request.formData();
-		const id = idDe(fd);
-		if (!id) return fail(400, { error: 'Acesso inválido.' });
-		const plataforma = str(fd, 'plataforma');
-		if (!plataforma) return fail(400, { error: 'A plataforma é obrigatória.' });
-		const { error } = await locals.supabase
-			.from('adm_acessos')
-			.update({
-				plataforma,
-				login: str(fd, 'login'),
-				url: str(fd, 'url'),
-				local_senha: str(fd, 'local_senha'),
-				responsavel_id: str(fd, 'responsavel_id'),
-				observacoes: str(fd, 'observacoes'),
-				updated_at: new Date().toISOString()
-			})
-			.eq('id', id);
-		if (error) return fail(500, { error: error.message });
-		return { saved: true };
-	},
-
-	acesso_excluir: async ({ request, locals }) => {
-		exigirPermissao(locals, 'ferramentas', 'excluir');
-		const fd = await request.formData();
-		const id = idDe(fd);
-		if (!id) return fail(400, { error: 'Acesso inválido.' });
-		const { error } = await locals.supabase.from('adm_acessos').delete().eq('id', id);
-		if (error) return fail(500, { error: error.message });
-		return { deleted: true };
-	}
+	acesso_criar: acesso.criar,
+	acesso_atualizar: acesso.atualizar,
+	acesso_excluir: acesso.excluir
 };

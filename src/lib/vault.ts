@@ -4,6 +4,7 @@
 //
 // A senha é gravada em texto no banco; quem protege é o módulo de permissão
 // 'vault' (RLS na 0051) — ver o cliente NÃO implica ver o cofre dele.
+import { str } from '$lib/form';
 
 export interface VaultItem {
 	id: string;
@@ -16,6 +17,19 @@ export interface VaultItem {
 	responsavel_id: string | null;
 	posicao: number;
 	updated_at: string | null;
+}
+
+/** Campos do formulário do cofre (compartilhados por criar e atualizar). */
+export function vaultFromForm(fd: FormData) {
+	return {
+		titulo: str(fd, 'titulo'),
+		categoria: str(fd, 'categoria'),
+		url: str(fd, 'url'),
+		login: str(fd, 'login'),
+		senha: str(fd, 'senha'),
+		observacoes: str(fd, 'observacoes'),
+		responsavel_id: str(fd, 'responsavel_id')
+	};
 }
 
 /** Sugestões do campo Categoria (datalist) — só atalho, o campo é livre. */

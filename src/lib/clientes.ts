@@ -1,3 +1,5 @@
+import { num, str as campo } from '$lib/form';
+
 export const CLIENTE_STATUS = [
 	{ value: 'lead', label: 'Lead' },
 	{ value: 'ativo', label: 'Ativo' },
@@ -48,18 +50,8 @@ export function formatBRL(value: number | null | undefined): string {
 
 /** Normaliza os campos do formulário (unificado) de cliente vindos de FormData. */
 export function clienteFromForm(fd: FormData) {
-	const str = (k: string) => {
-		const v = fd.get(k);
-		const s = typeof v === 'string' ? v.trim() : '';
-		return s === '' ? null : s;
-	};
-	// Números de <input type="number">: já vêm com ponto decimal.
-	const numero = (k: string) => {
-		const s = str(k);
-		if (s === null) return null;
-		const n = Number(s);
-		return Number.isNaN(n) ? null : n;
-	};
+	const str = (k: string) => campo(fd, k);
+	const numero = (k: string) => num(fd, k);
 	// Responsáveis (multi): checkboxes name="responsaveis_ids". O single
 	// responsavel_id espelha o primeiro, mantendo compat com as consultas.
 	const responsaveis_ids = fd

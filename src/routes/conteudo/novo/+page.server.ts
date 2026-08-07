@@ -1,8 +1,7 @@
 import { colaboradoresAtivos, clientesLite } from '$lib/server/lookups';
-import { fail, redirect } from '@sveltejs/kit';
-import { conteudoFromForm } from '$lib/conteudo';
+import { acaoCriar } from '$lib/server/crud';
+import { conteudo } from '$lib/server/recursos';
 import { nomesDeCampanha } from '$lib/server/conteudo';
-import { exigirPermissao } from '$lib/server/permissao';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals: { supabase } }) => {
@@ -15,14 +14,4 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 	return { clientes: clientes ?? [], projetos: projetos ?? [], colaboradores: colaboradores ?? [], campanhas };
 };
 
-export const actions: Actions = {
-	default: async ({ request, locals }) => {
-		exigirPermissao(locals, 'conteudo', 'editar');
-		const { supabase } = locals;
-		const values = conteudoFromForm(await request.formData());
-		if (!values.cliente_id) return fail(400, { error: 'Selecione um cliente.', values });
-		const { data, error } = await supabase.from('conteudos').insert(values).select('id').single();
-		if (error) return fail(500, { error: error.message, values });
-		throw redirect(303, `/conteudo/${data.id}`);
-	}
-};
+export const actions: Actions = { default: acaoCriar(conteudo) };

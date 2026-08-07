@@ -1,7 +1,6 @@
 import { colaboradoresAtivos } from '$lib/server/lookups';
-import { fail, redirect } from '@sveltejs/kit';
-import { clienteFromForm, erroDeMigration } from '$lib/clientes';
-import { exigirPermissao } from '$lib/server/permissao';
+import { acaoCriar } from '$lib/server/crud';
+import { clientes } from '$lib/server/recursos';
 import { selComErro } from '$lib/server/query';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -20,18 +19,4 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 	};
 };
 
-export const actions: Actions = {
-	default: async ({ request, locals }) => {
-		exigirPermissao(locals, 'clientes', 'editar');
-		const { supabase } = locals;
-		const values = clienteFromForm(await request.formData());
-		if (!values.nome) {
-			return fail(400, { error: 'O nome é obrigatório.', values });
-		}
-		const { data, error } = await supabase.from('clientes').insert(values).select('id').single();
-		if (error) {
-			return fail(500, { error: erroDeMigration(error.message) ?? error.message, values });
-		}
-		throw redirect(303, `/clientes/${data.id}`);
-	}
-};
+export const actions: Actions = { default: acaoCriar(clientes) };

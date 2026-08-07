@@ -1,8 +1,6 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
-	import { goto } from '$app/navigation';
 	import { PROCESSO_ETAPAS, PROCESSO_SITUACAO, ETAPA_STATUS } from '$lib/processos';
-	import { Button, Input, Select } from '$lib/components/ui';
+	import { Input, Select, FormShell } from '$lib/components/ui';
 
 	let {
 		processo = null,
@@ -22,31 +20,19 @@
 		onDone?: () => void;
 	} = $props();
 
-	let saving = $state(false);
 	const v = (k: string) => processo?.[k] ?? '';
 	const etapaAtual = (key: string) => processo?.etapas?.[key] ?? 'pendente';
 </script>
 
-<form
-	method="POST"
+<FormShell
 	{action}
-	use:enhance={() => {
-		saving = true;
-		return async ({ result, update }) => {
-			if (onDone && (result.type === 'success' || result.type === 'redirect')) {
-				saving = false;
-				onDone();
-				return;
-			}
-			await update();
-			saving = false;
-		};
-	}}
+	{error}
+	{submitLabel}
+	{onCancel}
+	{onDone}
+	cancelHref="/processos"
+	footerClass="mt-6"
 >
-	{#if error}
-		<div role="alert" class="mb-4 rounded-[var(--radius)] bg-brand-danger/10 px-4 py-3 text-sm text-brand-danger">{error}</div>
-	{/if}
-
 	<div class="grid grid-cols-1 md:grid-cols-12 gap-4">
 		<Input label="Nome do processo *" name="nome" required value={v('nome')} placeholder="Aquisição de…" wrapperClass="md:col-span-7" />
 		<Input label="Número" name="numero" value={v('numero')} placeholder="001/2026" wrapperClass="md:col-span-2" />
@@ -67,9 +53,4 @@
 			</Select>
 		{/each}
 	</div>
-
-	<div class="flex gap-2 mt-6">
-		<Button type="submit" loading={saving}>{submitLabel}</Button>
-		<Button variant="secondary" onclick={() => (onCancel ? onCancel() : goto('/processos'))}>Cancelar</Button>
-	</div>
-</form>
+</FormShell>

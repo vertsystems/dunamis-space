@@ -1,17 +1,5 @@
-import { fail, redirect } from '@sveltejs/kit';
-import { colaboradorFromForm } from '$lib/equipe';
-import { exigirPermissao } from '$lib/server/permissao';
+import { acaoCriar } from '$lib/server/crud';
+import { equipe } from '$lib/server/recursos';
 import type { Actions } from './$types';
 
-export const actions: Actions = {
-	default: async ({ request, locals }) => {
-		exigirPermissao(locals, 'equipe', 'editar');
-		const { supabase } = locals;
-		const values = colaboradorFromForm(await request.formData());
-		if (!values.nome) return fail(400, { error: 'O nome é obrigatório.', values });
-		if (!values.email) return fail(400, { error: 'O e-mail é obrigatório.', values });
-		const { error } = await supabase.from('colaboradores').insert(values);
-		if (error) return fail(500, { error: error.message, values });
-		throw redirect(303, '/equipe');
-	}
-};
+export const actions: Actions = { default: acaoCriar(equipe) };

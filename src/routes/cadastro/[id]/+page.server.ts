@@ -1,11 +1,11 @@
-import { error, fail, redirect } from '@sveltejs/kit';
-import { clienteFromForm, erroDeMigration } from '$lib/clientes';
-import { str } from '$lib/form';
+import { error } from '@sveltejs/kit';
+import { acoesDeItem, acoesNaPagina } from '$lib/server/crud';
+// `vault` renomeado: no load abaixo essa palavra já é o cofre carregado.
+import { clientes, vault as recursoVault } from '$lib/server/recursos';
 import { carregarCalendario } from '$lib/server/calendario';
-import { exigirPermissao } from '$lib/server/permissao';
 import { podeVer } from '$lib/permissoes';
 import { sel } from '$lib/server/query';
-import { podeVerValores, preservarValores } from '$lib/valores';
+import { podeVerValores } from '$lib/valores';
 import type { VaultItem } from '$lib/vault';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -44,19 +44,6 @@ async function carregarVault(supabase: SupabaseClient, clienteId: string) {
 		})) as VaultItem[],
 		pendente: false,
 		erro: null
-	};
-}
-
-/** Campos do formulário do cofre (compartilhados por criar e atualizar). */
-function vaultFromForm(fd: FormData) {
-	return {
-		titulo: str(fd, 'titulo'),
-		categoria: str(fd, 'categoria'),
-		url: str(fd, 'url'),
-		login: str(fd, 'login'),
-		senha: str(fd, 'senha'),
-		observacoes: str(fd, 'observacoes'),
-		responsavel_id: str(fd, 'responsavel_id')
 	};
 }
 
@@ -109,80 +96,14 @@ export const load: PageServerLoad = async ({ params, url, locals: { supabase, pe
 	};
 };
 
+const cofre = acoesNaPagina(recursoVault);
+
 export const actions: Actions = {
-	update: async ({ request, params, locals }) => {
-		exigirPermissao(locals, 'clientes', 'editar');
-		const { supabase } = locals;
-		const values = clienteFromForm(await request.formData());
-		if (!values.nome) return fail(400, { error: 'O nome é obrigatório.', values });
-		// Quem não vê o MRR também não o altera: o campo sai do update e a coluna
-		// fica como está no banco.
-		const patch = preservarValores(values, podeVerValores(locals.permissoes), 'mrr');
-		const { error: e } = await supabase
-			.from('clientes')
-			.update({ ...patch, updated_at: new Date().toISOString() })
-			.eq('id', params.id);
-		if (e) {
-			return fail(500, { error: erroDeMigration(e.message) ?? e.message, values });
-		}
-		return { saved: true };
-	},
-	delete: async ({ params, locals }) => {
-		exigirPermissao(locals, 'clientes', 'excluir');
-		const { supabase } = locals;
-		const { error: e } = await supabase.from('clientes').delete().eq('id', params.id);
-		if (e) return fail(500, { error: e.message });
-		throw redirect(303, '/cadastro');
-	},
+	// O cadastro do cliente: mesmas regras da tela /clientes/[id].
+	...acoesDeItem(clientes),
 
-	// ---------------- Vault (acessos do cliente) ----------------
-	vault_criar: async ({ request, params, locals }) => {
-		exigirPermissao(locals, 'vault', 'editar');
-		const fd = await request.formData();
-		const values = vaultFromForm(fd);
-		if (!values.titulo) return fail(400, { vaultError: 'O nome do acesso é obrigatório.', values });
-
-		// Novo entra no fim da lista do cliente.
-		const { data: ultimo } = await locals.supabase
-			.from('cliente_vault')
-			.select('posicao')
-			.eq('cliente_id', params.id)
-			.order('posicao', { ascending: false })
-			.limit(1)
-			.maybeSingle();
-
-		const { error: e } = await locals.supabase.from('cliente_vault').insert({
-			...values,
-			cliente_id: params.id,
-			posicao: ((ultimo?.posicao as number | undefined) ?? -1) + 1
-		});
-		if (e) return fail(500, { vaultError: e.message, values });
-		return { vaultSaved: true };
-	},
-
-	vault_atualizar: async ({ request, locals }) => {
-		exigirPermissao(locals, 'vault', 'editar');
-		const fd = await request.formData();
-		const id = str(fd, 'id');
-		if (!id) return fail(400, { vaultError: 'Acesso inválido.' });
-		const values = vaultFromForm(fd);
-		if (!values.titulo) return fail(400, { vaultError: 'O nome do acesso é obrigatório.', values });
-
-		const { error: e } = await locals.supabase
-			.from('cliente_vault')
-			.update({ ...values, updated_at: new Date().toISOString() })
-			.eq('id', id);
-		if (e) return fail(500, { vaultError: e.message, values });
-		return { vaultSaved: true };
-	},
-
-	vault_excluir: async ({ request, locals }) => {
-		exigirPermissao(locals, 'vault', 'excluir');
-		const fd = await request.formData();
-		const id = str(fd, 'id');
-		if (!id) return fail(400, { vaultError: 'Acesso inválido.' });
-		const { error: e } = await locals.supabase.from('cliente_vault').delete().eq('id', id);
-		if (e) return fail(500, { vaultError: e.message });
-		return { vaultDeleted: true };
-	}
+	// O cofre de acessos deste cliente, editado sem sair da tela.
+	vault_criar: cofre.criar,
+	vault_atualizar: cofre.atualizar,
+	vault_excluir: cofre.excluir
 };

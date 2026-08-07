@@ -1,8 +1,8 @@
 import { clientesLite } from '$lib/server/lookups';
-import { error, fail, redirect } from '@sveltejs/kit';
-import { contratoFromForm } from '$lib/contratos';
-import { exigirPermissao } from '$lib/server/permissao';
-import { ocultarValores, podeVerValores, preservarValores } from '$lib/valores';
+import { error } from '@sveltejs/kit';
+import { acoesDeItem } from '$lib/server/crud';
+import { contratos } from '$lib/server/recursos';
+import { ocultarValores, podeVerValores } from '$lib/valores';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals: { supabase, permissoes } }) => {
@@ -20,21 +20,4 @@ export const load: PageServerLoad = async ({ params, locals: { supabase, permiss
 	};
 };
 
-export const actions: Actions = {
-	update: async ({ request, params, locals }) => {
-		exigirPermissao(locals, 'contratos', 'editar');
-		const values = contratoFromForm(await request.formData());
-		if (!values.cliente_id) return fail(400, { error: 'Selecione um cliente.', values });
-		// Sem permissão de valores, o valor_mensal sai do update (fica o do banco).
-		const patch = preservarValores(values, podeVerValores(locals.permissoes), 'valor_mensal');
-		const { error: e } = await locals.supabase.from('contratos').update(patch).eq('id', params.id);
-		if (e) return fail(500, { error: e.message, values });
-		return { saved: true };
-	},
-	delete: async ({ params, locals }) => {
-		exigirPermissao(locals, 'contratos', 'excluir');
-		const { error: e } = await locals.supabase.from('contratos').delete().eq('id', params.id);
-		if (e) return fail(500, { error: e.message });
-		throw redirect(303, '/contratos');
-	}
-};
+export const actions: Actions = acoesDeItem(contratos);

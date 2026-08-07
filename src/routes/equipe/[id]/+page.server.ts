@@ -1,6 +1,6 @@
-import { error, fail, redirect } from '@sveltejs/kit';
-import { colaboradorFromForm } from '$lib/equipe';
-import { exigirPermissao } from '$lib/server/permissao';
+import { error } from '@sveltejs/kit';
+import { acoesDeItem } from '$lib/server/crud';
+import { equipe } from '$lib/server/recursos';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals: { supabase } }) => {
@@ -13,22 +13,4 @@ export const load: PageServerLoad = async ({ params, locals: { supabase } }) => 
 	return { colaborador };
 };
 
-export const actions: Actions = {
-	update: async ({ request, params, locals }) => {
-		exigirPermissao(locals, 'equipe', 'editar');
-		const { supabase } = locals;
-		const values = colaboradorFromForm(await request.formData());
-		if (!values.nome) return fail(400, { error: 'O nome é obrigatório.', values });
-		if (!values.email) return fail(400, { error: 'O e-mail é obrigatório.', values });
-		const { error: e } = await supabase.from('colaboradores').update(values).eq('id', params.id);
-		if (e) return fail(500, { error: e.message, values });
-		return { saved: true };
-	},
-	delete: async ({ params, locals }) => {
-		exigirPermissao(locals, 'equipe', 'excluir');
-		const { supabase } = locals;
-		const { error: e } = await supabase.from('colaboradores').delete().eq('id', params.id);
-		if (e) return fail(500, { error: e.message });
-		throw redirect(303, '/equipe');
-	}
-};
+export const actions: Actions = acoesDeItem(equipe);

@@ -25,6 +25,18 @@ export function num(fd: FormData, k: string): number | null {
 	return Number.isFinite(n) ? n : null;
 }
 
+/**
+ * Número digitado à brasileira, com separador de milhar: "1.234,56" → 1234.56.
+ * Só use onde o campo é texto livre; `<input type="number">` já manda canônico
+ * e passar por aqui estragaria valores em notação científica.
+ */
+export function numBR(fd: FormData, k: string): number | null {
+	const s = str(fd, k);
+	if (s === null) return null;
+	const n = Number(s.replace(/\./g, '').replace(',', '.'));
+	return Number.isFinite(n) ? n : null;
+}
+
 /** Inteiro; inválido/vazio vira null. */
 export function int(fd: FormData, k: string): number | null {
 	const n = num(fd, k);

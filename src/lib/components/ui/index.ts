@@ -14,6 +14,7 @@ export { default as EmptyState } from './EmptyState.svelte';
 export { default as Tabs } from './Tabs.svelte';
 export { default as Dropdown } from './Dropdown.svelte';
 export { default as DataTable } from './DataTable.svelte';
+export { default as FormShell } from './FormShell.svelte';
 
 export { toneClasses } from './Badge.svelte';
 

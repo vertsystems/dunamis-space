@@ -1,6 +1,8 @@
 import { colaboradoresAtivos, clientesLite } from '$lib/server/lookups';
-import { error, fail, redirect } from '@sveltejs/kit';
-import { conteudoFromForm } from '$lib/conteudo';
+import { error, fail } from '@sveltejs/kit';
+import { acoesDeItem } from '$lib/server/crud';
+// Renomeado: `conteudo` é o nome da linha carregada no load logo abaixo.
+import { conteudo as recursoConteudo } from '$lib/server/recursos';
 import { nomesDeCampanha } from '$lib/server/conteudo';
 import { exigirPermissao } from '$lib/server/permissao';
 import type { Actions, PageServerLoad } from './$types';
@@ -38,15 +40,9 @@ export const load: PageServerLoad = async ({ params, locals: { supabase } }) => 
 };
 
 export const actions: Actions = {
-	update: async ({ request, params, locals }) => {
-		exigirPermissao(locals, 'conteudo', 'editar');
-		const { supabase } = locals;
-		const values = conteudoFromForm(await request.formData());
-		if (!values.cliente_id) return fail(400, { error: 'Selecione um cliente.', values });
-		const { error: e } = await supabase.from('conteudos').update(values).eq('id', params.id);
-		if (e) return fail(500, { error: e.message, values });
-		return { saved: true };
-	},
+	...acoesDeItem(recursoConteudo),
+
+	// Fora do CRUD: cria o link público de aprovação e move o conteúdo de status.
 	enviarAprovacao: async ({ params, locals }) => {
 		exigirPermissao(locals, 'conteudo', 'editar');
 		const { supabase } = locals;
@@ -60,12 +56,5 @@ export const actions: Actions = {
 			.eq('id', params.id);
 		if (eStatus) return fail(500, { error: `Link criado, mas o status não mudou: ${eStatus.message}` });
 		return { aprovacaoCriada: true };
-	},
-	delete: async ({ params, locals }) => {
-		exigirPermissao(locals, 'conteudo', 'excluir');
-		const { supabase } = locals;
-		const { error: e } = await supabase.from('conteudos').delete().eq('id', params.id);
-		if (e) return fail(500, { error: e.message });
-		throw redirect(303, '/calendario');
 	}
 };
