@@ -4,6 +4,7 @@
 	import { untrack } from 'svelte';
 	import { browser } from '$app/environment';
 	import { organyze } from '$lib/organyze/store.svelte';
+	import { alturaAutomatica } from '$lib/alturaAutomatica';
 	import { PRIORIDADES, STATUS_ORDEM, urgencia } from '$lib/organyze/types';
 	import { PRAZO_ATALHOS, SECAO_META, prazoEmDias, situacaoStyle } from '$lib/organyze/ui';
 	import { Button, Modal } from '$lib/components/ui';
@@ -296,11 +297,11 @@
 								{/if}
 								<li
 									data-sub
-									class="group/sub flex items-center gap-2 rounded-[var(--radius)] border border-grey-200 bg-surface px-2.5 py-2 transition-opacity"
+									class="group/sub flex items-start gap-2 rounded-[var(--radius)] border border-grey-200 bg-surface px-2.5 py-2 transition-opacity"
 									class:opacity-40={subDragId === s.id}
 								>
 									<span
-										class="shrink-0 cursor-grab text-grey/50 hover:text-grey active:cursor-grabbing"
+										class="mt-0.5 shrink-0 cursor-grab text-grey/50 hover:text-grey active:cursor-grabbing"
 										role="button"
 										tabindex="-1"
 										aria-label="Arrastar para reordenar"
@@ -314,7 +315,7 @@
 										<GripVertical size={16} />
 									</span>
 									<button
-										class="grid size-4 shrink-0 place-items-center rounded border-2 transition-colors"
+										class="mt-1 grid size-4 shrink-0 place-items-center rounded border-2 transition-colors"
 										class:border-grey-200={!s.feita}
 										class:border-brand={s.feita}
 										class:bg-brand={s.feita}
@@ -324,16 +325,27 @@
 									>
 										{#if s.feita}<Check size={10} strokeWidth={3} />{/if}
 									</button>
-									<input
-										class="flex-1 bg-transparent text-sm outline-none"
+									<!-- Textarea, não input: a subtarefa aparece inteira, em quantas
+									     linhas precisar. Enter confirma em vez de quebrar a linha — o
+									     título é texto corrido e a quebra só atrapalharia. -->
+									<textarea
+										rows="1"
+										class="flex-1 resize-none overflow-hidden bg-transparent text-sm leading-snug outline-none"
 										class:text-grey={s.feita}
 										class:line-through={s.feita}
 										class:text-navy={!s.feita}
 										value={s.titulo}
+										use:alturaAutomatica={s.titulo}
+										onkeydown={(e) => {
+											if (e.key === 'Enter' && !e.shiftKey) {
+												e.preventDefault();
+												e.currentTarget.blur();
+											}
+										}}
 										onchange={(e) => id && organyze.editSubtarefa(id, s.id, e.currentTarget.value)}
-									/>
+									></textarea>
 									<button
-										class="grid size-7 shrink-0 place-items-center rounded-md text-grey opacity-0 transition-all hover:bg-brand-danger/10 hover:text-brand-danger group-hover/sub:opacity-100"
+										class="mt-px grid size-7 shrink-0 place-items-center rounded-md text-grey opacity-0 transition-all hover:bg-brand-danger/10 hover:text-brand-danger group-hover/sub:opacity-100"
 										aria-label="Excluir subtarefa"
 										onclick={() => id && organyze.removeSubtarefa(id, s.id)}
 									>
