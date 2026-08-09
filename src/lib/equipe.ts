@@ -54,6 +54,34 @@ export function colaboradorFromForm(fd: FormData) {
 		funcao: funcoes[0] ?? 'social_media', // enum single = primeira (compat)
 		funcoes,
 		custo_hora: custoNum !== null && Number.isNaN(custoNum) ? null : custoNum,
-		ativo: fd.get('ativo') !== null
+		ativo: fd.get('ativo') !== null,
+		...jornadaFromForm(fd)
 	};
+}
+
+/**
+ * Jornada esperada (base do saldo de horas do ponto). O formulário fala em
+ * HORAS por dia, porque é assim que se combina com a pessoa; o banco guarda
+ * minutos. Só devolve as chaves quando o form realmente traz os campos — um
+ * formulário sem eles não pode zerar a jornada de quem já tinha.
+ */
+function jornadaFromForm(fd: FormData): {
+	jornada_minutos?: number;
+	jornada_dias?: number[];
+} {
+	const out: { jornada_minutos?: number; jornada_dias?: number[] } = {};
+	const horas = str(fd, 'jornada_horas');
+	if (horas !== null) {
+		const n = Number(horas.replace(',', '.'));
+		if (!Number.isNaN(n) && n >= 0 && n <= 24) out.jornada_minutos = Math.round(n * 60);
+	}
+	// O marcador escondido diz "este formulário tem o bloco de jornada": sem ele,
+	// desmarcar todos os dias seria indistinguível de um form que nem os traz.
+	if (fd.has('jornada_form')) {
+		out.jornada_dias = fd
+			.getAll('jornada_dias')
+			.map(Number)
+			.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6);
+	}
+	return out;
 }

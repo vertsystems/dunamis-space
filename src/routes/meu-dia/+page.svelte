@@ -3,6 +3,7 @@
 	import { deserialize } from '$app/forms';
 	import { Card, Badge, Button, Modal } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
+	import MeuPonto from '$lib/components/ponto/MeuPonto.svelte';
 	import { diasAte, formatDateBR } from '$lib/alertas';
 	import { conteudoTipoLabel, conteudoStatusLabel, conteudoStatusTone } from '$lib/conteudo';
 	import { atividadeTipo, formatDataHora, vencimentoDe, vencimentoTone } from '$lib/crm';
@@ -133,6 +134,9 @@
 		<a class="underline" href="/equipe">Equipe</a> para ver só o que é seu.
 	</div>
 {/if}
+
+<!-- ===================== MEU PONTO ===================== -->
+<MeuPonto ponto={data.ponto} semColaborador={data.semColaborador} />
 
 <!-- ===================== MAPA DE ROTINA ===================== -->
 <section class="mb-5">

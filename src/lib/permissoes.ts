@@ -36,6 +36,11 @@ export const MODULOS: Modulo[] = [
 	{ id: 'fornecedores', label: 'Fornecedores', grupo: 'administrativo', rotas: ['/fornecedores'] },
 	{ id: 'onboarding', label: 'Onboarding', grupo: 'administrativo', rotas: ['/onboarding'] },
 	{ id: 'equipe', label: 'Equipe', grupo: 'administrativo', rotas: ['/equipe'] },
+	// Governa só o ACOMPANHAMENTO do ponto (ver o de todo mundo, corrigir batida,
+	// aprovar ajuste). Bater o próprio ponto é do Meu Dia, rota livre — ninguém
+	// precisa de permissão para registrar a própria jornada. Sem seed na 0034:
+	// nasce 'nenhum' e só ceo/admin enxergam, até liberarem alguém na tela.
+	{ id: 'ponto', label: 'Ponto (acompanhamento)', grupo: 'administrativo', rotas: ['/administrativo/ponto'] },
 	{ id: 'ferramentas', label: 'Ferramentas & Contas', grupo: 'administrativo', rotas: ['/ferramentas'] },
 	{ id: 'base_conhecimento', label: 'Base de Conhecimento', grupo: 'administrativo', rotas: ['/base-conhecimento'] },
 	{ id: 'sos', label: 'Central SOS', grupo: 'administrativo', rotas: ['/sos'] },

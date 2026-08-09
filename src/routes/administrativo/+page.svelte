@@ -40,6 +40,16 @@
 			value: String(data.equipeAtiva)
 		},
 		{
+			href: '/administrativo/ponto',
+			icon: 'clock',
+			label: 'Trabalhando agora',
+			value: String(data.pontoAbertoAgora),
+			hint: data.pontoAjustesPendentes
+				? `${data.pontoAjustesPendentes} ajuste(s) de ponto a aprovar`
+				: undefined,
+			accent: data.pontoAjustesPendentes > 0 ? 'text-brand-amber' : undefined
+		},
+		{
 			href: '/base-conhecimento',
 			icon: 'book',
 			label: 'Artigos na base',

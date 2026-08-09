@@ -1,4 +1,5 @@
 import { um } from '$lib/db';
+import { hojeISO } from '$lib/datas';
 import { sel } from '$lib/server/query';
 import type { PageServerLoad } from './$types';
 
@@ -71,12 +72,32 @@ async function carregarOnboardingPendente(supabase: Parameters<PageServerLoad>[0
 	}));
 }
 
-export const load: PageServerLoad = async ({ locals: { supabase } }) => {
-	const [kpis, renovacoes, onboardingItensPendentes] = await Promise.all([
-		carregarKpis(supabase),
-		carregarRenovacoes(supabase),
-		carregarOnboardingPendente(supabase)
+/** Quantos estão com o expediente aberto agora + fila de ajustes de ponto. */
+async function carregarPonto(supabase: Parameters<PageServerLoad>[0]['locals']['supabase']) {
+	const [registros, ajustes] = await Promise.all([
+		sel<{ entrada: string | null; saida: string | null }>(
+			supabase.from('ponto_registros').select('entrada, saida').eq('data', hojeISO()),
+			'administrativo: ponto de hoje'
+		),
+		supabase
+			.from('ponto_ajustes')
+			.select('id', { count: 'exact', head: true })
+			.eq('status', 'pendente')
 	]);
 
-	return { ...kpis, renovacoes, onboardingItensPendentes };
+	return {
+		pontoAbertoAgora: registros.filter((r) => r.entrada && !r.saida).length,
+		pontoAjustesPendentes: ajustes.count ?? 0
+	};
+}
+
+export const load: PageServerLoad = async ({ locals: { supabase } }) => {
+	const [kpis, renovacoes, onboardingItensPendentes, ponto] = await Promise.all([
+		carregarKpis(supabase),
+		carregarRenovacoes(supabase),
+		carregarOnboardingPendente(supabase),
+		carregarPonto(supabase)
+	]);
+
+	return { ...kpis, ...ponto, renovacoes, onboardingItensPendentes };
 };

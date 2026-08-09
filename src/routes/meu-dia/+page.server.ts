@@ -3,24 +3,39 @@ import { fail } from '@sveltejs/kit';
 import { hojeSP } from '$lib/rotina';
 import { funcaoLabel } from '$lib/equipe';
 import { sel, selUm } from '$lib/server/query';
+import { CAMPOS, instanteSP, jornadaDe, proximaBatida, type Campo, type Registro } from '$lib/ponto';
 import type { Actions, PageServerLoad } from './$types';
+
+const COLS_COLAB = 'id, nome, funcao, funcoes, jornada_minutos, jornada_dias';
 
 /** Colaborador do usuário logado (por auth_user_id, com fallback por e-mail). */
 async function meuColab(supabase: App.Locals['supabase'], user: { id: string; email?: string } | null) {
 	if (!user) return null;
 	let { data } = await supabase
 		.from('colaboradores')
-		.select('id, nome, funcao, funcoes')
+		.select(COLS_COLAB)
 		.eq('auth_user_id', user.id)
 		.maybeSingle();
 	if (!data && user.email) {
 		({ data } = await supabase
 			.from('colaboradores')
-			.select('id, nome, funcao, funcoes')
+			.select(COLS_COLAB)
 			.eq('email', user.email)
 			.maybeSingle());
 	}
 	return data ?? null;
+}
+
+/** Colunas de um registro de ponto (mesma lista no load e nas actions). */
+const COLS_PONTO = 'id, data, entrada, almoco_saida, almoco_volta, saida, observacao';
+
+/** Quantos dias de histórico o colaborador vê (e sobre os quais pode pedir ajuste). */
+const DIAS_HISTORICO = 30;
+
+function menosDias(data: string, dias: number): string {
+	const d = new Date(`${data}T12:00:00Z`);
+	d.setUTCDate(d.getUTCDate() - dias);
+	return d.toISOString().slice(0, 10);
 }
 
 /** Só CEO e Admin podem gerenciar a rotina (criar/editar/excluir) e trocar de cargo. */
@@ -85,8 +100,36 @@ export const load: PageServerLoad = async ({ locals: { supabase, user }, url }) 
 		.limit(60);
 	if (meuId) aq = aq.eq('responsavel_id', meuId);
 
+	// Ponto do dia + histórico recente + pedidos de ajuste em aberto. Tudo do
+	// próprio colaborador: a RLS já garante isso, o filtro aqui é só para não
+	// puxar a agência inteira.
+	const desde = menosDias(hoje.data, DIAS_HISTORICO);
+	const pontoQueries = meuId
+		? ([
+				sel<Registro>(
+					supabase
+						.from('ponto_registros')
+						.select(COLS_PONTO)
+						.eq('colaborador_id', meuId)
+						.gte('data', desde)
+						.lte('data', hoje.data)
+						.order('data', { ascending: false }),
+					'meu-dia: registros de ponto'
+				),
+				sel(
+					supabase
+						.from('ponto_ajustes')
+						.select('id, data, entrada, almoco_saida, almoco_volta, saida, motivo, status, resposta, created_at')
+						.eq('colaborador_id', meuId)
+						.gte('data', desde)
+						.order('created_at', { ascending: false }),
+					'meu-dia: pedidos de ajuste de ponto'
+				)
+			] as const)
+		: ([Promise.resolve([] as Registro[]), Promise.resolve([] as Record<string, unknown>[])] as const);
+
 	// Onda 2 — as quatro dependem só de `cargoSel`/`meuId`, já resolvidos acima.
-	const [rotinaItens, feitosRaw, publicacoesRaw, atividadesRes] = await Promise.all([
+	const [rotinaItens, feitosRaw, publicacoesRaw, atividadesRes, pontoDias, pontoAjustes] = await Promise.all([
 		sel(
 			supabase
 				.from('rotina_itens')
@@ -107,7 +150,8 @@ export const load: PageServerLoad = async ({ locals: { supabase, user }, url }) 
 				)
 			: Promise.resolve([] as { item_id: string }[]),
 		sel(tq, 'meu-dia: próximas publicações'),
-		aq
+		aq,
+		...pontoQueries
 	]);
 	const feitos = feitosRaw.map((c) => c.item_id as string);
 	const { data: atividadesRaw, error: aErr } = atividadesRes;
@@ -137,6 +181,25 @@ export const load: PageServerLoad = async ({ locals: { supabase, user }, url }) 
 		semColaborador: !meuId,
 		publicacoes,
 		atividades,
+		ponto: {
+			hoje: (pontoDias as Registro[]).find((r) => r.data === hoje.data) ?? null,
+			dias: pontoDias as Registro[],
+			ajustes: pontoAjustes as {
+				id: string;
+				data: string;
+				entrada: string | null;
+				almoco_saida: string | null;
+				almoco_volta: string | null;
+				saida: string | null;
+				motivo: string;
+				status: string;
+				resposta: string | null;
+				created_at: string;
+			}[],
+			jornada: jornadaDe(colab),
+			dataHoje: hoje.data,
+			desde
+		},
 		rotina: {
 			podeGerenciar,
 			cargoSel,
@@ -157,6 +220,108 @@ export const load: PageServerLoad = async ({ locals: { supabase, user }, url }) 
 };
 
 export const actions: Actions = {
+	/**
+	 * Bate um ponto (entrada, almoço, volta, saída) AGORA, no dia de hoje.
+	 * O horário é o do servidor — a batida não aceita hora escolhida pelo
+	 * usuário; para corrigir existe o pedido de ajuste. Só aceita a batida que
+	 * é de fato a próxima da sequência, então clique duplo ou aba velha não
+	 * sobrescrevem um horário já registrado.
+	 */
+	baterPonto: async ({ request, locals: { supabase, user } }) => {
+		const colab = await meuColab(supabase, user);
+		if (!colab) return fail(401, { error: 'Vincule seu login a um colaborador em Equipe.' });
+
+		const fd = await request.formData();
+		const campo = String(fd.get('campo') ?? '') as Campo;
+		if (!CAMPOS.includes(campo)) return fail(400, { error: 'Batida inválida.' });
+
+		const { data: hoje } = { data: hojeSP() };
+		const atual = await selUm<Registro>(
+			supabase
+				.from('ponto_registros')
+				.select(COLS_PONTO)
+				.eq('colaborador_id', colab.id)
+				.eq('data', hoje.data)
+				.maybeSingle(),
+			'meu-dia/baterPonto: registro de hoje'
+		);
+
+		if (proximaBatida(atual) !== campo)
+			return fail(409, { error: 'Esta batida já foi registrada. Atualize a página.' });
+
+		const agora = new Date().toISOString();
+		const { error } = atual?.id
+			? await supabase.from('ponto_registros').update({ [campo]: agora }).eq('id', atual.id)
+			: await supabase
+					.from('ponto_registros')
+					.insert({ colaborador_id: colab.id, data: hoje.data, [campo]: agora });
+		if (error) return fail(500, { error: error.message });
+		return { ok: true };
+	},
+
+	/**
+	 * Pede correção de um dia: manda as quatro batidas como deveriam ter sido
+	 * e o motivo. Fica pendente até CEO/Admin decidir — reenviar no mesmo dia
+	 * substitui o pedido anterior em vez de empilhar na fila do gestor.
+	 */
+	pedirAjuste: async ({ request, locals: { supabase, user } }) => {
+		const colab = await meuColab(supabase, user);
+		if (!colab) return fail(401, { error: 'Vincule seu login a um colaborador em Equipe.' });
+
+		const fd = await request.formData();
+		const data = String(fd.get('data') ?? '');
+		const motivo = String(fd.get('motivo') ?? '').trim();
+		const { data: hoje } = { data: hojeSP() };
+
+		if (!/^\d{4}-\d{2}-\d{2}$/.test(data) || data > hoje.data)
+			return fail(400, { error: 'Escolha um dia válido.' });
+		if (data < menosDias(hoje.data, DIAS_HISTORICO))
+			return fail(400, { error: `Só é possível ajustar os últimos ${DIAS_HISTORICO} dias.` });
+		if (motivo.length < 5) return fail(400, { error: 'Explique o motivo do ajuste.' });
+
+		const horarios = Object.fromEntries(
+			CAMPOS.map((c) => [c, instanteSP(data, String(fd.get(c) ?? ''))])
+		) as Record<Campo, string | null>;
+		if (!Object.values(horarios).some(Boolean))
+			return fail(400, { error: 'Informe pelo menos um horário.' });
+
+		const pendente = await selUm<{ id: string }>(
+			supabase
+				.from('ponto_ajustes')
+				.select('id')
+				.eq('colaborador_id', colab.id)
+				.eq('data', data)
+				.eq('status', 'pendente')
+				.maybeSingle(),
+			'meu-dia/pedirAjuste: pedido pendente'
+		);
+
+		const { error } = pendente
+			? await supabase.from('ponto_ajustes').update({ ...horarios, motivo }).eq('id', pendente.id)
+			: await supabase
+					.from('ponto_ajustes')
+					.insert({ colaborador_id: colab.id, data, ...horarios, motivo });
+		if (error) return fail(500, { error: error.message });
+		return { ok: true };
+	},
+
+	cancelarAjuste: async ({ request, locals: { supabase, user } }) => {
+		const colab = await meuColab(supabase, user);
+		if (!colab) return fail(401, { error: 'Vincule seu login a um colaborador em Equipe.' });
+
+		const fd = await request.formData();
+		const id = String(fd.get('id') ?? '');
+		if (!id) return fail(400, { error: 'Pedido inválido.' });
+		const { error } = await supabase
+			.from('ponto_ajustes')
+			.delete()
+			.eq('id', id)
+			.eq('colaborador_id', colab.id)
+			.eq('status', 'pendente');
+		if (error) return fail(500, { error: error.message });
+		return { ok: true };
+	},
+
 	// Marca/desmarca um item da rotina como feito hoje (por pessoa/dia).
 	toggleRotina: async ({ request, locals: { supabase, user } }) => {
 		const colab = await meuColab(supabase, user);

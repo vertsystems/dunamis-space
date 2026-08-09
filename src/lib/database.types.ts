@@ -407,6 +407,8 @@ export type Database = {
 					idioma: string
 					funcoes: string[]
 					super_admin: boolean
+					jornada_minutos: number
+					jornada_dias: number[]
 				}
 				Insert: {
 					id?: string
@@ -425,6 +427,8 @@ export type Database = {
 					idioma?: string
 					funcoes?: string[]
 					super_admin?: boolean
+					jornada_minutos?: number
+					jornada_dias?: number[]
 				}
 				Update: {
 					id?: string
@@ -443,6 +447,8 @@ export type Database = {
 					idioma?: string
 					funcoes?: string[]
 					super_admin?: boolean
+					jornada_minutos?: number
+					jornada_dias?: number[]
 				}
 				Relationships: []
 			}
@@ -1356,6 +1362,99 @@ export type Database = {
 					limite_reels?: number | null
 					escopo?: Json | null
 					ativo?: boolean
+					created_at?: string
+					updated_at?: string
+				}
+				Relationships: []
+			}
+			ponto_ajustes: {
+				Row: {
+					id: string
+					colaborador_id: string
+					data: string
+					entrada: string | null
+					almoco_saida: string | null
+					almoco_volta: string | null
+					saida: string | null
+					motivo: string
+					status: string
+					resposta: string | null
+					decidido_por: string | null
+					decidido_em: string | null
+					created_at: string
+				}
+				Insert: {
+					id?: string
+					colaborador_id: string
+					data: string
+					entrada?: string | null
+					almoco_saida?: string | null
+					almoco_volta?: string | null
+					saida?: string | null
+					motivo: string
+					status?: string
+					resposta?: string | null
+					decidido_por?: string | null
+					decidido_em?: string | null
+					created_at?: string
+				}
+				Update: {
+					id?: string
+					colaborador_id?: string
+					data?: string
+					entrada?: string | null
+					almoco_saida?: string | null
+					almoco_volta?: string | null
+					saida?: string | null
+					motivo?: string
+					status?: string
+					resposta?: string | null
+					decidido_por?: string | null
+					decidido_em?: string | null
+					created_at?: string
+				}
+				Relationships: []
+			}
+			ponto_registros: {
+				Row: {
+					id: string
+					colaborador_id: string
+					data: string
+					entrada: string | null
+					almoco_saida: string | null
+					almoco_volta: string | null
+					saida: string | null
+					observacao: string | null
+					editado_por: string | null
+					editado_em: string | null
+					created_at: string
+					updated_at: string
+				}
+				Insert: {
+					id?: string
+					colaborador_id: string
+					data: string
+					entrada?: string | null
+					almoco_saida?: string | null
+					almoco_volta?: string | null
+					saida?: string | null
+					observacao?: string | null
+					editado_por?: string | null
+					editado_em?: string | null
+					created_at?: string
+					updated_at?: string
+				}
+				Update: {
+					id?: string
+					colaborador_id?: string
+					data?: string
+					entrada?: string | null
+					almoco_saida?: string | null
+					almoco_volta?: string | null
+					saida?: string | null
+					observacao?: string | null
+					editado_por?: string | null
+					editado_em?: string | null
 					created_at?: string
 					updated_at?: string
 				}
