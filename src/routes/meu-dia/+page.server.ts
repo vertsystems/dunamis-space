@@ -6,7 +6,10 @@ import { sel, selUm } from '$lib/server/query';
 import { CAMPOS, instanteSP, jornadaDe, proximaBatida, type Campo, type Registro } from '$lib/ponto';
 import type { Actions, PageServerLoad } from './$types';
 
-const COLS_COLAB = 'id, nome, funcao, funcoes, jornada_minutos, jornada_dias';
+// `*` de propósito: a jornada é lida daqui, e pedir jornada_minutos pelo nome
+// faz o PostgREST recusar a query inteira enquanto a coluna não existe — o
+// Meu Dia inteiro passaria a dizer "vincule seu login a um colaborador".
+const COLS_COLAB = '*';
 
 /** Colaborador do usuário logado (por auth_user_id, com fallback por e-mail). */
 async function meuColab(supabase: App.Locals['supabase'], user: { id: string; email?: string } | null) {

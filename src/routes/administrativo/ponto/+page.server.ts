@@ -19,7 +19,9 @@ import {
 import type { Actions, PageServerLoad } from './$types';
 
 const COLS_PONTO = 'id, colaborador_id, data, entrada, almoco_saida, almoco_volta, saida, observacao';
-const COLS_COLAB = 'id, nome, email, funcao, funcoes, avatar_url, jornada_minutos, jornada_dias';
+// `*`: as colunas de jornada só existem depois da migration 0053, e uma lista
+// explícita faria o PostgREST recusar a query inteira até lá.
+const COLS_COLAB = '*';
 
 export type ColabPonto = {
 	id: string;

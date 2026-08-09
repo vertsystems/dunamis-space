@@ -38,8 +38,10 @@ export const load: PageServerLoad = async ({ params, url, locals: { supabase, pe
 		jornada_dias: number[] | null;
 	}>(
 		supabase
+			// `*` pelo mesmo motivo do painel: sem a migration, uma lista explícita
+			// com jornada_* derruba a query inteira.
 			.from('colaboradores')
-			.select('id, nome, email, funcao, funcoes, jornada_minutos, jornada_dias')
+			.select('*')
 			.eq('id', params.id)
 			.maybeSingle(),
 		'ponto/espelho: colaborador'
