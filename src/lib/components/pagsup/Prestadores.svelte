@@ -21,16 +21,22 @@
 	let novo = $state<Form>(emptyForm());
 	let edit = $state<Form>(emptyForm());
 
-	const filtered = $derived(
-		pagsup.filteredProviders.filter((p) => {
-			const q = searchTerm.toLowerCase();
-			return (
-				p.name.toLowerCase().includes(q) ||
-				p.service.toLowerCase().includes(q) ||
-				p.region.toLowerCase().includes(q)
-			);
-		})
-	);
+	/** Sem acento e em minúsculas: quem digita "grafica" quer achar "Gráficas". */
+	const chave = (s: string | undefined | null) =>
+		(s ?? '')
+			.normalize('NFD')
+			.replace(/[\u0300-\u036f]/g, '')
+			.toLowerCase();
+
+	const filtered = $derived.by(() => {
+		const q = chave(searchTerm).trim();
+		if (!q) return pagsup.filteredProviders;
+		return pagsup.filteredProviders.filter((p) =>
+			// `especialidade` entra na busca porque é ela que a coluna "Serviço"
+			// mostra quando existe: procurar pelo texto visível tem de funcionar.
+			[p.name, p.service, p.especialidade, p.region].some((campo) => chave(campo).includes(q))
+		);
+	});
 
 	const grouped = $derived.by(() => {
 		const g: Record<string, Provider[]> = {};
