@@ -95,6 +95,7 @@ export type Database = {
 					nome: string
 					tipo: string
 					especialidade: string | null
+					cidade: string | null
 					email: string | null
 					telefone: string | null
 					custo_referencia: number | null
@@ -111,6 +112,7 @@ export type Database = {
 					nome: string
 					tipo?: string
 					especialidade?: string | null
+					cidade?: string | null
 					email?: string | null
 					telefone?: string | null
 					custo_referencia?: number | null
@@ -127,6 +129,7 @@ export type Database = {
 					nome?: string
 					tipo?: string
 					especialidade?: string | null
+					cidade?: string | null
 					email?: string | null
 					telefone?: string | null
 					custo_referencia?: number | null

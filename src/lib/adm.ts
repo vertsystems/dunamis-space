@@ -23,6 +23,7 @@ export function fornecedorFromForm(fd: FormData) {
 		nome: str(fd, 'nome') ?? '',
 		tipo: tipoRaw && FORNECEDOR_TIPOS.includes(tipoRaw) ? tipoRaw : 'freelancer',
 		especialidade: str(fd, 'especialidade'),
+		cidade: str(fd, 'cidade'),
 		email: str(fd, 'email'),
 		telefone: str(fd, 'telefone'),
 		custo_referencia: numBR(fd, 'custo_referencia'),

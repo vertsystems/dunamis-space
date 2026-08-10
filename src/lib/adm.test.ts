@@ -32,7 +32,8 @@ describe('fornecedorFromForm', () => {
 				custo_referencia: '2.500,00',
 				avaliacao: '4',
 				ativo: 'on',
-				email: 'contato@estudio.com'
+				email: 'contato@estudio.com',
+				cidade: '  Sorocaba SP  '
 			})
 		);
 		expect(v.nome).toBe('Estúdio Vermelho');
@@ -40,7 +41,13 @@ describe('fornecedorFromForm', () => {
 		expect(v.custo_referencia).toBe(2500);
 		expect(v.avaliacao).toBe(4);
 		expect(v.ativo).toBe(true);
+		expect(v.cidade).toBe('Sorocaba SP');
 		expect(v.especialidade).toBeNull();
+	});
+
+	it('cidade em branco vira null, não string vazia', () => {
+		expect(fornecedorFromForm(fd({ nome: 'X' })).cidade).toBeNull();
+		expect(fornecedorFromForm(fd({ nome: 'X', cidade: '   ' })).cidade).toBeNull();
 	});
 
 	it('recusa tipo fora da lista (cai em freelancer)', () => {

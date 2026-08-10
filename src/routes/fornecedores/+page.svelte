@@ -77,6 +77,7 @@
 		{ id: 'nome', accessorFn: (f) => f.nome ?? '', meta: { label: 'Nome' } },
 		{ id: 'tipo', accessorFn: (f) => tipoLabel[f.tipo] ?? f.tipo, meta: { label: 'Tipo' } },
 		{ id: 'especialidade', accessorFn: (f) => f.especialidade ?? '', meta: { label: 'Especialidade' } },
+		{ id: 'cidade', accessorFn: (f) => f.cidade ?? '', meta: { label: 'Cidade' } },
 		{ id: 'contato', accessorFn: (f) => contato(f), meta: { label: 'Contato' } },
 		{
 			id: 'custo',
@@ -155,6 +156,7 @@
 						<Badge tone={tipoTone[f.tipo] ?? 'neutral'}>{tipoLabel[f.tipo] ?? f.tipo}</Badge>
 					</td>
 					<td class="px-4 py-3 text-slate">{f.especialidade ?? '—'}</td>
+					<td class="px-4 py-3 text-slate">{f.cidade || '—'}</td>
 					<td class="px-4 py-3 text-slate">{contato(f) || '—'}</td>
 					<td class="px-4 py-3 text-right tabular-nums text-navy">
 						{f.custo_referencia != null ? formatBRL(f.custo_referencia) : '—'}
@@ -211,7 +213,7 @@
 				</tr>
 			{/snippet}
 			{#snippet empty()}
-				<tr><td colspan="7" class="px-2"><EmptyState icon="building" title="Nenhum fornecedor" description="Cadastre freelancers, fornecedores e parceiros." /></td></tr>
+				<tr><td colspan="8" class="px-2"><EmptyState icon="building" title="Nenhum fornecedor" description="Cadastre freelancers, fornecedores e parceiros." /></td></tr>
 			{/snippet}
 		</DataTable>
 	</Card>
@@ -263,6 +265,13 @@
 				name="especialidade"
 				value={editando?.especialidade ?? ''}
 				placeholder="Ex.: Edição de vídeo"
+			/>
+
+			<Input
+				label="Cidade"
+				name="cidade"
+				value={editando?.cidade ?? ''}
+				placeholder="Ex.: Sorocaba SP"
 			/>
 
 			<Input label="E-mail" name="email" type="email" value={editando?.email ?? ''} />

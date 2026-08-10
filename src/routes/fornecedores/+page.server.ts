@@ -8,6 +8,7 @@ export type Fornecedor = {
 	nome: string;
 	tipo: string;
 	especialidade: string | null;
+	cidade: string | null;
 	email: string | null;
 	telefone: string | null;
 	custo_referencia: number | null;
@@ -18,8 +19,11 @@ export type Fornecedor = {
 	instagram: string | null;
 };
 
-const COLUNAS =
-	'id, nome, tipo, especialidade, email, telefone, custo_referencia, avaliacao, ativo, observacoes, site, instagram';
+// `*` em vez da lista de colunas: `cidade` só existe depois da migration 0054, e
+// pedir coluna por nome faz o PostgREST recusar a QUERY INTEIRA enquanto o banco
+// não tem a coluna — a tela cairia no aviso de "módulo não ativado". Tabela
+// pequena, o `*` sai barato.
+const COLUNAS = '*';
 
 export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	const tipoParam = url.searchParams.get('tipo');
