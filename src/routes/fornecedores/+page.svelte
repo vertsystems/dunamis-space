@@ -118,7 +118,7 @@
 			<option value="fornecedor">Fornecedor</option>
 			<option value="parceiro">Parceiro</option>
 		</Select>
-		<Input label="Buscar" name="q" placeholder="Nome…" value={data.q ?? ''} wrapperClass="w-56" />
+		<Input label="Buscar" name="q" placeholder="Nome ou cidade…" value={data.q ?? ''} wrapperClass="w-56" />
 		<Button type="submit" variant="secondary"><Icon name="search" size={15} /> Filtrar</Button>
 		{#if data.filtroTipo || data.q}
 			<Button type="button" variant="ghost" onclick={() => goto('/fornecedores')}>Limpar</Button>

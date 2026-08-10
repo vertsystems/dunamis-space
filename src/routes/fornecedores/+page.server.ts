@@ -25,6 +25,17 @@ export type Fornecedor = {
 // pequena, o `*` sai barato.
 const COLUNAS = '*';
 
+/**
+ * Valor pronto para entrar num `or(...)` do PostgREST.
+ *
+ * Ali os termos são separados por vírgula, então uma busca por "Registro, SP"
+ * quebraria a sintaxe do filtro e derrubaria a query. As aspas resolvem — desde
+ * que as aspas e barras do próprio texto venham escapadas.
+ */
+function comoTermo(q: string): string {
+	return `"%${q.replace(/["\\]/g, (c) => `\\${c}`)}%"`;
+}
+
 export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	const tipoParam = url.searchParams.get('tipo');
 	const filtroTipo = TIPOS.includes(tipoParam ?? '') ? tipoParam : null;
@@ -32,7 +43,9 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 
 	let query = supabase.from('adm_fornecedores').select(COLUNAS).order('nome', { ascending: true });
 	if (filtroTipo) query = query.eq('tipo', filtroTipo);
-	if (q) query = query.ilike('nome', `%${q}%`);
+	// Busca por nome OU cidade: quem procura "quem atende em Sorocaba" digita a
+	// cidade no mesmo campo em que digitaria o nome.
+	if (q) query = query.or(`nome.ilike.${comoTermo(q)},cidade.ilike.${comoTermo(q)}`);
 
 	const { data, error } = await query;
 
