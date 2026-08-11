@@ -5,7 +5,7 @@
 	import { corPrioridadeEfetiva, prazoUrgente, proximaPrioridade, urgencia } from '$lib/organyze/types';
 	import type { Tarefa } from '$lib/organyze/types';
 	import Avatar from './Avatar.svelte';
-	import { CalendarClock, Check, Copy, GripVertical, Trash2 } from '@lucide/svelte';
+	import { CalendarClock, Check, Clock, Copy, GripVertical, Trash2 } from '@lucide/svelte';
 
 	let {
 		tarefa: t,
@@ -81,7 +81,7 @@
 		>
 			{t.titulo}
 		</span>
-		{#if t.prazo || t.subtarefas.length || t.responsaveis.length}
+		{#if t.hora || t.prazo || t.subtarefas.length || t.responsaveis.length}
 			<span class="mt-1.5 flex flex-wrap items-center gap-1.5">
 				{#if t.responsaveis.length}
 					<span class="mr-0.5 flex items-center -space-x-1.5">
@@ -98,6 +98,16 @@
 								/>
 							{/if}
 						{/each}
+					</span>
+				{/if}
+				{#if t.hora}
+					<!-- Hora marcada vem primeiro: é o que decide a ordem do dia. -->
+					<span
+						class="inline-flex items-center gap-1 rounded-full border border-brand/40 bg-brand/5 px-2 py-0.5 text-[11px] font-semibold text-brand"
+						title="Horário da tarefa"
+					>
+						<Clock size={11} />
+						{t.hora}
 					</span>
 				{/if}
 				{#if t.prazo}

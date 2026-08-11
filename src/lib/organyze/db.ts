@@ -24,6 +24,7 @@ function toTarefa(r: {
 	categoria: string | null;
 	concluida: boolean | null;
 	data: string;
+	hora: string | null;
 	posicao: number;
 	prioridade: string;
 	prazo: string | null;
@@ -41,6 +42,8 @@ function toTarefa(r: {
 		status,
 		categoria: (r.categoria as Categoria) ?? 'empresa',
 		data: r.data,
+		// O Postgres devolve "14:30:00"; o <input type="time"> só entende "14:30".
+		hora: r.hora ? r.hora.slice(0, 5) : null,
 		posicao: r.posicao,
 		prioridade: (r.prioridade as Prioridade) ?? 'media',
 		prazo: r.prazo ?? null,
@@ -87,8 +90,10 @@ export async function rolarPendentesParaHoje(
 	if (error) throw error;
 }
 
-const COLUNAS =
-	'id, colaborador_id, titulo, status, categoria, concluida, data, posicao, prioridade, prazo, descricao, subtarefas, responsaveis, deleted_at';
+// `*` em vez da lista: pedir coluna por nome faz o PostgREST recusar a query
+// inteira enquanto uma migration nova (ex.: `hora`) não rodou — e aí o quadro
+// aparece vazio, como se as tarefas tivessem sumido.
+const COLUNAS = '*';
 
 /** Filtro PostgREST: tarefas do colaborador (dono) OU onde ele é responsável. */
 function donoOuResponsavel(id: string): string {
@@ -178,6 +183,7 @@ export async function insertTarefa(supabase: SupabaseClient, t: Tarefa): Promise
 		categoria: t.categoria,
 		concluida: t.status === 'concluida',
 		data: t.data,
+		hora: t.hora,
 		posicao: t.posicao,
 		prioridade: t.prioridade,
 		prazo: t.prazo,
@@ -197,6 +203,8 @@ export async function updateTarefa(
 			| 'titulo'
 			| 'status'
 			| 'categoria'
+			| 'data'
+			| 'hora'
 			| 'posicao'
 			| 'prioridade'
 			| 'prazo'
@@ -213,6 +221,9 @@ export async function updateTarefa(
 		row.concluida = patch.status === 'concluida';
 	}
 	if (patch.categoria !== undefined) row.categoria = patch.categoria;
+	// data/hora: reagendar a tarefa para outro dia ou horário.
+	if (patch.data !== undefined) row.data = patch.data;
+	if (patch.hora !== undefined) row.hora = patch.hora;
 	if (patch.posicao !== undefined) row.posicao = patch.posicao;
 	if (patch.prioridade !== undefined) row.prioridade = patch.prioridade;
 	if (patch.prazo !== undefined) row.prazo = patch.prazo;

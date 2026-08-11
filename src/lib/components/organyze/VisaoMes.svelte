@@ -2,7 +2,7 @@
 	// Modo Mês: grade de segunda a domingo cobrindo o mês, com até quatro
 	// tarefas por dia e um "+N mais" que leva ao dia.
 	import { organyze, toISODate, inicioSemana, inicioMes } from '$lib/organyze/store.svelte';
-	import { CATEGORIA_COR, CATEGORIA_LABEL } from '$lib/organyze/types';
+	import { CATEGORIA_COR, CATEGORIA_LABEL, horaOrdem } from '$lib/organyze/types';
 	import type { Tarefa } from '$lib/organyze/types';
 	import { DOW } from '$lib/organyze/ui';
 	import { Check } from '@lucide/svelte';
@@ -23,7 +23,11 @@
 				iso,
 				dia: dt.getDate(),
 				noMes: dt.getMonth() + 1 === mesFoco,
-				tarefas: organyze.tarefas.filter((t) => t.data === iso)
+				// Com hora marcada primeiro, na ordem do relógio: a célula do mês
+				// mostra só as quatro primeiras, e compromisso tem de estar entre elas.
+				tarefas: organyze.tarefas
+					.filter((t) => t.data === iso)
+					.sort((a, b) => horaOrdem(a) - horaOrdem(b) || a.posicao - b.posicao)
 			};
 		});
 		const semanas = [];
@@ -82,10 +86,13 @@
 									{#if t.status === 'concluida'}<Check size={8} strokeWidth={3} />{/if}
 								</button>
 								<button
-									class="flex min-w-0 flex-1 items-center text-left"
-									title={t.titulo}
+									class="flex min-w-0 flex-1 items-center gap-1 text-left"
+									title={t.hora ? `${t.hora} · ${t.titulo}` : t.titulo}
 									onclick={() => onAbrir(t)}
 								>
+									{#if t.hora}
+										<span class="shrink-0 text-[10px] font-semibold tabular-nums text-brand">{t.hora}</span>
+									{/if}
 									<span
 										class="truncate text-[11px] leading-tight"
 										class:text-grey={t.status === 'concluida'}

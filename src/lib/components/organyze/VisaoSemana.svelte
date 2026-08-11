@@ -2,7 +2,7 @@
 	// Modo Semana: sete cartões (um por dia), cada um com as tarefas separadas
 	// por lado. Clicar no cabeçalho do dia abre aquele dia no modo Dia.
 	import { organyze, toISODate, inicioSemana } from '$lib/organyze/store.svelte';
-	import { CATEGORIAS, CATEGORIA_COR, CATEGORIA_LABEL, corPrioridadeEfetiva, prazoOrdem, urgencia } from '$lib/organyze/types';
+	import { CATEGORIAS, CATEGORIA_COR, CATEGORIA_LABEL, corPrioridadeEfetiva, horaOrdem, prazoOrdem, urgencia } from '$lib/organyze/types';
 	import type { Tarefa } from '$lib/organyze/types';
 	import { fmtDiaMes } from '$lib/organyze/ui';
 	import { Check } from '@lucide/svelte';
@@ -13,8 +13,12 @@
 		onAbrirDia
 	}: { hoje: string; onAbrir: (t: Tarefa) => void; onAbrirDia: (iso: string) => void } = $props();
 
+	// Hora marcada manda no dia: 09:00 antes de 14:00, e quem não marcou hora vai
+	// depois, aí sim por prazo e pela ordem manual.
 	const ordAtivas = (arr: Tarefa[]) =>
-		[...arr].sort((a, b) => prazoOrdem(a) - prazoOrdem(b) || a.posicao - b.posicao);
+		[...arr].sort(
+			(a, b) => horaOrdem(a) - horaOrdem(b) || prazoOrdem(a) - prazoOrdem(b) || a.posicao - b.posicao
+		);
 
 	const dias = $derived.by(() => {
 		const [y, m, d] = inicioSemana(organyze.dia).split('-').map(Number);
@@ -46,6 +50,9 @@
 				class="size-2 shrink-0 rounded-full"
 				style="background: {corPrioridadeEfetiva(t.prioridade, t.prazo, hoje)}"
 			></span>
+			{#if t.hora}
+				<span class="shrink-0 text-[11px] font-semibold tabular-nums text-brand">{t.hora}</span>
+			{/if}
 			<span
 				class="flex-1 truncate text-sm"
 				class:text-grey={t.status === 'concluida'}

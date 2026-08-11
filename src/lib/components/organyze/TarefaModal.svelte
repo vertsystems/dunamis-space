@@ -10,7 +10,7 @@
 	import { Button, Modal } from '$lib/components/ui';
 	import RichText from '$lib/components/organyze/RichText.svelte';
 	import Avatar from './Avatar.svelte';
-	import { CalendarClock, CalendarDays, Check, Columns2, Copy, GripVertical, Plus, Rows3, Trash2 } from '@lucide/svelte';
+	import { CalendarClock, CalendarDays, Check, Clock, Columns2, Copy, GripVertical, Plus, Rows3, Trash2 } from '@lucide/svelte';
 
 	let {
 		/** Id da tarefa aberta; null fecha o modal. */
@@ -224,17 +224,33 @@
 					<!-- O dia do quadro em que a tarefa mora. Diferente do prazo abaixo:
 					     este decide ONDE ela aparece, aquele é quando vence. -->
 					<span class="mb-1.5 block text-sm font-medium text-navy">Agendada para</span>
-					<div class="flex items-center gap-2">
+					<div class="flex flex-wrap items-center gap-2">
 						<div class="inline-flex items-center gap-2 rounded-[var(--radius)] border border-grey-200 px-3 py-2">
 							<CalendarDays size={16} style="color: var(--color-grey)" />
 							<input
 								type="date"
 								value={tarefa.data}
+								aria-label="Dia da tarefa"
 								onchange={(e) => id && organyze.setData(id, e.currentTarget.value)}
 								class="bg-transparent text-sm text-navy outline-none [color-scheme:light]"
 							/>
 						</div>
-						<span class="text-xs text-grey">dia em que aparece no quadro</span>
+						<div class="inline-flex items-center gap-2 rounded-[var(--radius)] border border-grey-200 px-3 py-2">
+							<Clock size={16} style="color: var(--color-grey)" />
+							<input
+								type="time"
+								value={tarefa.hora ?? ''}
+								aria-label="Hora da tarefa"
+								onchange={(e) => id && organyze.setHora(id, e.currentTarget.value || null)}
+								class="bg-transparent text-sm text-navy outline-none [color-scheme:light]"
+							/>
+						</div>
+						{#if tarefa.hora}
+							<button
+								class="text-xs font-medium text-grey hover:text-brand-danger"
+								onclick={() => id && organyze.setHora(id, null)}>sem hora</button
+							>
+						{/if}
 					</div>
 				</div>
 

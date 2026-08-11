@@ -41,6 +41,7 @@ export interface Tarefa {
 	status: Status;
 	categoria: Categoria; // lado: empresa | pessoal
 	data: string; // yyyy-mm-dd (dia da tarefa)
+	hora: string | null; // HH:MM no dia, ou null quando não tem horário marcado
 	posicao: number; // ordem manual dentro do status (desempate)
 	prioridade: Prioridade;
 	prazo: string | null; // yyyy-mm-dd (prazo de entrega) ou null
@@ -60,8 +61,9 @@ export type OrganyzeResumo = {
 	proximas: { id: string; titulo: string; prazo: string | null; prioridade: Prioridade }[];
 };
 
-// Ordem de exibição das seções (topo → base).
-export const STATUS_ORDEM: Status[] = ['nao_iniciado', 'em_execucao', 'concluida'];
+// Ordem de exibição das seções (topo → base): o que está em andamento primeiro,
+// o que ainda não começou depois, e o que já foi feito por último.
+export const STATUS_ORDEM: Status[] = ['em_execucao', 'nao_iniciado', 'concluida'];
 
 export const STATUS_LABEL: Record<Status, string> = {
 	em_execucao: 'Em execução',
@@ -125,6 +127,14 @@ export const corPrioridade = (p: Prioridade): string =>
 /** Chave numérica do prazo p/ ordenar por urgência (sem prazo vai por último). */
 export const prazoOrdem = (t: Tarefa): number =>
 	t.prazo ? Number(t.prazo.replaceAll('-', '')) : Number.POSITIVE_INFINITY;
+
+/**
+ * Chave numérica da hora ("14:30" → 1430). Tarefa sem hora marcada vai depois
+ * das com hora: quem marcou horário tem compromisso, quem não marcou faz quando
+ * der.
+ */
+export const horaOrdem = (t: Tarefa): number =>
+	t.hora ? Number(t.hora.replace(':', '')) : Number.POSITIVE_INFINITY;
 
 export type Urgencia = { status: 'atrasada' | 'hoje' | 'futura'; label: string; cor: string };
 

@@ -1031,6 +1031,7 @@ export type Database = {
 					responsaveis: string[]
 					deleted_at: string | null
 					categoria: string
+					hora: string | null
 				}
 				Insert: {
 					id?: string
@@ -1049,6 +1050,7 @@ export type Database = {
 					responsaveis?: string[]
 					deleted_at?: string | null
 					categoria?: string
+					hora?: string | null
 				}
 				Update: {
 					id?: string
@@ -1067,6 +1069,7 @@ export type Database = {
 					responsaveis?: string[]
 					deleted_at?: string | null
 					categoria?: string
+					hora?: string | null
 				}
 				Relationships: []
 			}

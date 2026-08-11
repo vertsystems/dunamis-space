@@ -245,7 +245,8 @@ class OrganyzeStore {
 	addTarefa(
 		titulo: string,
 		agendarPara: string | null = null,
-		categoria: Categoria = 'empresa'
+		categoria: Categoria = 'empresa',
+		hora: string | null = null
 	): Tarefa | null {
 		const trimmed = titulo.trim();
 		if (!trimmed || !this.colaboradorId) return null;
@@ -260,6 +261,7 @@ class OrganyzeStore {
 			status: 'nao_iniciado',
 			categoria,
 			data,
+			hora: hora || null,
 			posicao,
 			prioridade: 'media',
 			prazo: null,
@@ -275,7 +277,10 @@ class OrganyzeStore {
 		);
 		// Agendada para outro dia, a tarefa não aparece no quadro à frente — sem
 		// este aviso, o clique em Adicionar pareceria não ter feito nada.
-		if (data !== this.dia) toast.info(`Tarefa agendada para ${fmtDiaMes(data)}.`);
+		if (data !== this.dia) {
+			const quando = tarefa.hora ? `${fmtDiaMes(data)} às ${tarefa.hora}` : fmtDiaMes(data);
+			toast.info(`Tarefa agendada para ${quando}.`);
+		}
 		return tarefa;
 	}
 
@@ -284,6 +289,11 @@ class OrganyzeStore {
 		if (!data) return;
 		this.#update(id, { data }, 'Falha ao reagendar a tarefa.');
 		if (data !== this.dia) toast.info(`Tarefa movida para ${fmtDiaMes(data)}.`);
+	}
+
+	/** Define (ou tira, com null) o horário da tarefa dentro do dia. */
+	setHora(id: string, hora: string | null) {
+		this.#update(id, { hora: hora || null }, 'Falha ao definir o horário.');
 	}
 
 	/** Duplica uma tarefa (cópia com novo id; subtarefas ganham novos ids). */

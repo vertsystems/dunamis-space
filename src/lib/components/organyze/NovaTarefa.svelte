@@ -11,13 +11,16 @@
 	let titulo = $state('');
 	// Dia em que a tarefa vai cair no quadro. Vazio = o dia em foco.
 	let agendarPara = $state('');
+	// Horário dentro do dia. Vazio = tarefa do dia, sem hora marcada.
+	let hora = $state('');
 	let lado = $state<Categoria>('empresa');
 	let mostrarAgenda = $state(false);
 
 	function adicionar() {
-		if (organyze.addTarefa(titulo, agendarPara || null, lado)) {
+		if (organyze.addTarefa(titulo, agendarPara || null, lado, hora || null)) {
 			titulo = '';
 			agendarPara = '';
+			hora = '';
 			mostrarAgenda = false;
 		}
 	}
@@ -47,12 +50,12 @@
 		/>
 		<button
 			class="grid size-11 shrink-0 place-items-center rounded-[var(--radius)] border transition-colors"
-			class:border-grey-200={!mostrarAgenda && !agendarPara}
-			class:text-grey={!mostrarAgenda && !agendarPara}
-			class:border-brand={mostrarAgenda || agendarPara}
-			class:text-brand={mostrarAgenda || agendarPara}
-			title="Agendar para outro dia (opcional)"
-			aria-label="Agendar para outro dia"
+			class:border-grey-200={!mostrarAgenda && !agendarPara && !hora}
+			class:text-grey={!mostrarAgenda && !agendarPara && !hora}
+			class:border-brand={mostrarAgenda || agendarPara || hora}
+			class:text-brand={mostrarAgenda || agendarPara || hora}
+			title="Agendar dia e hora (opcional)"
+			aria-label="Agendar dia e hora"
 			onclick={() => (mostrarAgenda = !mostrarAgenda)}
 		>
 			<CalendarClock size={18} />
@@ -67,14 +70,30 @@
 			<input
 				type="date"
 				bind:value={agendarPara}
+				aria-label="Dia da tarefa"
 				class="h-8 rounded-[var(--radius)] border border-grey-200 bg-surface px-2 text-xs text-navy outline-none focus-visible:border-brand [color-scheme:light]"
 			/>
-			{#if agendarPara}
+			<span class="text-xs text-grey">às</span>
+			<input
+				type="time"
+				bind:value={hora}
+				aria-label="Hora da tarefa"
+				class="h-8 rounded-[var(--radius)] border border-grey-200 bg-surface px-2 text-xs text-navy outline-none focus-visible:border-brand [color-scheme:light]"
+			/>
+			{#if agendarPara || hora}
 				<!-- Deixa claro que a tarefa não vai ficar no quadro que está à vista. -->
-				<span class="text-xs text-grey">
-					aparece só no quadro de {fmtDiaMes(agendarPara)}
-				</span>
-				<button class="text-xs font-medium text-grey hover:text-brand-danger" onclick={() => (agendarPara = '')}>
+				{#if agendarPara}
+					<span class="text-xs text-grey">
+						aparece só no quadro de {fmtDiaMes(agendarPara)}
+					</span>
+				{/if}
+				<button
+					class="text-xs font-medium text-grey hover:text-brand-danger"
+					onclick={() => {
+						agendarPara = '';
+						hora = '';
+					}}
+				>
 					limpar
 				</button>
 			{/if}
