@@ -4,7 +4,7 @@
 	type Atalho = { href: string; label: string; desc: string; icon: string };
 
 	const criar: Atalho[] = [
-		{ href: '/clientes/novo', label: 'Novo cliente', desc: 'Cadastrar cliente / lead', icon: 'contact' },
+		{ href: '/clientes/novo', label: 'Novo cliente', desc: 'Cadastrar cliente na carteira', icon: 'contact' },
 		{ href: '/comercial/kanban', label: 'Novo negócio', desc: 'Abrir o funil e criar oportunidade', icon: 'funnel' },
 		{ href: '/conteudo/novo', label: 'Novo conteúdo', desc: 'Criar post no calendário', icon: 'edit' },
 		{ href: '/financeiro/novo', label: 'Nova transação', desc: 'Registrar receita ou despesa', icon: 'dollar' },

@@ -1,10 +1,12 @@
 import { num, str as campo } from '$lib/form';
 
+// Prospecção mora no Comercial/CRM: quem está no cadastro de clientes já é
+// cliente. Daí a lista não ter 'lead'.
 export const CLIENTE_STATUS = [
-	{ value: 'lead', label: 'Lead' },
 	{ value: 'ativo', label: 'Ativo' },
+	{ value: 'standby', label: 'Stand-by' },
 	{ value: 'pausado', label: 'Pausado' },
-	{ value: 'cancelado', label: 'Cancelado' }
+	{ value: 'inativo', label: 'Inativo' }
 ] as const;
 
 export type ClienteStatus = (typeof CLIENTE_STATUS)[number]['value'];
@@ -16,9 +18,9 @@ export function statusTone(
 	switch (status) {
 		case 'ativo':
 			return 'success';
-		case 'lead':
+		case 'standby':
 			return 'warning';
-		case 'cancelado':
+		case 'inativo':
 			return 'danger';
 		default:
 			return 'neutral';
@@ -60,7 +62,7 @@ export function clienteFromForm(fd: FormData) {
 	return {
 		// Geral
 		nome: str('nome') ?? '',
-		status: str('status') ?? 'lead',
+		status: str('status') ?? 'ativo',
 		// URL já no Storage quando o form foi enviado (upload acontece na hora de
 		// escolher o arquivo). Vazio = sem foto / foto removida.
 		logo_url: str('logo_url'),

@@ -127,7 +127,7 @@
 			<h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-grey">Geral</h3>
 			<div class="grid grid-cols-1 md:grid-cols-12 gap-4">
 				<Input label="Nome *" name="nome" required value={v('nome')} wrapperClass="md:col-span-8" />
-				<Select label="Status" name="status" value={cliente?.status ?? 'lead'} wrapperClass="md:col-span-4">
+				<Select label="Status" name="status" value={cliente?.status ?? 'ativo'} wrapperClass="md:col-span-4">
 					{#each CLIENTE_STATUS as s (s.value)}<option value={s.value}>{s.label}</option>{/each}
 				</Select>
 				<Input label="Razão social" name="razao_social" value={v('razao_social')} wrapperClass="md:col-span-6" />

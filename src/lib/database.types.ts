@@ -302,7 +302,7 @@ export type Database = {
 					contato_nome: string | null
 					contato_email: string | null
 					contato_whatsapp: string | null
-					status: 'lead' | 'ativo' | 'pausado' | 'cancelado'
+					status: 'ativo' | 'standby' | 'pausado' | 'inativo'
 					responsavel_id: string | null
 					segmento: string | null
 					data_inicio: string | null
@@ -334,7 +334,7 @@ export type Database = {
 					contato_nome?: string | null
 					contato_email?: string | null
 					contato_whatsapp?: string | null
-					status?: 'lead' | 'ativo' | 'pausado' | 'cancelado'
+					status?: 'ativo' | 'standby' | 'pausado' | 'inativo'
 					responsavel_id?: string | null
 					segmento?: string | null
 					data_inicio?: string | null
@@ -366,7 +366,7 @@ export type Database = {
 					contato_nome?: string | null
 					contato_email?: string | null
 					contato_whatsapp?: string | null
-					status?: 'lead' | 'ativo' | 'pausado' | 'cancelado'
+					status?: 'ativo' | 'standby' | 'pausado' | 'inativo'
 					responsavel_id?: string | null
 					segmento?: string | null
 					data_inicio?: string | null
@@ -1765,7 +1765,7 @@ export type Database = {
 		}
 		Enums: {
 			aprovacao_status: 'pendente' | 'aprovado' | 'alteracao_solicitada'
-			cliente_status: 'lead' | 'ativo' | 'pausado' | 'cancelado'
+			cliente_status: 'ativo' | 'standby' | 'pausado' | 'inativo'
 			colaborador_funcao: 'admin' | 'gestor' | 'social_media' | 'designer' | 'trafego' | 'ceo' | 'comercial' | 'digital_creator' | 'growth_manager' | 'financeiro' | 'videomaker'
 			comentario_entidade: 'projeto' | 'tarefa' | 'conteudo' | 'cliente'
 			conteudo_status: 'rascunho' | 'em_aprovacao' | 'aprovado' | 'programado' | 'publicado' | 'escrever_conteudo' | 'ideia' | 'aguardando_material' | 'pausar_material' | 'editar_video' | 'gravar_video' | 'criar_design' | 'aprovar_roteiro' | 'aprovar_conteudo' | 'programado_parcial' | 'programar' | 'programar_feed' | 'programar_stories' | 'programar_reels'
