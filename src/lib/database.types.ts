@@ -1,7 +1,7 @@
 // GERADO AUTOMATICAMENTE — não edite à mão.
 // Regenerar:  PGPASSWORD='<senha-postgres>' node scripts/gen-types.mjs
 //
-// Reflete o schema public do Supabase (2026-08-07).
+// Reflete o schema public do Supabase (2026-08-11).
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -95,7 +95,6 @@ export type Database = {
 					nome: string
 					tipo: string
 					especialidade: string | null
-					cidade: string | null
 					email: string | null
 					telefone: string | null
 					custo_referencia: number | null
@@ -106,13 +105,13 @@ export type Database = {
 					updated_at: string
 					site: string | null
 					instagram: string | null
+					cidade: string | null
 				}
 				Insert: {
 					id?: string
 					nome: string
 					tipo?: string
 					especialidade?: string | null
-					cidade?: string | null
 					email?: string | null
 					telefone?: string | null
 					custo_referencia?: number | null
@@ -123,13 +122,13 @@ export type Database = {
 					updated_at?: string
 					site?: string | null
 					instagram?: string | null
+					cidade?: string | null
 				}
 				Update: {
 					id?: string
 					nome?: string
 					tipo?: string
 					especialidade?: string | null
-					cidade?: string | null
 					email?: string | null
 					telefone?: string | null
 					custo_referencia?: number | null
@@ -140,6 +139,7 @@ export type Database = {
 					updated_at?: string
 					site?: string | null
 					instagram?: string | null
+					cidade?: string | null
 				}
 				Relationships: []
 			}
@@ -325,6 +325,7 @@ export type Database = {
 					contato_operacao_whatsapp: string | null
 					responsaveis_ids: string[]
 					logo_url: string | null
+					enderecos: Json
 				}
 				Insert: {
 					id?: string
@@ -357,6 +358,7 @@ export type Database = {
 					contato_operacao_whatsapp?: string | null
 					responsaveis_ids?: string[]
 					logo_url?: string | null
+					enderecos?: Json
 				}
 				Update: {
 					id?: string
@@ -389,6 +391,7 @@ export type Database = {
 					contato_operacao_whatsapp?: string | null
 					responsaveis_ids?: string[]
 					logo_url?: string | null
+					enderecos?: Json
 				}
 				Relationships: []
 			}

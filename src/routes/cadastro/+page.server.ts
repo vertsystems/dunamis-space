@@ -7,9 +7,11 @@ export const load: PageServerLoad = async ({ locals: { supabase, permissoes }, u
 
 	let query = supabase
 		.from('clientes')
-		.select(
-			'id, nome, status, razao_social, cnpj_cpf, segmento, logo_url, responsavel_id, responsaveis_ids, data_inicio, contato_nome, contato_email, contato_whatsapp, contato_financeiro, contato_financeiro_email, contato_financeiro_whatsapp, contato_operacao, contato_operacao_email, contato_operacao_whatsapp, endereco, cidade, estado, cep, plano_ref, forma_pagamento, mrr, dia_vencimento, observacoes'
-		)
+		// `*`: a linha da lista alimenta o modal de edição, então precisa trazer o
+		// cadastro inteiro — e pedir coluna por nome faz o PostgREST recusar a
+		// query toda enquanto uma migration nova (ex.: `enderecos`) não rodou. O
+		// mrr sai depois, no ocultarValores.
+		.select('*')
 		.order('nome', { ascending: true });
 
 	if (q) query = query.ilike('nome', `%${q}%`);

@@ -46,6 +46,61 @@ export function erroDeMigration(msg: string): string | null {
 	return null;
 }
 
+/** Um endereço da lista do cliente (matriz, filial, loja...). */
+export type ClienteEndereco = {
+	/** Como a equipe chama o lugar: "Matriz", "Loja Centro". */
+	apelido: string;
+	endereco: string;
+	cidade: string;
+	estado: string;
+	cep: string;
+};
+
+const ENDERECO_CAMPOS = [
+	['apelido', 'end_apelido'],
+	['endereco', 'end_logradouro'],
+	['cidade', 'end_cidade'],
+	['estado', 'end_uf'],
+	['cep', 'end_cep']
+] as const;
+
+/**
+ * Monta a lista de endereços a partir dos campos repetidos do formulário.
+ *
+ * Cada campo vem como um array paralelo (`getAll`), na ordem em que aparece na
+ * tela — o índice é o que liga apelido, rua, cidade, UF e CEP do mesmo bloco.
+ * Bloco totalmente em branco não vira endereço: é a linha vazia que o form
+ * sempre mostra para quem ainda não digitou nada.
+ */
+export function enderecosFromForm(fd: FormData): ClienteEndereco[] {
+	const coluna = (campo: string) =>
+		fd.getAll(campo).map((x) => (typeof x === 'string' ? x.trim() : ''));
+
+	const colunas = Object.fromEntries(
+		ENDERECO_CAMPOS.map(([chave, campo]) => [chave, coluna(campo)])
+	) as Record<keyof ClienteEndereco, string[]>;
+
+	const linhas = Math.max(...Object.values(colunas).map((c) => c.length), 0);
+	const lista: ClienteEndereco[] = [];
+	for (let i = 0; i < linhas; i++) {
+		const item = {
+			apelido: colunas.apelido[i] ?? '',
+			endereco: colunas.endereco[i] ?? '',
+			cidade: colunas.cidade[i] ?? '',
+			estado: colunas.estado[i] ?? '',
+			cep: colunas.cep[i] ?? ''
+		};
+		if (Object.values(item).some((valor) => valor !== '')) lista.push(item);
+	}
+	return lista;
+}
+
+/** Resumo de uma linha em uma linha só, para listas e selos. */
+export function enderecoResumo(e: ClienteEndereco): string {
+	const local = [e.cidade, e.estado].filter(Boolean).join('/');
+	return [e.endereco, local, e.cep].filter(Boolean).join(' · ');
+}
+
 export function formatBRL(value: number | null | undefined): string {
 	return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value ?? 0);
 }
@@ -59,6 +114,8 @@ export function clienteFromForm(fd: FormData) {
 	const responsaveis_ids = fd
 		.getAll('responsaveis_ids')
 		.filter((v): v is string => typeof v === 'string' && v.trim() !== '');
+	const enderecos = enderecosFromForm(fd);
+	const primeiro = enderecos[0];
 	return {
 		// Geral
 		nome: str('nome') ?? '',
@@ -82,11 +139,13 @@ export function clienteFromForm(fd: FormData) {
 		contato_operacao: str('contato_operacao'),
 		contato_operacao_email: str('contato_operacao_email'),
 		contato_operacao_whatsapp: str('contato_operacao_whatsapp'),
-		// Endereço
-		endereco: str('endereco'),
-		cidade: str('cidade'),
-		estado: str('estado'),
-		cep: str('cep'),
+		// Endereço: a lista é a fonte da verdade; as quatro colunas antigas
+		// espelham o primeiro item para não quebrar quem ainda lê elas.
+		enderecos,
+		endereco: primeiro?.endereco || null,
+		cidade: primeiro?.cidade || null,
+		estado: primeiro?.estado || null,
+		cep: primeiro?.cep || null,
 		// Financeiro
 		plano_ref: str('plano_ref'),
 		forma_pagamento: str('forma_pagamento'),

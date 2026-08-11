@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { CLIENTE_STATUS } from '$lib/clientes';
+	import { CLIENTE_STATUS, type ClienteEndereco } from '$lib/clientes';
 	import { VALOR_MASCARA } from '$lib/valores';
 	import { LOGO_MAX_PX, enviarLogo, validarLogo } from '$lib/logo';
 	import { toast } from '$lib/toast.svelte';
@@ -32,6 +32,54 @@
 	// Vem do +layout.server.ts, então vale em qualquer tela que abra este form.
 	const podeValores = $derived(page.data.podeValores !== false);
 
+	// --- Endereços ---
+	// Cada bloco carrega uma chave própria: sem ela, remover o 2º de três faria
+	// o Svelte reaproveitar os <input> pelo índice e o texto pularia de linha.
+	type Linha = ClienteEndereco & { chave: number };
+	let proximaChave = 0;
+	const linhaVazia = (): Linha => ({
+		chave: proximaChave++,
+		apelido: '',
+		endereco: '',
+		cidade: '',
+		estado: '',
+		cep: ''
+	});
+
+	/** Lista inicial: a do banco; senão o endereço único antigo; senão um bloco em branco. */
+	function enderecosIniciais(c: Record<string, any> | null): Linha[] {
+		const salvos = Array.isArray(c?.enderecos) ? (c.enderecos as Partial<ClienteEndereco>[]) : [];
+		if (salvos.length) {
+			return salvos.map((e) => ({
+				...linhaVazia(),
+				apelido: e?.apelido ?? '',
+				endereco: e?.endereco ?? '',
+				cidade: e?.cidade ?? '',
+				estado: e?.estado ?? '',
+				cep: e?.cep ?? ''
+			}));
+		}
+		// Cliente gravado antes da migration: as quatro colunas antigas viram a
+		// primeira linha, para o endereço não sumir da tela.
+		const antigo = { ...linhaVazia(), endereco: c?.endereco ?? '', cidade: c?.cidade ?? '', estado: c?.estado ?? '', cep: c?.cep ?? '' };
+		return [antigo];
+	}
+
+	// Valor inicial de propósito (o svelte-check avisa): a partir daqui quem manda
+	// é o que a pessoa digita. Trocar de cliente recarrega a lista no $effect
+	// abaixo, junto com a foto.
+	let enderecos = $state<Linha[]>(enderecosIniciais(cliente));
+
+	function adicionarEndereco() {
+		enderecos = [...enderecos, linhaVazia()];
+	}
+	// Sempre sobra um bloco em branco: o formulário sem nenhuma linha não teria
+	// onde digitar. Bloco em branco não vira endereço no banco.
+	function removerEndereco(chave: number) {
+		const resto = enderecos.filter((e) => e.chave !== chave);
+		enderecos = resto.length ? resto : [linhaVazia()];
+	}
+
 	// --- Foto do cliente ---
 	// A foto escolhida agora vence a do banco; `undefined` = ainda não mexeu.
 	// Um $state puro travaria no valor inicial: reabrir o modal para OUTRO
@@ -43,6 +91,9 @@
 		if (id !== idAtual) {
 			idAtual = id;
 			escolhida = undefined;
+			// Mesmo motivo da foto: reabrir o modal para outro cliente não pode
+			// mostrar os endereços do anterior.
+			enderecos = enderecosIniciais(cliente);
 		}
 	});
 	const logoUrl = $derived(
@@ -163,12 +214,43 @@
 		</section>
 
 		<section>
-			<h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-grey">Endereço</h3>
-			<div class="grid grid-cols-1 md:grid-cols-12 gap-4">
-				<Input label="Endereço" name="endereco" value={v('endereco')} wrapperClass="md:col-span-5" />
-				<Input label="Cidade" name="cidade" value={v('cidade')} wrapperClass="md:col-span-3" />
-				<Input label="UF" name="estado" maxlength={2} placeholder="UF" value={v('estado')} wrapperClass="md:col-span-2" />
-				<Input label="CEP" name="cep" value={v('cep')} wrapperClass="md:col-span-2" />
+			<div class="mb-2 flex items-center justify-between gap-3">
+				<h3 class="text-xs font-semibold uppercase tracking-wide text-grey">
+					{enderecos.length > 1 ? 'Endereços' : 'Endereço'}
+				</h3>
+				<Button type="button" size="sm" variant="secondary" onclick={adicionarEndereco}>
+					<Icon name="plus" size={14} /> Adicionar endereço
+				</Button>
+			</div>
+
+			<div class="space-y-3">
+				{#each enderecos as e, i (e.chave)}
+					<div class="rounded-[var(--radius)] border border-grey-200 p-3">
+						<div class="mb-2 flex items-center justify-between gap-3">
+							<span class="text-xs font-medium text-grey">
+								{e.apelido.trim() || `Endereço ${i + 1}`}
+							</span>
+							{#if enderecos.length > 1 || e.apelido || e.endereco || e.cidade || e.estado || e.cep}
+								<button
+									type="button"
+									onclick={() => removerEndereco(e.chave)}
+									title="Remover este endereço"
+									aria-label="Remover {e.apelido.trim() || `endereço ${i + 1}`}"
+									class="rounded-[var(--radius-sm)] p-1.5 text-grey transition-colors hover:bg-brand-danger/10 hover:text-brand-danger"
+								>
+									<Icon name="trash" size={15} />
+								</button>
+							{/if}
+						</div>
+						<div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+							<Input label="Apelido" name="end_apelido" bind:value={e.apelido} placeholder="Matriz, Loja Centro…" wrapperClass="md:col-span-3" />
+							<Input label="Endereço" name="end_logradouro" bind:value={e.endereco} wrapperClass="md:col-span-4" />
+							<Input label="Cidade" name="end_cidade" bind:value={e.cidade} wrapperClass="md:col-span-2" />
+							<Input label="UF" name="end_uf" maxlength={2} placeholder="UF" bind:value={e.estado} wrapperClass="md:col-span-1" />
+							<Input label="CEP" name="end_cep" bind:value={e.cep} wrapperClass="md:col-span-2" />
+						</div>
+					</div>
+				{/each}
 			</div>
 		</section>
 
