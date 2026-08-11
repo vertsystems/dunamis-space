@@ -10,7 +10,7 @@
 	import { Button, Modal } from '$lib/components/ui';
 	import RichText from '$lib/components/organyze/RichText.svelte';
 	import Avatar from './Avatar.svelte';
-	import { CalendarClock, Check, Columns2, Copy, GripVertical, Plus, Rows3, Trash2 } from '@lucide/svelte';
+	import { CalendarClock, CalendarDays, Check, Columns2, Copy, GripVertical, Plus, Rows3, Trash2 } from '@lucide/svelte';
 
 	let {
 		/** Id da tarefa aberta; null fecha o modal. */
@@ -217,6 +217,24 @@
 								{#if sel}<Check size={13} strokeWidth={3} />{/if}
 							</button>
 						{/each}
+					</div>
+				</div>
+
+				<div>
+					<!-- O dia do quadro em que a tarefa mora. Diferente do prazo abaixo:
+					     este decide ONDE ela aparece, aquele é quando vence. -->
+					<span class="mb-1.5 block text-sm font-medium text-navy">Agendada para</span>
+					<div class="flex items-center gap-2">
+						<div class="inline-flex items-center gap-2 rounded-[var(--radius)] border border-grey-200 px-3 py-2">
+							<CalendarDays size={16} style="color: var(--color-grey)" />
+							<input
+								type="date"
+								value={tarefa.data}
+								onchange={(e) => id && organyze.setData(id, e.currentTarget.value)}
+								class="bg-transparent text-sm text-navy outline-none [color-scheme:light]"
+							/>
+						</div>
+						<span class="text-xs text-grey">dia em que aparece no quadro</span>
 					</div>
 				</div>
 

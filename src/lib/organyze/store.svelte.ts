@@ -35,6 +35,16 @@ function hoje(): string {
 	return toISODate(new Date());
 }
 
+/**
+ * "2026-08-20" → "20/08", para os avisos.
+ * Cópia curta do fmtDiaMes de ui.ts de propósito: ui.ts importa daqui, e
+ * importar de lá fecharia um ciclo entre os dois módulos.
+ */
+function fmtDiaMes(iso: string): string {
+	const [, m, d] = iso.split('-');
+	return `${d}/${m}`;
+}
+
 /** Mês atual no formato yyyy-mm. */
 function mesAtual(): string {
 	const d = new Date();
@@ -225,9 +235,16 @@ class OrganyzeStore {
 	}
 
 	// ---- Tarefas -----------------------------------------------------------
+	/**
+	 * Cria uma tarefa no dia em foco — ou no dia agendado, se houver.
+	 *
+	 * `agendarPara` é o DIA da tarefa, não o prazo de entrega: a tarefa some do
+	 * quadro de hoje e aparece no quadro daquele dia (e na célula dele em Semana
+	 * e Mês). O prazo continua sendo outra coisa, editada no modal.
+	 */
 	addTarefa(
 		titulo: string,
-		prazo: string | null = null,
+		agendarPara: string | null = null,
 		categoria: Categoria = 'empresa'
 	): Tarefa | null {
 		const trimmed = titulo.trim();
@@ -235,16 +252,17 @@ class OrganyzeStore {
 		const posicao = this.tarefas.length
 			? Math.max(...this.tarefas.map((t) => t.posicao)) + 1
 			: 0;
+		const data = agendarPara || this.dia;
 		const tarefa: Tarefa = {
 			id: uid(),
 			colaboradorId: this.colaboradorId,
 			titulo: trimmed,
 			status: 'nao_iniciado',
 			categoria,
-			data: this.dia,
+			data,
 			posicao,
 			prioridade: 'media',
-			prazo: prazo || null,
+			prazo: null,
 			descricao: '',
 			subtarefas: [],
 			responsaveis: []
@@ -255,7 +273,17 @@ class OrganyzeStore {
 			() => (this.tarefas = this.tarefas.filter((t) => t.id !== tarefa.id)),
 			'Falha ao adicionar tarefa.'
 		);
+		// Agendada para outro dia, a tarefa não aparece no quadro à frente — sem
+		// este aviso, o clique em Adicionar pareceria não ter feito nada.
+		if (data !== this.dia) toast.info(`Tarefa agendada para ${fmtDiaMes(data)}.`);
 		return tarefa;
+	}
+
+	/** Reagenda a tarefa para outro dia (sai do quadro atual, entra no de lá). */
+	setData(id: string, data: string) {
+		if (!data) return;
+		this.#update(id, { data }, 'Falha ao reagendar a tarefa.');
+		if (data !== this.dia) toast.info(`Tarefa movida para ${fmtDiaMes(data)}.`);
 	}
 
 	/** Duplica uma tarefa (cópia com novo id; subtarefas ganham novos ids). */

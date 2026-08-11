@@ -1,22 +1,24 @@
 <script lang="ts">
 	// Caixa de adicionar tarefa do modo Dia: título, lado (Empresa / Vida
-	// Pessoal) e um prazo opcional que só aparece quando pedido.
+	// Pessoal) e, opcionalmente, o dia para o qual a tarefa é agendada.
 	import { organyze } from '$lib/organyze/store.svelte';
 	import { CATEGORIAS, CATEGORIA_COR, CATEGORIA_LABEL } from '$lib/organyze/types';
 	import type { Categoria } from '$lib/organyze/types';
+	import { fmtDiaMes } from '$lib/organyze/ui';
 	import { Button } from '$lib/components/ui';
 	import { CalendarClock, Plus } from '@lucide/svelte';
 
 	let titulo = $state('');
-	let prazo = $state('');
+	// Dia em que a tarefa vai cair no quadro. Vazio = o dia em foco.
+	let agendarPara = $state('');
 	let lado = $state<Categoria>('empresa');
-	let mostrarPrazo = $state(false);
+	let mostrarAgenda = $state(false);
 
 	function adicionar() {
-		if (organyze.addTarefa(titulo, prazo || null, lado)) {
+		if (organyze.addTarefa(titulo, agendarPara || null, lado)) {
 			titulo = '';
-			prazo = '';
-			mostrarPrazo = false;
+			agendarPara = '';
+			mostrarAgenda = false;
 		}
 	}
 </script>
@@ -45,13 +47,13 @@
 		/>
 		<button
 			class="grid size-11 shrink-0 place-items-center rounded-[var(--radius)] border transition-colors"
-			class:border-grey-200={!mostrarPrazo && !prazo}
-			class:text-grey={!mostrarPrazo && !prazo}
-			class:border-brand={mostrarPrazo || prazo}
-			class:text-brand={mostrarPrazo || prazo}
-			title="Definir prazo de entrega (opcional)"
-			aria-label="Definir prazo de entrega"
-			onclick={() => (mostrarPrazo = !mostrarPrazo)}
+			class:border-grey-200={!mostrarAgenda && !agendarPara}
+			class:text-grey={!mostrarAgenda && !agendarPara}
+			class:border-brand={mostrarAgenda || agendarPara}
+			class:text-brand={mostrarAgenda || agendarPara}
+			title="Agendar para outro dia (opcional)"
+			aria-label="Agendar para outro dia"
+			onclick={() => (mostrarAgenda = !mostrarAgenda)}
 		>
 			<CalendarClock size={18} />
 		</button>
@@ -59,16 +61,20 @@
 			<Plus size={18} /> Adicionar
 		</Button>
 	</div>
-	{#if mostrarPrazo}
-		<div class="flex items-center gap-2 px-1">
-			<span class="text-xs font-medium text-grey">Prazo de entrega:</span>
+	{#if mostrarAgenda}
+		<div class="flex flex-wrap items-center gap-2 px-1">
+			<span class="text-xs font-medium text-grey">Agendar para:</span>
 			<input
 				type="date"
-				bind:value={prazo}
+				bind:value={agendarPara}
 				class="h-8 rounded-[var(--radius)] border border-grey-200 bg-surface px-2 text-xs text-navy outline-none focus-visible:border-brand [color-scheme:light]"
 			/>
-			{#if prazo}
-				<button class="text-xs font-medium text-grey hover:text-brand-danger" onclick={() => (prazo = '')}>
+			{#if agendarPara}
+				<!-- Deixa claro que a tarefa não vai ficar no quadro que está à vista. -->
+				<span class="text-xs text-grey">
+					aparece só no quadro de {fmtDiaMes(agendarPara)}
+				</span>
+				<button class="text-xs font-medium text-grey hover:text-brand-danger" onclick={() => (agendarPara = '')}>
 					limpar
 				</button>
 			{/if}
