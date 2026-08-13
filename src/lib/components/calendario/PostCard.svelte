@@ -7,7 +7,8 @@
 		conteudoTipoLabel,
 		conteudoStatusLabel,
 		conteudoStatusTone,
-		conteudoStatusFundo
+		conteudoStatusFundo,
+		proximoPassoPublicacao
 	} from '$lib/conteudo';
 
 	let {
@@ -30,6 +31,7 @@
 	} = $props();
 
 	const tipos = $derived(c.tipos?.length ? c.tipos : c.tipo ? [c.tipo] : []);
+	const proximo = $derived(proximoPassoPublicacao(c.status));
 	// O card inteiro veste a cor do status, bem lavada.
 	const fundo = $derived(conteudoStatusFundo(c.status));
 </script>
@@ -65,23 +67,16 @@
 				conteudoStatusTone(c.status)
 			]}">{conteudoStatusLabel(c.status)}</span
 		>
-		<!-- As bolinhas têm 12px: o ::after invisível (inset -8px) leva o alvo de
+		<!-- Um clique = um degrau: Programar → Programado → Publicado.
+		     As bolinhas têm 12px: o ::after invisível (inset -8px) leva o alvo de
 		     toque a 28px sem mudar o desenho — antes errar a mira abria o modal. -->
-		{#if c.status !== 'programar' && c.status !== 'publicado'}
+		{#if proximo}
 			<button
 				type="button"
-				onclick={(e) => onStatus('programar', e)}
-				title="Marcar como Programar"
-				aria-label="Marcar como Programar"
-				class="relative size-3 shrink-0 rounded-full border border-brand-amber bg-brand-amber/30 transition-colors after:absolute after:-inset-2 after:content-[''] hover:bg-brand-amber"
-			></button>
-		{:else if c.status === 'programar'}
-			<button
-				type="button"
-				onclick={(e) => onStatus('publicado', e)}
-				title="Marcar como Publicado"
-				aria-label="Marcar como Publicado"
-				class="relative size-3 shrink-0 rounded-full border border-brand-green bg-brand-green/30 transition-colors after:absolute after:-inset-2 after:content-[''] hover:bg-brand-green"
+				onclick={(e) => onStatus(proximo.valor, e)}
+				title="Marcar como {proximo.label}"
+				aria-label="Marcar como {proximo.label}"
+				class="relative size-3 shrink-0 rounded-full border transition-colors after:absolute after:-inset-2 after:content-[''] {proximo.classe}"
 			></button>
 		{/if}
 	</span>

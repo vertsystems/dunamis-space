@@ -130,6 +130,53 @@ export function conteudoStatusLabel(status: string): string {
 	return CONTEUDO_STATUS.find((s) => s.value === status)?.label ?? status;
 }
 
+/** Os quatro "Programar ..." são o mesmo degrau do fluxo: falta agendar o post. */
+const A_PROGRAMAR = new Set([
+	'programar',
+	'programar_feed',
+	'programar_stories',
+	'programar_reels'
+]);
+
+/** Já agendado no gerenciador, esperando a hora de sair. */
+const JA_PROGRAMADO = new Set(['programado', 'programado_parcial']);
+
+export type ProximoPasso = { valor: string; label: string; classe: string };
+
+/**
+ * Próximo degrau do fluxo de publicação, que é o que a bolinha do card do
+ * calendário faz avançar: **Programar → Programado → Publicado**.
+ *
+ * Um passo por clique, sem atalho: antes o card em "Programar" pulava direto
+ * para "Publicado", e o que já estava em "Programado" só oferecia VOLTAR para
+ * "Programar" — não dava para chegar em Publicado pela bolinha.
+ *
+ * `null` = fim da linha (já publicado), e aí o card não mostra bolinha.
+ */
+export function proximoPassoPublicacao(status: string): ProximoPasso | null {
+	if (status === 'publicado') return null;
+	if (JA_PROGRAMADO.has(status)) {
+		return {
+			valor: 'publicado',
+			label: 'Publicado',
+			classe: 'border-brand-green bg-brand-green/30 hover:bg-brand-green'
+		};
+	}
+	if (A_PROGRAMAR.has(status)) {
+		// Azul: a mesma cor do selo "Programado", para o clique casar com o destino.
+		return {
+			valor: 'programado',
+			label: 'Programado',
+			classe: 'border-navy/60 bg-navy/25 hover:bg-navy/60'
+		};
+	}
+	return {
+		valor: 'programar',
+		label: 'Programar',
+		classe: 'border-brand-amber bg-brand-amber/30 hover:bg-brand-amber'
+	};
+}
+
 export function conteudoTipoLabel(tipo: string): string {
 	return CONTEUDO_TIPO.find((t) => t.value === tipo)?.label ?? tipo;
 }
