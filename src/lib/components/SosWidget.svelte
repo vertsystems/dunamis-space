@@ -6,7 +6,15 @@
 	import { cubicOut } from 'svelte/easing';
 	import Icon from '$lib/components/Icon.svelte';
 	import { toast } from '$lib/toast.svelte';
-	import { SOS_ACEITA, SOS_MAX_H, SOS_MAX_W, enviarImagemSos, validarEntrada } from '$lib/sosImagem';
+	import {
+		SOS_ACEITA,
+		SOS_MAX_H,
+		SOS_MAX_IMAGENS,
+		SOS_MAX_W,
+		enviarImagensSos,
+		removerImagensSos,
+		validarEntrada
+	} from '$lib/sosImagem';
 
 	let {
 		supabase,
@@ -24,40 +32,54 @@
 	let enviando = $state(false);
 	let root = $state<HTMLElement | null>(null);
 
-	// --- Print do problema ---
-	// O arquivo fica guardado aqui e só sobe junto com o chamado: quem desiste no
-	// meio não deixa imagem órfã no Storage.
-	let imagem = $state<File | null>(null);
-	let previa = $state<string | null>(null);
+	// --- Prints do problema ---
+	// Os arquivos ficam guardados aqui e só sobem junto com o chamado: quem
+	// desiste no meio não deixa imagem órfã no Storage.
+	type Anexo = { file: File; previa: string };
+	let anexos = $state<Anexo[]>([]);
 	let arquivoInput = $state<HTMLInputElement | null>(null);
+	const podeAnexarMais = $derived(anexos.length < SOS_MAX_IMAGENS);
 
 	function escolherArquivo(e: Event) {
 		const input = e.currentTarget as HTMLInputElement;
-		const file = input.files?.[0];
+		const escolhidos = [...(input.files ?? [])];
 		// Zera o input para que reescolher o MESMO arquivo dispare o change de novo.
 		input.value = '';
-		if (!file) return;
+		if (!escolhidos.length) return;
 
-		const problema = validarEntrada(file);
-		if (problema) {
-			toast.error(problema);
-			return;
+		const vagas = SOS_MAX_IMAGENS - anexos.length;
+		if (escolhidos.length > vagas) {
+			toast.error(
+				vagas === 0
+					? `Já são ${SOS_MAX_IMAGENS} imagens — remova uma para trocar.`
+					: `Cabem mais ${vagas} ${vagas === 1 ? 'imagem' : 'imagens'} neste chamado.`
+			);
 		}
-		if (previa) URL.revokeObjectURL(previa);
-		imagem = file;
-		previa = URL.createObjectURL(file);
+
+		for (const file of escolhidos.slice(0, vagas)) {
+			const problema = validarEntrada(file);
+			if (problema) {
+				toast.error(`${file.name}: ${problema}`);
+				continue;
+			}
+			anexos = [...anexos, { file, previa: URL.createObjectURL(file) }];
+		}
 	}
 
-	function tirarImagem() {
-		if (previa) URL.revokeObjectURL(previa);
-		imagem = null;
-		previa = null;
+	function tirarImagem(previa: string) {
+		URL.revokeObjectURL(previa);
+		anexos = anexos.filter((a) => a.previa !== previa);
+	}
+
+	function limparAnexos() {
+		for (const a of anexos) URL.revokeObjectURL(a.previa);
+		anexos = [];
 	}
 
 	function limpar() {
 		titulo = '';
 		descricao = '';
-		tirarImagem();
+		limparAnexos();
 	}
 
 	async function enviar(e: SubmitEvent) {
@@ -69,16 +91,19 @@
 		}
 		enviando = true;
 
-		// A imagem sobe primeiro: sem URL, não adianta gravar o chamado.
-		let imagem_url: string | null = null;
-		if (imagem) {
-			const r = await enviarImagemSos(supabase, imagem);
+		// As imagens sobem primeiro: sem URL, não adianta gravar o chamado.
+		let imagens: string[] = [];
+		if (anexos.length) {
+			const r = await enviarImagensSos(
+				supabase,
+				anexos.map((a) => a.file)
+			);
 			if ('erro' in r) {
 				enviando = false;
 				toast.error(r.erro);
 				return;
 			}
-			imagem_url = r.url;
+			imagens = r.urls;
 		}
 
 		const { error } = await supabase.from('sos_chamados').insert({
@@ -87,13 +112,20 @@
 			autor_nome: autorNome,
 			autor_email: autorEmail,
 			rota: page.url.pathname,
-			imagem_url
+			imagens,
+			// Espelho do primeiro print, para a tela funcionar mesmo que a migration
+			// 0060 ainda não tenha rodado no banco.
+			imagem_url: imagens[0] ?? null
 		});
-		enviando = false;
 		if (error) {
+			// Sem chamado, as imagens já enviadas não têm dono: tirar do Storage
+			// agora evita o arquivo órfão que ninguém mais consegue achar.
+			await removerImagensSos(supabase, imagens);
+			enviando = false;
 			toast.error('Não foi possível enviar. Tente novamente.');
 			return;
 		}
+		enviando = false;
 		limpar();
 		aberto = false;
 		toast.success('Chamado SOS enviado. A equipe foi avisada.');
@@ -165,47 +197,56 @@
 					></textarea>
 				</div>
 				<div>
-					<span class="mb-1 block text-xs font-medium text-navy">Print do problema</span>
+					<span class="mb-1 block text-xs font-medium text-navy">
+						Prints do problema
+						{#if anexos.length}
+							<span class="font-normal text-grey">({anexos.length}/{SOS_MAX_IMAGENS})</span>
+						{/if}
+					</span>
 					<!-- Escondido: o botão abaixo é que abre o seletor, para o campo
 					     nativo (feio e sem tradução) não aparecer no widget. -->
 					<input
 						bind:this={arquivoInput}
 						type="file"
 						accept={SOS_ACEITA}
+						multiple
 						onchange={escolherArquivo}
 						class="hidden"
 					/>
-					{#if previa}
-						<div class="flex items-start gap-2">
-							<img
-								src={previa}
-								alt="Prévia do print anexado"
-								class="h-20 w-28 rounded-[var(--radius)] border border-grey-200 object-cover"
-							/>
-							<div class="flex flex-col items-start gap-1">
-								<button
-									type="button"
-									onclick={() => arquivoInput?.click()}
-									class="text-xs font-medium text-brand hover:underline">trocar</button
-								>
-								<button
-									type="button"
-									onclick={tirarImagem}
-									class="text-xs font-medium text-grey hover:text-brand-danger">remover</button
-								>
-							</div>
+					{#if anexos.length}
+						<div class="mb-2 flex flex-wrap gap-2">
+							{#each anexos as a (a.previa)}
+								<div class="relative">
+									<img
+										src={a.previa}
+										alt="Prévia de {a.file.name}"
+										class="size-16 rounded-[var(--radius)] border border-grey-200 object-cover"
+									/>
+									<button
+										type="button"
+										onclick={() => tirarImagem(a.previa)}
+										title="Remover esta imagem"
+										aria-label="Remover {a.file.name}"
+										class="absolute -top-1.5 -right-1.5 grid size-5 place-items-center rounded-full border border-grey-200 bg-surface text-grey shadow-sm transition-colors hover:bg-brand-danger hover:text-white"
+									>
+										<Icon name="x" size={12} />
+									</button>
+								</div>
+							{/each}
 						</div>
-					{:else}
+					{/if}
+					{#if podeAnexarMais}
 						<button
 							type="button"
 							onclick={() => arquivoInput?.click()}
 							class="inline-flex h-9 w-full items-center justify-center gap-2 rounded-[var(--radius)] border border-dashed border-grey-200 text-xs font-medium text-grey transition-colors hover:border-brand hover:text-brand"
 						>
-							<Icon name="camera" size={15} /> Anexar imagem (JPG, PNG)
+							<Icon name="camera" size={15} />
+							{anexos.length ? 'Anexar mais uma' : 'Anexar imagem (JPG, PNG)'}
 						</button>
 					{/if}
 					<p class="mt-1 text-[0.68rem] text-grey">
-						A imagem é convertida para WEBP e reduzida para até {SOS_MAX_W}x{SOS_MAX_H}px antes de
+						Até {SOS_MAX_IMAGENS} imagens. Cada uma vira WEBP de até {SOS_MAX_W}x{SOS_MAX_H}px antes de
 						subir.
 					</p>
 				</div>

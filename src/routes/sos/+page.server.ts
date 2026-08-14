@@ -1,5 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import { exigirPermissao } from '$lib/server/permissao';
+import { imagensDe, removerImagensSos } from '$lib/sosImagem';
 import type { Actions, PageServerLoad } from './$types';
 
 export type SosChamado = {
@@ -13,7 +14,9 @@ export type SosChamado = {
 	// migration 0043 não roda — a tela trata esses chamados como abertos.
 	status: 'aberto' | 'resolvido' | 'em_andamento';
 	created_at: string;
-	/** Print do problema (WEBP no bucket 'sos'), quando o autor anexou um. */
+	/** Prints do problema (WEBP no bucket 'sos'), até 5. */
+	imagens: string[] | null;
+	/** Espelho do primeiro print — mantido para chamados gravados antes da 0060. */
 	imagem_url: string | null;
 };
 
@@ -89,8 +92,24 @@ export const actions: Actions = {
 		const fd = await request.formData();
 		const id = idDe(fd);
 		if (!id) return fail(400, { error: 'Chamado inválido.' });
+
+		// Os prints saem junto com o chamado. Primeiro lê as URLs: depois do
+		// delete não há mais como saber quais arquivos eram deste chamado, e eles
+		// ficariam ocupando o bucket para sempre.
+		const { data: alvo } = await locals.supabase
+			.from('sos_chamados')
+			.select('imagens, imagem_url')
+			.eq('id', id)
+			.maybeSingle();
+
 		const { error } = await locals.supabase.from('sos_chamados').delete().eq('id', id);
 		if (error) return fail(500, { error: error.message });
+
+		// Só depois de apagar a linha: se o Storage falhar, o pior caso é um
+		// arquivo órfão (que a limpeza automática pega), e não um chamado sem
+		// imagem na tela.
+		if (alvo) await removerImagensSos(locals.supabase, imagensDe(alvo as SosChamado));
+
 		return { deleted: true };
 	}
 };

@@ -1,16 +1,32 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
-	import { Card, Badge, EmptyState } from '$lib/components/ui';
+	import { Card, Badge, EmptyState, Modal } from '$lib/components/ui';
 	import type { BadgeTone } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import { podeEditar, podeExcluir } from '$lib/permissoes';
 	import type { SosChamado } from './+page.server';
+	import { imagensDe } from '$lib/sosImagem';
 
 	let { data } = $props();
 
 	const perms = $derived(page.data.permissoes);
+
+	// Print aberto no modal: o chamado dá o título, o índice diz qual das imagens.
+	let vendo = $state<SosChamado | null>(null);
+	let indice = $state(0);
+	const galeria = $derived(vendo ? imagensDe(vendo) : []);
+
+	function abrirPrint(c: SosChamado, i: number) {
+		vendo = c;
+		indice = i;
+	}
+	/** Anda pela galeria dando a volta: do último vai para o primeiro. */
+	function passar(delta: number) {
+		if (galeria.length < 2) return;
+		indice = (indice + delta + galeria.length) % galeria.length;
+	}
 
 	const STATUS_META: Record<string, { label: string; tone: BadgeTone }> = {
 		aberto: { label: 'Aberto', tone: 'danger' },
@@ -110,6 +126,7 @@
 	<div class="space-y-3">
 		{#each data.itens as c (c.id)}
 			{@const st = statusDe(c)}
+			{@const prints = imagensDe(c)}
 			<Card class={CARD_COR[st]}>
 				<div class="flex items-start gap-3">
 					<span
@@ -129,23 +146,26 @@
 							<p class="mt-1 text-sm whitespace-pre-line text-slate">{c.descricao}</p>
 						{/if}
 
-						{#if c.imagem_url}
-							<!-- Abre em aba nova no tamanho cheio: dentro do card a miniatura
-							     serve para reconhecer a tela, não para ler o erro. -->
-							<a
-								href={c.imagem_url}
-								target="_blank"
-								rel="noopener"
-								title="Abrir o print em tamanho real"
-								class="mt-2 inline-block overflow-hidden rounded-[var(--radius)] border border-grey-200 transition-colors hover:border-brand"
-							>
-								<img
-									src={c.imagem_url}
-									alt="Print enviado no chamado {c.titulo}"
-									loading="lazy"
-									class="max-h-40 w-auto object-contain"
-								/>
-							</a>
+						{#if prints.length}
+							<!-- A miniatura serve para reconhecer a tela; para ler o erro, o
+							     clique abre o print grande sem sair da lista. -->
+							<div class="mt-2 flex flex-wrap gap-2">
+								{#each prints as url, i (url)}
+									<button
+										type="button"
+										onclick={() => abrirPrint(c, i)}
+										title="Ver o print {i + 1} de {prints.length}"
+										class="block overflow-hidden rounded-[var(--radius)] border border-grey-200 transition-colors hover:border-brand focus-visible:border-brand focus-visible:outline-none"
+									>
+										<img
+											src={url}
+											alt="Print {i + 1} do chamado {c.titulo}"
+											loading="lazy"
+											class="h-24 w-auto object-contain"
+										/>
+									</button>
+								{/each}
+							</div>
 						{/if}
 
 						<div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-grey">
@@ -199,3 +219,74 @@
 		{/each}
 	</div>
 {/if}
+
+<!-- Print em tamanho grande, sem tirar a pessoa da lista de chamados. -->
+<Modal
+	open={!!vendo}
+	title={vendo?.titulo ?? 'Print do chamado'}
+	subtitle={galeria.length > 1 ? `Print ${indice + 1} de ${galeria.length}` : 'Print enviado no chamado'}
+	size="xl"
+	onClose={() => (vendo = null)}
+>
+	{#if galeria[indice]}
+		<div class="flex flex-col items-center gap-3">
+			<div class="flex w-full items-center gap-2">
+				{#if galeria.length > 1}
+					<button
+						type="button"
+						onclick={() => passar(-1)}
+						aria-label="Print anterior"
+						class="grid size-9 shrink-0 place-items-center rounded-full border border-grey-200 text-slate transition-colors hover:border-brand hover:text-brand"
+					>
+						<Icon name="chevron" size={18} class="rotate-180" />
+					</button>
+				{/if}
+				<!-- max-h em vh: print alto (celular) não empurra o rodapé do modal
+				     para fora da tela. -->
+				<img
+					src={galeria[indice]}
+					alt="Print {indice + 1} do chamado {vendo?.titulo}"
+					class="mx-auto max-h-[70vh] w-auto rounded-[var(--radius)] border border-grey-200 object-contain"
+				/>
+				{#if galeria.length > 1}
+					<button
+						type="button"
+						onclick={() => passar(1)}
+						aria-label="Próximo print"
+						class="grid size-9 shrink-0 place-items-center rounded-full border border-grey-200 text-slate transition-colors hover:border-brand hover:text-brand"
+					>
+						<Icon name="chevron" size={18} />
+					</button>
+				{/if}
+			</div>
+
+			{#if galeria.length > 1}
+				<!-- Tiras embaixo: dá para pular direto para a imagem certa. -->
+				<div class="flex flex-wrap justify-center gap-2">
+					{#each galeria as url, i (url)}
+						<button
+							type="button"
+							onclick={() => (indice = i)}
+							aria-label="Ver print {i + 1}"
+							aria-current={i === indice}
+							class="overflow-hidden rounded-[var(--radius-sm)] border-2 transition-colors {i === indice
+								? 'border-brand'
+								: 'border-transparent opacity-60 hover:opacity-100'}"
+						>
+							<img src={url} alt="" class="size-12 object-cover" />
+						</button>
+					{/each}
+				</div>
+			{/if}
+
+			<a
+				href={galeria[indice]}
+				target="_blank"
+				rel="noopener"
+				class="text-xs font-medium text-grey hover:text-brand hover:underline"
+			>
+				abrir em nova aba
+			</a>
+		</div>
+	{/if}
+</Modal>

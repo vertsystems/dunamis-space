@@ -15,6 +15,9 @@ export const SOS_MAX_H = 600;
 /** Igual ao file_size_limit do bucket (0058). */
 export const SOS_MAX_BYTES = 524_288;
 
+/** Quantos prints cabem num chamado. */
+export const SOS_MAX_IMAGENS = 5;
+
 /** O que o usuário pode escolher no seletor de arquivo. */
 export const SOS_ACEITA = 'image/jpeg,image/png,image/webp';
 
@@ -114,4 +117,67 @@ export async function enviarImagemSos(
 
 	const { data } = supabase.storage.from(SOS_BUCKET).getPublicUrl(nome);
 	return { url: data.publicUrl };
+}
+
+/**
+ * Sobe a lista inteira. Se qualquer uma falhar, remove as que já subiram e
+ * devolve o erro — meio chamado com metade dos prints seria pior que nenhum.
+ */
+export async function enviarImagensSos(
+	supabase: SupabaseClient,
+	files: File[]
+): Promise<{ urls: string[] } | { erro: string }> {
+	const urls: string[] = [];
+	for (const file of files) {
+		const r = await enviarImagemSos(supabase, file);
+		if ('erro' in r) {
+			await removerImagensSos(supabase, urls);
+			return { erro: r.erro };
+		}
+		urls.push(r.url);
+	}
+	return { urls };
+}
+
+/**
+ * Nome do objeto no bucket a partir da URL pública.
+ *
+ * A URL termina em `/storage/v1/object/public/sos/<nome>`; é o `<nome>` que o
+ * Storage entende para apagar. Devolve null para URL de outro bucket ou
+ * malformada — apagar por engano o objeto errado seria pior que não apagar.
+ */
+export function nomeDoObjeto(url: string): string | null {
+	const marca = `/${SOS_BUCKET}/`;
+	const i = url.indexOf(`/object/public${marca}`);
+	if (i === -1) return null;
+	const nome = url.slice(i + `/object/public${marca}`.length).split('?')[0];
+	return nome ? decodeURIComponent(nome) : null;
+}
+
+/**
+ * Todos os prints de um chamado.
+ *
+ * `imagens` é a fonte da verdade; `imagem_url` é o espelho do primeiro, que
+ * sobrou dos chamados gravados antes da migration 0060 — e é o que salva a tela
+ * caso o código novo rode antes da migration.
+ */
+export function imagensDe(c: {
+	imagens?: string[] | null;
+	imagem_url?: string | null;
+}): string[] {
+	if (c.imagens?.length) return c.imagens;
+	return c.imagem_url ? [c.imagem_url] : [];
+}
+
+/** Apaga os prints do Storage. Silencioso: o chamado sai mesmo se o arquivo já não existir. */
+export async function removerImagensSos(
+	supabase: SupabaseClient,
+	urls: (string | null | undefined)[]
+): Promise<void> {
+	const nomes = urls
+		.filter((u): u is string => typeof u === 'string' && u !== '')
+		.map(nomeDoObjeto)
+		.filter((n): n is string => !!n);
+	if (!nomes.length) return;
+	await supabase.storage.from(SOS_BUCKET).remove(nomes);
 }
