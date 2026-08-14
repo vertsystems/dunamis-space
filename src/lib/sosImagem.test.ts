@@ -11,8 +11,8 @@ const cabe = ({ w, h }: { w: number; h: number }) => w <= SOS_MAX_W && h <= SOS_
  * Proporção preservada dentro do que o arredondamento permite.
  *
  * A folga não pode ser um percentual fixo: pixel é inteiro, então o erro máximo
- * é meio pixel no menor lado — o que é 0,1% numa imagem 640x480 e 5% numa
- * 10x480, sem nenhuma das duas estar errada. A tolerância acompanha isso.
+ * é meio pixel no menor lado — o que é 0,08% numa imagem 800x600 e 5% numa
+ * 10x600, sem nenhuma das duas estar errada. A tolerância acompanha isso.
  */
 const mesmaProporcao = (o: { w: number; h: number }, r: { w: number; h: number }) => {
 	const original = o.w / o.h;
@@ -24,25 +24,29 @@ describe('caberNaCaixa', () => {
 	it('reduz a foto grande até caber, mantendo a proporção', () => {
 		const original = { w: 4032, h: 3024 }; // foto de celular, 4:3
 		const r = caberNaCaixa(original.w, original.h);
-		expect(r).toEqual({ w: 640, h: 480 });
+		// 4:3 é a proporção da própria caixa, então preenche os dois lados.
+		expect(r).toEqual({ w: 800, h: 600 });
 		expect(cabe(r)).toBe(true);
 		expect(mesmaProporcao(original, r)).toBe(true);
 	});
 
 	it('imagem larga encosta na largura; alta encosta na altura', () => {
 		const larga = caberNaCaixa(1920, 1080); // 16:9
-		expect(larga.w).toBe(640);
-		expect(larga.h).toBe(360);
+		expect(larga.w).toBe(800);
+		expect(larga.h).toBe(450);
 		expect(cabe(larga)).toBe(true);
 
 		const alta = caberNaCaixa(1080, 1920); // print de celular em pé
-		expect(alta.h).toBe(480);
-		expect(alta.w).toBe(270);
+		expect(alta.h).toBe(600);
+		expect(alta.w).toBe(338);
 		expect(cabe(alta)).toBe(true);
 	});
 
 	it('não amplia imagem pequena — esticar só borraria o texto do print', () => {
 		expect(caberNaCaixa(300, 200)).toEqual({ w: 300, h: 200 });
+		// Exatamente do tamanho da caixa: fica como está.
+		expect(caberNaCaixa(SOS_MAX_W, SOS_MAX_H)).toEqual({ w: SOS_MAX_W, h: SOS_MAX_H });
+		// O tamanho antigo (640x480) agora é menor que a caixa e não é ampliado.
 		expect(caberNaCaixa(640, 480)).toEqual({ w: 640, h: 480 });
 	});
 

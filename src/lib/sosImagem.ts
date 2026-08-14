@@ -9,8 +9,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 export const SOS_BUCKET = 'sos';
 
 /** Caixa em que o print tem de caber. Mantém a proporção: é limite, não recorte. */
-export const SOS_MAX_W = 640;
-export const SOS_MAX_H = 480;
+export const SOS_MAX_W = 800;
+export const SOS_MAX_H = 600;
 
 /** Igual ao file_size_limit do bucket (0058). */
 export const SOS_MAX_BYTES = 524_288;
@@ -48,7 +48,7 @@ export function validarEntrada(file: File): string | null {
 }
 
 /**
- * Converte para WEBP dentro de 640x480. Devolve o arquivo pronto para subir.
+ * Converte para WEBP dentro da caixa (800x600). Devolve o arquivo pronto para subir.
  *
  * A qualidade 0.82 é o ponto em que print de tela ainda fica legível sem pesar;
  * abaixo disso o texto pequeno começa a esfarelar.
