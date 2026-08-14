@@ -6,6 +6,7 @@
 	import { cubicOut } from 'svelte/easing';
 	import Icon from '$lib/components/Icon.svelte';
 	import { toast } from '$lib/toast.svelte';
+	import { SOS_ACEITA, SOS_MAX_H, SOS_MAX_W, enviarImagemSos, validarEntrada } from '$lib/sosImagem';
 
 	let {
 		supabase,
@@ -23,6 +24,42 @@
 	let enviando = $state(false);
 	let root = $state<HTMLElement | null>(null);
 
+	// --- Print do problema ---
+	// O arquivo fica guardado aqui e só sobe junto com o chamado: quem desiste no
+	// meio não deixa imagem órfã no Storage.
+	let imagem = $state<File | null>(null);
+	let previa = $state<string | null>(null);
+	let arquivoInput = $state<HTMLInputElement | null>(null);
+
+	function escolherArquivo(e: Event) {
+		const input = e.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		// Zera o input para que reescolher o MESMO arquivo dispare o change de novo.
+		input.value = '';
+		if (!file) return;
+
+		const problema = validarEntrada(file);
+		if (problema) {
+			toast.error(problema);
+			return;
+		}
+		if (previa) URL.revokeObjectURL(previa);
+		imagem = file;
+		previa = URL.createObjectURL(file);
+	}
+
+	function tirarImagem() {
+		if (previa) URL.revokeObjectURL(previa);
+		imagem = null;
+		previa = null;
+	}
+
+	function limpar() {
+		titulo = '';
+		descricao = '';
+		tirarImagem();
+	}
+
 	async function enviar(e: SubmitEvent) {
 		e.preventDefault();
 		const t = titulo.trim();
@@ -31,20 +68,33 @@
 			return;
 		}
 		enviando = true;
+
+		// A imagem sobe primeiro: sem URL, não adianta gravar o chamado.
+		let imagem_url: string | null = null;
+		if (imagem) {
+			const r = await enviarImagemSos(supabase, imagem);
+			if ('erro' in r) {
+				enviando = false;
+				toast.error(r.erro);
+				return;
+			}
+			imagem_url = r.url;
+		}
+
 		const { error } = await supabase.from('sos_chamados').insert({
 			titulo: t,
 			descricao: descricao.trim() || null,
 			autor_nome: autorNome,
 			autor_email: autorEmail,
-			rota: page.url.pathname
+			rota: page.url.pathname,
+			imagem_url
 		});
 		enviando = false;
 		if (error) {
 			toast.error('Não foi possível enviar. Tente novamente.');
 			return;
 		}
-		titulo = '';
-		descricao = '';
+		limpar();
 		aberto = false;
 		toast.success('Chamado SOS enviado. A equipe foi avisada.');
 		await invalidateAll(); // atualiza o badge de abertos na sidebar
@@ -113,6 +163,51 @@
 						placeholder="O que você estava fazendo, o que aconteceu…"
 						class="w-full resize-none rounded-[var(--radius)] border border-grey-200 bg-surface px-3 py-2 text-sm text-navy-900 shadow-xs placeholder:text-grey/90 focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25 focus-visible:outline-none"
 					></textarea>
+				</div>
+				<div>
+					<span class="mb-1 block text-xs font-medium text-navy">Print do problema</span>
+					<!-- Escondido: o botão abaixo é que abre o seletor, para o campo
+					     nativo (feio e sem tradução) não aparecer no widget. -->
+					<input
+						bind:this={arquivoInput}
+						type="file"
+						accept={SOS_ACEITA}
+						onchange={escolherArquivo}
+						class="hidden"
+					/>
+					{#if previa}
+						<div class="flex items-start gap-2">
+							<img
+								src={previa}
+								alt="Prévia do print anexado"
+								class="h-20 w-28 rounded-[var(--radius)] border border-grey-200 object-cover"
+							/>
+							<div class="flex flex-col items-start gap-1">
+								<button
+									type="button"
+									onclick={() => arquivoInput?.click()}
+									class="text-xs font-medium text-brand hover:underline">trocar</button
+								>
+								<button
+									type="button"
+									onclick={tirarImagem}
+									class="text-xs font-medium text-grey hover:text-brand-danger">remover</button
+								>
+							</div>
+						</div>
+					{:else}
+						<button
+							type="button"
+							onclick={() => arquivoInput?.click()}
+							class="inline-flex h-9 w-full items-center justify-center gap-2 rounded-[var(--radius)] border border-dashed border-grey-200 text-xs font-medium text-grey transition-colors hover:border-brand hover:text-brand"
+						>
+							<Icon name="camera" size={15} /> Anexar imagem (JPG, PNG)
+						</button>
+					{/if}
+					<p class="mt-1 text-[0.68rem] text-grey">
+						A imagem é convertida para WEBP e reduzida para até {SOS_MAX_W}x{SOS_MAX_H}px antes de
+						subir.
+					</p>
 				</div>
 				<button
 					type="submit"

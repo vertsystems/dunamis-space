@@ -13,10 +13,15 @@ export type SosChamado = {
 	// migration 0043 não roda — a tela trata esses chamados como abertos.
 	status: 'aberto' | 'resolvido' | 'em_andamento';
 	created_at: string;
+	/** Print do problema (WEBP no bucket 'sos'), quando o autor anexou um. */
+	imagem_url: string | null;
 };
 
 const STATUS = ['aberto', 'resolvido'];
-const COLUNAS = 'id, titulo, descricao, autor_nome, autor_email, rota, status, created_at';
+// `*`: `imagem_url` só existe depois da migration 0058, e pedir coluna por nome
+// faria o PostgREST recusar a query inteira — a tela cairia no aviso de tabela
+// não criada, como se o SOS inteiro tivesse sumido.
+const COLUNAS = '*';
 
 export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	const statusParam = url.searchParams.get('status');

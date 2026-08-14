@@ -129,6 +129,25 @@
 							<p class="mt-1 text-sm whitespace-pre-line text-slate">{c.descricao}</p>
 						{/if}
 
+						{#if c.imagem_url}
+							<!-- Abre em aba nova no tamanho cheio: dentro do card a miniatura
+							     serve para reconhecer a tela, não para ler o erro. -->
+							<a
+								href={c.imagem_url}
+								target="_blank"
+								rel="noopener"
+								title="Abrir o print em tamanho real"
+								class="mt-2 inline-block overflow-hidden rounded-[var(--radius)] border border-grey-200 transition-colors hover:border-brand"
+							>
+								<img
+									src={c.imagem_url}
+									alt="Print enviado no chamado {c.titulo}"
+									loading="lazy"
+									class="max-h-40 w-auto object-contain"
+								/>
+							</a>
+						{/if}
+
 						<div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-grey">
 							<span>{c.autor_nome || c.autor_email || 'Anônimo'}</span>
 							{#if c.rota}
