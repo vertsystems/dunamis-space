@@ -34,7 +34,9 @@
 	</div>
 
 	{#if resumo.clientes.length}
-		<div class="grid gap-2 sm:grid-cols-2">
+		<!-- Um cliente por linha, empilhados: a leitura vira de cima para baixo, e
+		     cada valor ganha a largura inteira do card. -->
+		<div class="space-y-2">
 			{#each resumo.clientes as c (c.clienteId)}
 				<div class="rounded-[var(--radius)] border border-grey-200/70 p-2.5">
 					<!-- O nome vem antes dos números: sem ele, três valores soltos não
