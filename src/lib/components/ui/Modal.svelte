@@ -4,6 +4,7 @@
 	import { fade, scale } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import Icon from '$lib/components/Icon.svelte';
+	import { travarRolagem } from '$lib/travaRolagem';
 
 	let {
 		open = false,
@@ -47,13 +48,12 @@
 
 	// Trava a rolagem do fundo enquanto o modal está aberto. Antes, rolar dentro de
 	// um modal longo fazia a página atrás deslizar e perder a posição na lista.
+	// A contagem fica em $lib/travaRolagem: com dois modais no ar (agenda do dia →
+	// editar post, no calendário), cada um guardar e devolver o overflow deixava a
+	// página travada depois que os dois fechavam.
 	$effect(() => {
 		if (!open) return;
-		const anterior = document.body.style.overflow;
-		document.body.style.overflow = 'hidden';
-		return () => {
-			document.body.style.overflow = anterior;
-		};
+		return travarRolagem();
 	});
 
 	// --- Proteção contra descarte acidental do que foi digitado ---
