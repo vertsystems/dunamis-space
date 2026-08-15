@@ -1,10 +1,15 @@
 <script lang="ts">
-	// Bloco do Pag's Up na Visão Geral — mesmo formato dos painéis do dashboard:
-	// três números do mês/semana e os próximos serviços do cronograma. Só leitura;
-	// lançar pagamento continua sendo no app, em /dtools/pagsup.
+	// Bloco do Pag's Up na Visão Geral: um quadro por cliente (nome + os três
+	// números dele) e os próximos serviços do cronograma. Só leitura; lançar
+	// pagamento continua sendo no app, em /dtools/pagsup.
+	//
+	// Antes era um resumo só, somando todo mundo — parecia ser de um cliente e não
+	// era de nenhum. Com a carteira inteira à vista dá para comparar num relance,
+	// e quem não movimentou aparece zerado em vez de sumir.
 	import { Card } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
 	import { formatBRL } from '$lib/clientes';
+	import { caberEmUmaLinha } from '$lib/caberEmUmaLinha';
 	import type { PagsupResumo } from '$lib/pagsup/types';
 
 	let { resumo, hoje }: { resumo: PagsupResumo; hoje: string } = $props();
@@ -21,45 +26,85 @@
 </script>
 
 <Card>
-	<h2 class="mb-4 flex items-center gap-2 text-sm font-semibold text-navy">
-		<Icon name="pagsup" size={17} /> Pag's Up
-	</h2>
-
-	<div class="mb-2 flex items-center justify-between">
-		<h3 class="text-xs font-semibold uppercase tracking-wide text-grey">Resumo</h3>
+	<div class="mb-3 flex items-center justify-between gap-3">
+		<h2 class="flex items-center gap-2 text-sm font-semibold text-navy">
+			<Icon name="pagsup" size={17} /> Pag's Up
+		</h2>
 		<a class="text-xs text-brand hover:underline" href="/dtools/pagsup">Abrir Pag's Up</a>
 	</div>
 
-	<div class="mb-4 grid grid-cols-3 gap-2">
-		<div class="rounded-[var(--radius)] bg-bg p-3">
-			<div class="text-xs font-semibold uppercase tracking-wide text-grey">Pago no mês</div>
-			<div class="mt-0.5 text-base font-semibold tabular-nums text-brand-green">
-				{formatBRL(resumo.pagoMes)}
-			</div>
+	{#if resumo.clientes.length}
+		<div class="grid gap-2 sm:grid-cols-2">
+			{#each resumo.clientes as c (c.clienteId)}
+				<div class="rounded-[var(--radius)] border border-grey-200/70 p-2.5">
+					<!-- O nome vem antes dos números: sem ele, três valores soltos não
+					     dizem de quem são. -->
+					<div class="mb-1.5 truncate text-xs font-semibold text-navy" title={c.nome}>
+						{c.nome}
+					</div>
+					<div class="grid grid-cols-3 gap-1.5">
+						<div class="rounded-[var(--radius-sm)] bg-bg px-2 py-1.5">
+							<div class="text-[0.6rem] font-semibold uppercase tracking-wide text-grey">Pago</div>
+							<!-- Encolhe a fonte até caber (mesma ação dos chips do Pag's Up):
+							     truncar "R$ 27.139,55" viraria "R$ 27.1…", que não informa nada.
+							     Piso de 8px: medido, segura até a casa do milhão sem cortar. -->
+							<div
+								use:caberEmUmaLinha={{ max: 14, min: 8 }}
+								class="mt-0.5 max-w-full overflow-hidden whitespace-nowrap font-semibold tabular-nums {c.pagoMes >
+								0
+									? 'text-brand-green'
+									: 'text-grey'}"
+								title={formatBRL(c.pagoMes)}
+							>
+								{formatBRL(c.pagoMes)}
+							</div>
+						</div>
+						<div class="rounded-[var(--radius-sm)] bg-bg px-2 py-1.5">
+							<div class="text-[0.6rem] font-semibold uppercase tracking-wide text-grey">
+								Próx. 7d
+							</div>
+							<div
+								use:caberEmUmaLinha={{ max: 14, min: 8 }}
+								class="mt-0.5 max-w-full overflow-hidden whitespace-nowrap font-semibold tabular-nums {c.aPagar7 >
+								0
+									? 'text-navy'
+									: 'text-grey'}"
+								title={formatBRL(c.aPagar7)}
+							>
+								{formatBRL(c.aPagar7)}
+							</div>
+						</div>
+						<div class="rounded-[var(--radius-sm)] bg-bg px-2 py-1.5">
+							<div class="text-[0.6rem] font-semibold uppercase tracking-wide text-grey">
+								Serviços
+							</div>
+							<div
+								class="mt-0.5 text-sm font-semibold tabular-nums {c.servicosMes > 0
+									? 'text-navy'
+									: 'text-grey'}"
+							>
+								{c.servicosMes}
+							</div>
+						</div>
+					</div>
+				</div>
+			{/each}
 		</div>
-		<div class="rounded-[var(--radius)] bg-bg p-3">
-			<div class="text-xs font-semibold uppercase tracking-wide text-grey">Próx. 7 dias</div>
-			<div class="mt-0.5 text-base font-semibold tabular-nums text-navy">
-				{formatBRL(resumo.aPagar7)}
-			</div>
-		</div>
-		<div class="rounded-[var(--radius)] bg-bg p-3">
-			<div class="text-xs font-semibold uppercase tracking-wide text-grey">Serviços no mês</div>
-			<div class="mt-0.5 text-base font-semibold tabular-nums text-navy">{resumo.servicosMes}</div>
-		</div>
-	</div>
+	{:else}
+		<p class="text-sm text-grey">Nenhum cliente cadastrado no Pag's Up.</p>
+	{/if}
 
 	{#if resumo.proximos.length}
-		<div class="mb-1 text-xs font-semibold uppercase tracking-wide text-grey">
+		<div class="mt-3 mb-1 text-xs font-semibold uppercase tracking-wide text-grey">
 			Próximos do cronograma
 		</div>
 		<ul class="divide-y divide-grey-200/60">
 			{#each resumo.proximos as s (s.id)}
 				<li class="flex items-center gap-2 py-1.5 text-sm">
-					<span class="w-14 shrink-0 text-xs font-semibold text-grey">{quando(s.data)}</span>
+					<span class="w-12 shrink-0 text-xs font-semibold text-grey">{quando(s.data)}</span>
 					<span class="min-w-0 flex-1 truncate text-slate" title={`${s.nome} · ${s.servico}`}>
 						{s.nome}
-						{#if s.servico}<span class="text-grey"> · {s.servico}</span>{/if}
+						{#if s.cliente}<span class="text-grey"> · {s.cliente}</span>{/if}
 					</span>
 					<span class="shrink-0 text-xs tabular-nums text-navy">
 						{s.valor === null ? 'A definir' : formatBRL(s.valor)}
@@ -68,6 +113,6 @@
 			{/each}
 		</ul>
 	{:else}
-		<p class="text-sm text-grey">Nenhum serviço agendado para os próximos 7 dias.</p>
+		<p class="mt-3 text-sm text-grey">Nenhum serviço agendado para os próximos 7 dias.</p>
 	{/if}
 </Card>

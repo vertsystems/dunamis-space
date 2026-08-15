@@ -121,13 +121,29 @@ export const SERVICE_CATEGORIES = [
 	'Outros Serviços'
 ] as const;
 
-/** Resumo mostrado no bloco do Pag's Up na Visão Geral (só leitura). */
-export type PagsupResumo = {
+/** Os três números de um cliente no bloco do Pag's Up da Visão Geral. */
+export type PagsupResumoCliente = {
+	clienteId: string;
+	nome: string;
 	/** Soma dos pagamentos registrados no mês corrente. */
 	pagoMes: number;
 	/** Soma do cronograma dos próximos 7 dias. */
 	aPagar7: number;
 	/** Serviços agendados no mês (cronograma). */
 	servicosMes: number;
-	proximos: { id: string; data: string; nome: string; servico: string; valor: number | null }[];
+};
+
+/** Resumo mostrado no bloco do Pag's Up na Visão Geral (só leitura). */
+export type PagsupResumo = {
+	/** Um quadro por cliente — os números são de cada um, não da soma geral. */
+	clientes: PagsupResumoCliente[];
+	proximos: {
+		id: string;
+		data: string;
+		nome: string;
+		servico: string;
+		valor: number | null;
+		/** De qual cliente é o serviço, já que a lista mistura todos. */
+		cliente: string;
+	}[];
 };

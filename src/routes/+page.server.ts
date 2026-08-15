@@ -7,6 +7,7 @@ import { hojeSP } from '$lib/rotina';
 import { podeVer, type Permissoes } from '$lib/permissoes';
 import type { OrganyzeResumo, Prioridade } from '$lib/organyze/types';
 import type { PagsupResumo } from '$lib/pagsup/types';
+import { resumoPorCliente } from '$lib/pagsup/resumo';
 import { sel } from '$lib/server/query';
 
 // O módulo de Tarefas foi aposentado: a operação do dashboard passou a ser
@@ -307,20 +308,23 @@ async function carregarPagsup(supabase: SupabaseClient, hoje: string): Promise<P
 	em7.setUTCDate(em7.getUTCDate() + 7);
 	const limite7 = em7.toISOString().slice(0, 10);
 
-	const [pagos, mes, proximos] = await Promise.all([
+	const [clientes, pagos, mes, proximos] = await Promise.all([
+		supabase.from('pagsup_clientes').select('id, nome'),
 		supabase
 			.from('pagsup_pagamentos')
-			.select('valor')
+			.select('cliente_id, valor')
 			.gte('data_pagamento', inicioMes)
 			.lte('data_pagamento', fimMes),
+		// Traz as linhas em vez de contar: o mesmo resultado serve para contar por
+		// cliente, o que um count(head) não devolveria.
 		supabase
 			.from('pagsup_cronograma')
-			.select('id', { count: 'exact', head: true })
+			.select('cliente_id')
 			.gte('data', inicioMes)
 			.lte('data', fimMes),
 		supabase
 			.from('pagsup_cronograma')
-			.select('id, data, valor, prestador_id')
+			.select('id, data, valor, prestador_id, cliente_id')
 			.gte('data', hoje)
 			.lte('data', limite7)
 			.order('data', { ascending: true })
@@ -328,7 +332,7 @@ async function carregarPagsup(supabase: SupabaseClient, hoje: string): Promise<P
 	]);
 
 	// Pag's Up sem migration/sem acesso: o bloco simplesmente não aparece.
-	if (proximos.error) return null;
+	if (proximos.error || clientes.error) return null;
 
 	const linhas = proximos.data ?? [];
 	// Nome do prestador em query própria: sem embed, um cronograma órfão (prestador
@@ -338,11 +342,17 @@ async function carregarPagsup(supabase: SupabaseClient, hoje: string): Promise<P
 		? await supabase.from('pagsup_prestadores').select('id, nome, servico').in('id', ids)
 		: { data: [] as { id: string; nome: string; servico: string }[] };
 	const porId = new Map((prestadores ?? []).map((p) => [p.id as string, p]));
+	const nomeCliente = new Map(
+		(clientes.data ?? []).map((c) => [c.id as string, c.nome as string])
+	);
 
 	return {
-		pagoMes: (pagos.data ?? []).reduce((s, p) => s + Number(p.valor ?? 0), 0),
-		aPagar7: linhas.reduce((s, l) => s + Number(l.valor ?? 0), 0),
-		servicosMes: mes.count ?? 0,
+		clientes: resumoPorCliente(
+			(clientes.data ?? []) as { id: string; nome: string }[],
+			pagos.data ?? [],
+			mes.data ?? [],
+			linhas
+		),
 		proximos: linhas.slice(0, 5).map((l) => {
 			const p = porId.get(l.prestador_id as string);
 			return {
@@ -350,6 +360,7 @@ async function carregarPagsup(supabase: SupabaseClient, hoje: string): Promise<P
 				data: l.data as string,
 				nome: p?.nome ?? 'Prestador removido',
 				servico: p?.servico ?? '',
+				cliente: nomeCliente.get(l.cliente_id as string) ?? '',
 				// null = "A definir" no Pag's Up; o bloco mostra o mesmo rótulo.
 				valor: l.valor === null || l.valor === undefined ? null : Number(l.valor)
 			};
