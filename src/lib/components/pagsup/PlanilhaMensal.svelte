@@ -211,10 +211,11 @@
 		</div>
 	</div>
 
-	<!-- Linha 2: as duas ações do mês, centralizadas e em tamanho grande. -->
-	<div class="mb-6 flex flex-wrap items-center justify-center gap-3">
-		<Button size="lg" variant="secondary" onclick={abrirLancamento}><Plus size={18} /> Lançar pagamento</Button>
-		<Button size="lg" onclick={gerarPlanilha}><FileSpreadsheet size={18} /> Gerar Planilha</Button>
+	<!-- Linha 2: as duas ações do mês, à direita — alinhadas com o bloco de total
+	     que fica logo acima, no mesmo lado. -->
+	<div class="mb-6 flex flex-wrap items-center justify-end gap-2.5">
+		<Button variant="secondary" onclick={abrirLancamento}><Plus size={16} /> Lançar pagamento</Button>
+		<Button onclick={gerarPlanilha}><FileSpreadsheet size={16} /> Gerar Planilha</Button>
 	</div>
 
 	{#if lancando}

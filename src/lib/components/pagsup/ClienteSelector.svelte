@@ -34,18 +34,22 @@
 
 <!-- O nome fica no botão, não só dentro do menu: o ícone sozinho não dizia de
      quem eram os números da tela, e a única pista era o "check" escondido na
-     lista. Com quatro clientes na base, ler errado é fácil demais. -->
+     lista. Com quatro clientes na base, ler errado é fácil demais.
+
+     Altura 9 e cantos redondos para ficar na mesma régua das abas ao lado (as
+     pílulas dão 32px + 2px do padding da nav = 36px); o fundo azul claro separa
+     "qual cliente" de "qual tela", que são decisões diferentes. -->
 <Dropdown
 	{items}
 	align="end"
-	triggerClass="inline-flex h-10 shrink-0 items-center gap-2 rounded-[var(--radius)] border border-grey-200 bg-surface pl-3 pr-2.5 text-brand shadow-xs transition-colors hover:bg-bg hover:border-grey focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/25"
+	triggerClass="inline-flex h-9 shrink-0 items-center gap-2 rounded-full bg-brand/10 pl-3 pr-2.5 text-brand transition-colors hover:bg-brand/[0.18] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30"
 >
 	{#snippet trigger()}
 		<Building2 size={18} class="shrink-0" />
-		<span class="max-w-[10rem] truncate text-sm font-semibold text-navy">
+		<span class="max-w-[10rem] truncate text-sm font-semibold">
 			{pagsup.selectedClientName || 'Escolher cliente'}
 		</span>
-		<ChevronDown size={15} class="shrink-0 text-grey" />
+		<ChevronDown size={15} class="shrink-0 text-brand/60" />
 		<span class="sr-only">— trocar cliente</span>
 	{/snippet}
 </Dropdown>
