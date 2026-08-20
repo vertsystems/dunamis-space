@@ -59,6 +59,15 @@ class PagsupStore {
 	filteredScheduledNegotiations = $derived(
 		this.scheduledNegotiations.filter((sn) => sn.clientId === this.selectedClientId)
 	);
+	/**
+	 * Pagamentos do cliente selecionado.
+	 *
+	 * Faltava: a Planilha Mensal lia `payments` cru e mostrava o mês de TODOS os
+	 * clientes. Com Lojas Mari sendo quem mais lança, escolher outro cliente
+	 * continuava exibindo os pagamentos dela — parecia que o seletor não fazia
+	 * efeito nessa tela.
+	 */
+	filteredPayments = $derived(this.payments.filter((p) => p.clientId === this.selectedClientId));
 
 	/**
 	 * Opções do select de serviço: as categorias fixas mais tudo que já está

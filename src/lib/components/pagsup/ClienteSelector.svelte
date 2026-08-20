@@ -2,7 +2,7 @@
 	import { pagsup } from '$lib/pagsup/store.svelte';
 	import { Dropdown, Button, Card } from '$lib/components/ui';
 	import type { DropdownItem } from '$lib/components/ui';
-	import { Building2 } from '@lucide/svelte';
+	import { Building2, ChevronDown } from '@lucide/svelte';
 
 	let showNew = $state(false);
 	let novoNome = $state('');
@@ -32,14 +32,21 @@
 	]);
 </script>
 
+<!-- O nome fica no botão, não só dentro do menu: o ícone sozinho não dizia de
+     quem eram os números da tela, e a única pista era o "check" escondido na
+     lista. Com quatro clientes na base, ler errado é fácil demais. -->
 <Dropdown
 	{items}
 	align="end"
-	triggerClass="grid size-10 shrink-0 place-items-center rounded-[var(--radius)] border border-grey-200 bg-surface text-brand shadow-xs transition-colors hover:bg-bg hover:border-grey focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/25"
+	triggerClass="inline-flex h-10 shrink-0 items-center gap-2 rounded-[var(--radius)] border border-grey-200 bg-surface pl-3 pr-2.5 text-brand shadow-xs transition-colors hover:bg-bg hover:border-grey focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/25"
 >
 	{#snippet trigger()}
-		<Building2 size={18} />
-		<span class="sr-only">Cliente: {pagsup.selectedClientName} — trocar cliente</span>
+		<Building2 size={18} class="shrink-0" />
+		<span class="max-w-[10rem] truncate text-sm font-semibold text-navy">
+			{pagsup.selectedClientName || 'Escolher cliente'}
+		</span>
+		<ChevronDown size={15} class="shrink-0 text-grey" />
+		<span class="sr-only">— trocar cliente</span>
 	{/snippet}
 </Dropdown>
 

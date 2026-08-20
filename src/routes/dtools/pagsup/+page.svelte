@@ -4,6 +4,7 @@
 	import Prestadores from '$lib/components/pagsup/Prestadores.svelte';
 	import Negociacoes from '$lib/components/pagsup/Negociacoes.svelte';
 	import PlanilhaMensal from '$lib/components/pagsup/PlanilhaMensal.svelte';
+	import ClienteSelector from '$lib/components/pagsup/ClienteSelector.svelte';
 	import { Button } from '$lib/components/ui';
 	import { Calendar, Users, Briefcase, FileSpreadsheet } from '@lucide/svelte';
 	import type { PageData } from './$types';
@@ -50,7 +51,10 @@
 {#snippet abas()}
 	<!-- As abas ficam na MESMA linha das ações de cada módulo (Total, botões...),
 	     por isso são passadas como snippet em vez de renderizadas aqui: cada tela
-	     as coloca à esquerda da própria barra, no lugar do antigo título. -->
+	     as coloca à esquerda da própria barra, no lugar do antigo título.
+	     O seletor de cliente vem junto: estava repetido em três telas e faltando
+	     justamente na Planilha Mensal, que era onde dava para se perder. -->
+	<div class="flex flex-wrap items-center gap-2">
 	<nav class="inline-flex shrink-0 self-start rounded-full bg-bg p-0.5" aria-label="Módulos do Pag's Up">
 		{#each NAV as item (item.id)}
 			{@const Ico = item.icon}
@@ -68,6 +72,8 @@
 			</button>
 		{/each}
 	</nav>
+	<ClienteSelector />
+	</div>
 {/snippet}
 
 {#if pagsup.loading}

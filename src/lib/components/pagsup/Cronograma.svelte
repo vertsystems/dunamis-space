@@ -5,7 +5,6 @@
 	import BotaoWhatsApp from './BotaoWhatsApp.svelte';
 	import { formatBRL } from '$lib/clientes';
 	import { Button, Card } from '$lib/components/ui';
-	import ClienteSelector from './ClienteSelector.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import { hojeISO } from '$lib/datas';
 	import { Trash2, Calendar, DollarSign, Pencil, Check, X, FileSpreadsheet, Search } from '@lucide/svelte';
@@ -202,7 +201,6 @@
 				<p class="text-sm font-bold text-navy leading-none tabular-nums">{formatBRL(grandTotal)}</p>
 			</div>
 			<Button onclick={() => (isAddingExtra = !isAddingExtra)}>Novo Prestador</Button>
-			<ClienteSelector />
 		</div>
 	</div>
 

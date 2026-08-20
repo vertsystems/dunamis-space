@@ -5,7 +5,6 @@
 	import BotaoWhatsApp from './BotaoWhatsApp.svelte';
 	import { whatsappLegivel } from '$lib/pagsup/whatsapp';
 	import { Button, Card } from '$lib/components/ui';
-	import ClienteSelector from './ClienteSelector.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import { Plus, Search, Trash2, Pencil, Check, X } from '@lucide/svelte';
 
@@ -123,7 +122,6 @@
 			<Button onclick={() => (isAdding = !isAdding)}>
 				<Plus size={18} /> Novo Prestador
 			</Button>
-			<ClienteSelector />
 		</div>
 	</div>
 

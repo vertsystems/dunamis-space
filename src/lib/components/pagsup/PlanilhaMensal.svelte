@@ -16,7 +16,11 @@
 	/** AAAA-MM do mês corrente — o fechamento é sempre "o mês que passou ou este". */
 	let mes = $state(hojeISO().slice(0, 7));
 
-	const doMes = $derived(pagsup.payments.filter((p) => (p.date ?? '').startsWith(mes)));
+	// Do cliente selecionado, não de todos: esta tela lia `payments` cru e o mês
+	// de Lojas Mari aparecia mesmo com Rede Bazzar escolhido no topo.
+	const doMes = $derived(
+		pagsup.filteredPayments.filter((p) => (p.date ?? '').startsWith(mes))
+	);
 	const total = $derived(doMes.reduce((s, p) => s + (Number(p.value) || 0), 0));
 
 	/** Agrupado por loja — é assim que a prestação de contas é lida. */
@@ -93,9 +97,11 @@
 	const resultados = $derived.by(() => {
 		const q = busca.trim().toLowerCase();
 		if (!q || escolhido) return [] as Provider[];
-		// Todos os prestadores, de todas as lojas: o lançamento avulso pode ser de
-		// qualquer uma, independente da loja selecionada no topo.
-		return pagsup.providers
+		// Só os prestadores do cliente selecionado. Antes a busca varria todos, e
+		// escolher um prestador de outro cliente gravava o pagamento NO CLIENTE
+		// DELE (o clientId vem do prestador) — o lançamento sumia da tela logo
+		// depois de ser feito, porque caía em outra planilha.
+		return pagsup.filteredProviders
 			.filter(
 				(p) =>
 					p.name.toLowerCase().includes(q) ||

@@ -4,7 +4,6 @@
 	import type { Negotiation, ScheduledNegotiation } from '$lib/pagsup/types';
 	import { formatBRL } from '$lib/clientes';
 	import { Button, Card } from '$lib/components/ui';
-	import ClienteSelector from './ClienteSelector.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import { hojeISO } from '$lib/datas';
 	import { Plus, Trash2, Calendar, DollarSign, Pencil, Check, X, FileSpreadsheet, Search, Pin } from '@lucide/svelte';
@@ -201,7 +200,6 @@
 			</div>
 			<Button onclick={() => { isAddingExtra = false; isAdding = !isAdding; }}>Adic. Pagamento</Button>
 			<Button variant="secondary" onclick={() => { isAdding = false; isAddingExtra = !isAddingExtra; }}>Novo Pagamento</Button>
-			<ClienteSelector />
 		</div>
 	</div>
 
