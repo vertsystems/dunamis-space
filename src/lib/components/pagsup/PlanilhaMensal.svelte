@@ -296,7 +296,11 @@
 	{#if doMes.length === 0}
 		<Card class="border-dashed py-12 text-center">
 			<span class="mx-auto mb-4 grid size-16 place-items-center rounded-full bg-bg text-grey"><FileSpreadsheet size={30} /></span>
-			<h3 class="mb-1 text-base font-medium text-navy">Nenhum pagamento em {rotuloMes(mes)}</h3>
+			<!-- Com o nome do cliente: a planilha agora é de um só, e "nenhum
+			     pagamento" sem dizer de quem parece tela quebrada. -->
+			<h3 class="mb-1 text-base font-medium text-navy">
+				Nenhum pagamento de {pagsup.selectedClientName || 'nenhum cliente'} em {rotuloMes(mes)}
+			</h3>
 			<p class="mx-auto max-w-md text-sm text-grey">
 				Os pagamentos entram aqui quando você finaliza o cronograma da semana. Use
 				<b class="font-medium text-navy">Lançar pagamento</b> para registrar o que foi pago fora dele.
