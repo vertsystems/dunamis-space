@@ -188,6 +188,11 @@
 
 	const fieldCls =
 		'h-10 w-full rounded-[var(--radius)] border border-grey-200 bg-surface px-3.5 text-sm text-navy-900 shadow-xs placeholder:text-grey/80 transition-colors hover:border-grey focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25';
+
+	/** O mesmo campo, na altura da linha da tabela. Trocar a classe dentro da
+	    string é o que garante a altura: h-8 e h-10 juntas dependeriam da ordem em
+	    que o Tailwind as emite no CSS. */
+	const fieldRowCls = fieldCls.replace('h-10', 'h-8');
 </script>
 
 <div>
@@ -328,45 +333,45 @@
 					<div class="overflow-x-auto">
 						<table class="w-full border-collapse text-left">
 							<thead>
-								<tr class="border-b border-grey-200 text-xs uppercase tracking-wider text-grey">
-									<th scope="col" class="px-5 py-3 font-semibold">Prestador</th>
-									<th scope="col" class="px-5 py-3 font-semibold">Serviço</th>
-									<th scope="col" class="px-5 py-3 font-semibold">Região</th>
-									<th scope="col" class="w-32 px-5 py-3 font-semibold">LJ</th>
-									<th scope="col" class="px-5 py-3 font-semibold">Data</th>
-									<th scope="col" class="px-5 py-3 text-right font-semibold">Valor</th>
-									<th scope="col" class="w-24 px-5 py-3"><span class="sr-only">Ações</span></th>
+								<tr class="border-b border-grey-200 text-[11px] uppercase tracking-wider text-grey">
+									<th scope="col" class="px-5 py-2.5 font-semibold">Prestador</th>
+									<th scope="col" class="px-5 py-2.5 font-semibold">Serviço</th>
+									<th scope="col" class="px-5 py-2.5 font-semibold">Região</th>
+									<th scope="col" class="w-32 px-5 py-2.5 font-semibold">LJ</th>
+									<th scope="col" class="px-5 py-2.5 font-semibold">Data</th>
+									<th scope="col" class="px-5 py-2.5 text-right font-semibold">Valor</th>
+									<th scope="col" class="w-24 px-5 py-2.5"><span class="sr-only">Ações</span></th>
 								</tr>
 							</thead>
 							<tbody class="divide-y divide-grey-200/70">
 								{#each itens as p (p.id)}
 									{#if editandoId === p.id}
 										<tr class="bg-brand/[0.04]">
-											<td class="px-5 py-3 font-medium text-navy">{p.providerName}</td>
-											<td class="px-5 py-3 text-sm text-slate">{p.service}</td>
-											<td class="px-5 py-3 text-sm text-slate">{p.region || '-'}</td>
-											<td class="px-5 py-3">
-												<select bind:value={editLj} onkeydown={escOuNada} aria-label="LJ (loja)" class="h-9 w-full rounded-[var(--radius)] border border-grey-200 bg-surface px-2 text-sm text-navy-900 shadow-xs transition-colors hover:border-grey focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25">
+											<td class="px-5 py-2 text-sm font-medium text-navy">{p.providerName}</td>
+											<td class="px-5 py-2 text-sm text-slate">{p.service}</td>
+											<td class="px-5 py-2 text-sm text-slate">{p.region || '-'}</td>
+											<td class="px-5 py-2">
+												<select bind:value={editLj} onkeydown={escOuNada} aria-label="LJ (loja)" class="h-8 w-full rounded-[var(--radius)] border border-grey-200 bg-surface px-2 text-sm text-navy-900 shadow-xs transition-colors hover:border-grey focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25">
 													<option value="">—</option>
 													{#each LOJAS as l (l.sigla)}<option value={l.sigla} title={l.nome}>{l.sigla}</option>{/each}
 												</select>
 											</td>
-											<td class="px-5 py-3">
-												<input type="date" bind:value={editData} onkeydown={(e) => teclaEdicao(e, p.id)} aria-label="Data do pagamento" class="{fieldCls} h-9" />
+											<td class="px-5 py-2">
+												<input type="date" bind:value={editData} onkeydown={(e) => teclaEdicao(e, p.id)} aria-label="Data do pagamento" class={fieldRowCls} />
 											</td>
-											<td class="px-5 py-3">
+											<td class="px-5 py-2">
 												<input
 													type="number" min="0" step="0.01" value={editValor}
 													oninput={(e) => (editValor = e.currentTarget.value === '' ? '' : parseFloat(e.currentTarget.value))}
 													onkeydown={(e) => teclaEdicao(e, p.id)}
 													aria-label="Valor pago"
-													class="{fieldCls} ml-auto h-9 max-w-[130px] text-right font-mono"
+													class="{fieldRowCls} ml-auto max-w-[130px] text-right font-mono"
 												/>
 											</td>
-											<td class="px-5 py-3">
+											<td class="px-5 py-2">
 												<div class="flex justify-end gap-1">
-													<button onclick={() => salvarEdicao(p.id)} title="Salvar" class="rounded-[var(--radius-sm)] p-2 text-brand-green transition-colors hover:bg-brand-green/10"><Check size={18} /></button>
-													<button onclick={() => (editandoId = null)} title="Cancelar" class="rounded-[var(--radius-sm)] p-2 text-grey transition-colors hover:bg-bg"><X size={18} /></button>
+													<button onclick={() => salvarEdicao(p.id)} title="Salvar" class="rounded-[var(--radius-sm)] p-1.5 text-brand-green transition-colors hover:bg-brand-green/10"><Check size={16} /></button>
+													<button onclick={() => (editandoId = null)} title="Cancelar" class="rounded-[var(--radius-sm)] p-1.5 text-grey transition-colors hover:bg-bg"><X size={16} /></button>
 												</div>
 											</td>
 										</tr>
@@ -380,30 +385,30 @@
 											role="button"
 											aria-label="Editar pagamento de {p.providerName}"
 										>
-											<td class="px-5 py-3 font-medium text-navy">{p.providerName}</td>
-											<td class="px-5 py-3 text-sm text-slate">{p.service}</td>
-											<td class="px-5 py-3 text-sm text-slate">{p.region || '-'}</td>
-											<td class="px-5 py-3">
+											<td class="px-5 py-2 text-sm font-medium text-navy">{p.providerName}</td>
+											<td class="px-5 py-2 text-sm text-slate">{p.service}</td>
+											<td class="px-5 py-2 text-sm text-slate">{p.region || '-'}</td>
+											<td class="px-5 py-2">
 												{#if p.lj}
 													<span class="inline-flex items-center rounded-[var(--radius-sm)] bg-bg px-2 py-0.5 text-xs font-bold text-slate" title={lojaNome(p.lj)}>{p.lj}</span>
 												{:else}<span class="text-sm text-grey">-</span>{/if}
 											</td>
-											<td class="px-5 py-3 text-sm tabular-nums text-slate">{fmtData(p.date)}</td>
-											<td class="px-5 py-3 text-right font-mono font-medium text-navy">{formatBRL(p.value)}</td>
-											<td class="px-5 py-3">
+											<td class="px-5 py-2 text-sm tabular-nums text-slate">{fmtData(p.date)}</td>
+											<td class="px-5 py-2 text-right font-mono text-sm font-medium text-navy">{formatBRL(p.value)}</td>
+											<td class="px-5 py-2">
 												<div class="flex justify-end gap-1">
 													<button
 														onclick={(e) => { e.stopPropagation(); abrirEdicao(p); }}
 														title="Editar"
 														aria-label="Editar pagamento de {p.providerName}"
-														class="rounded-[var(--radius-sm)] p-2 text-grey opacity-0 transition-all hover:bg-brand/10 hover:text-brand group-hover:opacity-100"
-													><Pencil size={17} /></button>
+														class="rounded-[var(--radius-sm)] p-1.5 text-grey opacity-0 transition-all hover:bg-brand/10 hover:text-brand group-hover:opacity-100"
+													><Pencil size={16} /></button>
 													<button
 														onclick={(e) => { e.stopPropagation(); pagsup.deletePayment(p.id); }}
 														title="Excluir pagamento"
 														aria-label="Excluir pagamento de {p.providerName}"
-														class="rounded-[var(--radius-sm)] p-2 text-grey opacity-0 transition-all hover:bg-brand-danger/10 hover:text-brand-danger group-hover:opacity-100"
-													><Trash2 size={17} /></button>
+														class="rounded-[var(--radius-sm)] p-1.5 text-grey opacity-0 transition-all hover:bg-brand-danger/10 hover:text-brand-danger group-hover:opacity-100"
+													><Trash2 size={16} /></button>
 												</div>
 											</td>
 										</tr>
