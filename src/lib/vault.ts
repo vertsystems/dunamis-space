@@ -5,6 +5,7 @@
 // A senha é gravada em texto no banco; quem protege é o módulo de permissão
 // 'vault' (RLS na 0051) — ver o cliente NÃO implica ver o cofre dele.
 import { str } from '$lib/form';
+import { sanitizarHtml } from '$lib/richtext';
 
 export interface VaultItem {
 	id: string;
@@ -27,15 +28,23 @@ export function vaultFromForm(fd: FormData) {
 		url: str(fd, 'url'),
 		login: str(fd, 'login'),
 		senha: str(fd, 'senha'),
-		observacoes: str(fd, 'observacoes'),
+		// Observações vêm do editor de texto formatado: entra HTML, e ele é
+		// higienizado na porta de entrada — nada de script/handler chega ao banco.
+		observacoes: sanitizarHtml(str(fd, 'observacoes')),
 		responsavel_id: str(fd, 'responsavel_id')
 	};
 }
 
-/** Sugestões do campo Categoria (datalist) — só atalho, o campo é livre. */
+/**
+ * Categorias do cofre. Viraram uma lista fechada (`<select>`): como sugestão de
+ * campo livre, o Chrome só oferecia o que casava com o texto já digitado — com
+ * "Outros" preenchido, a edição parecia travada. Valor antigo fora desta lista
+ * continua aparecendo no formulário (o VaultForm o acrescenta como opção).
+ */
 export const VAULT_CATEGORIAS = [
 	'Redes sociais',
 	'Anúncios',
+	'Serviços',
 	'Site / Hospedagem',
 	'E-mail',
 	'Analytics',

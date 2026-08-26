@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Formulário de um acesso do cofre do cliente (criar/editar em modal, padrão
 	// do sistema). Submete nativamente para as actions vault_* de /cadastro/[id].
-	import { Input, Textarea, FormShell } from '$lib/components/ui';
+	import { Input, Select, FormShell, RichText } from '$lib/components/ui';
 	import ResponsavelPicker from '$lib/components/ResponsavelPicker.svelte';
 	import { Eye, EyeOff } from '@lucide/svelte';
 	import { VAULT_CATEGORIAS } from '$lib/vault';
@@ -33,6 +33,19 @@
 
 	let vendo = $state(false);
 	const v = (k: string) => (item?.[k as keyof typeof item] as string | null) ?? '';
+
+	// Categoria: lista fechada + o valor que já estava gravado, caso tenha sido
+	// escrito à mão antes desta tela virar <select> (senão salvar aqui o apagaria).
+	const categoriaAtual = $derived(v('categoria'));
+	const categorias = $derived(
+		categoriaAtual && !VAULT_CATEGORIAS.includes(categoriaAtual)
+			? [categoriaAtual, ...VAULT_CATEGORIAS]
+			: VAULT_CATEGORIAS
+	);
+
+	// O editor é contenteditable: o HTML viaja num campo escondido para a action
+	// receber `observacoes` como qualquer outro campo do formulário.
+	let observacoes = $state(((item?.observacoes as string | null) ?? '') as string);
 </script>
 
 <FormShell {action} {error} {submitLabel} {onCancel} {onDone} footerClass="mt-5">
@@ -49,16 +62,15 @@
 			value={v('titulo')}
 			wrapperClass="md:col-span-7"
 		/>
-		<Input
+		<Select
 			label="Categoria"
 			name="categoria"
-			list="vault-categorias"
-			value={v('categoria')}
+			value={categoriaAtual}
 			wrapperClass="md:col-span-5"
-		/>
-		<datalist id="vault-categorias">
-			{#each VAULT_CATEGORIAS as c (c)}<option value={c}></option>{/each}
-		</datalist>
+		>
+			<option value="">— sem categoria —</option>
+			{#each categorias as c (c)}<option value={c}>{c}</option>{/each}
+		</Select>
 
 		<Input
 			label="Endereço (URL)"
@@ -99,14 +111,17 @@
 			</div>
 		</div>
 
-		<Textarea
-			label="Observações"
-			name="observacoes"
-			rows={3}
-			placeholder="2FA, e-mail de recuperação, qual perfil usar…"
-			value={v('observacoes')}
-			wrapperClass="md:col-span-12"
-		/>
+		<div class="md:col-span-12">
+			<span class="mb-1.5 block text-sm font-medium text-navy">Observações</span>
+			<RichText
+				value={(item?.observacoes as string | null) ?? ''}
+				placeholder="2FA, e-mail de recuperação, links de painel, qual perfil usar…"
+				minHeight={220}
+				alturaColapsada={420}
+				onSave={(html) => (observacoes = html)}
+			/>
+			<input type="hidden" name="observacoes" value={observacoes} />
+		</div>
 
 		<ResponsavelPicker
 			{colaboradores}

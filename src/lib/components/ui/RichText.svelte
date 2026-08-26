@@ -2,6 +2,11 @@
 	// Editor de texto leve (estilo Notion enxuto): negrito, itálico, sublinhado,
 	// tachado, lista, cor de texto e cor de fundo (marca-texto). Baseado em
 	// contenteditable + execCommand (sem dependências). Salva o HTML via onSave.
+	//
+	// Mora em `ui/` porque não é mais só do organyze: o cofre do cliente usa o
+	// mesmo editor nas observações. Quem submete formulário nativo guarda o HTML
+	// num <input type="hidden"> alimentado pelo onSave (ver VaultForm).
+	import { paraHtml } from '$lib/richtext';
 	import {
 		Bold,
 		Italic,
@@ -18,24 +23,36 @@
 	let {
 		value = '',
 		placeholder = 'Escreva uma descrição…',
+		/** Altura mínima da área de escrita, em px. */
+		minHeight = 90,
+		/** Altura a partir da qual aparece o "Expandir", em px. */
+		alturaColapsada = 260,
 		onSave
-	}: { value?: string; placeholder?: string; onSave: (html: string) => void } = $props();
+	}: {
+		value?: string;
+		placeholder?: string;
+		minHeight?: number;
+		alturaColapsada?: number;
+		onSave: (html: string) => void;
+	} = $props();
 
 	let el = $state<HTMLDivElement | null>(null);
 	// Qual paleta está aberta (cor de texto ou de fundo) — null = nenhuma.
 	let paleta = $state<'texto' | 'fundo' | null>(null);
 
-	// Altura: colapsado mostra ~metade; "Expandir" cresce até 65vh. Rola dentro da caixa.
-	const ALTURA_COLAPSADA = 260; // px
+	// Altura: colapsado mostra até `alturaColapsada`; "Expandir" cresce até 85vh.
+	// Rola dentro da caixa.
 	let expandido = $state(false);
 	let transbordou = $state(false); // conteúdo maior que a altura colapsada
 
 	function medir() {
-		if (el) transbordou = el.scrollHeight > ALTURA_COLAPSADA + 8;
+		if (el) transbordou = el.scrollHeight > alturaColapsada + 8;
 	}
 
 	function init(node: HTMLDivElement) {
-		node.innerHTML = value || '';
+		// `paraHtml` cobre o conteúdo escrito antes do editor existir: texto puro
+		// com quebras de linha vira <br> em vez de virar um parágrafo só.
+		node.innerHTML = paraHtml(value);
 		normalizarLinks(node);
 		// Mede depois que o layout assenta.
 		requestAnimationFrame(() => {
@@ -343,8 +360,8 @@
 		tabindex="0"
 		aria-multiline="true"
 		data-placeholder={placeholder}
-		class="organyze-rt min-h-[90px] overflow-y-auto px-3.5 py-2.5 text-sm text-navy-900 outline-none"
-		style="max-height: {expandido ? '65vh' : ALTURA_COLAPSADA + 'px'}"
+		class="rt-editor overflow-y-auto px-3.5 py-2.5 text-sm text-navy-900 outline-none"
+		style="min-height: {minHeight}px; max-height: {expandido ? '85vh' : alturaColapsada + 'px'}"
 		oninput={onEntrada}
 		onblur={onSaida}
 		onpaste={onPaste}
@@ -367,17 +384,17 @@
 </div>
 
 <style>
-	.organyze-rt:empty::before {
+	.rt-editor:empty::before {
 		content: attr(data-placeholder);
 		color: var(--color-grey);
 		pointer-events: none;
 	}
-	.organyze-rt :global(ul) {
+	.rt-editor :global(ul) {
 		list-style: disc;
 		padding-left: 1.25rem;
 		margin: 0.25rem 0;
 	}
-	.organyze-rt :global(a) {
+	.rt-editor :global(a) {
 		color: var(--color-brand);
 		text-decoration: underline;
 		cursor: pointer;

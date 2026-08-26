@@ -11,6 +11,7 @@
 	import VaultForm from '$lib/components/VaultForm.svelte';
 	import { Copy, Eye, EyeOff, Info, Pencil, Trash2, ExternalLink } from '@lucide/svelte';
 	import { urlAbsoluta, urlCurta } from '$lib/vault';
+	import { ehHtml, paraTexto, sanitizarHtml } from '$lib/richtext';
 	import type { VaultItem } from '$lib/vault';
 	import { toast } from '$lib/toast.svelte';
 
@@ -38,6 +39,9 @@
 	let reveladas = $state<Record<string, boolean>>({});
 
 	let criando = $state(false);
+	// Observações agora são texto formatado: na lista cabe só a dica em texto
+	// puro, e o conteúdo com negrito/cor/links abre neste modal.
+	let vendoNota = $state<VaultItem | null>(null);
 	let editando = $state<VaultItem | null>(null);
 	let excluindo = $state<VaultItem | null>(null);
 	let apagando = $state(false);
@@ -114,9 +118,8 @@
 				{#each vault.itens as it (it.id)}
 					{@const resp = nomeResp(it.responsavel_id)}
 					{@const link = urlAbsoluta(it.url)}
-					{@const nota = [resp ? `Responsável: ${resp}` : null, it.observacoes]
-						.filter(Boolean)
-						.join('\n')}
+					{@const obs = paraTexto(it.observacoes)}
+					{@const nota = [resp ? `Responsável: ${resp}` : null, obs].filter(Boolean).join('\n')}
 					<li
 						class="grid items-center gap-x-3 gap-y-1 px-3 py-1.5 transition-colors hover:bg-bg/60 sm:grid-cols-[minmax(0,1.7fr)_minmax(0,1.2fr)_minmax(0,1fr)_auto]"
 					>
@@ -145,10 +148,21 @@
 								</a>
 							{/if}
 							{#if nota}
-								<span class="shrink-0 text-grey" title={nota}>
-									<Info size={13} />
-									<span class="sr-only">{nota}</span>
-								</span>
+								{#if obs}
+									<button
+										class="shrink-0 text-grey transition-colors hover:text-brand"
+										title={nota}
+										aria-label="Ver observações de {it.titulo}"
+										onclick={() => (vendoNota = it)}
+									>
+										<Info size={13} />
+									</button>
+								{:else}
+									<span class="shrink-0 text-grey" title={nota}>
+										<Info size={13} />
+										<span class="sr-only">{nota}</span>
+									</span>
+								{/if}
 							{/if}
 						</div>
 
@@ -232,6 +246,40 @@
 	{/if}
 </Card>
 
+<Modal
+	open={!!vendoNota}
+	title="Observações"
+	subtitle={vendoNota?.titulo}
+	size="lg"
+	onClose={() => (vendoNota = null)}
+>
+	{#if vendoNota}
+		{#if ehHtml(vendoNota.observacoes)}
+			<!-- Conteúdo do editor. Passa pelo sanitizador na saída também: o que
+			     está no banco pode ser anterior à higienização na gravação. -->
+			<div class="vault-nota text-sm text-navy-900">
+				{@html sanitizarHtml(vendoNota.observacoes)}
+			</div>
+		{:else}
+			<p class="whitespace-pre-wrap text-sm text-navy-900">{vendoNota.observacoes}</p>
+		{/if}
+		<div class="mt-5 flex justify-end gap-2">
+			{#if podeMexer}
+				<Button
+					variant="secondary"
+					onclick={() => {
+						editando = vendoNota;
+						vendoNota = null;
+					}}
+				>
+					Editar
+				</Button>
+			{/if}
+			<Button onclick={() => (vendoNota = null)}>Fechar</Button>
+		</div>
+	{/if}
+</Modal>
+
 <Modal open={criando} title="Novo acesso" size="lg" onClose={() => (criando = false)}>
 	<VaultForm
 		action="?/vault_criar"
@@ -294,3 +342,17 @@
 		</form>
 	{/if}
 </Modal>
+
+<style>
+	/* Espelha o que o RichText mostra enquanto se escreve. */
+	.vault-nota :global(ul) {
+		list-style: disc;
+		padding-left: 1.25rem;
+		margin: 0.25rem 0;
+	}
+	.vault-nota :global(a) {
+		color: var(--color-brand);
+		text-decoration: underline;
+		word-break: break-all;
+	}
+</style>

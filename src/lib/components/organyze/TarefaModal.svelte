@@ -8,7 +8,7 @@
 	import { PRIORIDADES, STATUS_ORDEM, urgencia } from '$lib/organyze/types';
 	import { PRAZO_ATALHOS, SECAO_META, prazoEmDias, situacaoStyle } from '$lib/organyze/ui';
 	import { Button, Modal } from '$lib/components/ui';
-	import RichText from '$lib/components/organyze/RichText.svelte';
+	import RichText from '$lib/components/ui/RichText.svelte';
 	import Avatar from './Avatar.svelte';
 	import { CalendarClock, CalendarDays, Check, Clock, Columns2, Copy, GripVertical, Plus, Rows3, Trash2 } from '@lucide/svelte';
 
