@@ -13,6 +13,7 @@ import type { Recurso, RecursoDePagina } from './crud';
 import { clienteFromForm, erroDeMigration } from '$lib/clientes';
 import { acessoFromForm, ferramentaFromForm, fornecedorFromForm } from '$lib/adm';
 import { vaultFromForm } from '$lib/vault';
+import { servicoAcessoFromForm, servicoFromForm } from '$lib/servicos';
 import { atividadeFromForm, contatoFromForm } from '$lib/crm';
 import { projetoFromForm } from '$lib/projetos';
 import { processoFromForm } from '$lib/processos';
@@ -219,3 +220,59 @@ export const vault = naPagina({
 		};
 	}
 });
+
+// --- Serviços & Ferramentas do cliente (0061) ---------------------------------
+// Duas tabelas, dois módulos: a ficha do serviço é 'servicos' (todos os cargos,
+// por seed) e os logins de dentro são 'vault' (só quem vê senha). As chaves de
+// retorno são separadas porque a tela do cliente hospeda três CRUDs ao mesmo
+// tempo — o cadastro, o cofre e este.
+
+export const clienteServicos = naPagina({
+	tabela: 'cliente_servicos',
+	modulo: 'servicos',
+	fromForm: servicoFromForm,
+	validar: (v) => (!v.nome ? 'O nome do serviço é obrigatório.' : null),
+	idInvalido: 'Serviço inválido.',
+	// `updated_at` vem do trigger da 0061.
+	camposDeValor: ['custo_mensal'],
+	chaves: { erro: 'servicoError', salvo: 'servicoSaved', excluido: 'servicoDeleted' },
+	extrasAoCriar: async ({ params, locals }) => {
+		// Serviço novo entra no fim da lista daquele cliente.
+		const { data: ultimo } = await locals.supabase
+			.from('cliente_servicos')
+			.select('posicao')
+			.eq('cliente_id', params.id as string)
+			.order('posicao', { ascending: false })
+			.limit(1)
+			.maybeSingle();
+		return {
+			cliente_id: params.id as string,
+			posicao: ((ultimo?.posicao as number | undefined) ?? -1) + 1
+		};
+	}
+});
+
+export const clienteServicoAcessos = naPagina({
+	tabela: 'cliente_servico_acessos',
+	// Login é cofre: quem não tem o vault não cria nem enxerga (RLS na 0061).
+	modulo: 'vault',
+	fromForm: servicoAcessoFromForm,
+	validar: (v) => {
+		if (!v.servico_id) return 'Serviço não informado.';
+		if (!v.rotulo) return 'Diga de qual unidade é este login.';
+		return null;
+	},
+	idInvalido: 'Login inválido.',
+	chaves: { erro: 'acessoError', salvo: 'acessoSaved', excluido: 'acessoDeleted' },
+	extrasAoCriar: async ({ locals }, values) => {
+		const { data: ultimo } = await locals.supabase
+			.from('cliente_servico_acessos')
+			.select('posicao')
+			.eq('servico_id', values.servico_id as string)
+			.order('posicao', { ascending: false })
+			.limit(1)
+			.maybeSingle();
+		return { posicao: ((ultimo?.posicao as number | undefined) ?? -1) + 1 };
+	}
+});
+
