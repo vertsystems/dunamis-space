@@ -107,6 +107,7 @@
 				{ href: '/equipe', label: 'Equipe', icon: 'users' },
 				{ href: '/administrativo/ponto', label: 'Ponto', icon: 'clock' },
 				{ href: '/administrativo/permissoes', label: 'Permissões', icon: 'shield' },
+				{ href: '/administrativo/saude', label: 'Saúde do sistema', icon: 'chart' },
 				{ href: '/ferramentas', label: 'Ferramentas & Contas', icon: 'key' },
 				{ href: '/base-conhecimento', label: 'Base de Conhecimento', icon: 'book' },
 				{ href: '/sos', label: 'Central SOS', icon: 'lifebuoy' }
