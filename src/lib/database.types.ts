@@ -1,7 +1,7 @@
 // GERADO AUTOMATICAMENTE — não edite à mão.
 // Regenerar:  PGPASSWORD='<senha-postgres>' node scripts/gen-types.mjs
 //
-// Reflete o schema public do Supabase (2026-08-26).
+// Reflete o schema public do Supabase (2026-08-11).
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -243,93 +243,6 @@ export type Database = {
 					tipo?: 'reuniao' | 'ligacao' | 'email' | 'whatsapp' | 'nota'
 					descricao?: string | null
 					data?: string
-					created_at?: string
-					updated_at?: string
-				}
-				Relationships: []
-			}
-			cliente_servico_acessos: {
-				Row: {
-					id: string
-					servico_id: string
-					rotulo: string
-					login: string | null
-					senha: string | null
-					url: string | null
-					observacoes: string | null
-					posicao: number
-					created_at: string
-					updated_at: string
-				}
-				Insert: {
-					id?: string
-					servico_id: string
-					rotulo: string
-					login?: string | null
-					senha?: string | null
-					url?: string | null
-					observacoes?: string | null
-					posicao?: number
-					created_at?: string
-					updated_at?: string
-				}
-				Update: {
-					id?: string
-					servico_id?: string
-					rotulo?: string
-					login?: string | null
-					senha?: string | null
-					url?: string | null
-					observacoes?: string | null
-					posicao?: number
-					created_at?: string
-					updated_at?: string
-				}
-				Relationships: []
-			}
-			cliente_servicos: {
-				Row: {
-					id: string
-					cliente_id: string
-					nome: string
-					categoria: string | null
-					url: string | null
-					fornecedor: string | null
-					suporte_contato: string | null
-					custo_mensal: number | null
-					responsavel_id: string | null
-					observacoes: string | null
-					posicao: number
-					created_at: string
-					updated_at: string
-				}
-				Insert: {
-					id?: string
-					cliente_id: string
-					nome: string
-					categoria?: string | null
-					url?: string | null
-					fornecedor?: string | null
-					suporte_contato?: string | null
-					custo_mensal?: number | null
-					responsavel_id?: string | null
-					observacoes?: string | null
-					posicao?: number
-					created_at?: string
-					updated_at?: string
-				}
-				Update: {
-					id?: string
-					cliente_id?: string
-					nome?: string
-					categoria?: string | null
-					url?: string | null
-					fornecedor?: string | null
-					suporte_contato?: string | null
-					custo_mensal?: number | null
-					responsavel_id?: string | null
-					observacoes?: string | null
-					posicao?: number
 					created_at?: string
 					updated_at?: string
 				}
@@ -1738,8 +1651,6 @@ export type Database = {
 					status: string
 					created_at: string
 					updated_at: string
-					imagem_url: string | null
-					imagens: string[]
 				}
 				Insert: {
 					id?: string
@@ -1751,8 +1662,6 @@ export type Database = {
 					status?: string
 					created_at?: string
 					updated_at?: string
-					imagem_url?: string | null
-					imagens?: string[]
 				}
 				Update: {
 					id?: string
@@ -1764,8 +1673,6 @@ export type Database = {
 					status?: string
 					created_at?: string
 					updated_at?: string
-					imagem_url?: string | null
-					imagens?: string[]
 				}
 				Relationships: []
 			}

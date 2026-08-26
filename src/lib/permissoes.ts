@@ -33,12 +33,6 @@ export const MODULOS: Modulo[] = [
 	// separado de 'clientes'. Como não entra no seed da 0034, nasce 'nenhum' para
 	// todos os cargos; só super-admin (ceo/admin) enxerga até alguém liberar.
 	{ id: 'vault', label: 'Vault (acessos do cliente)', grupo: 'administrativo', rotas: [] },
-	// Também sem rotas: governa a seção "Serviços & Ferramentas" DENTRO da área do
-	// cliente (Rádio Indoor, PDV, telefonia…). Ao contrário do vault, entra no seed
-	// da 0061 liberado a todos os cargos: saber que o cliente usa a ferramenta e a
-	// quem ligar no suporte não é segredo. Os LOGINS de dentro de cada serviço
-	// continuam no módulo 'vault' — quem tem só este vê a ficha e nenhuma senha.
-	{ id: 'servicos', label: 'Serviços do cliente', grupo: 'administrativo', rotas: [] },
 	{ id: 'fornecedores', label: 'Fornecedores', grupo: 'administrativo', rotas: ['/fornecedores'] },
 	{ id: 'onboarding', label: 'Onboarding', grupo: 'administrativo', rotas: ['/onboarding'] },
 	{ id: 'equipe', label: 'Equipe', grupo: 'administrativo', rotas: ['/equipe'] },

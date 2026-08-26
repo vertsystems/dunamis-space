@@ -146,24 +146,13 @@ export type RecursoDePagina<
 	/** Grava `updated_at` no update (tabelas sem trigger no banco). */
 	tocarUpdatedAt?: boolean;
 	/**
-	 * Colunas de valor sigiloso — mesmo papel que em `Recurso`: saem do UPDATE
-	 * de quem não tem o módulo 'valores', senão o campo mascarado do formulário
-	 * apagaria o número real do banco.
-	 */
-	camposDeValor?: (keyof V)[];
-	/**
 	 * Nomes das chaves devolvidas à página. O padrão serve a quem tem um CRUD
 	 * só; telas com dois (o cliente e o cofre dele) precisam separar, senão o
 	 * erro de um aparece no formulário do outro.
 	 */
 	chaves?: { erro?: KE; salvo?: KS; excluido?: KD };
-	/**
-	 * Colunas calculadas no insert (ex.: o cliente dono e a posição na lista).
-	 * Recebe também os valores do formulário — o corpo da requisição já foi lido
-	 * por `fromForm` e não dá para lê-lo de novo, então quem precisa de um campo
-	 * enviado (o serviço dono de um login, p.ex.) pega dele.
-	 */
-	extrasAoCriar?: (ev: Evento, values: V) => Valores | Promise<Valores>;
+	/** Colunas calculadas no insert (ex.: o cliente dono e a posição na lista). */
+	extrasAoCriar?: (ev: Evento) => Valores | Promise<Valores>;
 };
 
 /** Id vindo do próprio formulário (não da URL). */
@@ -195,7 +184,7 @@ export function acoesNaPagina<
 			const problema = r.validar?.(values);
 			if (problema) return falhar(400, problema, values);
 
-			const extras = (await r.extrasAoCriar?.(ev, values)) ?? {};
+			const extras = (await r.extrasAoCriar?.(ev)) ?? {};
 			const { error } = await ev.locals.supabase.from(r.tabela).insert({ ...values, ...extras });
 			if (error) return falhar(500, error.message, values);
 			return { [kSalvo]: true } as Record<KS, true>;
@@ -210,15 +199,9 @@ export function acoesNaPagina<
 			const problema = r.validar?.(values);
 			if (problema) return falhar(400, problema, values);
 
-			// Sem permissão de valores, as colunas sigilosas somem do payload —
-			// ausente do UPDATE = coluna intocada no banco.
-			const patch: Valores = r.camposDeValor?.length
-				? preservarValores(values, podeVerValores(ev.locals.permissoes), ...r.camposDeValor)
-				: values;
-
 			const { error } = await ev.locals.supabase
 				.from(r.tabela)
-				.update({ ...patch, ...agora() })
+				.update({ ...values, ...agora() })
 				.eq('id', id);
 			if (error) return falhar(500, error.message, values);
 			return { [kSalvo]: true } as Record<KS, true>;

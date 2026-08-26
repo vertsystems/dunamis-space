@@ -5,7 +5,6 @@
 	import ClienteForm from '$lib/components/ClienteForm.svelte';
 	import CalendarioConteudos from '$lib/components/CalendarioConteudos.svelte';
 	import VaultCard from '$lib/components/VaultCard.svelte';
-	import ServicosCard from '$lib/components/ServicosCard.svelte';
 	import CargoBadge from '$lib/components/CargoBadge.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import { Card, Badge, Button, Breadcrumb, Modal } from '$lib/components/ui';
@@ -158,17 +157,6 @@
      módulo 'vault' — sem permissão a seção nem existe. -->
 {#if data.vault}
 	<VaultCard vault={data.vault} colaboradores={data.calendario.colaboradores} {form} />
-{/if}
-
-<!-- Serviços & Ferramentas: o que o cliente contrata por fora (com os logins de
-     cada loja dentro de cada serviço). Módulo 'servicos'; os logins, 'vault'. -->
-{#if data.servicos}
-	<ServicosCard
-		servicos={data.servicos}
-		colaboradores={data.calendario.colaboradores}
-		podeValores={data.podeValores}
-		{form}
-	/>
 {/if}
 
 <!-- Calendário de posts do cliente (mesmo do marketing, filtrado a este cliente) -->
