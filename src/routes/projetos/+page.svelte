@@ -8,6 +8,7 @@
 	import { iniciais } from '$lib/crm';
 	import { Card, Badge, Button, Input, Select, EmptyState, Modal } from '$lib/components/ui';
 	import ProjetoForm from '$lib/components/ProjetoForm.svelte';
+	import MarcaIcon from '$lib/components/MarcaIcon.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import { podeEditar } from '$lib/permissoes';
 
@@ -121,7 +122,7 @@
 								class="mt-0.5 inline-flex items-center gap-1 text-xs text-brand no-underline hover:underline"
 								title={p.url}
 							>
-								{urlCurta(p.url)}<ExternalLink size={11} />
+								<MarcaIcon texto={p.url} size={12} />{urlCurta(p.url)}<ExternalLink size={11} />
 							</a>
 						{:else}
 							<p class="mt-0.5 text-xs text-grey">Atualizado em {fmtQuando(p.updated_at)}</p>

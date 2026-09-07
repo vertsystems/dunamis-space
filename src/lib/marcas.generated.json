@@ -1,0 +1,512 @@
+[
+	{
+		"slug": "angular",
+		"titulo": "Angular",
+		"hex": "#0F0F11"
+	},
+	{
+		"slug": "anthropic",
+		"titulo": "Anthropic",
+		"hex": "#191919"
+	},
+	{
+		"slug": "asana",
+		"titulo": "Asana",
+		"hex": "#F06A6A"
+	},
+	{
+		"slug": "astro",
+		"titulo": "Astro",
+		"hex": "#BC52EE"
+	},
+	{
+		"slug": "bitbucket",
+		"titulo": "Bitbucket",
+		"hex": "#0052CC"
+	},
+	{
+		"slug": "bun",
+		"titulo": "Bun",
+		"hex": "#000000"
+	},
+	{
+		"slug": "clickhouse",
+		"titulo": "ClickHouse",
+		"hex": "#FFCC01"
+	},
+	{
+		"slug": "clickup",
+		"titulo": "ClickUp",
+		"hex": "#7B68EE"
+	},
+	{
+		"slug": "cloudflare",
+		"titulo": "Cloudflare",
+		"hex": "#F38020"
+	},
+	{
+		"slug": "cloudinary",
+		"titulo": "Cloudinary",
+		"hex": "#3448C5"
+	},
+	{
+		"slug": "codeberg",
+		"titulo": "Codeberg",
+		"hex": "#2185D0"
+	},
+	{
+		"slug": "contentful",
+		"titulo": "Contentful",
+		"hex": "#2478CC"
+	},
+	{
+		"slug": "cpanel",
+		"titulo": "cPanel",
+		"hex": "#FF6C2C"
+	},
+	{
+		"slug": "deno",
+		"titulo": "Deno",
+		"hex": "#000000"
+	},
+	{
+		"slug": "digitalocean",
+		"titulo": "DigitalOcean",
+		"hex": "#0080FF"
+	},
+	{
+		"slug": "discord",
+		"titulo": "Discord",
+		"hex": "#5865F2"
+	},
+	{
+		"slug": "django",
+		"titulo": "Django",
+		"hex": "#092E20"
+	},
+	{
+		"slug": "docker",
+		"titulo": "Docker",
+		"hex": "#2496ED"
+	},
+	{
+		"slug": "dotnet",
+		"titulo": ".NET",
+		"hex": "#512BD4"
+	},
+	{
+		"slug": "dropbox",
+		"titulo": "Dropbox",
+		"hex": "#0061FF"
+	},
+	{
+		"slug": "expo",
+		"titulo": "Expo",
+		"hex": "#1C2024"
+	},
+	{
+		"slug": "facebook",
+		"titulo": "Facebook",
+		"hex": "#0866FF"
+	},
+	{
+		"slug": "figma",
+		"titulo": "Figma",
+		"hex": "#F24E1E"
+	},
+	{
+		"slug": "firebase",
+		"titulo": "Firebase",
+		"hex": "#DD2C00"
+	},
+	{
+		"slug": "flutter",
+		"titulo": "Flutter",
+		"hex": "#02569B"
+	},
+	{
+		"slug": "framer",
+		"titulo": "Framer",
+		"hex": "#0055FF"
+	},
+	{
+		"slug": "git",
+		"titulo": "Git",
+		"hex": "#F03C2E"
+	},
+	{
+		"slug": "gitea",
+		"titulo": "Gitea",
+		"hex": "#609926"
+	},
+	{
+		"slug": "github",
+		"titulo": "GitHub",
+		"hex": "#181717"
+	},
+	{
+		"slug": "gitlab",
+		"titulo": "GitLab",
+		"hex": "#FC6D26"
+	},
+	{
+		"slug": "gmail",
+		"titulo": "Gmail",
+		"hex": "#EA4335"
+	},
+	{
+		"slug": "go",
+		"titulo": "Go",
+		"hex": "#00ADD8"
+	},
+	{
+		"slug": "godaddy",
+		"titulo": "GoDaddy",
+		"hex": "#1BDBDB"
+	},
+	{
+		"slug": "googleanalytics",
+		"titulo": "Google Analytics",
+		"hex": "#E37400"
+	},
+	{
+		"slug": "googlecloud",
+		"titulo": "Google Cloud",
+		"hex": "#4285F4"
+	},
+	{
+		"slug": "googledrive",
+		"titulo": "Google Drive",
+		"hex": "#4285F4"
+	},
+	{
+		"slug": "googlesheets",
+		"titulo": "Google Sheets",
+		"hex": "#34A853"
+	},
+	{
+		"slug": "googletagmanager",
+		"titulo": "Google Tag Manager",
+		"hex": "#246FDB"
+	},
+	{
+		"slug": "hostinger",
+		"titulo": "Hostinger",
+		"hex": "#673DE6"
+	},
+	{
+		"slug": "instagram",
+		"titulo": "Instagram",
+		"hex": "#FF0069"
+	},
+	{
+		"slug": "javascript",
+		"titulo": "JavaScript",
+		"hex": "#F7DF1E"
+	},
+	{
+		"slug": "kubernetes",
+		"titulo": "Kubernetes",
+		"hex": "#326CE5"
+	},
+	{
+		"slug": "laravel",
+		"titulo": "Laravel",
+		"hex": "#FF2D20"
+	},
+	{
+		"slug": "linux",
+		"titulo": "Linux",
+		"hex": "#FCC624"
+	},
+	{
+		"slug": "make",
+		"titulo": "Make",
+		"hex": "#6D00CC"
+	},
+	{
+		"slug": "mariadb",
+		"titulo": "MariaDB",
+		"hex": "#003545"
+	},
+	{
+		"slug": "mercadopago",
+		"titulo": "Mercado Pago",
+		"hex": "#00B1EA"
+	},
+	{
+		"slug": "meta",
+		"titulo": "Meta",
+		"hex": "#0467DF"
+	},
+	{
+		"slug": "mongodb",
+		"titulo": "MongoDB",
+		"hex": "#47A248"
+	},
+	{
+		"slug": "mysql",
+		"titulo": "MySQL",
+		"hex": "#4479A1"
+	},
+	{
+		"slug": "n8n",
+		"titulo": "n8n",
+		"hex": "#EA4B71"
+	},
+	{
+		"slug": "namecheap",
+		"titulo": "Namecheap",
+		"hex": "#DE3723"
+	},
+	{
+		"slug": "neon",
+		"titulo": "Neon",
+		"hex": "#34D59A"
+	},
+	{
+		"slug": "netlify",
+		"titulo": "Netlify",
+		"hex": "#00C7B7"
+	},
+	{
+		"slug": "nextdotjs",
+		"titulo": "Next.js",
+		"hex": "#000000"
+	},
+	{
+		"slug": "nginx",
+		"titulo": "NGINX",
+		"hex": "#009639"
+	},
+	{
+		"slug": "nodedotjs",
+		"titulo": "Node.js",
+		"hex": "#5FA04E"
+	},
+	{
+		"slug": "notion",
+		"titulo": "Notion",
+		"hex": "#000000"
+	},
+	{
+		"slug": "nuxt",
+		"titulo": "Nuxt",
+		"hex": "#00DC82"
+	},
+	{
+		"slug": "pagseguro",
+		"titulo": "PagSeguro",
+		"hex": "#FFC801"
+	},
+	{
+		"slug": "paypal",
+		"titulo": "PayPal",
+		"hex": "#002991"
+	},
+	{
+		"slug": "php",
+		"titulo": "PHP",
+		"hex": "#777BB4"
+	},
+	{
+		"slug": "pix",
+		"titulo": "Pix",
+		"hex": "#77B6A8"
+	},
+	{
+		"slug": "planetscale",
+		"titulo": "PlanetScale",
+		"hex": "#000000"
+	},
+	{
+		"slug": "plesk",
+		"titulo": "Plesk",
+		"hex": "#52BBE6"
+	},
+	{
+		"slug": "postgresql",
+		"titulo": "PostgreSQL",
+		"hex": "#4169E1"
+	},
+	{
+		"slug": "posthog",
+		"titulo": "PostHog",
+		"hex": "#000000"
+	},
+	{
+		"slug": "prisma",
+		"titulo": "Prisma",
+		"hex": "#2D3748"
+	},
+	{
+		"slug": "python",
+		"titulo": "Python",
+		"hex": "#3776AB"
+	},
+	{
+		"slug": "railway",
+		"titulo": "Railway",
+		"hex": "#0B0D0E"
+	},
+	{
+		"slug": "react",
+		"titulo": "React",
+		"hex": "#61DAFB"
+	},
+	{
+		"slug": "redis",
+		"titulo": "Redis",
+		"hex": "#FF4438"
+	},
+	{
+		"slug": "render",
+		"titulo": "Render",
+		"hex": "#000000"
+	},
+	{
+		"slug": "rubyonrails",
+		"titulo": "Ruby on Rails",
+		"hex": "#D30001"
+	},
+	{
+		"slug": "rust",
+		"titulo": "Rust",
+		"hex": "#000000"
+	},
+	{
+		"slug": "sanity",
+		"titulo": "Sanity",
+		"hex": "#0D0E12"
+	},
+	{
+		"slug": "sentry",
+		"titulo": "Sentry",
+		"hex": "#362D59"
+	},
+	{
+		"slug": "shopify",
+		"titulo": "Shopify",
+		"hex": "#7AB55C"
+	},
+	{
+		"slug": "sqlite",
+		"titulo": "SQLite",
+		"hex": "#003B57"
+	},
+	{
+		"slug": "squarespace",
+		"titulo": "Squarespace",
+		"hex": "#000000"
+	},
+	{
+		"slug": "strapi",
+		"titulo": "Strapi",
+		"hex": "#4945FF"
+	},
+	{
+		"slug": "stripe",
+		"titulo": "Stripe",
+		"hex": "#635BFF"
+	},
+	{
+		"slug": "supabase",
+		"titulo": "Supabase",
+		"hex": "#3FCF8E"
+	},
+	{
+		"slug": "svelte",
+		"titulo": "Svelte",
+		"hex": "#FF3E00"
+	},
+	{
+		"slug": "tailwindcss",
+		"titulo": "Tailwind CSS",
+		"hex": "#06B6D4"
+	},
+	{
+		"slug": "telegram",
+		"titulo": "Telegram",
+		"hex": "#26A5E4"
+	},
+	{
+		"slug": "tiktok",
+		"titulo": "TikTok",
+		"hex": "#000000"
+	},
+	{
+		"slug": "trello",
+		"titulo": "Trello",
+		"hex": "#0052CC"
+	},
+	{
+		"slug": "turso",
+		"titulo": "Turso",
+		"hex": "#4FF8D2"
+	},
+	{
+		"slug": "typescript",
+		"titulo": "TypeScript",
+		"hex": "#3178C6"
+	},
+	{
+		"slug": "ubuntu",
+		"titulo": "Ubuntu",
+		"hex": "#E95420"
+	},
+	{
+		"slug": "upstash",
+		"titulo": "Upstash",
+		"hex": "#00E9A3"
+	},
+	{
+		"slug": "vercel",
+		"titulo": "Vercel",
+		"hex": "#000000"
+	},
+	{
+		"slug": "vite",
+		"titulo": "Vite",
+		"hex": "#9135FF"
+	},
+	{
+		"slug": "vuedotjs",
+		"titulo": "Vue.js",
+		"hex": "#4FC08D"
+	},
+	{
+		"slug": "webflow",
+		"titulo": "Webflow",
+		"hex": "#146EF5"
+	},
+	{
+		"slug": "whatsapp",
+		"titulo": "WhatsApp",
+		"hex": "#25D366"
+	},
+	{
+		"slug": "wix",
+		"titulo": "Wix",
+		"hex": "#0C6EFC"
+	},
+	{
+		"slug": "woocommerce",
+		"titulo": "WooCommerce",
+		"hex": "#96588A"
+	},
+	{
+		"slug": "wordpress",
+		"titulo": "WordPress",
+		"hex": "#21759B"
+	},
+	{
+		"slug": "youtube",
+		"titulo": "YouTube",
+		"hex": "#FF0000"
+	},
+	{
+		"slug": "zapier",
+		"titulo": "Zapier",
+		"hex": "#FF4F00"
+	}
+]

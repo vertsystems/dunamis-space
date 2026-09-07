@@ -5,6 +5,7 @@
 	import ProjetoForm from '$lib/components/ProjetoForm.svelte';
 	import Comentarios from '$lib/components/Comentarios.svelte';
 	import CargoBadge from '$lib/components/CargoBadge.svelte';
+	import MarcaIcon from '$lib/components/MarcaIcon.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import { ExternalLink } from '@lucide/svelte';
 	import { Card, Badge, Button, Breadcrumb, Modal } from '$lib/components/ui';
@@ -104,19 +105,20 @@
 			{#each onde as c (c.campo)}
 				<div class="min-w-0">
 					<dt class="text-xs text-grey">{c.label}</dt>
-					<dd class="truncate text-sm font-medium text-navy">
+					<dd class="flex min-w-0 items-center gap-1.5 text-sm font-medium text-navy">
+						<MarcaIcon texto={c.valor} size={15} />
 						{#if c.link}
 							<a
 								href={urlAbsoluta(c.valor)}
 								target="_blank"
 								rel="noopener"
-								class="inline-flex items-center gap-1 text-brand hover:underline"
+								class="inline-flex min-w-0 items-center gap-1 truncate text-brand hover:underline"
 								title={c.valor}
 							>
-								{urlCurta(c.valor)}<ExternalLink size={13} />
+								<span class="truncate">{urlCurta(c.valor)}</span><ExternalLink size={13} class="shrink-0" />
 							</a>
 						{:else}
-							{c.valor}
+							<span class="truncate" title={c.valor}>{c.valor}</span>
 						{/if}
 					</dd>
 				</div>
