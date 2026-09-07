@@ -1,9 +1,7 @@
 <script lang="ts">
-	// Vault — cofre de acessos que vive só dentro da área do seu dono: o cliente
-	// (cliente_vault, migration 0051) ou o projeto (projeto_vault, 0064). A tela
-	// é a mesma; muda o texto e a tabela por trás das actions. Governado pelo
-	// módulo de permissão 'vault': quem não tem 'ver' nem recebe os dados do
-	// servidor (o load nem consulta).
+	// Vault do cliente — cofre de acessos que vive só na área do cliente.
+	// Governado pelo módulo de permissão 'vault': quem não tem 'ver' nem recebe
+	// os dados do servidor (o load nem consulta).
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
@@ -20,8 +18,7 @@
 	let {
 		vault,
 		colaboradores = [],
-		form = null,
-		dono = 'cliente'
+		form = null
 	}: {
 		vault: { itens: VaultItem[]; pendente: boolean; erro: string | null };
 		colaboradores?: {
@@ -32,16 +29,7 @@
 			funcoes?: string[] | null;
 		}[];
 		form?: Record<string, unknown> | null;
-		/** De quem é este cofre — muda os textos e a migration citada. */
-		dono?: 'cliente' | 'projeto';
 	} = $props();
-
-	// Os únicos pontos em que os dois cofres falam diferente.
-	const TEXTOS = {
-		cliente: { posse: 'deste cliente', migration: '0051_cliente_vault.sql' },
-		projeto: { posse: 'deste projeto', migration: '0064_projeto_vault.sql' }
-	} as const;
-	const t = $derived(TEXTOS[dono]);
 
 	const perms = $derived(page.data.permissoes);
 	const podeMexer = $derived(podeEditar(perms, 'vault'));
@@ -102,13 +90,13 @@
 	{#if vault.pendente}
 		<div class="rounded-[var(--radius)] bg-brand-amber/15 px-4 py-3 text-sm text-brand-brown">
 			O cofre ainda não existe no banco. Rode a migration
-			<code>{t.migration}</code> no Supabase para liberar esta seção.
+			<code>0051_cliente_vault.sql</code> no Supabase para liberar esta seção.
 		</div>
 	{:else if vault.erro}
 		<div role="alert" class="text-sm text-brand-danger">{vault.erro}</div>
 	{:else if !vault.itens.length}
 		<p class="text-sm text-grey">
-			Nenhum acesso guardado ainda. Aqui ficam logins e senhas das contas {t.posse} — visíveis
+			Nenhum acesso guardado ainda. Aqui ficam logins e senhas das contas deste cliente — visíveis
 			só para quem tem o Vault liberado.
 		</p>
 	{:else}
@@ -326,7 +314,7 @@
 <Modal open={!!excluindo} title="Excluir acesso" onClose={() => (excluindo = null)}>
 	{#if excluindo}
 		<p class="mb-4 text-sm text-slate">
-			Excluir <strong class="text-navy">{excluindo.titulo}</strong> do cofre {t.posse}? A senha
+			Excluir <strong class="text-navy">{excluindo.titulo}</strong> do cofre deste cliente? A senha
 			guardada some junto e não dá para desfazer.
 		</p>
 		<form

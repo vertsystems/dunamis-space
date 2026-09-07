@@ -16,7 +16,7 @@ export const load: PageServerLoad = async ({ params, url, locals: { supabase, pe
 	const [{ data: cliente, error: e }, calendario, vault] = await Promise.all([
 		supabase.from('clientes').select('*').eq('id', params.id).single(),
 		carregarCalendario(supabase, url, { clienteFixo: params.id }),
-		podeVault ? carregarVault(supabase, 'cliente_vault', 'cliente_id', params.id) : Promise.resolve(null)
+		podeVault ? carregarVault(supabase, params.id) : Promise.resolve(null)
 	]);
 
 	if (e || !cliente) throw error(404, 'Cliente não encontrado');

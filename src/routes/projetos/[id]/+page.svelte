@@ -4,11 +4,12 @@
 	import { podeEditar, podeExcluir } from '$lib/permissoes';
 	import ProjetoForm from '$lib/components/ProjetoForm.svelte';
 	import Comentarios from '$lib/components/Comentarios.svelte';
-	import VaultCard from '$lib/components/VaultCard.svelte';
 	import CargoBadge from '$lib/components/CargoBadge.svelte';
 	import Icon from '$lib/components/Icon.svelte';
+	import { ExternalLink } from '@lucide/svelte';
 	import { Card, Badge, Button, Breadcrumb, Modal } from '$lib/components/ui';
-	import { projetoStatusTone, projetoStatusLabel } from '$lib/projetos';
+	import { projetoStatusTone, projetoStatusLabel, PROJETO_ONDE } from '$lib/projetos';
+	import { urlAbsoluta, urlCurta } from '$lib/vault';
 	import { ehHtml, sanitizarHtml } from '$lib/richtext';
 	import { iniciais } from '$lib/crm';
 	import { toast } from '$lib/toast.svelte';
@@ -28,6 +29,13 @@
 	function fmtQuando(s: string | null): string | null {
 		return s ? new Date(s).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : null;
 	}
+
+	// Onde o projeto está — só o que foi preenchido; linha vazia é ruído.
+	const onde = $derived(
+		PROJETO_ONDE.map((c) => ({ ...c, valor: (p[c.campo] as string | null) ?? null })).filter(
+			(c) => c.valor != null && c.valor !== ''
+		)
+	);
 
 	// --- Edição em modal (mesmo padrão do resto do sistema) ---
 	let editAberto = $state(false);
@@ -89,6 +97,34 @@
 	</div>
 </Card>
 
+{#if onde.length}
+	<Card class="mt-4">
+		<h2 class="mb-3 text-sm font-semibold text-navy">Onde está</h2>
+		<dl class="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
+			{#each onde as c (c.campo)}
+				<div class="min-w-0">
+					<dt class="text-xs text-grey">{c.label}</dt>
+					<dd class="truncate text-sm font-medium text-navy">
+						{#if c.link}
+							<a
+								href={urlAbsoluta(c.valor)}
+								target="_blank"
+								rel="noopener"
+								class="inline-flex items-center gap-1 text-brand hover:underline"
+								title={c.valor}
+							>
+								{urlCurta(c.valor)}<ExternalLink size={13} />
+							</a>
+						{:else}
+							{c.valor}
+						{/if}
+					</dd>
+				</div>
+			{/each}
+		</dl>
+	</Card>
+{/if}
+
 <!-- As anotações técnicas: o miolo da tela. -->
 <Card class="mt-4">
 	<h2 class="mb-3 text-sm font-semibold text-navy">Anotações</h2>
@@ -108,12 +144,6 @@
 	{/if}
 </Card>
 
-<!-- Vault: acessos deste projeto. `data.vault` só vem preenchido para quem tem o
-     módulo 'vault' — sem permissão a seção nem existe. -->
-{#if data.vault}
-	<VaultCard vault={data.vault} colaboradores={data.colaboradores} {form} dono="projeto" />
-{/if}
-
 <Comentarios entidadeTipo="projeto" entidadeId={p.id} />
 
 <!-- Zona de perigo -->
@@ -123,7 +153,7 @@
 		{#if confirmDelete}
 			<form method="POST" action="?/delete">
 				<p class="mb-3 text-sm text-slate">
-					Excluir este projeto? As anotações e os acessos guardados no cofre dele somem junto.
+					Excluir este projeto? As anotações dele somem junto e não dá para desfazer.
 				</p>
 				<div class="flex gap-2">
 					<Button variant="danger" type="submit" loading={excluindo} onclick={() => (excluindo = true)}>

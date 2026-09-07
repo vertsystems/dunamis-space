@@ -34,6 +34,22 @@ export function projetoFromForm(fd: FormData) {
 		// A descrição vem do editor de texto formatado: entra HTML, e ele é
 		// higienizado na porta de entrada — nada de script/handler chega ao banco.
 		descricao: sanitizarHtml(str(fd, 'descricao')),
-		status: str(fd, 'status') ?? 'em_construcao'
+		status: str(fd, 'status') ?? 'em_construcao',
+		url: str(fd, 'url'),
+		repositorio: str(fd, 'repositorio'),
+		hospedagem: str(fd, 'hospedagem'),
+		banco_dados: str(fd, 'banco_dados')
 	};
 }
+
+/**
+ * Os campos de "onde o projeto está", na ordem em que aparecem na ficha e no
+ * formulário. Uma lista só, para os dois não saírem da linha um do outro.
+ * `link: true` = o valor costuma ser endereço e vira âncora clicável.
+ */
+export const PROJETO_ONDE = [
+	{ campo: 'url', label: 'No ar em', placeholder: 'meuprojeto.com.br', link: true },
+	{ campo: 'repositorio', label: 'Repositório', placeholder: 'github.com/user/repo', link: true },
+	{ campo: 'hospedagem', label: 'Hospedagem', placeholder: 'Vercel, VPS, FTP…', link: false },
+	{ campo: 'banco_dados', label: 'Banco de dados', placeholder: 'Supabase, SQLite…', link: false }
+] as const;

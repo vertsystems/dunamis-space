@@ -217,35 +217,3 @@ export const vault = naPagina({
 		};
 	}
 });
-
-/**
- * Cofre do PROJETO. Mesmo formulário e mesmo módulo de permissão do cofre do
- * cliente — muda só a tabela e a coluna do dono (ver a migration 0064). Quem
- * tem o Vault liberado tem os dois; separá-los em módulos diferentes só criaria
- * uma segunda chave para a mesma fechadura.
- */
-export const vaultProjeto = naPagina({
-	tabela: 'projeto_vault',
-	modulo: 'vault',
-	fromForm: vaultFromForm,
-	validar: (v) => (!v.titulo ? 'O nome do acesso é obrigatório.' : null),
-	idInvalido: 'Acesso inválido.',
-	tocarUpdatedAt: true,
-	// A tela do projeto também salva o próprio projeto: chaves separadas para o
-	// erro do cofre não aparecer no formulário do cadastro.
-	chaves: { erro: 'vaultError', salvo: 'vaultSaved', excluido: 'vaultDeleted' },
-	extrasAoCriar: async ({ params, locals }) => {
-		// Novo acesso entra no fim da lista daquele projeto.
-		const { data: ultimo } = await locals.supabase
-			.from('projeto_vault')
-			.select('posicao')
-			.eq('projeto_id', params.id as string)
-			.order('posicao', { ascending: false })
-			.limit(1)
-			.maybeSingle();
-		return {
-			projeto_id: params.id as string,
-			posicao: ((ultimo?.posicao as number | undefined) ?? -1) + 1
-		};
-	}
-});

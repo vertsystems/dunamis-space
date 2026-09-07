@@ -1,7 +1,6 @@
 <script lang="ts">
-	// Formulário de um acesso do cofre (criar/editar em modal, padrão do sistema).
-	// Serve aos dois cofres sem saber de qual se trata: submete para as actions
-	// vault_* da rota em que está — /cadastro/[id] (cliente) ou /projetos/[id].
+	// Formulário de um acesso do cofre do cliente (criar/editar em modal, padrão
+	// do sistema). Submete nativamente para as actions vault_* de /cadastro/[id].
 	import { Input, Select, FormShell, RichText } from '$lib/components/ui';
 	import ResponsavelPicker from '$lib/components/ResponsavelPicker.svelte';
 	import { Eye, EyeOff } from '@lucide/svelte';

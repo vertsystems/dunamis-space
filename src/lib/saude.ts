@@ -44,7 +44,6 @@ export const MODULOS_SAUDE: Modulo[] = [
 	{ label: 'Clientes', grupo: 'Administrativo', tabelas: ['clientes'] },
 	{ label: 'Cofre dos clientes', grupo: 'Administrativo', tabelas: ['cliente_vault'] },
 	{ label: 'Projetos', grupo: 'Administrativo', tabelas: ['projetos'] },
-	{ label: 'Cofre dos projetos', grupo: 'Administrativo', tabelas: ['projeto_vault'] },
 	{ label: 'Fornecedores', grupo: 'Administrativo', tabelas: ['adm_fornecedores'] },
 	{ label: 'Ferramentas & contas', grupo: 'Administrativo', tabelas: ['adm_ferramentas', 'adm_acessos'] },
 	{ label: 'Contratos e planos', grupo: 'Administrativo', tabelas: ['contratos', 'planos'] },

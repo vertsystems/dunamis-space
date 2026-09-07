@@ -1538,51 +1538,6 @@ export type Database = {
 				}
 				Relationships: []
 			}
-			projeto_vault: {
-				Row: {
-					id: string
-					projeto_id: string
-					titulo: string
-					categoria: string | null
-					url: string | null
-					login: string | null
-					senha: string | null
-					observacoes: string | null
-					responsavel_id: string | null
-					posicao: number
-					created_at: string
-					updated_at: string
-				}
-				Insert: {
-					id?: string
-					projeto_id: string
-					titulo: string
-					categoria?: string | null
-					url?: string | null
-					login?: string | null
-					senha?: string | null
-					observacoes?: string | null
-					responsavel_id?: string | null
-					posicao?: number
-					created_at?: string
-					updated_at?: string
-				}
-				Update: {
-					id?: string
-					projeto_id?: string
-					titulo?: string
-					categoria?: string | null
-					url?: string | null
-					login?: string | null
-					senha?: string | null
-					observacoes?: string | null
-					responsavel_id?: string | null
-					posicao?: number
-					created_at?: string
-					updated_at?: string
-				}
-				Relationships: []
-			}
 			projetos: {
 				Row: {
 					id: string
@@ -1593,6 +1548,10 @@ export type Database = {
 					status: 'em_construcao' | 'em_producao'
 					created_at: string
 					updated_at: string
+					url: string | null
+					repositorio: string | null
+					hospedagem: string | null
+					banco_dados: string | null
 				}
 				Insert: {
 					id?: string
@@ -1603,6 +1562,10 @@ export type Database = {
 					status?: 'em_construcao' | 'em_producao'
 					created_at?: string
 					updated_at?: string
+					url?: string | null
+					repositorio?: string | null
+					hospedagem?: string | null
+					banco_dados?: string | null
 				}
 				Update: {
 					id?: string
@@ -1613,6 +1576,10 @@ export type Database = {
 					status?: 'em_construcao' | 'em_producao'
 					created_at?: string
 					updated_at?: string
+					url?: string | null
+					repositorio?: string | null
+					hospedagem?: string | null
+					banco_dados?: string | null
 				}
 				Relationships: []
 			}

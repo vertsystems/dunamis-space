@@ -2,7 +2,9 @@
 	import { invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
 	import { PROJETO_STATUS, projetoStatusTone, projetoStatusLabel } from '$lib/projetos';
+	import { urlAbsoluta, urlCurta } from '$lib/vault';
 	import { paraTexto } from '$lib/richtext';
+	import { ExternalLink } from '@lucide/svelte';
 	import { iniciais } from '$lib/crm';
 	import { Card, Badge, Button, Input, Select, EmptyState, Modal } from '$lib/components/ui';
 	import ProjetoForm from '$lib/components/ProjetoForm.svelte';
@@ -111,7 +113,19 @@
 							>
 							<Badge tone={projetoStatusTone(p.status)}>{projetoStatusLabel(p.status)}</Badge>
 						</div>
-						<p class="mt-0.5 text-xs text-grey">Atualizado em {fmtQuando(p.updated_at)}</p>
+						{#if p.url}
+							<a
+								href={urlAbsoluta(p.url)}
+								target="_blank"
+								rel="noopener"
+								class="mt-0.5 inline-flex items-center gap-1 text-xs text-brand no-underline hover:underline"
+								title={p.url}
+							>
+								{urlCurta(p.url)}<ExternalLink size={11} />
+							</a>
+						{:else}
+							<p class="mt-0.5 text-xs text-grey">Atualizado em {fmtQuando(p.updated_at)}</p>
+						{/if}
 					</div>
 				</div>
 

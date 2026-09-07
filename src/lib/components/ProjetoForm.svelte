@@ -1,9 +1,9 @@
 <script lang="ts">
-	// Formulário do projeto próprio. O peso da tela é a Descrição: é ali que ele
-	// registra banco de dados, hospedagem e o resto do "onde as coisas estão" —
-	// por isso ela ganha o editor formatado e a maior parte da altura, enquanto a
-	// identificação (nome, status, responsável) ocupa uma faixa só, no topo.
-	import { PROJETO_STATUS } from '$lib/projetos';
+	// Formulário do projeto próprio, em duas faixas: em cima a identificação e os
+	// endereços de "onde está" (o que ele procura de relance quando volta ao
+	// projeto), embaixo a Descrição com o editor formatado — é ali que entram as
+	// anotações longas, inclusive senhas e credenciais.
+	import { PROJETO_STATUS, PROJETO_ONDE } from '$lib/projetos';
 	import { Input, Select, FormShell, RichText } from '$lib/components/ui';
 	import ResponsavelPicker from '$lib/components/ResponsavelPicker.svelte';
 
@@ -42,11 +42,22 @@
 		</Select>
 		<ResponsavelPicker {colaboradores} value={projeto?.responsavel_id ?? null} wrapperClass="md:col-span-4" />
 
+		<!-- Onde o projeto está: os quatro endereços que ele sempre reprocura. -->
+		{#each PROJETO_ONDE as c (c.campo)}
+			<Input
+				label={c.label}
+				name={c.campo}
+				value={v(c.campo)}
+				placeholder={c.placeholder}
+				wrapperClass="md:col-span-3"
+			/>
+		{/each}
+
 		<div class="md:col-span-12">
 			<span class="mb-1.5 block text-sm font-medium text-navy">Descrição</span>
 			<RichText
 				value={(projeto?.descricao as string | null) ?? ''}
-				placeholder="Onde está hospedado, qual banco de dados, domínio, variáveis de ambiente, o que falta fazer…"
+				placeholder="Credenciais, variáveis de ambiente, como subir, o que falta fazer…"
 				minHeight={260}
 				alturaColapsada={460}
 				onSave={(html) => (descricao = html)}
