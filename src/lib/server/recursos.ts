@@ -44,14 +44,9 @@ export const projetos = recurso({
 	tabela: 'projetos',
 	modulo: 'projetos',
 	fromForm: projetoFromForm,
-	validar: (v) => {
-		if (!v.cliente_id) return 'Selecione um cliente.';
-		if (!v.nome) return 'O nome é obrigatório.';
-		return null;
-	},
-	// Mesma trava do MRR do cliente: sem o módulo 'valores', o campo mascarado do
-	// formulário não pode zerar o valor real gravado.
-	camposDeValor: ['valor'],
+	// Projeto próprio não tem cliente dono nem valor a cobrar (migration 0065):
+	// o nome é a única coisa que o formulário exige.
+	validar: (v) => (!v.nome ? 'O nome é obrigatório.' : null),
 	aposCriar: (id) => `/projetos/${id}`,
 	aposExcluir: '/projetos'
 });

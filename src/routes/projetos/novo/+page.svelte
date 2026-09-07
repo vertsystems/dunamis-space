@@ -10,7 +10,6 @@
 	<h1 class="text-sm font-semibold text-navy mb-4">Novo projeto</h1>
 	<ProjetoForm
 		projeto={form?.values ?? null}
-		clientes={data.clientes}
 		colaboradores={data.colaboradores}
 		error={form?.error ?? null}
 		submitLabel="Criar projeto"

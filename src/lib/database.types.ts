@@ -1586,49 +1586,31 @@ export type Database = {
 			projetos: {
 				Row: {
 					id: string
-					cliente_id: string
 					responsavel_id: string | null
 					template_id: string | null
 					nome: string
 					descricao: string | null
-					tipo: 'social_media' | 'design' | 'trafego' | 'impresso' | 'site' | 'outro'
-					status: 'em_andamento' | 'aguardando_cliente' | 'em_aprovacao' | 'finalizado'
-					recorrente: boolean
-					valor: number | null
-					data_inicio: string | null
-					prazo: string | null
+					status: 'em_construcao' | 'em_producao'
 					created_at: string
 					updated_at: string
 				}
 				Insert: {
 					id?: string
-					cliente_id: string
 					responsavel_id?: string | null
 					template_id?: string | null
 					nome: string
 					descricao?: string | null
-					tipo?: 'social_media' | 'design' | 'trafego' | 'impresso' | 'site' | 'outro'
-					status?: 'em_andamento' | 'aguardando_cliente' | 'em_aprovacao' | 'finalizado'
-					recorrente?: boolean
-					valor?: number | null
-					data_inicio?: string | null
-					prazo?: string | null
+					status?: 'em_construcao' | 'em_producao'
 					created_at?: string
 					updated_at?: string
 				}
 				Update: {
 					id?: string
-					cliente_id?: string
 					responsavel_id?: string | null
 					template_id?: string | null
 					nome?: string
 					descricao?: string | null
-					tipo?: 'social_media' | 'design' | 'trafego' | 'impresso' | 'site' | 'outro'
-					status?: 'em_andamento' | 'aguardando_cliente' | 'em_aprovacao' | 'finalizado'
-					recorrente?: boolean
-					valor?: number | null
-					data_inicio?: string | null
-					prazo?: string | null
+					status?: 'em_construcao' | 'em_producao'
 					created_at?: string
 					updated_at?: string
 				}
@@ -1832,7 +1814,7 @@ export type Database = {
 			crm_negocio_status: 'aberto' | 'ganho' | 'perdido'
 			interacao_tipo: 'reuniao' | 'ligacao' | 'email' | 'whatsapp' | 'nota'
 			perm_nivel: 'nenhum' | 'ver' | 'editar' | 'excluir'
-			projeto_status: 'em_andamento' | 'aguardando_cliente' | 'em_aprovacao' | 'finalizado'
+			projeto_status: 'em_construcao' | 'em_producao'
 			projeto_tipo: 'social_media' | 'design' | 'trafego' | 'impresso' | 'site' | 'outro'
 			transacao_status: 'previsto' | 'pago' | 'atrasado'
 			transacao_tipo: 'receita' | 'despesa'

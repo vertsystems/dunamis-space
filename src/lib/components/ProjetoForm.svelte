@@ -1,13 +1,14 @@
 <script lang="ts">
-	import { page } from '$app/state';
-	import { PROJETO_TIPO, PROJETO_STATUS } from '$lib/projetos';
-	import { VALOR_MASCARA } from '$lib/valores';
-	import { Input, Select, Textarea, Checkbox, FormShell } from '$lib/components/ui';
+	// Formulário do projeto próprio. O peso da tela é a Descrição: é ali que ele
+	// registra banco de dados, hospedagem e o resto do "onde as coisas estão" —
+	// por isso ela ganha o editor formatado e a maior parte da altura, enquanto a
+	// identificação (nome, status, responsável) ocupa uma faixa só, no topo.
+	import { PROJETO_STATUS } from '$lib/projetos';
+	import { Input, Select, FormShell, RichText } from '$lib/components/ui';
 	import ResponsavelPicker from '$lib/components/ResponsavelPicker.svelte';
 
 	let {
 		projeto = null,
-		clientes = [],
 		colaboradores = [],
 		error = null,
 		submitLabel = 'Salvar',
@@ -16,7 +17,6 @@
 		onDone
 	}: {
 		projeto?: Record<string, any> | null;
-		clientes?: { id: string; nome: string }[];
 		colaboradores?: { id: string; nome: string }[];
 		error?: string | null;
 		submitLabel?: string;
@@ -28,47 +28,30 @@
 	} = $props();
 
 	const v = (k: string) => projeto?.[k] ?? '';
-	// Mesma regra do MRR do cliente: quem não tem o módulo 'valores' não vê nem
-	// edita o valor do projeto. A flag vem do +layout.server.ts.
-	const podeValores = $derived(page.data.podeValores !== false);
+
+	// O editor é contenteditable: o HTML viaja num campo escondido para a action
+	// receber `descricao` como qualquer outro campo do formulário.
+	let descricao = $state(((projeto?.descricao as string | null) ?? '') as string);
 </script>
 
 <FormShell {action} {error} {submitLabel} {onCancel} {onDone} cancelHref="/projetos">
-	<div class="grid grid-cols-1 md:grid-cols-12 gap-4">
-		<Input label="Nome do projeto *" name="nome" required value={v('nome')} wrapperClass="md:col-span-6" />
-		<Select label="Cliente *" name="cliente_id" required value={projeto?.cliente_id ?? ''} wrapperClass="md:col-span-6">
-			<option value="" disabled>Selecione um cliente</option>
-			{#each clientes as c (c.id)}<option value={c.id}>{c.nome}</option>{/each}
-		</Select>
-
-		<Select label="Tipo" name="tipo" value={projeto?.tipo ?? 'social_media'} wrapperClass="md:col-span-4">
-			{#each PROJETO_TIPO as t (t.value)}<option value={t.value}>{t.label}</option>{/each}
-		</Select>
-		<Select label="Status" name="status" value={projeto?.status ?? 'em_andamento'} wrapperClass="md:col-span-4">
+	<div class="grid grid-cols-1 gap-4 md:grid-cols-12">
+		<Input label="Nome do projeto *" name="nome" required value={v('nome')} wrapperClass="md:col-span-5" />
+		<Select label="Status" name="status" value={projeto?.status ?? 'em_construcao'} wrapperClass="md:col-span-3">
 			{#each PROJETO_STATUS as s (s.value)}<option value={s.value}>{s.label}</option>{/each}
 		</Select>
-		<ResponsavelPicker {colaboradores} value={projeto?.responsavel_id ?? null} wrapperClass="md:col-span-12" />
+		<ResponsavelPicker {colaboradores} value={projeto?.responsavel_id ?? null} wrapperClass="md:col-span-4" />
 
-		<Input label="Início" type="date" name="data_inicio" value={v('data_inicio')} wrapperClass="md:col-span-3" />
-		<Input label="Prazo" type="date" name="prazo" value={v('prazo')} wrapperClass="md:col-span-3" />
-		{#if podeValores}
-			<Input label="Valor (R$, se pontual)" type="number" step="0.01" name="valor" value={v('valor')} wrapperClass="md:col-span-3" />
-		{:else}
-			<!-- Sem `name`: o campo nem entra no FormData, e a action ainda ignora o
-			     valor de quem não pode vê-lo. Duas travas, de propósito. -->
-			<Input
-				label="Valor (R$, se pontual)"
-				value={VALOR_MASCARA}
-				disabled
-				readonly
-				title="Só CEO e Administrador veem os valores"
-				wrapperClass="md:col-span-3"
+		<div class="md:col-span-12">
+			<span class="mb-1.5 block text-sm font-medium text-navy">Descrição</span>
+			<RichText
+				value={(projeto?.descricao as string | null) ?? ''}
+				placeholder="Onde está hospedado, qual banco de dados, domínio, variáveis de ambiente, o que falta fazer…"
+				minHeight={260}
+				alturaColapsada={460}
+				onSave={(html) => (descricao = html)}
 			/>
-		{/if}
-		<div class="md:col-span-3 flex items-end">
-			<Checkbox label="Recorrente" name="recorrente" checked={!!projeto?.recorrente} />
+			<input type="hidden" name="descricao" value={descricao} />
 		</div>
-
-		<Textarea label="Descrição" name="descricao" rows={3} value={v('descricao')} wrapperClass="md:col-span-12" />
 	</div>
 </FormShell>
