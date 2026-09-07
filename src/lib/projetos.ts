@@ -8,6 +8,7 @@ import { str } from '$lib/form';
 import { sanitizarHtml } from '$lib/richtext';
 
 export const PROJETO_STATUS = [
+	{ value: 'suspenso', label: 'Suspenso' },
 	{ value: 'em_construcao', label: 'Em construção' },
 	{ value: 'em_producao', label: 'Em produção' }
 ] as const;
@@ -18,6 +19,8 @@ export function projetoStatusTone(status: string): 'warning' | 'success' | 'neut
 			return 'warning';
 		case 'em_producao':
 			return 'success';
+		// Suspenso é cinza de propósito: parado não é problema nem conquista, e
+		// uma cor forte o faria disputar atenção com o que está andando.
 		default:
 			return 'neutral';
 	}

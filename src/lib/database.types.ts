@@ -1545,7 +1545,7 @@ export type Database = {
 					template_id: string | null
 					nome: string
 					descricao: string | null
-					status: 'em_construcao' | 'em_producao'
+					status: 'suspenso' | 'em_construcao' | 'em_producao'
 					created_at: string
 					updated_at: string
 					url: string | null
@@ -1559,7 +1559,7 @@ export type Database = {
 					template_id?: string | null
 					nome: string
 					descricao?: string | null
-					status?: 'em_construcao' | 'em_producao'
+					status?: 'suspenso' | 'em_construcao' | 'em_producao'
 					created_at?: string
 					updated_at?: string
 					url?: string | null
@@ -1573,7 +1573,7 @@ export type Database = {
 					template_id?: string | null
 					nome?: string
 					descricao?: string | null
-					status?: 'em_construcao' | 'em_producao'
+					status?: 'suspenso' | 'em_construcao' | 'em_producao'
 					created_at?: string
 					updated_at?: string
 					url?: string | null
@@ -1781,7 +1781,7 @@ export type Database = {
 			crm_negocio_status: 'aberto' | 'ganho' | 'perdido'
 			interacao_tipo: 'reuniao' | 'ligacao' | 'email' | 'whatsapp' | 'nota'
 			perm_nivel: 'nenhum' | 'ver' | 'editar' | 'excluir'
-			projeto_status: 'em_construcao' | 'em_producao'
+			projeto_status: 'suspenso' | 'em_construcao' | 'em_producao'
 			projeto_tipo: 'social_media' | 'design' | 'trafego' | 'impresso' | 'site' | 'outro'
 			transacao_status: 'previsto' | 'pago' | 'atrasado'
 			transacao_tipo: 'receita' | 'despesa'
