@@ -3,49 +3,11 @@ import { acoesDeItem, acoesNaPagina } from '$lib/server/crud';
 // `vault` renomeado: no load abaixo essa palavra já é o cofre carregado.
 import { clientes, vault as recursoVault } from '$lib/server/recursos';
 import { carregarCalendario } from '$lib/server/calendario';
+import { carregarVault } from '$lib/server/vault';
 import { podeVer } from '$lib/permissoes';
 import { sel } from '$lib/server/query';
 import { podeVerValores } from '$lib/valores';
-import type { VaultItem } from '$lib/vault';
 import type { Actions, PageServerLoad } from './$types';
-
-type SupabaseClient = Parameters<PageServerLoad>[0]['locals']['supabase'];
-
-/** Tabela ainda não criada = migration 0051 pendente (não é erro do usuário). */
-const VAULT_PENDENTE_RX = /cliente_vault|does not exist|schema cache|relation/i;
-
-/** Acessos do cofre deste cliente. Só chamado para quem tem o módulo 'vault'. */
-async function carregarVault(supabase: SupabaseClient, clienteId: string) {
-	const { data, error: e } = await supabase
-		.from('cliente_vault')
-		.select(
-			'id, titulo, categoria, url, login, senha, observacoes, responsavel_id, posicao, updated_at'
-		)
-		.eq('cliente_id', clienteId)
-		.order('posicao', { ascending: true })
-		.order('titulo', { ascending: true });
-
-	if (e) {
-		const pendente = VAULT_PENDENTE_RX.test(e.message ?? '');
-		return { itens: [] as VaultItem[], pendente, erro: pendente ? null : e.message };
-	}
-	return {
-		itens: (data ?? []).map((v) => ({
-			id: v.id as string,
-			titulo: v.titulo as string,
-			categoria: (v.categoria as string | null) ?? null,
-			url: (v.url as string | null) ?? null,
-			login: (v.login as string | null) ?? null,
-			senha: (v.senha as string | null) ?? null,
-			observacoes: (v.observacoes as string | null) ?? null,
-			responsavel_id: (v.responsavel_id as string | null) ?? null,
-			posicao: (v.posicao as number) ?? 0,
-			updated_at: (v.updated_at as string | null) ?? null
-		})) as VaultItem[],
-		pendente: false,
-		erro: null
-	};
-}
 
 export const load: PageServerLoad = async ({ params, url, locals: { supabase, permissoes } }) => {
 	// O cofre só é consultado por quem tem o módulo; sem permissão, nem as senhas
@@ -54,7 +16,7 @@ export const load: PageServerLoad = async ({ params, url, locals: { supabase, pe
 	const [{ data: cliente, error: e }, calendario, vault] = await Promise.all([
 		supabase.from('clientes').select('*').eq('id', params.id).single(),
 		carregarCalendario(supabase, url, { clienteFixo: params.id }),
-		podeVault ? carregarVault(supabase, params.id) : Promise.resolve(null)
+		podeVault ? carregarVault(supabase, 'cliente_vault', 'cliente_id', params.id) : Promise.resolve(null)
 	]);
 
 	if (e || !cliente) throw error(404, 'Cliente não encontrado');

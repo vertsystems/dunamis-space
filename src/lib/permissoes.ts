@@ -29,10 +29,10 @@ export const MODULOS: Modulo[] = [
 	{ id: 'permissoes', label: 'Permissões', grupo: 'administrativo', rotas: ['/administrativo/permissoes'] },
 	{ id: 'clientes', label: 'Clientes', grupo: 'administrativo', rotas: ['/clientes', '/cadastro'] },
 	// Sem rotas: não governa uma tela, e sim o cofre de acessos DENTRO da área do
-	// cliente. Ver o cliente não implica ver as senhas dele — por isso é módulo
-	// separado de 'clientes'. Como não entra no seed da 0034, nasce 'nenhum' para
+	// cliente (0051) e da área do projeto (0064). Ver o cliente ou o projeto não
+	// implica ver as senhas dele — por isso é módulo separado. Como não entra no seed da 0034, nasce 'nenhum' para
 	// todos os cargos; só super-admin (ceo/admin) enxerga até alguém liberar.
-	{ id: 'vault', label: 'Vault (acessos do cliente)', grupo: 'administrativo', rotas: [] },
+	{ id: 'vault', label: 'Vault (acessos de cliente e projeto)', grupo: 'administrativo', rotas: [] },
 	{ id: 'fornecedores', label: 'Fornecedores', grupo: 'administrativo', rotas: ['/fornecedores'] },
 	{ id: 'onboarding', label: 'Onboarding', grupo: 'administrativo', rotas: ['/onboarding'] },
 	{ id: 'equipe', label: 'Equipe', grupo: 'administrativo', rotas: ['/equipe'] },
@@ -56,7 +56,7 @@ export const MODULOS: Modulo[] = [
 	{ id: 'conteudo', label: 'Conteúdo', grupo: 'marketing', rotas: ['/conteudo'] },
 	{ id: 'processos', label: 'Processos', grupo: 'marketing', rotas: ['/processos'] },
 	{ id: 'contratos', label: 'Contratos', grupo: 'administrativo', rotas: ['/contratos'] },
-	{ id: 'projetos', label: 'Projetos', grupo: 'marketing', rotas: ['/projetos'] },
+	{ id: 'projetos', label: 'Projetos', grupo: 'administrativo', rotas: ['/projetos'] },
 	{ id: 'pagsup', label: "Pag's Up", grupo: 'dtools', rotas: ['/dtools/pagsup'] },
 	// Módulo SEM rotas: não governa telas, e sim os valores em R$ dentro delas
 	// (cliente, plano, contrato). Quem não tem 'ver' enxerga a máscara ***** e

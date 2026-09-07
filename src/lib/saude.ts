@@ -33,7 +33,6 @@ export const MODULOS_SAUDE: Modulo[] = [
 	{ label: 'Conteúdo (calendário)', grupo: 'Marketing', tabelas: ['conteudos'] },
 	{ label: 'Aprovações de post', grupo: 'Marketing', tabelas: ['aprovacoes'] },
 	{ label: 'Comentários em posts', grupo: 'Marketing', tabelas: ['comentarios'] },
-	{ label: 'Projetos', grupo: 'Marketing', tabelas: ['projetos'] },
 	{ label: 'Processos', grupo: 'Marketing', tabelas: ['processos'] },
 	// Comercial
 	{ label: 'Negócios (funil)', grupo: 'Comercial', tabelas: ['crm_negocios'] },
@@ -44,6 +43,8 @@ export const MODULOS_SAUDE: Modulo[] = [
 	// Administrativo
 	{ label: 'Clientes', grupo: 'Administrativo', tabelas: ['clientes'] },
 	{ label: 'Cofre dos clientes', grupo: 'Administrativo', tabelas: ['cliente_vault'] },
+	{ label: 'Projetos', grupo: 'Administrativo', tabelas: ['projetos'] },
+	{ label: 'Cofre dos projetos', grupo: 'Administrativo', tabelas: ['projeto_vault'] },
 	{ label: 'Fornecedores', grupo: 'Administrativo', tabelas: ['adm_fornecedores'] },
 	{ label: 'Ferramentas & contas', grupo: 'Administrativo', tabelas: ['adm_ferramentas', 'adm_acessos'] },
 	{ label: 'Contratos e planos', grupo: 'Administrativo', tabelas: ['contratos', 'planos'] },

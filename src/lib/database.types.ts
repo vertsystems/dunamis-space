@@ -1,7 +1,7 @@
 // GERADO AUTOMATICAMENTE — não edite à mão.
 // Regenerar:  PGPASSWORD='<senha-postgres>' node scripts/gen-types.mjs
 //
-// Reflete o schema public do Supabase (2026-08-11).
+// Reflete o schema public do Supabase (2026-09-07).
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -1538,6 +1538,51 @@ export type Database = {
 				}
 				Relationships: []
 			}
+			projeto_vault: {
+				Row: {
+					id: string
+					projeto_id: string
+					titulo: string
+					categoria: string | null
+					url: string | null
+					login: string | null
+					senha: string | null
+					observacoes: string | null
+					responsavel_id: string | null
+					posicao: number
+					created_at: string
+					updated_at: string
+				}
+				Insert: {
+					id?: string
+					projeto_id: string
+					titulo: string
+					categoria?: string | null
+					url?: string | null
+					login?: string | null
+					senha?: string | null
+					observacoes?: string | null
+					responsavel_id?: string | null
+					posicao?: number
+					created_at?: string
+					updated_at?: string
+				}
+				Update: {
+					id?: string
+					projeto_id?: string
+					titulo?: string
+					categoria?: string | null
+					url?: string | null
+					login?: string | null
+					senha?: string | null
+					observacoes?: string | null
+					responsavel_id?: string | null
+					posicao?: number
+					created_at?: string
+					updated_at?: string
+				}
+				Relationships: []
+			}
 			projetos: {
 				Row: {
 					id: string
@@ -1651,6 +1696,8 @@ export type Database = {
 					status: string
 					created_at: string
 					updated_at: string
+					imagem_url: string | null
+					imagens: string[]
 				}
 				Insert: {
 					id?: string
@@ -1662,6 +1709,8 @@ export type Database = {
 					status?: string
 					created_at?: string
 					updated_at?: string
+					imagem_url?: string | null
+					imagens?: string[]
 				}
 				Update: {
 					id?: string
@@ -1673,6 +1722,8 @@ export type Database = {
 					status?: string
 					created_at?: string
 					updated_at?: string
+					imagem_url?: string | null
+					imagens?: string[]
 				}
 				Relationships: []
 			}

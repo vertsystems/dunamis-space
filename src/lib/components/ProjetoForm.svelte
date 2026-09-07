@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import { PROJETO_TIPO, PROJETO_STATUS } from '$lib/projetos';
+	import { VALOR_MASCARA } from '$lib/valores';
 	import { Input, Select, Textarea, Checkbox, FormShell } from '$lib/components/ui';
 	import ResponsavelPicker from '$lib/components/ResponsavelPicker.svelte';
 
@@ -26,6 +28,9 @@
 	} = $props();
 
 	const v = (k: string) => projeto?.[k] ?? '';
+	// Mesma regra do MRR do cliente: quem não tem o módulo 'valores' não vê nem
+	// edita o valor do projeto. A flag vem do +layout.server.ts.
+	const podeValores = $derived(page.data.podeValores !== false);
 </script>
 
 <FormShell {action} {error} {submitLabel} {onCancel} {onDone} cancelHref="/projetos">
@@ -46,7 +51,20 @@
 
 		<Input label="Início" type="date" name="data_inicio" value={v('data_inicio')} wrapperClass="md:col-span-3" />
 		<Input label="Prazo" type="date" name="prazo" value={v('prazo')} wrapperClass="md:col-span-3" />
-		<Input label="Valor (R$, se pontual)" type="number" step="0.01" name="valor" value={v('valor')} wrapperClass="md:col-span-3" />
+		{#if podeValores}
+			<Input label="Valor (R$, se pontual)" type="number" step="0.01" name="valor" value={v('valor')} wrapperClass="md:col-span-3" />
+		{:else}
+			<!-- Sem `name`: o campo nem entra no FormData, e a action ainda ignora o
+			     valor de quem não pode vê-lo. Duas travas, de propósito. -->
+			<Input
+				label="Valor (R$, se pontual)"
+				value={VALOR_MASCARA}
+				disabled
+				readonly
+				title="Só CEO e Administrador veem os valores"
+				wrapperClass="md:col-span-3"
+			/>
+		{/if}
 		<div class="md:col-span-3 flex items-end">
 			<Checkbox label="Recorrente" name="recorrente" checked={!!projeto?.recorrente} />
 		</div>

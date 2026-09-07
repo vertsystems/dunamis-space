@@ -102,6 +102,7 @@
 			areas: [
 				{ href: '/administrativo', label: 'Visão Geral', icon: 'admin' },
 				{ href: '/cadastro', label: 'Clientes', icon: 'file' },
+				{ href: '/projetos', label: 'Projetos', icon: 'folder' },
 				{ href: '/fornecedores', label: 'Fornecedores', icon: 'building' },
 				{ href: '/onboarding', label: 'Onboarding', icon: 'clipboard' },
 				{ href: '/equipe', label: 'Equipe', icon: 'users' },
