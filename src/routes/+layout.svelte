@@ -8,7 +8,7 @@
 	import '$lib/styles/design-system.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import logo from '$lib/assets/dspace-logo.svg';
-	import { goto, invalidate, invalidateAll } from '$app/navigation';
+	import { goto, invalidate } from '$app/navigation';
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { DTOOLS_FERRAMENTAS } from '$lib/dtools';
@@ -18,7 +18,6 @@
 	import CargoBadge from '$lib/components/CargoBadge.svelte';
 	import SosWidget from '$lib/components/SosWidget.svelte';
 	import { Toaster } from '$lib/components/ui';
-	import { toast } from '$lib/toast.svelte';
 
 	let { children, data } = $props();
 	let { supabase, session } = $derived(data);
@@ -186,11 +185,25 @@
 	});
 
 	let refreshing = $state(false);
-	async function refresh() {
-		refreshing = true;
-		await invalidateAll();
-		refreshing = false;
-		toast.success('Dados atualizados');
+	/**
+	 * Recarrega a PÁGINA, não só os dados.
+	 *
+	 * Antes isto era um invalidateAll(): ele refaz os `load` e traz dados novos
+	 * do banco, mas o JS e o CSS que já estão na aba continuam sendo os de
+	 * antes. Depois de um deploy, o botão dizia "Dados atualizados" e a tela
+	 * seguia igual — que é justamente quando alguém aperta atualizar.
+	 *
+	 * location.reload() revalida o documento no servidor, e os arquivos do build
+	 * têm hash no nome (_app/immutable/…): o HTML novo já aponta para o JS e o
+	 * CSS novos, então não sobra versão velha para trás. É o Cmd+Shift+R sem
+	 * precisar lembrar do atalho.
+	 *
+	 * Sem toast no fim de propósito: a página vai embora antes de alguém ler.
+	 */
+	function refresh() {
+		if (refreshing) return;
+		refreshing = true; // o ícone gira até a aba trocar de página
+		location.reload();
 	}
 
 	// Rotas "nuas" (sem o app shell): login e o portal público de aprovação.
@@ -250,8 +263,8 @@
 						class="icon-btn"
 						class:is-spinning={refreshing}
 						onclick={refresh}
-						title="Atualizar"
-						aria-label="Atualizar"
+						title="Recarregar a página"
+						aria-label="Recarregar a página"
 					>
 						<Icon name="refresh" size={14} />
 					</button>
