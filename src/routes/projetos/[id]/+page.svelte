@@ -9,7 +9,12 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import { ExternalLink } from '@lucide/svelte';
 	import { Card, Badge, Button, Breadcrumb, Modal } from '$lib/components/ui';
-	import { projetoStatusTone, projetoStatusLabel, PROJETO_ONDE } from '$lib/projetos';
+	import {
+		projetoStatusTone,
+		projetoStatusLabel,
+		projetoStatusClasse,
+		PROJETO_ONDE
+	} from '$lib/projetos';
 	import { urlAbsoluta, urlCurta } from '$lib/vault';
 	import { ehHtml, sanitizarHtml } from '$lib/richtext';
 	import { iniciais } from '$lib/crm';
@@ -62,7 +67,9 @@
 		<div class="min-w-0 flex-1">
 			<div class="flex flex-wrap items-center gap-2">
 				<h1 class="text-[1.3rem] font-semibold text-navy">{p.nome}</h1>
-				<Badge tone={projetoStatusTone(p.status)}>{projetoStatusLabel(p.status)}</Badge>
+				<Badge tone={projetoStatusTone(p.status)} class={projetoStatusClasse(p.status)}
+							>{projetoStatusLabel(p.status)}</Badge
+						>
 			</div>
 			{#if fmtQuando(p.updated_at)}
 				<p class="mt-0.5 text-sm text-grey">Atualizado em {fmtQuando(p.updated_at)}</p>

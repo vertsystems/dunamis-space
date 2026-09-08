@@ -26,6 +26,17 @@ export function projetoStatusTone(status: string): 'warning' | 'success' | 'neut
 	}
 }
 
+/**
+ * Classe extra do badge de status. Hoje só o "Em produção" tem: ele ganha um
+ * anel verde em degradê com brilho (ver .badge-producao no design-system.css).
+ *
+ * Existe para os três lugares que desenham o badge — cartão, lista e ficha —
+ * não terem de lembrar disso cada um por si.
+ */
+export function projetoStatusClasse(status: string): string {
+	return status === 'em_producao' ? 'badge-producao' : '';
+}
+
 export function projetoStatusLabel(status: string): string {
 	return PROJETO_STATUS.find((s) => s.value === status)?.label ?? status;
 }

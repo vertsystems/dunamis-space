@@ -2,7 +2,12 @@
 	import { untrack } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
-	import { PROJETO_STATUS, projetoStatusTone, projetoStatusLabel } from '$lib/projetos';
+	import {
+		PROJETO_STATUS,
+		projetoStatusTone,
+		projetoStatusLabel,
+		projetoStatusClasse
+	} from '$lib/projetos';
 	import { urlAbsoluta, urlCurta } from '$lib/vault';
 	import { marcaDe } from '$lib/marcas';
 	import { paraTexto } from '$lib/richtext';
@@ -201,7 +206,9 @@
 						</div>
 					</td>
 					<td class="px-4 py-3">
-						<Badge tone={projetoStatusTone(p.status)}>{projetoStatusLabel(p.status)}</Badge>
+						<Badge tone={projetoStatusTone(p.status)} class={projetoStatusClasse(p.status)}
+							>{projetoStatusLabel(p.status)}</Badge
+						>
 					</td>
 					<td class="px-4 py-3">
 						{#if p.url}
@@ -282,7 +289,9 @@
 								href={`/projetos/${p.id}`}
 								class="truncate font-semibold text-navy no-underline hover:text-brand">{p.nome}</a
 							>
-							<Badge tone={projetoStatusTone(p.status)}>{projetoStatusLabel(p.status)}</Badge>
+							<Badge tone={projetoStatusTone(p.status)} class={projetoStatusClasse(p.status)}
+							>{projetoStatusLabel(p.status)}</Badge
+						>
 						</div>
 						{#if p.url}
 							<a

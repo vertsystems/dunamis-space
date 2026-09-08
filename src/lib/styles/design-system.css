@@ -65,6 +65,65 @@
 	}
 }
 
+/* --------------------------------------------------------------------------
+ * Badge "Em produção" do projeto — o anel verde com brilho.
+ *
+ * Só o projeto NO AR ganha isto. O tom 'success' do Badge é usado no sistema
+ * inteiro (ponto, financeiro, conteúdo, clientes), então mexer nele acenderia
+ * badge verde em tela que ninguém pediu — daí uma classe à parte, aplicada por
+ * projetoStatusClasse() em $lib/projetos.
+ *
+ * O anel é um ::before mascarado, e não um `border`: borda não aceita gradiente,
+ * e pintar o fundo para simular a borda apagaria o tint translúcido do badge
+ * (que precisa deixar passar tanto o branco do card quanto o cinza da linha sob
+ * o mouse). A máscara recorta o miolo e sobra só a moldura de 1px.
+ *
+ * O brilho anda devagar de propósito: é um selo de "está no ar", não um alarme.
+ * O @media prefers-reduced-motion global (app.scss) já congela a animação para
+ * quem pediu menos movimento.
+ * -------------------------------------------------------------------------- */
+.badge-producao {
+	position: relative;
+	box-shadow: 0 0 12px -3px color-mix(in srgb, var(--color-brand-green) 55%, transparent);
+}
+
+.badge-producao::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	padding: 1px;
+	background: linear-gradient(
+		115deg,
+		color-mix(in srgb, var(--color-brand-green) 35%, white),
+		var(--color-brand-green) 45%,
+		color-mix(in srgb, var(--color-brand-green) 55%, white) 70%,
+		color-mix(in srgb, var(--color-brand-green) 30%, white)
+	);
+	background-size: 220% 100%;
+	/* Pinta a área toda, recorta o miolo (content-box) e sobra a moldura. */
+	-webkit-mask:
+		linear-gradient(#000 0 0) content-box,
+		linear-gradient(#000 0 0);
+	-webkit-mask-composite: xor;
+	mask:
+		linear-gradient(#000 0 0) content-box,
+		linear-gradient(#000 0 0);
+	mask-composite: exclude;
+	animation: brilho-producao 4.5s ease-in-out infinite;
+	pointer-events: none;
+}
+
+@keyframes brilho-producao {
+	0%,
+	100% {
+		background-position: 0% 50%;
+	}
+	50% {
+		background-position: 100% 50%;
+	}
+}
+
 /* Renderização de fonte mais limpa/premium */
 html {
 	-webkit-font-smoothing: antialiased;
