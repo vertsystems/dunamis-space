@@ -54,11 +54,3 @@ export function clientesAtivos(supabase: Supa) {
 		.overrideTypes<NomeLite[], { merge: false }>();
 }
 
-/** Projetos (id + nome), para seletores. */
-export function projetosLite(supabase: Supa) {
-	return supabase
-		.from('projetos')
-		.select('id, nome')
-		.order('nome')
-		.overrideTypes<NomeLite[], { merge: false }>();
-}

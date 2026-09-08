@@ -13,7 +13,7 @@ const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
 
 /** Campos duplicáveis de um conteúdo (exclui id/timestamps). */
 const COPIAVEIS =
-	'cliente_id, projeto_id, responsavel_id, tipo, tipos, titulo, status, legenda, arte_url, redes, publicado_manual';
+	'cliente_id, responsavel_id, tipo, tipos, titulo, status, legenda, arte_url, redes, publicado_manual';
 
 export const actions: Actions = {
 	// Arrastar-e-soltar: mover o post para outra data (mantém a hora enviada).

@@ -485,7 +485,6 @@
 			action="/conteudo/novo"
 			submitLabel="Criar conteúdo"
 			clientes={data.clientes}
-			projetos={data.projetos}
 			colaboradores={data.colaboradores}
 			campanhas={data.campanhasNomes ?? []}
 			conteudo={res?.values ?? novoConteudo}
@@ -502,7 +501,6 @@
 			action={`/conteudo/${editando.id}?/update`}
 			submitLabel="Salvar alterações"
 			clientes={data.clientes}
-			projetos={data.projetos}
 			colaboradores={data.colaboradores}
 			campanhas={data.campanhasNomes ?? []}
 			conteudo={res?.values ?? editando}

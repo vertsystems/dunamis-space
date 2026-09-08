@@ -6,7 +6,6 @@
 	let {
 		conteudo = null,
 		clientes = [],
-		projetos = [],
 		colaboradores = [],
 		campanhas = [],
 		error = null,
@@ -18,7 +17,6 @@
 	}: {
 		conteudo?: Record<string, any> | null;
 		clientes?: { id: string; nome: string }[];
-		projetos?: { id: string; nome: string }[];
 		colaboradores?: { id: string; nome: string }[];
 		/** Nomes de campanha já usados, para o autocomplete. */
 		campanhas?: string[];
@@ -163,10 +161,6 @@
 			</div>
 		</div>
 
-		<Select label="Projeto" name="projeto_id" value={conteudo?.projeto_id ?? ''} wrapperClass="md:col-span-4">
-			<option value="">—</option>
-			{#each projetos as p (p.id)}<option value={p.id}>{p.nome}</option>{/each}
-		</Select>
 		<ResponsavelPicker {colaboradores} value={conteudo?.responsavel_id ?? null} wrapperClass="md:col-span-12" />
 		<Input label="URL da arte" name="arte_url" value={v('arte_url')} placeholder="link do Drive/imagem" wrapperClass="md:col-span-4" />
 

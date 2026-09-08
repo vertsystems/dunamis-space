@@ -95,7 +95,7 @@ export async function carregarCalendario(
 	let qConteudos = supabase
 		.from('conteudos')
 		.select(
-			'id, titulo, tipo, tipos, status, data_publicacao, legenda, arte_url, redes, publicado_manual, cliente_id, projeto_id, responsavel_id, campanha, cliente:clientes(nome)'
+			'id, titulo, tipo, tipos, status, data_publicacao, legenda, arte_url, redes, publicado_manual, cliente_id, responsavel_id, campanha, cliente:clientes(nome)'
 		)
 		.not('data_publicacao', 'is', null)
 		.gte('data_publicacao', gteISO)
@@ -105,12 +105,10 @@ export async function carregarCalendario(
 
 	const [
 		{ data: clientes, error: errCli },
-		{ data: projetos },
 		{ data: colaboradores },
 		{ data: conteudosRaw, error: errCon }
 	] = await Promise.all([
 		supabase.from('clientes').select('id, nome').order('nome'),
-		supabase.from('projetos').select('id, nome').order('created_at', { ascending: false }),
 		supabase.from('colaboradores').select('id, nome, avatar_url, funcao, funcoes').eq('ativo', true).order('nome'),
 		qConteudos
 	]);
@@ -131,7 +129,6 @@ export async function carregarCalendario(
 		redes: (c.redes as string[] | null) ?? [],
 		publicado_manual: !!c.publicado_manual,
 		cliente_id: (c.cliente_id as string | null) ?? null,
-		projeto_id: (c.projeto_id as string | null) ?? null,
 		responsavel_id: (c.responsavel_id as string | null) ?? null,
 		campanha: (c.campanha as string | null) ?? null
 	}));
@@ -149,7 +146,6 @@ export async function carregarCalendario(
 		next: mesSeguinte(ano, mes),
 		clienteFiltro,
 		clientes: clientes ?? [],
-		projetos: projetos ?? [],
 		colaboradores: colaboradores ?? [],
 		conteudos,
 		campanhasNomes,

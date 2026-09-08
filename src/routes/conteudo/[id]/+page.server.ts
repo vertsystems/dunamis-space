@@ -11,14 +11,12 @@ export const load: PageServerLoad = async ({ params, locals: { supabase } }) => 
 	const [
 		{ data: conteudo, error: e },
 		{ data: clientes },
-		{ data: projetos },
 		{ data: colaboradores },
 		{ data: aprovacoes },
 		campanhas
 	] = await Promise.all([
 		supabase.from('conteudos').select('*').eq('id', params.id).single(),
 		clientesLite(supabase),
-		supabase.from('projetos').select('id, nome').order('created_at', { ascending: false }),
 		colaboradoresAtivos(supabase),
 		supabase
 			.from('aprovacoes')
@@ -32,7 +30,6 @@ export const load: PageServerLoad = async ({ params, locals: { supabase } }) => 
 	return {
 		conteudo,
 		clientes: clientes ?? [],
-		projetos: projetos ?? [],
 		colaboradores: colaboradores ?? [],
 		campanhas,
 		aprovacao: aprovacoes?.[0] ?? null
