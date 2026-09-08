@@ -5,9 +5,10 @@
 	import { PROJETO_STATUS, projetoStatusTone, projetoStatusLabel } from '$lib/projetos';
 	import { urlAbsoluta, urlCurta } from '$lib/vault';
 	import { paraTexto } from '$lib/richtext';
-	import { ExternalLink } from '@lucide/svelte';
+	import { ExternalLink, LayoutGrid, List } from '@lucide/svelte';
 	import { iniciais } from '$lib/crm';
-	import { Card, Badge, Button, Input, Select, EmptyState, Modal } from '$lib/components/ui';
+	import { Card, Badge, Button, Input, Select, EmptyState, Modal, DataTable } from '$lib/components/ui';
+	import type { ColumnDef } from '$lib/components/ui';
 	import ProjetoForm from '$lib/components/ProjetoForm.svelte';
 	import MarcaIcon from '$lib/components/MarcaIcon.svelte';
 	import { toast } from '$lib/toast.svelte';
@@ -47,6 +48,36 @@
 		return s ? new Date(s).toLocaleDateString('pt-BR') : '—';
 	}
 
+	// --- Grade × lista ---
+	// A visão viaja na URL, como os filtros: o link fica compartilhável e o
+	// back/forward do navegador volta para a visão anterior. Trocar de visão
+	// preserva busca e status (e o <form> devolve a visão no hidden abaixo).
+	const VISOES = [
+		{ key: 'grade' as const, label: 'Grade', icon: LayoutGrid },
+		{ key: 'lista' as const, label: 'Lista', icon: List }
+	];
+	function hrefVisao(v: 'grade' | 'lista'): string {
+		const p = new URLSearchParams(page.url.searchParams);
+		// 'grade' é o padrão: sai da URL em vez de sujá-la com o óbvio.
+		if (v === 'grade') p.delete('visao');
+		else p.set('visao', v);
+		const busca = p.toString();
+		return busca ? `?${busca}` : '/projetos';
+	}
+
+	const colunas: ColumnDef<Projeto>[] = [
+		{ id: 'nome', accessorFn: (p) => p.nome ?? '', meta: { label: 'Projeto' } },
+		{ id: 'status', accessorFn: (p) => projetoStatusLabel(p.status), meta: { label: 'Status' } },
+		{ id: 'url', accessorFn: (p) => p.url ?? '', meta: { label: 'Onde está' } },
+		{
+			id: 'responsavel',
+			accessorFn: (p) => p.responsavel?.nome ?? '',
+			meta: { label: 'Responsável' }
+		},
+		{ id: 'updated_at', accessorFn: (p) => p.updated_at ?? '', meta: { label: 'Atualizado' } },
+		{ id: 'acoes', accessorFn: () => '', enableSorting: false, meta: { label: '', thClass: 'text-right' } }
+	];
+
 	let novoAberto = $state(false);
 	let editando = $state<Projeto | null>(null);
 
@@ -71,6 +102,8 @@
 		<!-- Um formulário só: buscar e filtrar mandam tudo junto, senão filtrar
 		     apagaria a busca (e vice-versa). -->
 		<form class="flex flex-wrap items-end gap-2" method="GET">
+			<!-- Filtrar não pode jogar quem está na lista de volta para a grade. -->
+			{#if data.visao === 'lista'}<input type="hidden" name="visao" value="lista" />{/if}
 			<Input
 				type="search"
 				name="q"
@@ -85,6 +118,27 @@
 			</Select>
 			<Button variant="secondary" type="submit">Filtrar</Button>
 		</form>
+		<div
+			class="inline-flex gap-0.5 rounded-[var(--radius)] bg-bg p-1"
+			role="group"
+			aria-label="Modo de visualização"
+		>
+			{#each VISOES as v (v.key)}
+				{@const Icone = v.icon}
+				{@const ativa = data.visao === v.key}
+				<a
+					href={hrefVisao(v.key)}
+					title={v.label}
+					aria-label={`Ver em ${v.label.toLowerCase()}`}
+					aria-current={ativa ? 'true' : undefined}
+					class="grid size-9 place-items-center rounded-[var(--radius-sm)] no-underline transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35 {ativa
+						? 'bg-surface text-navy shadow-sm'
+						: 'text-slate hover:text-navy'}"
+				>
+					<Icone size={16} />
+				</a>
+			{/each}
+		</div>
 		{#if podeEditar(perms, 'projetos')}
 			<Button onclick={() => (novoAberto = true)}>+ Novo projeto</Button>
 		{/if}
@@ -97,7 +151,88 @@
 	</div>
 {/if}
 
-{#if data.projetos.length}
+{#if data.projetos.length && data.visao === 'lista'}
+	<!-- Sem initialSort: a lista chega na mesma ordem da grade (mais recentes
+	     primeiro). Quem quiser outra ordem clica no cabeçalho. -->
+	<Card padding="none" class="overflow-hidden">
+		<DataTable columns={colunas} data={data.projetos}>
+			{#snippet row(r)}
+				{@const p = r.original}
+				<tr class="border-b border-grey-200/60 last:border-0 hover:bg-bg">
+					<td class="px-4 py-3">
+						<div class="flex items-center gap-2.5">
+							<span
+								class="grid size-8 shrink-0 place-items-center rounded-full text-[0.65rem] font-bold text-white shadow-sm {corAvatar(
+									p.nome
+								)}">{iniciais(p.nome)}</span
+							>
+							<a
+								href={`/projetos/${p.id}`}
+								class="font-medium text-navy no-underline hover:text-brand">{p.nome}</a
+							>
+						</div>
+					</td>
+					<td class="px-4 py-3">
+						<Badge tone={projetoStatusTone(p.status)}>{projetoStatusLabel(p.status)}</Badge>
+					</td>
+					<td class="px-4 py-3">
+						{#if p.url}
+							<a
+								href={urlAbsoluta(p.url)}
+								target="_blank"
+								rel="noopener"
+								class="inline-flex items-center gap-1 text-brand no-underline hover:underline"
+								title={p.url}
+							>
+								<MarcaIcon texto={p.url} size={12} />{urlCurta(p.url)}<ExternalLink size={11} />
+							</a>
+						{:else}
+							<span class="text-grey">—</span>
+						{/if}
+					</td>
+					<td class="px-4 py-3">
+						{#if p.responsavel}
+							<div class="flex items-center gap-2">
+								{#if p.responsavel.avatar_url}
+									<img
+										src={p.responsavel.avatar_url}
+										alt=""
+										class="size-6 rounded-full object-cover shadow-sm"
+									/>
+								{:else}
+									<span
+										class="grid size-6 place-items-center rounded-full text-[0.6rem] font-semibold text-white {corAvatar(
+											p.responsavel.nome
+										)}">{iniciais(p.responsavel.nome)}</span
+									>
+								{/if}
+								<span class="text-slate">{p.responsavel.nome}</span>
+							</div>
+						{:else}
+							<span class="text-grey">—</span>
+						{/if}
+					</td>
+					<td class="px-4 py-3 tabular-nums text-slate">{fmtQuando(p.updated_at)}</td>
+					<td class="px-4 py-3">
+						<div class="flex items-center justify-end gap-3">
+							{#if podeEditar(perms, 'projetos')}
+								<button
+									type="button"
+									class="text-slate hover:text-navy"
+									onclick={() => (editando = p)}>Editar</button
+								>
+							{/if}
+							<a
+								class="font-medium text-brand no-underline hover:underline"
+								href={`/projetos/${p.id}`}>Abrir</a
+							>
+						</div>
+					</td>
+				</tr>
+			{/snippet}
+		</DataTable>
+	</Card>
+{:else if data.projetos.length}
 	<div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
 		{#each data.projetos as p (p.id)}
 			<Card class="flex flex-col gap-3 transition-shadow hover:shadow-md">

@@ -5,6 +5,9 @@ import type { PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	const status = url.searchParams.get('status') ?? '';
 	const q = url.searchParams.get('q')?.trim() ?? '';
+	// Grade (cartões) é o padrão; a lista é para quando são muitos projetos e o
+	// que importa é comparar linha a linha. Valor desconhecido cai na grade.
+	const visao = url.searchParams.get('visao') === 'lista' ? 'lista' : 'grade';
 
 	let query = supabase
 		.from('projetos')
@@ -25,6 +28,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		projetos,
 		status,
 		q,
+		visao,
 		colaboradores: colaboradores ?? [],
 		loadError: error?.message ?? null
 	};
