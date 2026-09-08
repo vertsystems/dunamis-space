@@ -4,6 +4,7 @@
 	import { page } from '$app/state';
 	import { PROJETO_STATUS, projetoStatusTone, projetoStatusLabel } from '$lib/projetos';
 	import { urlAbsoluta, urlCurta } from '$lib/vault';
+	import { marcaDe } from '$lib/marcas';
 	import { paraTexto } from '$lib/richtext';
 	import { ExternalLink, LayoutGrid, List } from '@lucide/svelte';
 	import { iniciais } from '$lib/crm';
@@ -36,6 +37,32 @@
 		let h = 0;
 		for (let i = 0; i < nome.length; i++) h = (h * 31 + nome.charCodeAt(i)) >>> 0;
 		return AVATAR_CORES[h % AVATAR_CORES.length];
+	}
+
+	/**
+	 * As tecnologias que o projeto cita nos campos de "onde está", sem repetir.
+	 *
+	 * Devolve os TEXTOS dos campos, não as marcas: quem desenha é o MarcaIcon,
+	 * que já sabe achar a marca no texto — assim existe um lugar só decidindo o
+	 * que vira logo.
+	 *
+	 * A marca da URL fica de fora porque ela já aparece colada no link logo
+	 * acima; sem isso, um projeto em playarkania.vercel.app hospedado na Vercel
+	 * mostraria o mesmo logo duas vezes na mesma linha.
+	 */
+	function tecnologias(p: Projeto): string[] {
+		const vistos = new Set<string>();
+		const daUrl = marcaDe(p.url);
+		if (daUrl) vistos.add(daUrl.slug);
+
+		const textos: string[] = [];
+		for (const valor of [p.repositorio, p.hospedagem, p.banco_dados]) {
+			const m = marcaDe(valor);
+			if (!m || vistos.has(m.slug)) continue;
+			vistos.add(m.slug);
+			textos.push(valor as string);
+		}
+		return textos;
 	}
 
 	/** Primeira linha das anotações, em texto puro — a descrição é HTML. */
@@ -158,6 +185,7 @@
 		<DataTable columns={colunas} data={data.projetos}>
 			{#snippet row(r)}
 				{@const p = r.original}
+				{@const tecs = tecnologias(p)}
 				<tr class="border-b border-grey-200/60 last:border-0 hover:bg-bg">
 					<td class="px-4 py-3">
 						<div class="flex items-center gap-2.5">
@@ -188,6 +216,11 @@
 							</a>
 						{:else}
 							<span class="text-grey">—</span>
+						{/if}
+						{#if tecs.length}
+							<div class="mt-1 flex flex-wrap items-center gap-1.5">
+								{#each tecs as texto (texto)}<MarcaIcon {texto} size={14} />{/each}
+							</div>
 						{/if}
 					</td>
 					<td class="px-4 py-3">
@@ -235,6 +268,7 @@
 {:else if data.projetos.length}
 	<div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
 		{#each data.projetos as p (p.id)}
+			{@const tecs = tecnologias(p)}
 			<Card class="flex flex-col gap-3 transition-shadow hover:shadow-md">
 				<div class="flex items-start gap-3">
 					<span
@@ -262,6 +296,11 @@
 							</a>
 						{:else}
 							<p class="mt-0.5 text-xs text-grey">Atualizado em {fmtQuando(p.updated_at)}</p>
+						{/if}
+						{#if tecs.length}
+							<div class="mt-1.5 flex flex-wrap items-center gap-2">
+								{#each tecs as texto (texto)}<MarcaIcon {texto} size={16} />{/each}
+							</div>
 						{/if}
 					</div>
 				</div>

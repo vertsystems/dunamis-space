@@ -11,7 +11,9 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 
 	let query = supabase
 		.from('projetos')
-		.select('id, nome, status, descricao, url, responsavel_id, updated_at, responsavel:colaboradores(nome, avatar_url)')
+		.select(
+			'id, nome, status, descricao, url, repositorio, hospedagem, banco_dados, responsavel_id, updated_at, responsavel:colaboradores(nome, avatar_url)'
+		)
 		.order('created_at', { ascending: false });
 
 	if (status) query = query.eq('status', status);
