@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { page } from '$app/state';
 	import { CLIENTE_STATUS, type ClienteEndereco } from '$lib/clientes';
 	import { VALOR_MASCARA } from '$lib/valores';
@@ -68,7 +69,7 @@
 	// Valor inicial de propósito (o svelte-check avisa): a partir daqui quem manda
 	// é o que a pessoa digita. Trocar de cliente recarrega a lista no $effect
 	// abaixo, junto com a foto.
-	let enderecos = $state<Linha[]>(enderecosIniciais(cliente));
+	let enderecos = $state<Linha[]>(untrack(() => enderecosIniciais(cliente)));
 
 	function adicionarEndereco() {
 		enderecos = [...enderecos, linhaVazia()];
@@ -85,7 +86,7 @@
 	// Um $state puro travaria no valor inicial: reabrir o modal para OUTRO
 	// cliente mostraria a foto do anterior.
 	let escolhida = $state<string | null | undefined>(undefined);
-	let idAtual = $state<string | null>((cliente?.id as string | null) ?? null);
+	let idAtual = $state<string | null>(untrack(() => (cliente?.id as string | null) ?? null));
 	$effect(() => {
 		const id = (cliente?.id as string | null) ?? null;
 		if (id !== idAtual) {

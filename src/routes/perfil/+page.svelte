@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { fade, scale } from 'svelte/transition';
@@ -31,13 +32,13 @@
 	]);
 
 	// --- Dados pessoais (form) — $state p/ os inputs não resetarem durante o save ---
-	let nome = $state((colab?.nome as string) ?? '');
-	let telefone = $state((colab?.telefone as string) ?? '');
-	let local = $state((colab?.local as string) ?? '');
+	let nome = $state(untrack(() => (colab?.nome as string) ?? ''));
+	let telefone = $state(untrack(() => (colab?.telefone as string) ?? ''));
+	let local = $state(untrack(() => (colab?.local as string) ?? ''));
 	let salvando = $state(false);
 
 	// --- Avatar: galeria de imagens de static/avatares/ ---
-	let avatarAtual = $state((colab?.avatar_url as string | null) ?? null);
+	let avatarAtual = $state(untrack(() => (colab?.avatar_url as string | null) ?? null));
 	let modalAvatar = $state(false);
 	let salvandoAvatar = $state(false);
 
@@ -60,7 +61,7 @@
 	}
 
 	// --- Personalização: cor de destaque do sistema (só para este login) ---
-	let corAtual = $state(normalizaHex(colab?.cor_tema) ?? COR_PADRAO);
+	let corAtual = $state(untrack(() => normalizaHex(colab?.cor_tema) ?? COR_PADRAO));
 	let salvandoCor = $state(false);
 
 	function aplicarTema(hex: string) {
@@ -91,7 +92,7 @@
 		{ value: 'en-US', label: 'English (US)' },
 		{ value: 'es-ES', label: 'Español' }
 	];
-	let idioma = $state((colab?.idioma as string) ?? 'pt-BR');
+	let idioma = $state(untrack(() => (colab?.idioma as string) ?? 'pt-BR'));
 	async function salvarIdioma(valor: string) {
 		idioma = valor;
 		const { error } = await data.supabase

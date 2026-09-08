@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import {
 		TRANSACAO_TIPO,
@@ -44,8 +45,8 @@
 		},
 		{ id: 'acoes', accessorFn: () => '', meta: { label: '' } }
 	];
-	let tipo = $state(data.tipo);
-	let status = $state(data.status);
+	let tipo = $state(untrack(() => data.tipo));
+	let status = $state(untrack(() => data.status));
 	// Re-sincroniza os filtros com a URL (back/forward do navegador).
 	$effect(() => {
 		tipo = data.tipo;

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { deserialize } from '$app/forms';
 	import { Card, Badge, Button, Modal } from '$lib/components/ui';
@@ -17,7 +18,7 @@
 	const hojeItens = $derived(itensPorDia[data.rotina.dia] ?? []);
 	const diaHoje = $derived(DIAS[data.rotina.dia]);
 
-	let feitos = $state(new Set<string>(data.rotina.feitos));
+	let feitos = $state(untrack(() => new Set<string>(data.rotina.feitos)));
 	$effect(() => {
 		feitos = new Set(data.rotina.feitos);
 	});

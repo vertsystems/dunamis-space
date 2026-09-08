@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
 	import { Card, Badge, Button, Input, EmptyState, DataTable, Modal } from '$lib/components/ui';
@@ -12,7 +13,7 @@
 	const perms = $derived(page.data.permissoes);
 	// O form vem de actions de outras rotas (/base-conhecimento/novo, /[id]?/update) → tipagem solta.
 	const res = $derived(form as { values?: Record<string, any>; error?: string } | null);
-	let q = $state(data.q);
+	let q = $state(untrack(() => data.q));
 	// Re-sincroniza o campo com a URL (ex.: back/forward do navegador).
 	$effect(() => {
 		q = data.q;

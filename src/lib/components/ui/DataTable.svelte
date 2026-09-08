@@ -9,6 +9,7 @@
 	// Tabela com ordenação client-side (motor do TanStack Table). As linhas são
 	// renderizadas pelo caller via snippet `row` → mantém estilo/links/badges do DS.
 	import type { Snippet } from 'svelte';
+	import { untrack } from 'svelte';
 	import {
 		createTable,
 		getCoreRowModel,
@@ -35,13 +36,15 @@
 		class?: string;
 	} = $props();
 
-	let sorting = $state<SortingState>(initialSort);
+	let sorting = $state<SortingState>(untrack(() => initialSort));
 
 	const table = createTable<T>({
 		get data() {
 			return data;
 		},
-		columns,
+		get columns() {
+			return columns;
+		},
 		state: {
 			get sorting() {
 				return sorting;

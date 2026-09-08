@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	// Formulário de um acesso do cofre do cliente (criar/editar em modal, padrão
 	// do sistema). Submete nativamente para as actions vault_* de /cadastro/[id].
 	import { Input, Select, FormShell, RichText } from '$lib/components/ui';
@@ -45,7 +46,7 @@
 
 	// O editor é contenteditable: o HTML viaja num campo escondido para a action
 	// receber `observacoes` como qualquer outro campo do formulário.
-	let observacoes = $state(((item?.observacoes as string | null) ?? '') as string);
+	let observacoes = $state(untrack(() => ((item?.observacoes as string | null) ?? '') as string));
 </script>
 
 <FormShell {action} {error} {submitLabel} {onCancel} {onDone} footerClass="mt-5">

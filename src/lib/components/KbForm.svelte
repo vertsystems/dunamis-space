@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { tagsToText } from '$lib/kb';
 	import { Input, Select, Textarea, FormShell } from '$lib/components/ui';
 
@@ -23,7 +24,7 @@
 	} = $props();
 
 	const v = (k: string) => artigo?.[k] ?? '';
-	const tags = artigo?.tags ? tagsToText(artigo.tags) : '';
+	const tags = untrack(() => (artigo?.tags ? tagsToText(artigo.tags) : ''));
 </script>
 
 <FormShell {action} {error} {submitLabel} {onCancel} {onDone} cancelHref="/base-conhecimento">

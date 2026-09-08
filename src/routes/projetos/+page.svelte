@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
 	import { PROJETO_STATUS, projetoStatusTone, projetoStatusLabel } from '$lib/projetos';
@@ -21,8 +22,8 @@
 	type Projeto = (typeof data.projetos)[number];
 
 	// Filtros: espelham a URL, e o back/forward do navegador re-sincroniza.
-	let status = $state(data.status);
-	let q = $state(data.q);
+	let status = $state(untrack(() => data.status));
+	let q = $state(untrack(() => data.q));
 	$effect(() => {
 		status = data.status;
 		q = data.q;

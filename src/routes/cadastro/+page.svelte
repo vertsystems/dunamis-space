@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
 	import { podeEditar } from '$lib/permissoes';
@@ -52,7 +53,7 @@
 			.filter((k): k is NonNullable<typeof k> => !!k);
 	}
 
-	let q = $state(data.q);
+	let q = $state(untrack(() => data.q));
 	// Re-sincroniza o campo com a URL (ex.: back/forward do navegador).
 	$effect(() => {
 		q = data.q;

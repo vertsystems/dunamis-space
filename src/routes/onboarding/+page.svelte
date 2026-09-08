@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { Button, Card, Badge, Input, Select } from '$lib/components/ui';
 	import Icon from '$lib/components/Icon.svelte';
 	import { toast } from '$lib/toast.svelte';
@@ -12,7 +13,7 @@
 	const perms = $derived(page.data.permissoes);
 
 	// Estado local dos itens, clonado de data + re-sync a cada navegação/invalidação.
-	let itens = $state(data.itens.map((x) => ({ ...x })));
+	let itens = $state(untrack(() => data.itens.map((x) => ({ ...x }))));
 	$effect(() => {
 		itens = data.itens.map((x) => ({ ...x }));
 	});

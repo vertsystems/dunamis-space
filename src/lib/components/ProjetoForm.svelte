@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	// Formulário do projeto próprio, em duas faixas: em cima a identificação e os
 	// endereços de "onde está" (o que ele procura de relance quando volta ao
 	// projeto), embaixo a Descrição com o editor formatado — é ali que entram as
@@ -31,7 +32,7 @@
 
 	// O editor é contenteditable: o HTML viaja num campo escondido para a action
 	// receber `descricao` como qualquer outro campo do formulário.
-	let descricao = $state(((projeto?.descricao as string | null) ?? '') as string);
+	let descricao = $state(untrack(() => ((projeto?.descricao as string | null) ?? '') as string));
 </script>
 
 <FormShell {action} {error} {submitLabel} {onCancel} {onDone} cancelHref="/projetos">

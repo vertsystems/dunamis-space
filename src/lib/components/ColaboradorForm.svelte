@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { FUNCAO } from '$lib/equipe';
 	import { DIAS } from '$lib/rotina';
 	import { JORNADA_PADRAO } from '$lib/ponto';
@@ -25,11 +26,12 @@
 	const v = (k: string) => colaborador?.[k] ?? '';
 
 	// Jornada: o banco guarda minutos, a conversa é em horas por dia.
-	const jornadaHoras =
-		Math.round(((colaborador?.jornada_minutos ?? JORNADA_PADRAO.minutos) / 60) * 100) / 100;
-	const jornadaDias: number[] = colaborador?.jornada_dias?.length
-		? colaborador.jornada_dias
-		: JORNADA_PADRAO.dias;
+	const jornadaHoras = untrack(
+		() => Math.round(((colaborador?.jornada_minutos ?? JORNADA_PADRAO.minutos) / 60) * 100) / 100
+	);
+	const jornadaDias: number[] = untrack(() =>
+		colaborador?.jornada_dias?.length ? colaborador.jornada_dias : JORNADA_PADRAO.dias
+	);
 </script>
 
 <FormShell {action} {error} {submitLabel} {onCancel} {onDone} cancelHref="/equipe">

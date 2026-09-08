@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { page } from '$app/state';
 	import { CONTRATO_STATUS } from '$lib/contratos';
 	import { VALOR_MASCARA } from '$lib/valores';
@@ -26,8 +27,8 @@
 		onDone?: () => void;
 	} = $props();
 
-	let planoId = $state(contrato?.plano_id ?? '');
-	let valor = $state(contrato?.valor_mensal ?? '');
+	let planoId = $state(untrack(() => contrato?.plano_id ?? ''));
+	let valor = $state(untrack(() => contrato?.valor_mensal ?? ''));
 	// Vem do +layout.server.ts (módulo de permissão 'valores').
 	const podeValores = $derived(page.data.podeValores !== false);
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { CONTRATO_STATUS, contratoStatusTone, contratoStatusLabel } from '$lib/contratos';
 	import { valorBRL } from '$lib/valores';
@@ -13,7 +14,7 @@
 	const perms = $derived(page.data.permissoes);
 	// O form vem de actions de outras rotas (/contratos/novo, /[id]?/update) → tipagem solta.
 	const res = $derived(form as { values?: Record<string, any>; error?: string } | null);
-	let status = $state(data.status);
+	let status = $state(untrack(() => data.status));
 	// Re-sincroniza o filtro com a URL (back/forward do navegador).
 	$effect(() => {
 		status = data.status;
