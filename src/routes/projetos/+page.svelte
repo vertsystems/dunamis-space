@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
 	import {
 		PROJETO_STATUS,
@@ -35,6 +35,19 @@
 		status = data.status;
 		q = data.q;
 	});
+
+	// Escolher um status já filtra: um <select> só tem um jeito de ser usado, e
+	// pedir um clique em Filtrar depois da escolha é um passo a mais sem razão.
+	// A busca continua no botão (ou no Enter) — digitar ainda não é ter escolhido.
+	// Leva junto o que está na barra de filtros, como o <form> faria.
+	function aplicaStatus(valor: string) {
+		const p = new URLSearchParams();
+		if (q) p.set('q', q);
+		if (valor) p.set('status', valor);
+		if (data.visao === 'lista') p.set('visao', 'lista');
+		const busca = p.toString();
+		goto(busca ? `?${busca}` : '/projetos', { keepFocus: true, noScroll: true });
+	}
 
 	// Cor determinística a partir do nome — mesma paleta do resto do sistema.
 	const AVATAR_CORES = ['bg-navy', 'bg-brand', 'bg-brand-green', 'bg-brand-danger', 'bg-slate'];
@@ -144,7 +157,13 @@
 				bind:value={q}
 				wrapperClass="w-52"
 			/>
-			<Select name="status" bind:value={status} aria-label="Filtrar por status" wrapperClass="w-44">
+			<Select
+				name="status"
+				bind:value={status}
+				onchange={(e) => aplicaStatus(e.currentTarget.value)}
+				aria-label="Filtrar por status"
+				wrapperClass="w-44"
+			>
 				<option value="">Todos os status</option>
 				{#each PROJETO_STATUS as s (s.value)}<option value={s.value}>{s.label}</option>{/each}
 			</Select>
