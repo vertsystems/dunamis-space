@@ -86,9 +86,6 @@
 				{ href: '/', label: 'Visão Geral', icon: 'home' },
 				{ href: '/meu-dia', label: 'Meu Dia', icon: 'calendar' },
 				...areasFerramentas,
-				{ href: '/desempenho', label: 'Desempenho', icon: 'chart' },
-				{ href: '/atalhos', label: 'Atalhos', icon: 'zap' },
-				{ href: '/notificacoes', label: 'Notificações', icon: 'bell' },
 				{ href: '/perfil', label: 'Meu Perfil', icon: 'contact' }
 			]
 		},
@@ -103,13 +100,11 @@
 				{ href: '/cadastro', label: 'Clientes', icon: 'file' },
 				{ href: '/projetos', label: 'Projetos', icon: 'folder' },
 				{ href: '/fornecedores', label: 'Fornecedores', icon: 'building' },
-				{ href: '/onboarding', label: 'Onboarding', icon: 'clipboard' },
 				{ href: '/equipe', label: 'Equipe', icon: 'users' },
 				{ href: '/administrativo/ponto', label: 'Ponto', icon: 'clock' },
 				{ href: '/administrativo/permissoes', label: 'Permissões', icon: 'shield' },
 				{ href: '/administrativo/saude', label: 'Saúde do sistema', icon: 'chart' },
 				{ href: '/ferramentas', label: 'Ferramentas & Contas', icon: 'key' },
-				{ href: '/base-conhecimento', label: 'Base de Conhecimento', icon: 'book' },
 				{ href: '/sos', label: 'Central SOS', icon: 'lifebuoy' }
 			]
 		},
