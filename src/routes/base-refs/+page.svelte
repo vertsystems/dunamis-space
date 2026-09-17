@@ -142,54 +142,51 @@
 <div class="progresso" style:width="{progresso}%" aria-hidden="true"></div>
 
 <div class="refs space-y-4" bind:this={raiz}>
-	<!-- Identidade + busca (mesmo hero do DTools) -->
+	<!-- Identidade + busca numa linha só (mesmo hero do DTools, compacto) -->
 	<Card>
-		<div class="flex items-start gap-4">
-			<span
-				class="grid size-14 shrink-0 place-items-center rounded-[var(--radius-lg)] bg-brand text-white shadow-md"
-			>
-				<Icon name="refs" size={28} />
-			</span>
-			<div class="min-w-0 flex-1">
-				<h1 class="text-2xl font-bold text-navy leading-none">Base Refs</h1>
-				<p class="text-2xs font-semibold text-grey uppercase tracking-[0.14em] mt-1.5">
-					{TOTAL_REFS} ferramentas em {NICHOS.length} nichos
-				</p>
-				<p class="text-sm text-slate mt-3 max-w-2xl">
-					Você não precisa de mais uma ferramenta — precisa achar a certa em 10 segundos.
-					Organizado por problema, não por ordem alfabética: escolha o nicho no menu ou digite o
-					que precisa resolver.
-				</p>
+		<div class="flex flex-wrap items-center gap-x-5 gap-y-3">
+			<div class="flex items-center gap-3.5">
+				<span
+					class="grid size-12 shrink-0 place-items-center rounded-[var(--radius-lg)] bg-brand text-white shadow-md"
+				>
+					<Icon name="refs" size={24} />
+				</span>
+				<div>
+					<h1 class="text-2xl font-bold text-navy leading-none">Base Refs</h1>
+					<p class="text-2xs font-semibold text-grey uppercase tracking-[0.14em] mt-1.5">
+						{TOTAL_REFS} ferramentas em {NICHOS.length} nichos
+					</p>
+				</div>
+			</div>
+
+			<div class="busca ml-auto w-full min-w-[260px] flex-1 sm:max-w-md">
+				<label class="sr-only" for="refs-busca">Buscar ferramenta</label>
+				<span class="busca__lupa text-grey"><Icon name="search" size={16} /></span>
+				<input
+					id="refs-busca"
+					type="search"
+					autocomplete="off"
+					spellcheck="false"
+					placeholder="Buscar por nome, site ou o que resolve"
+					class="h-11 w-full rounded-[var(--radius)] border border-grey-200 bg-surface pl-10 pr-24 text-sm text-navy-900 shadow-xs placeholder:text-grey/90 transition-colors hover:border-grey focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25"
+					bind:value={busca}
+					bind:this={campo}
+				/>
+				<span class="busca__atalho text-2xs font-semibold uppercase tracking-wider text-grey">
+					<kbd class="rounded-[6px] border border-grey-200 bg-bg px-1.5 py-0.5 font-sans">/</kbd>
+					buscar
+				</span>
 			</div>
 		</div>
-
-		<div class="busca mt-5 max-w-xl">
-			<label class="sr-only" for="refs-busca">Buscar ferramenta</label>
-			<span class="busca__lupa text-grey"><Icon name="search" size={16} /></span>
-			<input
-				id="refs-busca"
-				type="search"
-				autocomplete="off"
-				spellcheck="false"
-				placeholder="Buscar por nome, site ou o que resolve"
-				class="h-11 w-full rounded-[var(--radius)] border border-grey-200 bg-surface pl-10 pr-24 text-sm text-navy-900 shadow-xs placeholder:text-grey/90 transition-colors hover:border-grey focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25"
-				bind:value={busca}
-				bind:this={campo}
-			/>
-			<span class="busca__atalho text-2xs font-semibold uppercase tracking-wider text-grey">
-				<kbd class="rounded-[6px] border border-grey-200 bg-bg px-1.5 py-0.5 font-sans">/</kbd>
-				buscar
-			</span>
-		</div>
-		<p class="mt-2 min-h-5 text-sm text-grey" aria-live="polite">
-			{#if q}
+		{#if q}
+			<p class="mt-3 text-sm text-grey" aria-live="polite">
 				{#if achou === 0}
 					Nenhum resultado para <b class="font-semibold text-navy">{q}</b>
 				{:else}
 					<b class="font-semibold text-brand">{achou}</b> de {TOTAL_REFS} recursos
 				{/if}
-			{/if}
-		</p>
+			</p>
+		{/if}
 	</Card>
 
 	<!-- Faixa de chips: substitui o trilho quando a coluna fica estreita -->
@@ -717,6 +714,10 @@
 	@container refs (max-width: 520px) {
 		.busca__atalho {
 			display: none;
+		}
+		/* Sem o atalho, o campo não precisa reservar espaço à direita. */
+		.busca input {
+			padding-right: 0.875rem;
 		}
 		.tags {
 			gap: 8px;
