@@ -1,19 +1,13 @@
 <script lang="ts">
-	// Base Refs — cópia fiel de https://filestools.vercel.app/ dentro do app:
-	// mesma capa, mesmo trilho de nichos, mesma busca e as mesmas 105 referências.
-	// Os dados moram em $lib/baseRefs.ts; aqui é só apresentação e interação.
-	//
-	// Fontes do site original, auto-hospedadas (o app não depende do Google
-	// Fonts). Só os pesos usados no CSS abaixo entram no bundle.
-	import '@fontsource/bebas-neue/400.css';
-	import '@fontsource/hanken-grotesk/400.css';
-	import '@fontsource/hanken-grotesk/500.css';
-	import '@fontsource/hanken-grotesk/600.css';
-	import '@fontsource/hanken-grotesk/700.css';
-	import '@fontsource/jetbrains-mono/600.css';
-	import '@fontsource/cormorant-garamond/600-italic.css';
+	// Base Refs — biblioteca de referências de design, no padrão visual do
+	// Dunamis Space (fundo gelo, cards brancos, azul primário, Inter). A
+	// estrutura veio do filestools.vercel.app: nichos numerados, trilho lateral
+	// que acompanha a rolagem e busca que filtra tudo. Os dados moram em
+	// $lib/baseRefs.ts; aqui é só apresentação e interação.
 	import { onMount } from 'svelte';
 	import { NICHOS, TOTAL_REFS, chaveDeBusca, semAcento } from '$lib/baseRefs';
+	import { Card, EmptyState } from '$lib/components/ui';
+	import Icon from '$lib/components/Icon.svelte';
 
 	// Índice de busca calculado uma vez: cada link já com a chave normalizada.
 	const indice = NICHOS.map((nicho) => ({
@@ -108,7 +102,7 @@
 						const r = chip.getBoundingClientRect();
 						if (r.left < f.left || r.right > f.right) {
 							rolo.scrollTo({
-								left: rolo.scrollLeft + (r.left - f.left) - 20,
+								left: rolo.scrollLeft + (r.left - f.left) - 16,
 								behavior: reduz ? 'auto' : 'smooth'
 							});
 						}
@@ -122,7 +116,8 @@
 		/* atalhos: "/" foca a busca, Esc limpa */
 		function tecla(e: KeyboardEvent) {
 			const el = document.activeElement as HTMLElement | null;
-			const digitando = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+			const digitando =
+				el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
 			if (e.key === '/' && !digitando) {
 				e.preventDefault();
 				campo.focus();
@@ -141,53 +136,61 @@
 </script>
 
 <svelte:head>
-	<title>Base Refs · {TOTAL_REFS} ferramentas em {NICHOS.length} nichos | Dunamis Space</title>
+	<title>Base Refs | Dunamis Space</title>
 </svelte:head>
 
 <div class="progresso" style:width="{progresso}%" aria-hidden="true"></div>
 
-<div class="refs" class:vazio bind:this={raiz}>
-	<header class="capa">
-		<div class="capa__brilho" aria-hidden="true"></div>
-		<img class="capa__crest" src="/base-refs/crest.png" alt="" width="420" height="420" aria-hidden="true" />
-		<div class="marca" aria-label="Dunamis">
-			<span class="marca__z">D</span><span class="marca__risco"></span><span class="marca__nome">DUNAMIS</span>
+<div class="refs space-y-4" bind:this={raiz}>
+	<!-- Identidade + busca (mesmo hero do DTools) -->
+	<Card>
+		<div class="flex items-start gap-4">
+			<span
+				class="grid size-14 shrink-0 place-items-center rounded-[var(--radius-lg)] bg-brand text-white shadow-md"
+			>
+				<Icon name="refs" size={28} />
+			</span>
+			<div class="min-w-0 flex-1">
+				<h1 class="text-2xl font-bold text-navy leading-none">Base Refs</h1>
+				<p class="text-2xs font-semibold text-grey uppercase tracking-[0.14em] mt-1.5">
+					{TOTAL_REFS} ferramentas em {NICHOS.length} nichos
+				</p>
+				<p class="text-sm text-slate mt-3 max-w-2xl">
+					Você não precisa de mais uma ferramenta — precisa achar a certa em 10 segundos.
+					Organizado por problema, não por ordem alfabética: escolha o nicho no menu ou digite o
+					que precisa resolver.
+				</p>
+			</div>
 		</div>
-		<p class="capa__rotulo sobe">BASE REFS</p>
-		<h1 class="sobe d1">
-			Você não precisa de mais uma ferramenta.<br class="q" />
-			<em>Precisa achar a certa em 10 segundos.</em>
-		</h1>
-		<p class="capa__linha sobe d2">
-			Organizado por problema, não por ordem alfabética:<br class="q" /> escolhe o nicho no menu ou
-			digita o que precisa resolver.
-		</p>
-		<div class="busca sobe d3">
+
+		<div class="busca mt-5 max-w-xl">
 			<label class="sr-only" for="refs-busca">Buscar ferramenta</label>
+			<span class="busca__lupa text-grey"><Icon name="search" size={16} /></span>
 			<input
 				id="refs-busca"
 				type="search"
 				autocomplete="off"
 				spellcheck="false"
 				placeholder="Buscar por nome, site ou o que resolve"
+				class="h-11 w-full rounded-[var(--radius)] border border-grey-200 bg-surface pl-10 pr-24 text-sm text-navy-900 shadow-xs placeholder:text-grey/90 transition-colors hover:border-grey focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25"
 				bind:value={busca}
 				bind:this={campo}
 			/>
-			<svg class="busca__lupa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-				<circle cx="11" cy="11" r="7" /><path d="M20 20l-3.6-3.6" />
-			</svg>
-			<span class="busca__atalho"><kbd>/</kbd> buscar</span>
+			<span class="busca__atalho text-2xs font-semibold uppercase tracking-wider text-grey">
+				<kbd class="rounded-[6px] border border-grey-200 bg-bg px-1.5 py-0.5 font-sans">/</kbd>
+				buscar
+			</span>
 		</div>
-		<p class="busca__saldo" aria-live="polite">
+		<p class="mt-2 min-h-5 text-sm text-grey" aria-live="polite">
 			{#if q}
 				{#if achou === 0}
-					Nenhum resultado para <b>{q}</b>
+					Nenhum resultado para <b class="font-semibold text-navy">{q}</b>
 				{:else}
-					<b>{achou}</b> de {TOTAL_REFS} recursos
+					<b class="font-semibold text-brand">{achou}</b> de {TOTAL_REFS} recursos
 				{/if}
 			{/if}
 		</p>
-	</header>
+	</Card>
 
 	<!-- Faixa de chips: substitui o trilho quando a coluna fica estreita -->
 	<nav class="faixa" aria-label="Nichos">
@@ -202,7 +205,16 @@
 					data-fora={c === 0 ? '' : undefined}
 					onclick={(e) => irPara(e, n.id)}
 				>
-					<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+					<svg
+						class="chip__ico"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.75"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						aria-hidden="true"
+					>
 						<!-- eslint-disable-next-line svelte/no-at-html-tags — SVG estático de $lib/baseRefs -->
 						{@html n.icone}
 					</svg>
@@ -212,7 +224,7 @@
 		</div>
 	</nav>
 
-	<div class="corpo">
+	<Card padding="none" class="corpo">
 		<nav class="rail" aria-label="Navegação por nicho">
 			<p class="rail__titulo">{NICHOS.length} nichos</p>
 			{#each NICHOS as n (n.id)}
@@ -224,7 +236,16 @@
 					data-fora={c === 0 ? '' : undefined}
 					onclick={(e) => irPara(e, n.id)}
 				>
-					<svg class="rail__ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+					<svg
+						class="rail__ico"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.75"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						aria-hidden="true"
+					>
 						<!-- eslint-disable-next-line svelte/no-at-html-tags — SVG estático de $lib/baseRefs -->
 						{@html n.icone}
 					</svg>
@@ -236,18 +257,42 @@
 
 		<main class="miolo">
 			{#each resultado as { nicho, itens }, i (nicho.id)}
-				<section class="bloco" id="refs-{nicho.id}" data-bloco={nicho.id} hidden={itens.length === 0}>
+				<section
+					class="bloco"
+					id="refs-{nicho.id}"
+					data-bloco={nicho.id}
+					hidden={itens.length === 0}
+				>
 					<header class="bloco__topo" data-revela>
-						<div class="bloco__marca">
-							<svg class="bloco__ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-								<!-- eslint-disable-next-line svelte/no-at-html-tags — SVG estático de $lib/baseRefs -->
-								{@html nicho.icone}
-							</svg>
-							<p class="bloco__num">{pad(i + 1)}<em>/{NICHOS.length}</em></p>
+						<div class="flex items-center gap-3">
+							<span
+								class="grid size-9 shrink-0 place-items-center rounded-[var(--radius-sm)] bg-brand/10 text-brand"
+							>
+								<svg
+									class="size-[18px]"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="1.75"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									aria-hidden="true"
+								>
+									<!-- eslint-disable-next-line svelte/no-at-html-tags — SVG estático de $lib/baseRefs -->
+									{@html nicho.icone}
+								</svg>
+							</span>
+							<p class="text-2xs font-semibold uppercase tracking-[0.14em] text-grey tabular-nums">
+								{pad(i + 1)} <span class="text-grey-200">/</span> {pad(NICHOS.length)}
+							</p>
 						</div>
-						<h2 class="bloco__titulo">{nicho.titulo}</h2>
-						<p class="bloco__desc">{nicho.desc}</p>
-						<p class="bloco__cont"><b>{itens.length}</b> recursos</p>
+						<h2 class="mt-3 text-xl font-bold text-navy leading-tight text-balance">
+							{nicho.titulo}
+						</h2>
+						<p class="mt-1 max-w-xl text-sm text-slate">{nicho.desc}</p>
+						<p class="mt-3 text-2xs font-semibold uppercase tracking-[0.14em] text-grey">
+							<b class="text-navy">{itens.length}</b> recursos
+						</p>
 					</header>
 					<div class="tags" data-revela>
 						{#each nicho.ferramentas as f, j (f.href)}
@@ -261,83 +306,57 @@
 								hidden={!itens.some((x) => x.f === f)}
 							>
 								{#if f.logo}
-									<img class="tag__logo" src="/base-refs/logos/{f.logo}" alt="" width="22" height="22" loading="lazy" decoding="async" />
+									<img
+										class="tag__logo"
+										src="/base-refs/logos/{f.logo}"
+										alt=""
+										width="22"
+										height="22"
+										loading="lazy"
+										decoding="async"
+									/>
 								{:else}
-									<span class="tag__logo tag__logo--letra" aria-hidden="true">{f.letra ?? f.nome[0]}</span>
+									<span class="tag__logo tag__logo--letra" aria-hidden="true">
+										{f.letra ?? f.nome[0]}
+									</span>
 								{/if}
 								<span class="tag__nome">{f.nome}</span>
 								<span class="tag__host">{f.host}</span>
 								<svg class="tag__seta" viewBox="0 0 14 14" aria-hidden="true">
-									<path d="M3 11L11 3M5 3h6v6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+									<path
+										d="M3 11L11 3M5 3h6v6"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="1.6"
+										stroke-linecap="round"
+									/>
 								</svg>
 							</a>
 						{/each}
 					</div>
 				</section>
 			{/each}
-			<p class="vazio-msg">
-				Nada com esse nome por aqui. Tenta o <b>site</b>, uma palavra do <b>problema</b> ou o nome do
-				<b>nicho</b>.
-			</p>
+			{#if vazio}
+				<EmptyState
+					icon="search"
+					title="Nada com esse nome por aqui"
+					description="Tente o site, uma palavra do problema ou o nome do nicho."
+				/>
+			{/if}
 		</main>
-	</div>
+	</Card>
 </div>
 
 <style>
-	/* Paleta e ritmo do site original. Tudo escopado ao painel .refs — nada
-	   vaza para o resto do app (cores, fontes, seleção). */
+	/* Tokens do design system (design-system.css). Só o que Tailwind não
+	   expressa bem fica aqui: estados por data-attribute, sticky, entrada. */
 	.refs {
-		--bg: oklch(0.155 0.012 68);
-		--card: oklch(0.205 0.014 71);
-		--card2: oklch(0.235 0.016 72);
-		--gold: oklch(0.79 0.1 80);
-		--gold-light: oklch(0.88 0.09 86);
-		--gold-dim: oklch(0.6 0.1 68);
-		--gold-pale: oklch(0.82 0.05 82);
-		--white: oklch(0.945 0.014 82);
-		--gray: oklch(0.74 0.022 78);
-		--gray2: oklch(0.575 0.02 74);
-		--line: oklch(0.82 0.04 78 / 0.16);
-		--raio: 10px;
 		--curva: cubic-bezier(0.22, 1, 0.36, 1);
-		/* Recuo interno proporcional à LARGURA DO PAINEL (cqw), não da janela:
-		   dentro do app a coluna de conteúdo é bem mais estreita que 100vw. */
-		--margem: clamp(20px, 5cqw, 64px);
-		--rail: 280px;
+		--rail: 248px;
 		/* Altura da barra fixa do app + folga: onde o trilho gruda e até onde a
 		   rolagem por âncora precisa parar para o título não ficar por baixo. */
 		--topo: calc(var(--ds-topbar-space) + 8px);
-
 		container: refs / inline-size;
-		background: var(--bg);
-		color: var(--white);
-		font-family: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
-		font-size: 16px;
-		line-height: 1.55;
-		-webkit-font-smoothing: antialiased;
-		text-wrap: pretty;
-		border-radius: 22px;
-		/* clip (e não hidden): corta os cantos sem virar contêiner de rolagem,
-		   senão o position: sticky do trilho deixa de funcionar. */
-		overflow: clip;
-		box-shadow: 0 14px 34px -10px rgba(16, 24, 40, 0.24);
-	}
-	.refs ::selection {
-		background: var(--gold);
-		color: var(--bg);
-	}
-	.refs a {
-		color: inherit;
-	}
-	.ico {
-		width: 20px;
-		height: 20px;
-		flex: none;
-	}
-	h1,
-	h2 {
-		font-family: 'Bebas Neue', Impact, sans-serif;
-		font-weight: 400;
 	}
 
 	.progresso {
@@ -345,192 +364,40 @@
 		top: 0;
 		left: 0;
 		height: 2px;
-		background: oklch(0.79 0.1 80);
+		background: var(--color-brand);
 		width: 0;
 		z-index: 60; /* acima da barra de topo do app (30) */
 		transition: width 0.12s linear;
 	}
 
-	/* marca */
-	.marca {
-		position: absolute;
-		top: 34px;
-		right: var(--margem);
-		z-index: 5;
-		display: flex;
-		align-items: center;
-		gap: 12px;
-	}
-	.marca__z {
-		font-family: 'Cormorant Garamond', Georgia, serif;
-		font-style: italic;
-		font-weight: 600;
-		font-size: 28px;
-		color: var(--gold);
-		line-height: 1;
-	}
-	.marca__risco {
-		width: 1px;
-		height: 22px;
-		background: var(--gold-dim);
-	}
-	.marca__nome {
-		font-family: 'Bebas Neue', Impact, sans-serif;
-		font-size: 18px;
-		letter-spacing: 0.16em;
-		color: var(--gold-pale);
-	}
-
-	/* capa */
-	.capa {
-		position: relative;
-		padding: 96px var(--margem) 56px;
-		overflow: hidden;
-	}
-	.capa__brilho {
-		position: absolute;
-		top: -260px;
-		left: -10%;
-		width: 680px;
-		height: 680px;
-		background: radial-gradient(circle, rgba(201, 160, 88, 0.14), rgba(201, 160, 88, 0) 62%);
-		pointer-events: none;
-		animation: respira 14s ease-in-out infinite;
-	}
-	.capa__crest {
-		position: absolute;
-		right: -40px;
-		top: 60px;
-		width: 420px;
-		height: auto;
-		opacity: 0.028;
-		pointer-events: none;
-	}
-	@keyframes respira {
-		0%,
-		100% {
-			transform: scale(1);
-			opacity: 0.9;
-		}
-		50% {
-			transform: scale(1.14);
-			opacity: 0.55;
-		}
-	}
-	.capa__rotulo {
-		display: inline-flex;
-		align-items: center;
-		gap: 10px;
-		font-family: 'JetBrains Mono', ui-monospace, monospace;
-		font-weight: 600;
-		font-size: 11px;
-		letter-spacing: 0.18em;
-		color: var(--gold);
-	}
-	.capa__rotulo::before {
-		content: '';
-		width: 26px;
-		height: 1px;
-		background: var(--gold-dim);
-	}
-	.capa h1 {
-		font-size: clamp(27px, 3.4cqw, 43px);
-		line-height: 1.03;
-		letter-spacing: -0.015em;
-		margin: 14px 0 0;
-		max-width: 1160px;
-		color: var(--white);
-	}
-	.capa h1 em {
-		font-style: normal;
-		color: var(--gold);
-	}
-	.capa__linha {
-		font-size: 18px;
-		color: var(--gray);
-		max-width: 680px;
-		margin-top: 22px;
-	}
-	br.q {
-		display: none;
-	}
-	@container refs (min-width: 900px) {
-		br.q {
-			display: initial;
-		}
-	}
-
 	/* busca */
 	.busca {
 		position: relative;
-		margin-top: 34px;
-		max-width: 560px;
 	}
-	.busca input {
-		width: 100%;
-		background: var(--card);
-		border: 1px solid var(--line);
-		border-radius: 999px;
-		color: var(--white);
-		font: 500 16px 'Hanken Grotesk', sans-serif;
-		padding: 16px 108px 16px 50px;
-		transition:
-			border-color 0.3s var(--curva),
-			background 0.3s var(--curva);
+	.busca__lupa {
+		position: absolute;
+		left: 14px;
+		top: 50%;
+		transform: translateY(-50%);
+		display: grid;
+		pointer-events: none;
+		transition: color 0.2s var(--curva);
 	}
-	.busca input::placeholder {
-		color: var(--gray);
-	}
-	.busca input:focus {
-		outline: none;
-		border-color: var(--gold);
-		background: var(--card2);
+	.busca:focus-within .busca__lupa {
+		color: var(--color-brand);
 	}
 	.busca input::-webkit-search-cancel-button {
 		display: none;
 	}
-	.busca__lupa {
-		position: absolute;
-		left: 18px;
-		top: 50%;
-		transform: translateY(-50%);
-		color: var(--gray2);
-		width: 18px;
-		height: 18px;
-	}
-	.busca input:focus ~ .busca__lupa {
-		color: var(--gold);
-	}
 	.busca__atalho {
 		position: absolute;
-		right: 16px;
+		right: 12px;
 		top: 50%;
 		transform: translateY(-50%);
 		display: flex;
 		align-items: center;
-		gap: 8px;
-		font-size: 12px;
-		color: var(--gray2);
-		font-weight: 700;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-	}
-	.busca__atalho kbd {
-		font: inherit;
-		border: 1px solid var(--line);
-		border-radius: 6px;
-		padding: 2px 8px;
-		background: var(--bg);
-	}
-	.busca__saldo {
-		margin-top: 12px;
-		font-size: 14px;
-		color: var(--gray);
-		font-weight: 500;
-		min-height: 20px;
-	}
-	.busca__saldo b {
-		color: var(--gold);
+		gap: 6px;
+		pointer-events: none;
 	}
 
 	/* faixa (chips) — só quando o trilho não cabe */
@@ -539,11 +406,12 @@
 		top: var(--ds-topbar-full);
 		z-index: 20;
 		display: none;
-		background: rgba(11, 10, 8, 0.9);
+		margin-inline: calc(-1 * var(--ds-content-gap)) calc(-1 * var(--ds-gutter-right));
+		padding: 10px var(--ds-gutter-right) 10px var(--ds-content-gap);
+		background: rgba(243, 246, 251, 0.88);
 		backdrop-filter: blur(14px);
-		border-top: 1px solid var(--line);
-		border-bottom: 1px solid var(--line);
-		padding: 12px var(--margem);
+		-webkit-backdrop-filter: blur(14px);
+		border-bottom: 1px solid var(--color-grey-200);
 	}
 	.faixa__rolo {
 		display: flex;
@@ -559,44 +427,47 @@
 		align-items: center;
 		gap: 8px;
 		white-space: nowrap;
-		border: 1px solid var(--line);
+		border: 1px solid var(--color-grey-200);
+		background: var(--color-surface);
 		border-radius: 999px;
-		padding: 8px 14px;
-		font-size: 14px;
+		padding: 7px 12px;
+		font-size: 0.8125rem;
 		font-weight: 500;
 		text-decoration: none;
-		color: var(--white);
+		color: var(--color-navy);
+		box-shadow: var(--shadow-xs);
 		transition:
-			border-color 0.3s var(--curva),
-			background 0.3s var(--curva),
-			color 0.3s var(--curva);
+			border-color 0.25s var(--curva),
+			background 0.25s var(--curva),
+			color 0.25s var(--curva);
 	}
-	.chip .ico {
-		width: 16px;
-		height: 16px;
-		color: var(--gold-dim);
+	.chip__ico {
+		width: 15px;
+		height: 15px;
+		flex: none;
+		color: var(--color-grey);
 	}
 	.chip i {
 		font-style: normal;
-		font-size: 12px;
-		color: var(--gray2);
+		font-size: 0.6875rem;
+		font-weight: 600;
+		color: var(--color-grey);
 	}
 	.chip[data-ativo] {
-		background: var(--gold);
-		border-color: var(--gold);
-		color: var(--bg);
+		background: var(--color-brand);
+		border-color: var(--color-brand);
+		color: #fff;
+		box-shadow: 0 4px 12px -2px color-mix(in srgb, var(--color-brand) 50%, transparent);
 	}
-	.chip[data-ativo] .ico,
+	.chip[data-ativo] .chip__ico,
 	.chip[data-ativo] i {
-		color: rgba(11, 10, 8, 0.65);
+		color: rgba(255, 255, 255, 0.8);
 	}
 
-	/* corpo */
-	.corpo {
+	/* corpo: trilho + blocos dentro de um card só */
+	.refs :global(.corpo) {
 		display: grid;
 		grid-template-columns: var(--rail) minmax(0, 1fr);
-		gap: 56px;
-		padding: 0 var(--margem) 96px;
 	}
 	.rail {
 		position: sticky;
@@ -605,172 +476,125 @@
 		max-height: calc(100vh - var(--topo) - 32px);
 		overflow-y: auto;
 		scrollbar-width: none;
+		padding: 0.9rem 0.6rem;
+		border-right: 1px solid var(--color-grey-200);
 	}
 	.rail::-webkit-scrollbar {
 		display: none;
 	}
+	/* Mesmo rótulo da sidebar do app (.sidebar-title). */
 	.rail__titulo {
-		font-family: 'JetBrains Mono', ui-monospace, monospace;
-		font-weight: 600;
-		font-size: 10.5px;
-		letter-spacing: 0.16em;
-		color: var(--gray2);
-		padding: 0 14px 12px;
+		font-size: 0.66rem;
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+		color: var(--color-grey);
+		font-weight: 700;
+		padding: 0.25rem 0.85rem 0.75rem;
 	}
+	/* Mesmo item da sidebar do app: hover gelo, ativo com tint azul. */
 	.rail__item {
 		position: relative;
 		display: flex;
 		align-items: center;
-		gap: 12px;
-		padding: 10px 14px;
-		border-radius: 8px;
+		gap: 10px;
+		padding: 0.55rem 0.85rem;
+		border-radius: var(--radius);
 		text-decoration: none;
-		color: var(--gray);
-		font-size: 14px;
+		color: var(--color-slate);
+		font-size: 0.8125rem;
 		font-weight: 500;
+		line-height: 1.3;
 		transition:
-			color 0.25s var(--curva),
-			background 0.25s var(--curva);
+			color 0.2s var(--curva),
+			background 0.2s var(--curva);
 	}
 	.rail__ico {
-		width: 18px;
-		height: 18px;
+		width: 17px;
+		height: 17px;
 		flex: none;
-		opacity: 0.6;
+		opacity: 0.75;
 		transition:
-			opacity 0.25s var(--curva),
-			transform 0.3s var(--curva);
+			opacity 0.2s var(--curva),
+			transform 0.25s var(--curva);
 	}
 	.rail__nome {
 		flex: 1;
 		min-width: 0;
-		line-height: 1.3;
 	}
 	.rail__n {
-		font-size: 12px;
-		font-weight: 700;
-		color: var(--gray2);
-		align-self: center;
+		font-size: 0.6875rem;
+		font-weight: 600;
+		color: var(--color-grey);
+		font-variant-numeric: tabular-nums;
 	}
 	.rail__item:hover {
-		color: var(--white);
-		background: var(--card);
+		color: var(--color-navy);
+		background: var(--color-bg);
 	}
 	.rail__item:hover .rail__ico {
 		opacity: 1;
 		transform: translateX(2px);
 	}
 	.rail__item[data-ativo] {
-		color: var(--gold-light);
-		background: var(--card);
+		color: var(--color-brand);
+		font-weight: 600;
+		background: color-mix(in srgb, var(--color-brand) 10%, transparent);
 	}
 	.rail__item[data-ativo] .rail__ico {
 		opacity: 1;
 	}
 	.rail__item[data-ativo] .rail__n {
-		color: var(--gold);
-	}
-	.rail__item[data-ativo]::before {
-		content: '';
-		position: absolute;
-		left: 0;
-		top: 8px;
-		bottom: 8px;
-		width: 2px;
-		background: var(--gold);
-		border-radius: 2px;
+		color: var(--color-brand);
 	}
 	.rail__item[data-fora],
 	.chip[data-fora] {
-		opacity: 0.26;
+		opacity: 0.35;
 		pointer-events: none;
 	}
 
 	/* blocos */
 	.miolo {
 		min-width: 0;
+		padding: 0 1.5rem;
 	}
 	.bloco {
-		padding: 64px 0;
-		border-bottom: 1px solid var(--line);
+		padding: 2.5rem 0;
+		border-bottom: 1px solid var(--color-grey-200);
 		scroll-margin-top: var(--topo);
 	}
 	.bloco:first-child {
-		padding-top: 40px;
+		padding-top: 1.75rem;
 	}
 	.bloco:last-of-type {
 		border-bottom: 0;
-		padding-bottom: 40px;
 	}
 	.bloco[hidden] {
 		display: none;
 	}
-	.bloco__marca {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		color: var(--gold);
-	}
-	.bloco__ico {
-		width: 20px;
-		height: 20px;
-	}
-	.bloco__num {
-		font-family: 'Bebas Neue', Impact, sans-serif;
-		font-size: 16px;
-		letter-spacing: 0.16em;
-	}
-	.bloco__num em {
-		font-style: normal;
-		color: var(--gray2);
-		margin-left: 4px;
-	}
-	.bloco__titulo {
-		font-size: clamp(30px, 3.8cqw, 44px);
-		line-height: 1;
-		letter-spacing: 0.01em;
-		margin: 14px 0 12px;
-		text-wrap: balance;
-		color: var(--white);
-	}
-	.bloco__desc {
-		font-size: 16px;
-		color: var(--gray);
-		max-width: 620px;
-	}
-	.bloco__cont {
-		font-size: 12px;
-		font-weight: 700;
-		letter-spacing: 0.16em;
-		text-transform: uppercase;
-		color: var(--gray2);
-		margin-top: 16px;
-	}
-	.bloco__cont b {
-		color: var(--gold-pale);
-	}
 
-	/* tags */
+	/* tags: cards brancos, azul no hover */
 	.tags {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 10px;
-		margin-top: 26px;
+		margin-top: 1.25rem;
 	}
 	.tag {
 		display: inline-flex;
 		align-items: center;
 		gap: 10px;
-		background: var(--card);
-		border: 1px solid var(--line);
-		border-radius: var(--raio);
-		padding: 10px 14px;
+		background: var(--color-surface);
+		border: 1px solid var(--color-grey-200);
+		border-radius: var(--radius);
+		padding: 9px 13px;
 		text-decoration: none;
+		color: var(--color-navy);
+		box-shadow: var(--shadow-xs);
 		transition:
-			border-color 0.3s var(--curva),
-			background 0.3s var(--curva),
-			transform 0.3s var(--curva),
-			color 0.3s var(--curva);
+			border-color 0.25s var(--curva),
+			box-shadow 0.25s var(--curva),
+			transform 0.25s var(--curva),
+			color 0.25s var(--curva);
 	}
 	.tag[hidden] {
 		display: none;
@@ -778,51 +602,45 @@
 	.tag__logo {
 		width: 22px;
 		height: 22px;
-		border-radius: 5px;
+		border-radius: 6px;
 		flex: none;
 		object-fit: contain;
 		background: #fff;
+		border: 1px solid var(--color-grey-200);
 		padding: 2px;
 	}
 	.tag__logo--letra {
 		display: grid;
 		place-items: center;
-		background: var(--card2);
-		color: var(--gold-dim);
-		font-size: 12px;
+		background: var(--color-bg);
+		color: var(--color-brand);
+		font-size: 0.6875rem;
 		font-weight: 700;
 		padding: 0;
 	}
 	.tag__nome {
-		font-size: 14px;
-		font-weight: 700;
+		font-size: 0.8125rem;
+		font-weight: 600;
 	}
 	.tag__host {
-		font-size: 12px;
-		color: var(--gray);
-		transition: color 0.3s var(--curva);
+		font-size: 0.75rem;
+		color: var(--color-grey);
 	}
 	.tag__seta {
 		width: 12px;
 		height: 12px;
+		color: var(--color-brand);
 		opacity: 0;
 		transform: translate(-4px, 4px);
 		transition:
-			opacity 0.3s var(--curva),
-			transform 0.3s var(--curva);
+			opacity 0.25s var(--curva),
+			transform 0.25s var(--curva);
 	}
 	.tag:hover {
-		border-color: var(--gold);
-		background: var(--gold);
-		color: var(--bg);
-		transform: translateY(-3px);
-	}
-	.tag:hover .tag__host {
-		color: rgba(11, 10, 8, 0.6);
-	}
-	.tag:hover .tag__logo--letra {
-		background: rgba(11, 10, 8, 0.14);
-		color: var(--bg);
+		border-color: var(--color-brand);
+		color: var(--color-brand);
+		box-shadow: var(--shadow-md);
+		transform: translateY(-2px);
 	}
 	.tag:hover .tag__seta {
 		opacity: 1;
@@ -831,69 +649,33 @@
 	.tag:focus-visible,
 	.chip:focus-visible,
 	.rail__item:focus-visible {
-		outline: 2px solid var(--gold);
-		outline-offset: 3px;
-	}
-
-	.vazio-msg {
-		padding: 80px 0;
-		color: var(--gray);
-		font-size: 16px;
-		display: none;
-	}
-	.vazio-msg b {
-		color: var(--gold-pale);
-	}
-	.refs.vazio .vazio-msg {
-		display: block;
+		outline: 2px solid var(--color-brand);
+		outline-offset: 2px;
 	}
 
 	/* entrada */
 	[data-revela] > * {
 		opacity: 0;
-		transform: translateY(16px);
+		transform: translateY(12px);
 	}
 	[data-revela]:global(.visivel) > * {
 		opacity: 1;
 		transform: none;
 		transition:
-			opacity 0.7s var(--curva),
-			transform 0.7s var(--curva);
-	}
-	.bloco__topo > *:nth-child(1) {
-		transition-delay: 0.02s;
+			opacity 0.6s var(--curva),
+			transform 0.6s var(--curva);
 	}
 	.bloco__topo > *:nth-child(2) {
-		transition-delay: 0.08s;
+		transition-delay: 0.06s;
 	}
 	.bloco__topo > *:nth-child(3) {
-		transition-delay: 0.14s;
+		transition-delay: 0.12s;
 	}
 	.bloco__topo > *:nth-child(4) {
-		transition-delay: 0.2s;
+		transition-delay: 0.18s;
 	}
 	.tags:global(.visivel) > .tag {
-		transition-delay: calc(var(--i) * 0.026s);
-	}
-	.sobe {
-		opacity: 0;
-		transform: translateY(20px);
-		animation: sobe 0.9s var(--curva) forwards;
-	}
-	.d1 {
-		animation-delay: 0.06s;
-	}
-	.d2 {
-		animation-delay: 0.14s;
-	}
-	.d3 {
-		animation-delay: 0.22s;
-	}
-	@keyframes sobe {
-		to {
-			opacity: 1;
-			transform: none;
-		}
+		transition-delay: calc(var(--i) * 0.022s);
 	}
 
 	@media (prefers-reduced-motion: reduce) {
@@ -903,8 +685,7 @@
 			animation: none !important;
 			transition: none !important;
 		}
-		[data-revela] > *,
-		.sobe {
+		[data-revela] > * {
 			opacity: 1 !important;
 			transform: none !important;
 		}
@@ -913,16 +694,12 @@
 	/* responsivo — pela largura do painel, que já desconta sidebar e recuos do app */
 	@container refs (max-width: 1000px) {
 		.refs {
-			--rail: 232px;
-		}
-		.corpo {
-			gap: 40px;
+			--rail: 216px;
 		}
 	}
 	@container refs (max-width: 760px) {
-		.corpo {
+		.refs :global(.corpo) {
 			grid-template-columns: minmax(0, 1fr);
-			padding-bottom: 72px;
 		}
 		.rail {
 			display: none;
@@ -930,41 +707,14 @@
 		.faixa {
 			display: block;
 		}
-		.capa {
-			padding-top: 96px;
-			padding-bottom: 40px;
-		}
-		.capa__crest {
-			width: 300px;
-			opacity: 0.03;
+		.miolo {
+			padding: 0 1rem;
 		}
 		.bloco {
-			padding: 52px 0;
-		}
-		.bloco:first-child {
-			padding-top: 44px;
+			padding: 2rem 0;
 		}
 	}
 	@container refs (max-width: 520px) {
-		.capa {
-			padding-top: 88px;
-		}
-		.capa h1 {
-			max-width: none;
-		}
-		.marca {
-			top: 26px;
-		}
-		.marca__z {
-			font-size: 24px;
-		}
-		.marca__nome {
-			font-size: 16px;
-		}
-		.busca input {
-			padding: 14px 18px 14px 46px;
-			font-size: 16px;
-		}
 		.busca__atalho {
 			display: none;
 		}
@@ -972,7 +722,7 @@
 			gap: 8px;
 		}
 		.tag {
-			padding: 9px 12px;
+			padding: 8px 11px;
 		}
 		.tag__host {
 			display: none;
