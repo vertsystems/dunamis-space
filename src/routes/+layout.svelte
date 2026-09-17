@@ -86,6 +86,8 @@
 				{ href: '/', label: 'Visão Geral', icon: 'home' },
 				{ href: '/meu-dia', label: 'Meu Dia', icon: 'calendar' },
 				...areasFerramentas,
+				// Biblioteca de referências de design (cópia do filestools.vercel.app).
+				{ href: '/base-refs', label: 'Base Refs', icon: 'refs' },
 				{ href: '/perfil', label: 'Meu Perfil', icon: 'contact' }
 			]
 		},

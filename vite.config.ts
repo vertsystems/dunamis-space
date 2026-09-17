@@ -1,7 +1,8 @@
 import adapter from '@sveltejs/adapter-vercel';
 import { sveltekit } from '@sveltejs/kit/vite';
 import tailwindcss from '@tailwindcss/vite';
-import { defineConfig } from 'vite';
+import { realpathSync } from 'node:fs';
+import { defineConfig, searchForWorkspaceRoot } from 'vite';
 
 export default defineConfig({
 	plugins: [
@@ -27,5 +28,15 @@ export default defineConfig({
 			// como a Visão Geral faz mais de dez.
 			adapter: adapter({ regions: ['pdx1'] })
 		})
-	]
+	],
+	server: {
+		fs: {
+			// `node_modules` é um atalho para fora do projeto (ver
+			// scripts/dependencias.mjs). O Vite resolve o caminho real e, como ele
+			// está fora da raiz, negava (403) os arquivos servidos direto de lá —
+			// na prática as fontes @fontsource, que no dev caíam para a fallback.
+			// O build de produção nunca sofreu com isso: lá tudo é empacotado.
+			allow: [searchForWorkspaceRoot(process.cwd()), realpathSync('node_modules')]
+		}
+	}
 });

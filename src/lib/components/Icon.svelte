@@ -46,6 +46,7 @@
 		ListChecks,
 		ShieldCheck,
 		Target,
+		Library,
 		type IconProps
 	} from '@lucide/svelte';
 	import type { Component } from 'svelte';
@@ -93,7 +94,8 @@
 		lifebuoy: LifeBuoy,
 		organyze: ListChecks,
 		shield: ShieldCheck,
-		target: Target
+		target: Target,
+		refs: Library
 	};
 </script>
 

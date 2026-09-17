@@ -78,7 +78,9 @@ const ROTAS_LIVRES = [
 	'/notificacoes',
 	'/atalhos',
 	'/desempenho',
-	'/dtools/organyze'
+	'/dtools/organyze',
+	// Biblioteca de referências: só links, sem dado sensível — livre para todos.
+	'/base-refs'
 ];
 
 // Pares (rota, modulo) ordenados por especificidade (rota mais longa primeiro),
