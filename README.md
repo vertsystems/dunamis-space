@@ -44,7 +44,7 @@ npm run dev
 | `npm run build` | Build de produção |
 | `npm run preview` | Preview do build |
 | `npm run check` | Verificação de tipos (svelte-check) |
-| `npm test` | Testes (214 em 24 arquivos) |
+| `npm test` | Testes (249 em 26 arquivos) |
 | `npm run deps` | Reinstala as dependências (no lugar de `npm install`) |
 
 > **Este projeto mora dentro do Google Drive**, e isso pede dois desvios.

@@ -47,6 +47,9 @@
 		ShieldCheck,
 		Target,
 		Library,
+		Download,
+		Upload,
+		FileSpreadsheet,
 		type IconProps
 	} from '@lucide/svelte';
 	import type { Component } from 'svelte';
@@ -95,7 +98,10 @@
 		organyze: ListChecks,
 		shield: ShieldCheck,
 		target: Target,
-		refs: Library
+		refs: Library,
+		download: Download,
+		upload: Upload,
+		sheet: FileSpreadsheet
 	};
 </script>
 

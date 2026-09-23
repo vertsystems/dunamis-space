@@ -204,8 +204,8 @@ export async function insertClient(supabase: SupabaseClient, nome: string): Prom
 
 // ---- Prestadores ---------------------------------------------------------
 
-export async function insertProvider(supabase: SupabaseClient, p: Provider): Promise<void> {
-	const { error } = await supabase.from('pagsup_prestadores').insert({
+function prestadorRow(p: Provider) {
+	return {
 		id: p.id,
 		cliente_id: p.clientId,
 		nome: p.name,
@@ -217,7 +217,22 @@ export async function insertProvider(supabase: SupabaseClient, p: Provider): Pro
 		whatsapp: p.whatsapp || null,
 		especialidade: p.especialidade || null,
 		lj: p.lj || null
-	});
+	};
+}
+
+export async function insertProvider(supabase: SupabaseClient, p: Provider): Promise<void> {
+	const { error } = await supabase.from('pagsup_prestadores').insert(prestadorRow(p));
+	if (error) throw error;
+}
+
+/**
+ * Cadastra vários prestadores de uma vez (importação de planilha). Um insert só:
+ * uma planilha de 80 linhas por insertProvider seriam 80 requisições, e um erro
+ * no meio deixava metade cadastrada.
+ */
+export async function insertProviders(supabase: SupabaseClient, ps: Provider[]): Promise<void> {
+	if (!ps.length) return;
+	const { error } = await supabase.from('pagsup_prestadores').insert(ps.map(prestadorRow));
 	if (error) throw error;
 }
 

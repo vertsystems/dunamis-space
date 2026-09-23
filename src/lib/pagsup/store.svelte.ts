@@ -192,6 +192,34 @@ class PagsupStore {
 		return provider;
 	}
 
+	/**
+	 * Cadastra vários prestadores de uma vez (importação de planilha).
+	 *
+	 * Não é um laço de addProvider: aquele dispara um insert por prestador, e uma
+	 * planilha de 80 linhas viraria 80 requisições — com a metade gravada se uma
+	 * falhasse no meio. Aqui vai tudo num insert, e o rollback tira todos.
+	 */
+	addProviders(lista: Omit<Provider, 'id' | 'clientId'>[]): Provider[] {
+		if (!lista.length) return [];
+		const novos: Provider[] = lista.map((data) => ({
+			...data,
+			cpf: cleanDoc(data.cpf),
+			id: uid(),
+			clientId: this.selectedClientId
+		}));
+		const snapshot = this.providers;
+		this.providers = [...this.providers, ...novos];
+		// Registrados um a um pelo mesmo motivo do addProvider: importar e escalar
+		// no mesmo minuto não pode esbarrar na FK do cronograma.
+		const p = this.#persist(
+			() => db.insertProviders(this.supabase!, novos),
+			() => (this.providers = snapshot),
+			'Falha ao importar os prestadores.'
+		);
+		for (const n of novos) this.#registrar(n.id, p);
+		return novos;
+	}
+
 	updateProvider(id: string, patch: Partial<Provider>) {
 		const snapshot = this.providers;
 		const clean = patch.cpf !== undefined ? { ...patch, cpf: cleanDoc(patch.cpf) } : patch;

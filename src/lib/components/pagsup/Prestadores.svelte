@@ -4,9 +4,23 @@
 	import { caberEmUmaLinha } from '$lib/caberEmUmaLinha';
 	import BotaoWhatsApp from './BotaoWhatsApp.svelte';
 	import { whatsappLegivel } from '$lib/pagsup/whatsapp';
-	import { Button, Card } from '$lib/components/ui';
+	import { Button, Card, Dropdown, Modal } from '$lib/components/ui';
 	import { toast } from '$lib/toast.svelte';
-	import { Plus, Search, Trash2, Pencil, Check, X } from '@lucide/svelte';
+	import { carregarExcel, erroExport } from '$lib/pagsup/exportacao';
+	import { formataDocumento, resumir, type LinhaImportada } from '$lib/pagsup/importacao';
+	import { hojeISO } from '$lib/datas';
+	import { formatBRL } from '$lib/clientes';
+	import {
+		Plus,
+		Search,
+		Trash2,
+		Pencil,
+		Check,
+		X,
+		ChevronDown,
+		FileSpreadsheet,
+		TriangleAlert
+	} from '@lucide/svelte';
 
 	// As abas do Pag's Up vêm do +page.svelte para ficarem nesta mesma barra.
 	let { abas }: { abas?: import('svelte').Snippet } = $props();
@@ -113,6 +127,152 @@
 
 	const fieldCls =
 		'h-9 w-full rounded-[var(--radius-sm)] border border-grey-200 bg-surface px-3 text-sm text-navy-900 shadow-xs placeholder:text-grey/80 transition-colors hover:border-grey focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25';
+
+	// ---- Planilha: baixar o cadastro, subir novos, pegar o modelo -------------
+	// As três ações ficam num menu ao lado do "Novo Prestador" porque são do mesmo
+	// assunto (o cadastro em massa) e nenhuma é frequente o bastante para um botão
+	// próprio na barra.
+
+	function fmtData(iso: string): string {
+		const [a, m, d] = (iso ?? '').split('-');
+		return a && m && d ? `${d}/${m}/${a}` : iso;
+	}
+
+	/**
+	 * Baixa o cadastro inteiro do cliente — não o resultado da busca. O menu vale
+	 * para "o que está salvo"; filtrar a exportação pelo que está digitado na busca
+	 * produziria arquivos incompletos sem avisar.
+	 */
+	async function baixarPrestadores() {
+		if (!pagsup.filteredProviders.length) {
+			toast.error('Nenhum prestador cadastrado para exportar.');
+			return;
+		}
+		const porCategoria: Record<string, typeof pagsup.filteredProviders> = {};
+		for (const p of pagsup.filteredProviders) (porCategoria[p.service] ??= []).push(p);
+
+		const groups = Object.keys(porCategoria)
+			.sort((a, b) => a.localeCompare(b, 'pt-BR'))
+			.map((categoria) => ({
+				categoria,
+				itens: porCategoria[categoria]
+					.slice()
+					.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+					.map((p) => ({
+						name: p.name,
+						especialidade: p.especialidade ?? '',
+						region: p.region ?? '',
+						cpf: p.cpf ?? '',
+						pix: p.pix ?? '',
+						whatsapp: p.whatsapp ?? '',
+						lj: p.lj ?? '',
+						defaultPrice: Number(p.defaultPrice) || 0
+					}))
+			}));
+
+		try {
+			const { exportPrestadoresXlsx } = await carregarExcel();
+			await exportPrestadoresXlsx(groups, {
+				cliente: pagsup.selectedClientName,
+				emitidoEm: fmtData(hojeISO())
+			});
+			toast.success('Planilha de prestadores gerada');
+		} catch (e) {
+			toast.error(erroExport(e));
+		}
+	}
+
+	async function baixarModelo() {
+		try {
+			const { exportModeloPrestadoresXlsx } = await carregarExcel();
+			await exportModeloPrestadoresXlsx(pagsup.serviceOptions);
+			toast.success('Planilha modelo gerada');
+		} catch (e) {
+			toast.error(erroExport(e));
+		}
+	}
+
+	// ---- Importação ----------------------------------------------------------
+	let inputArquivo = $state<HTMLInputElement | null>(null);
+	let lendo = $state(false);
+	let importando = $state(false);
+	let linhas = $state<LinhaImportada[]>([]);
+	let nomeArquivo = $state('');
+	let revisando = $state(false);
+
+	const resumo = $derived(resumir(linhas));
+
+	function escolherArquivo() {
+		if (!pagsup.selectedClientId) {
+			toast.error('Escolha um cliente antes de importar prestadores.');
+			return;
+		}
+		inputArquivo?.click();
+	}
+
+	/**
+	 * Lê o arquivo e abre a conferência. A gravação não acontece aqui de propósito:
+	 * uma planilha preenchida à mão erra coluna, repete prestador e escreve LJ que
+	 * não existe — ver os números antes é o que evita descobrir isso com 40 linhas
+	 * já no cadastro.
+	 */
+	async function arquivoEscolhido(e: Event) {
+		const input = e.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		// O input é limpo já aqui: escolher o MESMO arquivo de novo (depois de
+		// corrigi-lo) não disparava change, e parecia que o botão tinha travado.
+		input.value = '';
+		if (!file) return;
+
+		lendo = true;
+		try {
+			const { lerPlanilhaPrestadores } = await carregarExcel();
+			const buffer = await file.arrayBuffer();
+			const lido = await lerPlanilhaPrestadores(buffer, pagsup.filteredProviders);
+
+			if (lido.faltando.length) {
+				toast.error(
+					`A planilha não tem a coluna ${lido.faltando.join(', ')}. Baixe a planilha modelo e use os mesmos títulos.`
+				);
+				return;
+			}
+			if (!lido.linhas.length) {
+				toast.error('Nenhuma linha preenchida foi encontrada na planilha.');
+				return;
+			}
+			linhas = lido.linhas;
+			nomeArquivo = file.name;
+			revisando = true;
+		} catch (err) {
+			toast.error(erroExport(err));
+		} finally {
+			lendo = false;
+		}
+	}
+
+	function confirmarImportacao() {
+		const novos = resumo.novos.map((l) => l.dados);
+		if (!novos.length) return;
+		importando = true;
+		pagsup.addProviders(novos);
+		importando = false;
+		revisando = false;
+		linhas = [];
+		toast.success(
+			`${novos.length} ${novos.length === 1 ? 'prestador importado' : 'prestadores importados'}`
+		);
+	}
+
+	function fecharRevisao() {
+		revisando = false;
+		linhas = [];
+	}
+
+	const acoesPlanilha = $derived([
+		{ label: 'Baixar Prestadores', icon: 'download', onSelect: baixarPrestadores },
+		{ label: 'Enviar Novos Prestadores', icon: 'upload', onSelect: escolherArquivo },
+		{ label: 'Planilha Modelo', icon: 'sheet', onSelect: baixarModelo }
+	]);
 </script>
 
 <div>
@@ -122,6 +282,34 @@
 			<Button onclick={() => (isAdding = !isAdding)}>
 				<Plus size={18} /> Novo Prestador
 			</Button>
+			<!-- Planilhas do cadastro: baixar, enviar e o modelo. Ao lado do "Novo
+			     Prestador" porque é a mesma tarefa — cadastrar — em lote. -->
+			<Dropdown
+				items={acoesPlanilha}
+				triggerClass="inline-flex h-10 items-center gap-1 rounded-[var(--radius)] border border-grey-200 bg-surface px-3 text-slate shadow-xs transition-colors hover:bg-bg hover:text-navy hover:border-grey focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35 focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:opacity-50 disabled:pointer-events-none"
+			>
+				{#snippet trigger()}
+					{#if lendo}
+						<span
+							class="size-4 rounded-full border-2 border-current border-t-transparent animate-spin"
+							aria-hidden="true"
+						></span>
+					{:else}
+						<FileSpreadsheet size={18} />
+					{/if}
+					<ChevronDown size={14} />
+					<span class="sr-only">Planilhas de prestadores</span>
+				{/snippet}
+			</Dropdown>
+			<input
+				bind:this={inputArquivo}
+				onchange={arquivoEscolhido}
+				type="file"
+				accept=".xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+				class="hidden"
+				aria-hidden="true"
+				tabindex="-1"
+			/>
 		</div>
 	</div>
 
@@ -321,3 +509,119 @@
 		</Card>
 	{/if}
 </div>
+
+<!-- Conferência da importação: o que entra, o que já existe e o que está torto,
+     linha por linha e com o número da linha do Excel para achar e corrigir. -->
+<Modal
+	open={revisando}
+	title="Conferir importação"
+	size="xl"
+	onClose={fecharRevisao}
+>
+	<div class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+		<div class="rounded-[var(--radius)] border border-brand-green/25 bg-brand-green/[0.07] px-4 py-3">
+			<p class="text-[10px] font-bold uppercase tracking-wider text-brand-green">Vão entrar</p>
+			<p class="mt-0.5 text-2xl font-bold tabular-nums text-navy">{resumo.novos.length}</p>
+		</div>
+		<div class="rounded-[var(--radius)] border border-grey-200 bg-bg/60 px-4 py-3">
+			<p class="text-[10px] font-bold uppercase tracking-wider text-grey">Já cadastrados</p>
+			<p class="mt-0.5 text-2xl font-bold tabular-nums text-slate">{resumo.duplicadas}</p>
+		</div>
+		<div class="rounded-[var(--radius)] border border-grey-200 bg-bg/60 px-4 py-3">
+			<p class="text-[10px] font-bold uppercase tracking-wider text-grey">Com problema</p>
+			<p class="mt-0.5 text-2xl font-bold tabular-nums text-slate">{resumo.invalidas}</p>
+		</div>
+		<div class="rounded-[var(--radius)] border border-grey-200 bg-bg/60 px-4 py-3">
+			<p class="text-[10px] font-bold uppercase tracking-wider text-grey">Linhas lidas</p>
+			<p class="mt-0.5 text-2xl font-bold tabular-nums text-slate">{resumo.total}</p>
+		</div>
+	</div>
+
+	{#if resumo.avisos}
+		<p class="mb-4 flex items-start gap-2 rounded-[var(--radius)] border border-brand-amber/30 bg-brand-amber/10 px-4 py-2.5 text-sm text-brand-brown">
+			<TriangleAlert size={16} class="mt-0.5 shrink-0" />
+			<span>
+				{resumo.avisos}
+				{resumo.avisos === 1 ? 'linha entra com uma ressalva' : 'linhas entram com ressalvas'} — dá
+				para importar assim e corrigir na tela depois.
+			</span>
+		</p>
+	{/if}
+
+	<div class="max-h-[46vh] overflow-auto rounded-[var(--radius)] border border-grey-200">
+		<table class="w-full border-collapse text-left text-sm">
+			<thead class="sticky top-0 z-10 bg-bg">
+				<tr class="border-b border-grey-200 text-xs uppercase tracking-wider text-grey">
+					<th scope="col" class="px-3 py-2.5 font-semibold w-14">Linha</th>
+					<th scope="col" class="px-3 py-2.5 font-semibold">Nome</th>
+					<th scope="col" class="px-3 py-2.5 font-semibold">Serviço</th>
+					<th scope="col" class="px-3 py-2.5 font-semibold">Região</th>
+					<th scope="col" class="px-3 py-2.5 font-semibold">CPF / CNPJ</th>
+					<th scope="col" class="px-3 py-2.5 font-semibold">PIX</th>
+					<th scope="col" class="px-3 py-2.5 font-semibold w-14">LJ</th>
+					<th scope="col" class="px-3 py-2.5 font-semibold text-right w-24">Valor</th>
+					<th scope="col" class="px-3 py-2.5 font-semibold w-64">Situação</th>
+				</tr>
+			</thead>
+			<tbody class="divide-y divide-grey-200/70">
+				{#each linhas as l (l.linha)}
+					<tr class={l.erro ? 'text-grey' : 'text-slate'}>
+						<td class="px-3 py-2 text-xs tabular-nums text-grey">{l.linha}</td>
+						<td class="px-3 py-2 font-medium {l.erro ? 'text-grey line-through' : 'text-navy'}">
+							{l.dados.name || '—'}
+						</td>
+						<td class="px-3 py-2">
+							<span class="block">{l.dados.service}</span>
+							{#if l.dados.especialidade}
+								<span class="block text-xs text-grey">{l.dados.especialidade}</span>
+							{/if}
+						</td>
+						<td class="px-3 py-2">{l.dados.region || '—'}</td>
+						<td class="px-3 py-2 font-mono text-xs">{formataDocumento(l.dados.cpf) || '—'}</td>
+						<td class="px-3 py-2">
+							<span class="block max-w-[150px] truncate" title={l.dados.pix}>{l.dados.pix || '—'}</span>
+						</td>
+						<td class="px-3 py-2 text-xs font-bold">{l.dados.lj || '—'}</td>
+						<td class="px-3 py-2 text-right tabular-nums">
+							{l.dados.defaultPrice ? formatBRL(l.dados.defaultPrice) : '—'}
+						</td>
+						<td class="px-3 py-2">
+							{#if l.erro}
+								<span
+									class="inline-flex rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide {l.duplicada
+										? 'bg-bg text-slate'
+										: 'bg-brand-danger/10 text-brand-danger'}">{l.erro}</span
+								>
+							{:else if l.aviso}
+								<span class="text-xs text-brand-brown">{l.aviso}</span>
+							{:else}
+								<span class="inline-flex items-center gap-1 text-xs font-medium text-brand-green">
+									<Check size={14} /> Novo
+								</span>
+							{/if}
+						</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	</div>
+
+	<div class="mt-5 flex flex-wrap items-center justify-between gap-3">
+		<p class="text-xs text-grey">
+			Lido de <span class="font-medium text-slate">{nomeArquivo}</span>.
+			{#if resumo.novos.length}
+				Serão cadastrados em <b class="font-semibold text-slate">{pagsup.selectedClientName}</b>, e
+				o que já existe ou está com problema fica de fora.
+			{:else}
+				Nada a importar: corrija a planilha e envie de novo.
+			{/if}
+		</p>
+		<div class="flex gap-3">
+			<Button variant="ghost" onclick={fecharRevisao}>Cancelar</Button>
+			<Button onclick={confirmarImportacao} disabled={!resumo.novos.length} loading={importando}>
+				Importar {resumo.novos.length}
+				{resumo.novos.length === 1 ? 'prestador' : 'prestadores'}
+			</Button>
+		</div>
+	</div>
+</Modal>
