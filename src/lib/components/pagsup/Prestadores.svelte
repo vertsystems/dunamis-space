@@ -279,13 +279,12 @@
 	<div class="flex flex-wrap items-center justify-between gap-3 mb-6">
 		{@render abas?.()}
 		<div class="flex items-center gap-2.5">
-			<Button onclick={() => (isAdding = !isAdding)}>
-				<Plus size={18} /> Novo Prestador
-			</Button>
 			<!-- Planilhas do cadastro: baixar, enviar e o modelo. Ao lado do "Novo
-			     Prestador" porque é a mesma tarefa — cadastrar — em lote. -->
+			     Prestador" porque é a mesma tarefa — cadastrar — em lote, e à
+			     esquerda para o botão principal ficar na ponta da barra. -->
 			<Dropdown
 				items={acoesPlanilha}
+				align="start"
 				triggerClass="inline-flex h-10 items-center gap-1 rounded-[var(--radius)] border border-grey-200 bg-surface px-3 text-slate shadow-xs transition-colors hover:bg-bg hover:text-navy hover:border-grey focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/35 focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:opacity-50 disabled:pointer-events-none"
 			>
 				{#snippet trigger()}
@@ -301,6 +300,9 @@
 					<span class="sr-only">Planilhas de prestadores</span>
 				{/snippet}
 			</Dropdown>
+			<Button onclick={() => (isAdding = !isAdding)}>
+				<Plus size={18} /> Novo Prestador
+			</Button>
 			<input
 				bind:this={inputArquivo}
 				onchange={arquivoEscolhido}
