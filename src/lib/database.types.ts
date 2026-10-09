@@ -1,7 +1,7 @@
 // GERADO AUTOMATICAMENTE — não edite à mão.
 // Regenerar:  PGPASSWORD='<senha-postgres>' node scripts/gen-types.mjs
 //
-// Reflete o schema public do Supabase (2026-09-08).
+// Reflete o schema public do Supabase (2026-10-09).
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
