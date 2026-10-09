@@ -104,7 +104,7 @@ export type ObjetoStorage = { name: string; created_at: string };
  * quando um pagamento foi excluído ou o PDF foi trocado e a remoção falhou. Um
  * arquivo que algum pagamento ainda usa dentro do prazo nunca entra.
  *
- * Data ilegível não apaga nada: errar guardando custa 50 KB; apagar a NF que o
+ * Data ilegível não apaga nada: errar guardando custa 70 KB; apagar a NF que o
  * financeiro ainda não baixou custa uma cobrança ao prestador.
  */
 export function planoDeLimpeza(

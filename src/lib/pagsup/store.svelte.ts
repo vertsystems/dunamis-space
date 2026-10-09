@@ -410,7 +410,7 @@ class PagsupStore {
 	}
 
 	/**
-	 * Compacta o PDF (até 50 KB, ver compactarPdf.ts), sobe e liga ao pagamento.
+	 * Compacta o PDF (até 70 KB, ver compactarPdf.ts), sobe e liga ao pagamento.
 	 * Não é otimista como o resto do store: até o arquivo chegar ao Storage não há
 	 * o que mostrar. Se o pagamento já tinha PDF, o novo substitui o antigo.
 	 */

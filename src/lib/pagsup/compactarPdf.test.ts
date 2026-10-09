@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
-import { binarizar, compactarPdf, ehPdf, montarPdfDeImagens, otimizarVetor } from './compactarPdf';
+import {
+	binarizar,
+	compactarPdf,
+	ehPdf,
+	montarPdfDeImagens,
+	normalizarFundo,
+	otimizarVetor,
+	quantizar
+} from './compactarPdf';
 
 /** Imagem RGBA cinza-uniforme de w×h. */
 function imagem(w: number, h: number, cinza = 255): Uint8ClampedArray {
@@ -52,8 +60,8 @@ describe('binarizar', () => {
 
 	it('na sombra, a caneta aparece e o papel escurecido não vira mancha', () => {
 		// Metade direita com sombra (papel 110) e caneta fraca (85) dentro dela —
-		// acima do PRETO_ABSOLUTO, então só o limiar local a enxerga. Um limiar
-		// fixo em 128 pintaria a metade inteira de preto.
+		// acima do PRETO_ABSOLUTO, então só a comparação com o papel ao redor a
+		// enxerga. Um limiar fixo em 128 pintaria a metade inteira de preto.
 		const w = 640, h = 320;
 		const px = imagem(w, h, 235);
 		pintar(px, w, 320, 0, 640, 320, 110);
@@ -77,6 +85,51 @@ describe('binarizar', () => {
 	});
 });
 
+describe('normalizarFundo', () => {
+	it('o papel vira branco em qualquer iluminação, e a tinta continua escura', () => {
+		const w = 640, h = 320;
+		const px = imagem(w, h, 235);
+		pintar(px, w, 320, 0, 640, 320, 120); // sombra
+		pintar(px, w, 100, 150, 200, 154, 40); // tinta no claro
+		const norm = normalizarFundo(px, w, h);
+		expect(norm[50 * w + 600]).toBe(255); // papel na sombra
+		expect(norm[50 * w + 100]).toBe(255); // papel no claro
+		expect(norm[152 * w + 150]).toBe(0); // tinta
+	});
+
+	it('ruído de foto não vira sujeira: o papel é medido pela média, não pelo pixel mais claro', () => {
+		const w = 400, h = 200;
+		const px = imagem(w, h, 200);
+		let semente = 7;
+		const sorteio = () => ((semente = (semente * 16807) % 2147483647) / 2147483647 - 0.5) * 30;
+		for (let i = 0; i < px.length; i += 4) {
+			const v = 200 + sorteio();
+			px.set([v, v, v, 255], i);
+		}
+		const bits = quantizar(normalizarFundo(px, w, h), w, h, 2);
+		expect([...bits].every((b) => b === 0xff)).toBe(true);
+	});
+});
+
+describe('quantizar', () => {
+	it('4 tons: 2 bits por pixel, papel branco, tinta preta e a borda em cinza', () => {
+		// 5 pixels: papel, borda clara, borda escura, tinta, papel
+		const norm = Uint8Array.from([255, 190, 140, 0, 255]);
+		const bits = quantizar(norm, 5, 1, 2);
+		expect(bits.length).toBe(2); // 5 px × 2 bits → 2 bytes
+		const nivel = (x: number) => (bits[x >> 2] >> (6 - 2 * (x & 3))) & 3;
+		expect([0, 1, 2, 3, 4].map(nivel)).toEqual([3, 2, 1, 0, 3]);
+		expect(bits[1] & 0x3f).toBe(0x3f); // o resto da linha é papel
+	});
+
+	it('1 bit: o mesmo corte que binarizar', () => {
+		const norm = Uint8Array.from([255, 210, 190, 0, 255, 255, 255, 255, 0]);
+		const bits = quantizar(norm, 9, 1, 1);
+		expect(bits[0]).toBe(0b11001111);
+		expect(bits[1]).toBe(0b01111111);
+	});
+});
+
 describe('montarPdfDeImagens', () => {
 	it('uma página por imagem, no tamanho original em pontos', async () => {
 		const w = 40, h = 20;
@@ -88,6 +141,15 @@ describe('montarPdfDeImagens', () => {
 		const doc = await PDFDocument.load(pdf);
 		expect(doc.getPageCount()).toBe(2);
 		expect(doc.getPage(1).getSize()).toEqual({ width: 842, height: 595 });
+	});
+
+	it('grava os bits por pixel de cada página (4 tons = 2)', async () => {
+		const w = 8, h = 4;
+		const bits = quantizar(new Uint8Array(w * h).fill(255), w, h, 2);
+		const pdf = await montarPdfDeImagens([{ larguraPt: 100, alturaPt: 50, w, h, bits, bpc: 2 }]);
+		// O dicionário de uma imagem fica em texto no arquivo (stream não vai
+		// para dentro de object stream), então dá para ler direto.
+		expect(new TextDecoder('latin1').decode(pdf)).toContain('/BitsPerComponent 2');
 	});
 });
 
@@ -114,7 +176,7 @@ describe('compactarPdf', () => {
 		const entrada = await pdfComTexto();
 		const r = await compactarPdf(entrada);
 		expect(r.modo).toBe('vetor');
-		expect(r.bytes.length).toBeLessThanOrEqual(50 * 1024);
+		expect(r.bytes.length).toBeLessThanOrEqual(70 * 1024);
 		expect(r.original).toBe(entrada.length);
 	});
 });
