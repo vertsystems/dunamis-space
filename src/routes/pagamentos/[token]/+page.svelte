@@ -38,7 +38,19 @@
 	}
 
 	const comPdf = (p: PagamentoPublico) => !!p.doc_arquivo;
-	const nomeDe = (p: PagamentoPublico) => nomeDeDownload(p.doc_tipo ?? 'nf', p.prestador, p.data);
+
+	/**
+	 * Número de cada pagamento na lista do mês, na ordem de lançamento (a função
+	 * pagsup_publico já devolve nessa ordem). Fica o mesmo com qualquer filtro,
+	 * para "o 14" ser o mesmo pagamento para quem conversa sobre ele.
+	 */
+	const numero = $derived(new Map(painel.pagamentos.map((p, i) => [p.id, i + 1])));
+	const casas = $derived(String(painel.pagamentos.length).length);
+	const numeroDe = (p: PagamentoPublico) => String(numero.get(p.id) ?? 0).padStart(casas, '0');
+
+	// O número vai no nome do arquivo: na pasta, os PDFs ficam na ordem da lista.
+	const nomeDe = (p: PagamentoPublico) =>
+		`${numeroDe(p)} - ${nomeDeDownload(p.doc_tipo ?? 'nf', p.prestador, p.data)}`;
 
 	// ---- O que este navegador já baixou --------------------------------------
 	// Só conveniência de quem abre: some se limparem o navegador, e não é
@@ -77,13 +89,6 @@
 	const visiveis = $derived(
 		filtro === 'faltam' ? faltam : filtro === 'aguardando' ? aguardando : painel.pagamentos
 	);
-
-	/** Por categoria de serviço — a mesma divisão da planilha do mês. */
-	const grupos = $derived.by(() => {
-		const g: Record<string, PagamentoPublico[]> = {};
-		for (const p of visiveis) (g[p.servico || 'Sem categoria'] ??= []).push(p);
-		return Object.entries(g).sort(([a], [b]) => a.localeCompare(b, 'pt-BR'));
-	});
 
 	// Trocar de mês limpa o filtro: "faltam baixar" de outro mês confunde.
 	function trocarMes(mes: string) {
@@ -254,67 +259,61 @@
 					</p>
 				</Card>
 			{:else}
-				<div class="space-y-5">
-					{#each grupos as [categoria, itens] (categoria)}
-						{@const subtotal = itens.reduce((s, p) => s + (Number(p.valor) || 0), 0)}
-						<Card padding="none" class="overflow-hidden">
-							<div class="flex items-center justify-between gap-3 border-b border-grey-200 bg-bg/50 px-5 py-3">
-								<div class="flex items-center gap-3">
-									<span class="h-6 w-1.5 rounded-full bg-brand"></span>
-									<h2 class="text-sm font-bold text-navy">{categoria}</h2>
-									<span class="rounded-full bg-grey-200 px-2 py-0.5 text-[11px] font-bold text-slate">{itens.length}</span>
+				<!-- Uma lista só, na ordem em que os pagamentos foram lançados: o que
+				     entrou por último fica no fim, e o financeiro acompanha de cima
+				     para baixo. (Era agrupada por categoria.) -->
+				<Card padding="none" class="overflow-hidden">
+					<!-- Celular: o link chega pelo WhatsApp, então a lista empilha em vez de
+					     espremer as colunas. -->
+					<ul class="divide-y divide-grey-200/70 sm:hidden">
+						{#each visiveis as p (p.id)}
+							<li class="flex items-center justify-between gap-3 px-4 py-2.5">
+								<div class="flex min-w-0 items-start gap-2.5">
+									<span class="mt-0.5 shrink-0 font-mono text-[11px] font-semibold text-grey">{numeroDe(p)}</span>
+									<div class="min-w-0">
+										<p class="truncate text-sm font-medium text-navy">{p.prestador}</p>
+										<p class="truncate text-[11px] text-slate">{p.servico}</p>
+										<p class="text-[11px] text-slate">
+											<span class="font-semibold">{p.lj || '-'}</span> · {fmtData(p.data)} ·
+											<span class="font-mono font-medium text-navy">{formatBRL(p.valor)}</span>
+										</p>
+									</div>
 								</div>
-								<p class="text-sm font-bold tabular-nums text-navy">{formatBRL(subtotal)}</p>
-							</div>
-							<!-- Celular: o link chega pelo WhatsApp, então a lista empilha em vez de
-							     espremer seis colunas. -->
-							<ul class="divide-y divide-grey-200/70 sm:hidden">
-								{#each itens as p (p.id)}
-									<li class="flex items-center justify-between gap-3 px-4 py-2.5">
-										<div class="min-w-0">
-											<p class="truncate text-sm font-medium text-navy">{p.prestador}</p>
-											<p class="text-[11px] text-slate">
-												<span class="font-semibold">{p.lj || '-'}</span> · {fmtData(p.data)} ·
-												<span class="font-mono font-medium text-navy">{formatBRL(p.valor)}</span>
-											</p>
-										</div>
-										<div class="shrink-0">{@render documento(p)}</div>
-									</li>
+								<div class="shrink-0">{@render documento(p)}</div>
+							</li>
+						{/each}
+					</ul>
+					<div class="hidden overflow-x-auto sm:block">
+						<table class="w-full min-w-[860px] table-fixed border-collapse text-left">
+							<thead>
+								<tr class="border-b border-grey-200 bg-bg/50 text-[10px] uppercase tracking-wider text-grey">
+									<th scope="col" class="w-12 py-2.5 pl-5 pr-2 font-semibold">Nº</th>
+									<th scope="col" class="px-3 py-2.5 font-semibold">Prestador</th>
+									<th scope="col" class="w-44 px-3 py-2.5 font-semibold">Serviço</th>
+									<th scope="col" class="w-28 px-3 py-2.5 font-semibold">Região</th>
+									<th scope="col" class="w-14 px-3 py-2.5 font-semibold">LJ</th>
+									<th scope="col" class="w-24 px-3 py-2.5 font-semibold">Data</th>
+									<th scope="col" class="w-28 px-3 py-2.5 text-right font-semibold">Valor</th>
+									<th scope="col" class="w-48 px-5 py-2.5 font-semibold">NF / Recibo</th>
+								</tr>
+							</thead>
+							<tbody class="divide-y divide-grey-200/70">
+								{#each visiveis as p (p.id)}
+									<tr>
+										<td class="py-2 pl-5 pr-2 font-mono text-[11px] font-semibold text-grey">{numeroDe(p)}</td>
+										<td class="truncate px-3 py-2 text-xs font-medium text-navy" title={p.prestador}>{p.prestador}</td>
+										<td class="truncate px-3 py-2 text-[11px] text-slate" title={p.servico}>{p.servico}</td>
+										<td class="truncate px-3 py-2 text-[11px] text-slate" title={p.regiao ?? ''}>{p.regiao || '-'}</td>
+										<td class="px-3 py-2 text-[11px] font-semibold text-slate" title={lojaNome(p.lj)}>{p.lj || '-'}</td>
+										<td class="px-3 py-2 text-[11px] tabular-nums text-slate">{fmtData(p.data)}</td>
+										<td class="px-3 py-2 text-right font-mono text-[11px] font-medium text-navy">{formatBRL(p.valor)}</td>
+										<td class="px-5 py-2">{@render documento(p)}</td>
+									</tr>
 								{/each}
-							</ul>
-							<div class="hidden overflow-x-auto sm:block">
-								<!-- Larguras fixas: cada categoria é uma tabela, e sem isto as colunas
-								     desalinhavam de um bloco para o outro. -->
-								<table class="w-full min-w-[720px] table-fixed border-collapse text-left">
-									<thead>
-										<tr class="border-b border-grey-200 text-[10px] uppercase tracking-wider text-grey">
-											<th scope="col" class="px-5 py-2 font-semibold">Prestador</th>
-											<th scope="col" class="w-32 px-3 py-2 font-semibold">Região</th>
-											<th scope="col" class="w-16 px-3 py-2 font-semibold">LJ</th>
-											<th scope="col" class="w-24 px-3 py-2 font-semibold">Data</th>
-											<th scope="col" class="w-28 px-3 py-2 text-right font-semibold">Valor</th>
-											<th scope="col" class="w-52 px-5 py-2 font-semibold">NF / Recibo</th>
-										</tr>
-									</thead>
-									<tbody class="divide-y divide-grey-200/70">
-										{#each itens as p (p.id)}
-											<tr>
-												<td class="truncate px-5 py-2 text-xs font-medium text-navy" title={p.prestador}>{p.prestador}</td>
-												<td class="truncate px-3 py-2 text-[11px] text-slate">{p.regiao || '-'}</td>
-												<td class="px-3 py-2 text-[11px] font-semibold text-slate" title={lojaNome(p.lj)}>{p.lj || '-'}</td>
-												<td class="px-3 py-2 text-[11px] tabular-nums text-slate">{fmtData(p.data)}</td>
-												<td class="px-3 py-2 text-right font-mono text-[11px] font-medium text-navy">{formatBRL(p.valor)}</td>
-												<td class="px-5 py-2">
-													{@render documento(p)}
-												</td>
-											</tr>
-										{/each}
-									</tbody>
-								</table>
-							</div>
-						</Card>
-					{/each}
-				</div>
+							</tbody>
+						</table>
+					</div>
+				</Card>
 			{/if}
 
 			<p class="mt-6 flex items-start gap-2 text-xs text-grey">

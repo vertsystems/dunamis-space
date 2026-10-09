@@ -18,6 +18,7 @@ import { toast } from '$lib/toast.svelte';
 import * as db from './db';
 import { hojeISO } from '$lib/datas';
 import { DOC_GENERO, DOC_ROTULO, novoCaminho, tipoSugerido } from './documentos';
+import { naOrdemDaTela } from './ordem';
 
 const K_CLIENT = 'pagsup_selected_client';
 
@@ -302,7 +303,11 @@ class PagsupStore {
 	clearScheduleForCurrentClient(dataPagamento?: string) {
 		const cid = this.selectedClientId;
 		const data = dataPagamento || hoje();
-		const doCliente = this.scheduledServices.filter((s) => s.clientId === cid);
+		// Na ordem em que o Cronograma mostra: é nela que o banco numera o lote.
+		const doCliente = naOrdemDaTela(
+			this.scheduledServices.filter((s) => s.clientId === cid),
+			(s) => this.providers.find((p) => p.id === s.providerId)?.service ?? ''
+		);
 
 		const novos: Payment[] = doCliente.map((s) => {
 			const prov = this.providers.find((p) => p.id === s.providerId);

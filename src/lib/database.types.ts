@@ -1225,6 +1225,7 @@ export type Database = {
 					doc_bytes: number | null
 					doc_enviado_em: string | null
 					doc_apagado_em: string | null
+					ordem: number
 				}
 				Insert: {
 					id?: string
@@ -1245,6 +1246,7 @@ export type Database = {
 					doc_bytes?: number | null
 					doc_enviado_em?: string | null
 					doc_apagado_em?: string | null
+					ordem: number
 				}
 				Update: {
 					id?: string
@@ -1265,6 +1267,7 @@ export type Database = {
 					doc_bytes?: number | null
 					doc_enviado_em?: string | null
 					doc_apagado_em?: string | null
+					ordem?: number
 				}
 				Relationships: []
 			}
