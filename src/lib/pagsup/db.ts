@@ -8,8 +8,11 @@ import type {
 	ScheduledService,
 	Negotiation,
 	ScheduledNegotiation,
-	Payment
+	Payment,
+	PaymentDoc,
+	DocTipo
 } from './types';
+import { DOCS_BUCKET } from './documentos';
 
 /** `valor` no banco: null representa "A definir" (''). */
 function toPrice(v: number | string | null): number | '' {
@@ -28,6 +31,24 @@ export interface PagsupSnapshot {
 	negotiations: Negotiation[];
 	scheduledNegotiations: ScheduledNegotiation[];
 	payments: Payment[];
+	/**
+	 * A migration 0069 (NF/recibo e link público) já rodou? Enquanto não, a
+	 * Planilha Mensal esconde a coluna de documentos e o link do financeiro.
+	 */
+	docsAtivos: boolean;
+}
+
+/** A linha do banco → o documento do pagamento (null = sem documento). */
+function docDaLinha(p: Record<string, unknown>): PaymentDoc | null {
+	if (!p.doc_tipo) return null;
+	return {
+		tipo: p.doc_tipo as DocTipo,
+		arquivo: (p.doc_arquivo as string | null) ?? null,
+		nome: (p.doc_nome as string | null) ?? '',
+		bytes: Number(p.doc_bytes ?? 0),
+		enviadoEm: (p.doc_enviado_em as string | null) ?? '',
+		apagadoEm: (p.doc_apagado_em as string | null) ?? null
+	};
 }
 
 /**
@@ -56,7 +77,10 @@ async function todasAsPaginas<T>(
 
 export async function fetchAll(supabase: SupabaseClient): Promise<PagsupSnapshot> {
 	const [cli, prest, cron, neg, negAg, pag] = await Promise.all([
-		supabase.from('pagsup_clientes').select('id, nome').order('nome', { ascending: true }),
+		// '*' pelo mesmo motivo das negociações agendadas logo abaixo: token_publico
+		// só existe depois da migration 0069, e pedi-lo pelo nome antes disso
+		// derrubaria o Pag's Up inteiro.
+		supabase.from('pagsup_clientes').select('*').order('nome', { ascending: true }),
 		supabase
 			.from('pagsup_prestadores')
 			.select('id, cliente_id, nome, servico, regiao, valor_padrao, cpf, pix, whatsapp, especialidade, lj'),
@@ -77,7 +101,8 @@ export async function fetchAll(supabase: SupabaseClient): Promise<PagsupSnapshot
 		todasAsPaginas((de, ate) =>
 			supabase
 				.from('pagsup_pagamentos')
-				.select('id, cliente_id, prestador_id, prestador_nome, servico, regiao, valor, data_pagamento, observacoes, lj')
+				// '*': as colunas doc_* chegam com a migration 0069 (ver os clientes).
+				.select('*')
 				.order('data_pagamento', { ascending: false })
 				.range(de, ate)
 		)
@@ -90,7 +115,11 @@ export async function fetchAll(supabase: SupabaseClient): Promise<PagsupSnapshot
 	if (pag.error) console.error('[pagsup] pagamentos', pag.error);
 
 	return {
-		clients: (cli.data ?? []).map((c) => ({ id: c.id, name: c.nome })),
+		clients: (cli.data ?? []).map((c) => ({
+			id: c.id,
+			name: c.nome,
+			publicToken: c.token_publico ?? null
+		})),
 		providers: (prest.data ?? []).map((p) => ({
 			id: p.id,
 			clientId: p.cliente_id,
@@ -142,8 +171,10 @@ export async function fetchAll(supabase: SupabaseClient): Promise<PagsupSnapshot
 			value: Number(p.valor ?? 0),
 			date: p.data_pagamento,
 			notes: p.observacoes ?? '',
-			lj: p.lj ?? ''
-		}))
+			lj: p.lj ?? '',
+			doc: docDaLinha(p)
+		})),
+		docsAtivos: !!cli.data?.length && 'token_publico' in cli.data[0]
 	};
 }
 
@@ -187,6 +218,64 @@ export async function updatePayment(
 
 export async function deletePayment(supabase: SupabaseClient, id: string): Promise<void> {
 	const { error } = await supabase.from('pagsup_pagamentos').delete().eq('id', id);
+	if (error) throw error;
+}
+
+// ---- NF / recibo do pagamento -------------------------------------------
+
+/** Sobe o PDF já compactado. Nome novo a cada envio: nada é sobrescrito. */
+export async function uploadDocumento(
+	supabase: SupabaseClient,
+	caminho: string,
+	bytes: Uint8Array
+): Promise<void> {
+	const { error } = await supabase.storage
+		.from(DOCS_BUCKET)
+		.upload(caminho, new Blob([bytes as BlobPart], { type: 'application/pdf' }), {
+			contentType: 'application/pdf',
+			// O arquivo nunca muda (troca = nome novo), então pode ficar em cache.
+			cacheControl: '31536000',
+			upsert: false
+		});
+	if (error) throw error;
+}
+
+/** Grava (ou limpa, com null) o documento na linha do pagamento. */
+export async function salvarDocumento(
+	supabase: SupabaseClient,
+	pagamentoId: string,
+	doc: PaymentDoc | null
+): Promise<void> {
+	const { error } = await supabase
+		.from('pagsup_pagamentos')
+		.update({
+			doc_tipo: doc?.tipo ?? null,
+			doc_arquivo: doc?.arquivo ?? null,
+			doc_nome: doc?.nome || null,
+			doc_bytes: doc?.bytes ?? null,
+			doc_enviado_em: doc?.enviadoEm || null,
+			doc_apagado_em: doc?.apagadoEm ?? null
+		})
+		.eq('id', pagamentoId);
+	if (error) throw error;
+}
+
+export async function removerArquivos(supabase: SupabaseClient, caminhos: string[]): Promise<void> {
+	if (!caminhos.length) return;
+	const { error } = await supabase.storage.from(DOCS_BUCKET).remove(caminhos);
+	if (error) throw error;
+}
+
+/** Liga (token novo) ou desliga (null) o link público do financeiro. */
+export async function setTokenPublico(
+	supabase: SupabaseClient,
+	clienteId: string,
+	token: string | null
+): Promise<void> {
+	const { error } = await supabase
+		.from('pagsup_clientes')
+		.update({ token_publico: token })
+		.eq('id', clienteId);
 	if (error) throw error;
 }
 

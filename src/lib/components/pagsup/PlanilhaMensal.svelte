@@ -8,7 +8,10 @@
 	import { Button, Card } from '$lib/components/ui';
 	import { toast } from '$lib/toast.svelte';
 	import { hojeISO } from '$lib/datas';
-	import { Search, Trash2, FileSpreadsheet, Plus, X, DollarSign, Pencil, Check } from '@lucide/svelte';
+	import { contarDocs, statusDoc } from '$lib/pagsup/documentos';
+	import DocumentoCelula from './DocumentoCelula.svelte';
+	import LinkFinanceiro from './LinkFinanceiro.svelte';
+	import { Search, Trash2, FileSpreadsheet, Plus, X, DollarSign, Pencil, Check, Link2, FileText } from '@lucide/svelte';
 
 	// As abas do Pag's Up vêm do +page.svelte para ficarem nesta mesma barra.
 	let { abas }: { abas?: import('svelte').Snippet } = $props();
@@ -23,10 +26,34 @@
 	);
 	const total = $derived(doMes.reduce((s, p) => s + (Number(p.value) || 0), 0));
 
+	// ---- NF / recibo ----
+	// Só controle interno: nada disto entra na planilha .xlsx (gerarPlanilha
+	// continua lendo doMes inteiro, sem as colunas de documento).
+	const docs = $derived(contarDocs(doMes));
+	/** Esconde quem já tem documento — a lista de cobrança do mês. */
+	let soPendentes = $state(false);
+	const visiveis = $derived(
+		soPendentes ? doMes.filter((p) => statusDoc(p) === 'pendente') : doMes
+	);
+	let compartilhando = $state(false);
+
+	// Soltar um PDF em cima da linha anexa a ele — mais rápido que abrir o
+	// seletor de arquivo vinte vezes no fechamento do mês.
+	let alvoDrop = $state<string | null>(null);
+	function temArquivo(e: DragEvent) {
+		return !!e.dataTransfer?.types.includes('Files');
+	}
+	function soltar(e: DragEvent, id: string) {
+		e.preventDefault();
+		alvoDrop = null;
+		const arquivo = e.dataTransfer?.files?.[0];
+		if (arquivo) pagsup.anexarDocumento(id, arquivo);
+	}
+
 	/** Agrupado por loja — é assim que a prestação de contas é lida. */
 	const porLoja = $derived.by(() => {
 		const g: Record<string, Payment[]> = {};
-		for (const p of doMes) (g[nomeLoja(p.clientId)] ??= []).push(p);
+		for (const p of visiveis) (g[nomeLoja(p.clientId)] ??= []).push(p);
 		return Object.entries(g).sort(([a], [b]) => a.localeCompare(b));
 	});
 
@@ -216,12 +243,42 @@
 		</div>
 	</div>
 
-	<!-- Linha 2: as duas ações do mês, à direita — alinhadas com o bloco de total
-	     que fica logo acima, no mesmo lado. -->
+	<!-- Linha 2: à esquerda, como anda a coleta de NFs do mês; à direita, as
+	     ações — alinhadas com o bloco de total que fica logo acima. -->
 	<div class="mb-6 flex flex-wrap items-center justify-end gap-2.5">
+		{#if pagsup.docsAtivos && doMes.length}
+			<div class="mr-auto flex flex-wrap items-center gap-2 text-xs">
+				<span class="inline-flex h-8 items-center gap-1.5 rounded-full bg-bg px-3 font-medium text-slate">
+					<FileText size={14} class="text-grey" />
+					NF / Recibo
+					<b class="tabular-nums text-navy">{docs.anexado + docs.arquivado} de {doMes.length}</b>
+				</span>
+				{#if docs.pendente || soPendentes}
+					<button
+						type="button"
+						onclick={() => (soPendentes = !soPendentes)}
+						aria-pressed={soPendentes}
+						class="inline-flex h-8 items-center gap-1.5 rounded-full border px-3 font-semibold transition-colors {soPendentes
+							? 'border-brand-amber bg-brand-amber/15 text-brand-brown'
+							: 'border-grey-200 text-slate hover:border-brand-amber hover:text-brand-brown'}"
+					>
+						{docs.pendente}
+						{docs.pendente === 1 ? 'pendente' : 'pendentes'}
+						{#if soPendentes}<X size={13} />{/if}
+					</button>
+				{/if}
+			</div>
+			<Button variant="secondary" onclick={() => (compartilhando = !compartilhando)} aria-expanded={compartilhando}>
+				<Link2 size={16} /> Link do financeiro
+			</Button>
+		{/if}
 		<Button variant="secondary" onclick={abrirLancamento}><Plus size={16} /> Lançar pagamento</Button>
 		<Button onclick={gerarPlanilha}><FileSpreadsheet size={16} /> Gerar Planilha</Button>
 	</div>
+
+	{#if compartilhando && pagsup.docsAtivos}
+		<LinkFinanceiro onfechar={() => (compartilhando = false)} />
+	{/if}
 
 	{#if lancando}
 		<Card class="mb-6">
@@ -312,6 +369,13 @@
 				<b class="font-medium text-navy">Lançar pagamento</b> para registrar o que foi pago fora dele.
 			</p>
 		</Card>
+	{:else if visiveis.length === 0}
+		<!-- Só acontece com o filtro de pendentes ligado. -->
+		<Card class="border-dashed py-12 text-center">
+			<span class="mx-auto mb-4 grid size-16 place-items-center rounded-full bg-brand-green/12 text-brand-green"><Check size={30} /></span>
+			<h3 class="mb-1 text-base font-medium text-navy">Todos os pagamentos de {rotuloMes(mes)} têm NF ou recibo</h3>
+			<button type="button" onclick={() => (soPendentes = false)} class="text-sm font-medium text-brand hover:underline">Ver todos</button>
+		</Card>
 	{:else}
 		<div class="space-y-5">
 			{#each porLoja as [loja, itens] (loja)}
@@ -340,6 +404,9 @@
 									<th scope="col" class="w-32 px-5 py-2 font-semibold">LJ</th>
 									<th scope="col" class="px-5 py-2 font-semibold">Data</th>
 									<th scope="col" class="px-5 py-2 text-right font-semibold">Valor</th>
+									{#if pagsup.docsAtivos}
+										<th scope="col" class="w-36 px-3 py-2 font-semibold">NF / Recibo</th>
+									{/if}
 									<th scope="col" class="w-24 px-5 py-2"><span class="sr-only">Ações</span></th>
 								</tr>
 							</thead>
@@ -368,6 +435,9 @@
 													class="{fieldRowCls} ml-auto max-w-[130px] text-right font-mono"
 												/>
 											</td>
+											{#if pagsup.docsAtivos}
+												<td class="px-3 py-1.5"><DocumentoCelula {p} /></td>
+											{/if}
 											<td class="px-5 py-1.5">
 												<div class="flex justify-end gap-1">
 													<button onclick={() => salvarEdicao(p.id)} title="Salvar" class="rounded-[var(--radius-sm)] p-1 text-brand-green transition-colors hover:bg-brand-green/10"><Check size={14} /></button>
@@ -378,8 +448,19 @@
 									{:else}
 										<!-- A linha toda abre a edição, como no cronograma. -->
 										<tr
-											class="group cursor-pointer transition-colors hover:bg-bg/50"
+											class="group cursor-pointer transition-colors hover:bg-bg/50 {alvoDrop === p.id
+												? 'bg-brand/[0.06] outline-2 -outline-offset-2 outline-dashed outline-brand'
+												: ''}"
 											onclick={() => abrirEdicao(p)}
+											ondragover={(e) => {
+												if (!pagsup.docsAtivos || !temArquivo(e)) return;
+												e.preventDefault();
+												alvoDrop = p.id;
+											}}
+											ondragleave={() => {
+												if (alvoDrop === p.id) alvoDrop = null;
+											}}
+											ondrop={(e) => soltar(e, p.id)}
 											onkeydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); abrirEdicao(p); } }}
 											tabindex="0"
 											role="button"
@@ -395,6 +476,9 @@
 											</td>
 											<td class="px-5 py-1.5 text-[11px] tabular-nums text-slate">{fmtData(p.date)}</td>
 											<td class="px-5 py-1.5 text-right font-mono text-[11px] font-medium text-navy">{formatBRL(p.value)}</td>
+											{#if pagsup.docsAtivos}
+												<td class="px-3 py-1.5"><DocumentoCelula {p} /></td>
+											{/if}
 											<td class="px-5 py-1.5">
 												<div class="flex justify-end gap-1">
 													<button

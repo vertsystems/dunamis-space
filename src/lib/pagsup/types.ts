@@ -7,6 +7,8 @@ export type ServiceType = 'Carros e Veículos de Som' | 'Locução Loja' | strin
 export interface Client {
 	id: string;
 	name: string;
+	/** Token do link público do financeiro (/pagamentos/<token>). Nulo = desligado. */
+	publicToken?: string | null;
 }
 
 export interface Provider {
@@ -72,6 +74,23 @@ export interface Payment {
 	notes?: string;
 	/** LJ copiada do prestador no ato do registro (ver Provider.lj). */
 	lj?: string;
+	/** NF ou recibo do pagamento — controle interno, fora da planilha .xlsx. */
+	doc?: PaymentDoc | null;
+}
+
+export type DocTipo = 'nf' | 'recibo';
+
+/** O PDF de NF/recibo de um pagamento (ver $lib/pagsup/documentos). */
+export interface PaymentDoc {
+	tipo: DocTipo;
+	/** Caminho no bucket. Nulo depois que a faxina de 3 meses apagou o PDF. */
+	arquivo: string | null;
+	/** Nome do arquivo como foi enviado. */
+	nome: string;
+	/** Tamanho depois de compactado. */
+	bytes: number;
+	enviadoEm: string;
+	apagadoEm: string | null;
 }
 
 export interface Negotiation {

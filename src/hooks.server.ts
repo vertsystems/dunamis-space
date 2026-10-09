@@ -45,11 +45,15 @@ const supabase: Handle = async ({ event, resolve }) => {
 };
 
 const authGuard: Handle = async ({ event, resolve }) => {
-	// Rotas públicas: login, redefinição de senha e o portal externo de aprovação.
+	// Rotas públicas: login, redefinição de senha, o portal externo de aprovação
+	// e o painel do financeiro do cliente (Pag's Up → /pagamentos/<token>).
 	const publicRoute =
 		event.url.pathname.startsWith('/login') ||
 		event.url.pathname.startsWith('/redefinir-senha') ||
-		event.url.pathname.startsWith('/aprovar');
+		event.url.pathname.startsWith('/aprovar') ||
+		event.url.pathname.startsWith('/pagamentos/') ||
+		// O cron da Vercel não tem sessão: a rota confere o CRON_SECRET sozinha.
+		event.url.pathname === '/api/pagsup/limpeza';
 
 	// getSession() só lê e decodifica o cookie — é local, sem rede. As duas
 	// chamadas CARAS são getUser() (valida no servidor de auth) e o RPC de

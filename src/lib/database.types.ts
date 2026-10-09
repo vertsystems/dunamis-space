@@ -1076,18 +1076,21 @@ export type Database = {
 					nome: string
 					created_at: string
 					updated_at: string
+					token_publico: string | null
 				}
 				Insert: {
 					id?: string
 					nome: string
 					created_at?: string
 					updated_at?: string
+					token_publico?: string | null
 				}
 				Update: {
 					id?: string
 					nome?: string
 					created_at?: string
 					updated_at?: string
+					token_publico?: string | null
 				}
 				Relationships: []
 			}
@@ -1216,6 +1219,12 @@ export type Database = {
 					created_at: string
 					updated_at: string
 					lj: string | null
+					doc_tipo: string | null
+					doc_arquivo: string | null
+					doc_nome: string | null
+					doc_bytes: number | null
+					doc_enviado_em: string | null
+					doc_apagado_em: string | null
 				}
 				Insert: {
 					id?: string
@@ -1230,6 +1239,12 @@ export type Database = {
 					created_at?: string
 					updated_at?: string
 					lj?: string | null
+					doc_tipo?: string | null
+					doc_arquivo?: string | null
+					doc_nome?: string | null
+					doc_bytes?: number | null
+					doc_enviado_em?: string | null
+					doc_apagado_em?: string | null
 				}
 				Update: {
 					id?: string
@@ -1244,6 +1259,12 @@ export type Database = {
 					created_at?: string
 					updated_at?: string
 					lj?: string | null
+					doc_tipo?: string | null
+					doc_arquivo?: string | null
+					doc_nome?: string | null
+					doc_bytes?: number | null
+					doc_enviado_em?: string | null
+					doc_apagado_em?: string | null
 				}
 				Relationships: []
 			}

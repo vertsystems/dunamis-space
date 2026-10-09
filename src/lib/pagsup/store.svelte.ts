@@ -10,12 +10,14 @@ import type {
 	Negotiation,
 	ScheduledNegotiation,
 	Client,
-	Payment
+	Payment,
+	PaymentDoc
 } from './types';
 import { SERVICE_CATEGORIES } from './types';
 import { toast } from '$lib/toast.svelte';
 import * as db from './db';
 import { hojeISO } from '$lib/datas';
+import { DOC_GENERO, DOC_ROTULO, novoCaminho, tipoSugerido } from './documentos';
 
 const K_CLIENT = 'pagsup_selected_client';
 
@@ -47,6 +49,10 @@ class PagsupStore {
 	scheduledNegotiations = $state<ScheduledNegotiation[]>([]);
 	/** Pagamentos já efetuados (histórico) — base da Planilha Mensal. */
 	payments = $state<Payment[]>([]);
+	/** NF/recibo e link público disponíveis (migration 0069 aplicada). */
+	docsAtivos = $state(false);
+	/** PDFs sendo compactados/enviados, por pagamento → etapa ("Compactando…"). */
+	enviandoDoc = $state<Record<string, string>>({});
 
 	// ---- Derivados filtrados pelo cliente selecionado ----------------------
 	filteredProviders = $derived(this.providers.filter((p) => p.clientId === this.selectedClientId));
@@ -105,6 +111,7 @@ class PagsupStore {
 			this.negotiations = snap.negotiations;
 			this.scheduledNegotiations = snap.scheduledNegotiations;
 			this.payments = snap.payments;
+			this.docsAtivos = snap.docsAtivos;
 
 			const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(K_CLIENT) : null;
 			this.selectedClientId =
@@ -345,13 +352,18 @@ class PagsupStore {
 		const item: Payment = { ...data, id: uid() };
 		const snapshot = this.payments;
 		this.payments = [item, ...this.payments];
-		this.#persist(
-			async () => {
-				await this.#esperarPai(item.providerId ?? undefined);
-				await db.insertPayments(this.supabase!, [item]);
-			},
-			() => (this.payments = snapshot),
-			'Falha ao registrar o pagamento.'
+		// Registrado como em voo: anexar a NF logo depois de lançar faria o
+		// update do documento chegar antes do insert do pagamento.
+		this.#registrar(
+			item.id,
+			this.#persist(
+				async () => {
+					await this.#esperarPai(item.providerId ?? undefined);
+					await db.insertPayments(this.supabase!, [item]);
+				},
+				() => (this.payments = snapshot),
+				'Falha ao registrar o pagamento.'
+			)
 		);
 		return item;
 	}
@@ -368,11 +380,142 @@ class PagsupStore {
 
 	deletePayment(id: string) {
 		const snapshot = this.payments;
+		const arquivo = this.payments.find((p) => p.id === id)?.doc?.arquivo;
 		this.payments = this.payments.filter((p) => p.id !== id);
 		this.#persist(
-			() => db.deletePayment(this.supabase!, id),
+			async () => {
+				await db.deletePayment(this.supabase!, id);
+				// O PDF vai junto. Se a remoção falhar, a faxina pega o órfão depois.
+				if (arquivo) await db.removerArquivos(this.supabase!, [arquivo]).catch(console.error);
+			},
 			() => (this.payments = snapshot),
 			'Falha ao excluir o pagamento.'
+		);
+	}
+
+	// ---- NF / recibo do pagamento ------------------------------------------
+
+	#trocarDoc(id: string, doc: PaymentDoc | null) {
+		this.payments = this.payments.map((p) => (p.id === id ? { ...p, doc } : p));
+	}
+
+	#etapaDoc(id: string, etapa: string | null) {
+		const { [id]: _, ...resto } = this.enviandoDoc;
+		this.enviandoDoc = etapa ? { ...resto, [id]: etapa } : resto;
+	}
+
+	/**
+	 * Compacta o PDF (até 50 KB, ver compactarPdf.ts), sobe e liga ao pagamento.
+	 * Não é otimista como o resto do store: até o arquivo chegar ao Storage não há
+	 * o que mostrar. Se o pagamento já tinha PDF, o novo substitui o antigo.
+	 */
+	async anexarDocumento(id: string, arquivo: File): Promise<void> {
+		const sb = this.supabase;
+		const p = this.payments.find((x) => x.id === id);
+		if (!sb || !p || this.enviandoDoc[id]) return;
+
+		this.#etapaDoc(id, 'Compactando…');
+		let caminho = '';
+		try {
+			// Import sob demanda: pdf.js e pdf-lib só descem quando alguém anexa.
+			const { compactarPdf, formatarBytes } = await import('./compactarPdf');
+			const r = await compactarPdf(new Uint8Array(await arquivo.arrayBuffer()), {
+				onEtapa: (e) => this.#etapaDoc(id, e)
+			});
+
+			this.#etapaDoc(id, 'Enviando…');
+			caminho = novoCaminho();
+			await db.uploadDocumento(sb, caminho, r.bytes);
+
+			const atual = this.payments.find((x) => x.id === id);
+			const prestador = this.providers.find((pr) => pr.id === p.providerId);
+			const doc: PaymentDoc = {
+				// Substituir o PDF mantém o tipo que alguém já corrigiu à mão.
+				tipo: atual?.doc?.tipo ?? tipoSugerido(prestador?.cpf),
+				arquivo: caminho,
+				nome: arquivo.name,
+				bytes: r.bytes.length,
+				enviadoEm: new Date().toISOString(),
+				apagadoEm: null
+			};
+			await this.#esperarPai(id);
+			await db.salvarDocumento(sb, id, doc);
+			caminho = ''; // a partir daqui o arquivo tem dono
+
+			const antigo = atual?.doc?.arquivo;
+			this.#trocarDoc(id, doc);
+			if (antigo) db.removerArquivos(sb, [antigo]).catch(console.error);
+
+			const reduziu = r.original > r.bytes.length ? ` (era ${formatarBytes(r.original)})` : '';
+			toast.success(
+				`${DOC_ROTULO[doc.tipo]} de ${p.providerName} anexad${DOC_GENERO[doc.tipo]} · ${formatarBytes(r.bytes.length)}${reduziu}`
+			);
+		} catch (e) {
+			console.error('[pagsup] anexarDocumento', e);
+			// Subiu mas não ficou ligado ao pagamento: não deixa o arquivo solto.
+			if (caminho) db.removerArquivos(sb, [caminho]).catch(console.error);
+			toast.error(
+				e instanceof Error && e.name === 'ErroDocumento' ? e.message : 'Não foi possível anexar o PDF.'
+			);
+		} finally {
+			this.#etapaDoc(id, null);
+		}
+	}
+
+	/** NF ⇄ Recibo — o palpite do envio vem do CPF/CNPJ e pode errar. */
+	trocarTipoDocumento(id: string) {
+		const doc = this.payments.find((p) => p.id === id)?.doc;
+		if (!doc) return;
+		const novo: PaymentDoc = { ...doc, tipo: doc.tipo === 'nf' ? 'recibo' : 'nf' };
+		this.#trocarDoc(id, novo);
+		this.#persist(
+			() => db.salvarDocumento(this.supabase!, id, novo),
+			() => this.#trocarDoc(id, doc),
+			'Falha ao trocar o tipo do documento.'
+		);
+	}
+
+	/** Tira o PDF do pagamento, que volta a ficar pendente. */
+	removerDocumento(id: string) {
+		const doc = this.payments.find((p) => p.id === id)?.doc;
+		if (!doc) return;
+		this.#trocarDoc(id, null);
+		this.#persist(
+			async () => {
+				await db.salvarDocumento(this.supabase!, id, null);
+				if (doc.arquivo) await db.removerArquivos(this.supabase!, [doc.arquivo]).catch(console.error);
+			},
+			() => this.#trocarDoc(id, doc),
+			'Falha ao remover o documento.'
+		);
+	}
+
+	// ---- Link público do financeiro ----------------------------------------
+
+	#trocarToken(clientId: string, token: string | null) {
+		this.clients = this.clients.map((c) => (c.id === clientId ? { ...c, publicToken: token } : c));
+	}
+
+	/** Gera um link novo — o anterior, se havia, para de funcionar. */
+	ligarLinkPublico(clientId: string): string {
+		const antes = this.clients.find((c) => c.id === clientId)?.publicToken ?? null;
+		const token = uid();
+		this.#trocarToken(clientId, token);
+		this.#persist(
+			() => db.setTokenPublico(this.supabase!, clientId, token),
+			() => this.#trocarToken(clientId, antes),
+			'Falha ao gerar o link.'
+		);
+		return token;
+	}
+
+	desligarLinkPublico(clientId: string) {
+		const antes = this.clients.find((c) => c.id === clientId)?.publicToken ?? null;
+		this.#trocarToken(clientId, null);
+		this.#persist(
+			() => db.setTokenPublico(this.supabase!, clientId, null),
+			() => this.#trocarToken(clientId, antes),
+			'Falha ao desligar o link.'
 		);
 	}
 
