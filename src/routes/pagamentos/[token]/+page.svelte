@@ -45,6 +45,12 @@
 	 * para "o 14" ser o mesmo pagamento para quem conversa sobre ele.
 	 */
 	const numero = $derived(new Map(painel.pagamentos.map((p, i) => [p.id, i + 1])));
+	/**
+	 * A tela mostra do lançamento mais recente para o mais antigo. O número
+	 * continua contando do primeiro: assim um pagamento novo entra no topo sem
+	 * mudar o número de quem já estava na lista.
+	 */
+	const recentesPrimeiro = $derived([...painel.pagamentos].reverse());
 	const casas = $derived(String(painel.pagamentos.length).length);
 	const numeroDe = (p: PagamentoPublico) => String(numero.get(p.id) ?? 0).padStart(casas, '0');
 
@@ -81,13 +87,13 @@
 	type Filtro = 'todos' | 'faltam' | 'aguardando';
 	let filtro = $state<Filtro>('todos');
 
-	const disponiveis = $derived(painel.pagamentos.filter(comPdf));
+	const disponiveis = $derived(recentesPrimeiro.filter(comPdf));
 	const faltam = $derived(disponiveis.filter((p) => !baixados[p.id]));
-	const aguardando = $derived(painel.pagamentos.filter((p) => !p.doc_tipo));
+	const aguardando = $derived(recentesPrimeiro.filter((p) => !p.doc_tipo));
 	const total = $derived(painel.pagamentos.reduce((s, p) => s + (Number(p.valor) || 0), 0));
 
 	const visiveis = $derived(
-		filtro === 'faltam' ? faltam : filtro === 'aguardando' ? aguardando : painel.pagamentos
+		filtro === 'faltam' ? faltam : filtro === 'aguardando' ? aguardando : recentesPrimeiro
 	);
 
 	// Trocar de mês limpa o filtro: "faltam baixar" de outro mês confunde.
@@ -259,9 +265,8 @@
 					</p>
 				</Card>
 			{:else}
-				<!-- Uma lista só, na ordem em que os pagamentos foram lançados: o que
-				     entrou por último fica no fim, e o financeiro acompanha de cima
-				     para baixo. (Era agrupada por categoria.) -->
+				<!-- Uma lista só, por ordem de lançamento, do mais recente (no topo) ao
+				     mais antigo. (Era agrupada por categoria.) -->
 				<Card padding="none" class="overflow-hidden">
 					<!-- Celular: o link chega pelo WhatsApp, então a lista empilha em vez de
 					     espremer as colunas. -->
