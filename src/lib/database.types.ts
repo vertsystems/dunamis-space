@@ -833,6 +833,21 @@ export type Database = {
 				}
 				Relationships: []
 			}
+			dmetric_config: {
+				Row: {
+					chave: string
+					valor: string
+				}
+				Insert: {
+					chave: string
+					valor: string
+				}
+				Update: {
+					chave?: string
+					valor?: string
+				}
+				Relationships: []
+			}
 			dmetric_diario: {
 				Row: {
 					site_id: string

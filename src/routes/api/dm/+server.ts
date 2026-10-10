@@ -2,7 +2,11 @@
 //
 // Pública de propósito: quem chama é o navegador do visitante, num site que não
 // é o nosso. Por isso ela só sabe CONTAR — nada é lido daqui — e a função do
-// banco confere a chave e o domínio do site antes (dmetric_coletar, 0072).
+// banco confere a chave e o domínio do site antes (dmetric_coletar, 0072/0073).
+//
+// Fala com o banco pela chave pública (anon), levando o segredo do DMetric
+// (DMETRIC_SEGREDO): a função só conta com ele, então chamá-la direto pela API
+// não adianta. Era com a service role, que chegou vazia à função em produção.
 //
 // País e cidade vêm dos cabeçalhos que a própria Vercel põe em toda requisição
 // (x-vercel-ip-*): não dá para o visitante forjar, e não precisa de serviço de
@@ -48,8 +52,9 @@ export const OPTIONS: RequestHandler = () => pronto('preflight');
 
 export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 	const url = envPublic.PUBLIC_SUPABASE_URL;
-	const chaveServico = env.SUPABASE_SERVICE_ROLE_KEY;
-	if (!url || !chaveServico) return pronto('sem-configuracao');
+	const anon = envPublic.PUBLIC_SUPABASE_ANON_KEY;
+	const segredo = env.DMETRIC_SEGREDO;
+	if (!url || !anon || !segredo) return pronto('sem-configuracao');
 
 	const ua = request.headers.get('user-agent') ?? '';
 	if (ehRobo(ua)) return pronto('robo');
@@ -74,10 +79,11 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 		/* sem IP (alguns ambientes de dev): o hash fica só com o User-Agent */
 	}
 
-	const supabase = createClient(url, chaveServico, {
+	const supabase = createClient(url, anon, {
 		auth: { persistSession: false, autoRefreshToken: false }
 	});
 	const { data: contou, error } = await supabase.rpc('dmetric_coletar', {
+		p_segredo: segredo,
 		p_chave: b.chave,
 		p_host: b.host,
 		p_caminho: b.caminho,
@@ -87,9 +93,9 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 		p_dispositivo: classificarAparelho(ua, b.largura),
 		p_navegador: classificarNavegador(ua),
 		p_sistema: classificarSistema(ua),
-		// O segredo do hash é a própria service role key: já é segredo do
-		// servidor, e trocar de chave só "zera" quem foi visto hoje.
-		p_visitante: await hashVisitante(chaveServico, dia, b.chave, ip, ua)
+		// O mesmo segredo assina o hash do visitante: trocá-lo só "zera" quem
+		// já foi visto hoje.
+		p_visitante: await hashVisitante(segredo, dia, b.chave, ip, ua)
 	});
 	if (error) {
 		console.error('[dmetric] coletar', error.message);
