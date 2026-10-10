@@ -1,17 +1,28 @@
 // DMetric — as regras do painel, sem I/O (testadas em painel.test.ts).
 
 /** Um item de uma dimensão (país, página, origem…) já somado no período. */
-export type ItemDimensao = { valor: string; visitas: number; visualizacoes: number };
+export type ItemDimensao = { valor: string; visitas: number; visualizacoes: number; segundos?: number };
 
 /** O que a função dmetric_painel devolve (migration 0072). */
 export type PainelDados = {
 	visitas: number;
 	visualizacoes: number;
+	/** Tempo de tela somado (só aba visível). Médio = segundos ÷ visitas. */
+	segundos?: number;
 	por_dia: { dia: string; visitas: number; visualizacoes: number }[];
 	dimensoes: Partial<Record<Dimensao, ItemDimensao[]>>;
 };
 
-export type Dimensao = 'pais' | 'cidade' | 'pagina' | 'origem' | 'dispositivo' | 'navegador' | 'sistema';
+export type Dimensao =
+	| 'pais'
+	| 'cidade'
+	| 'pagina'
+	| 'origem'
+	| 'campanha'
+	| 'clique'
+	| 'dispositivo'
+	| 'navegador'
+	| 'sistema';
 
 /** Uma linha do histórico importado do Google Analytics. */
 export type LinhaHistorico = {
@@ -29,6 +40,8 @@ export type DMetricSite = {
 	dominio: string | null;
 	chave: string;
 	ativo: boolean;
+	/** Criado sozinho pela primeira visita (código único). */
+	automatico?: boolean;
 	ultima_visita: string | null;
 	created_at: string;
 };
@@ -155,6 +168,52 @@ export function porcentagem(f: number): string {
 	return new Intl.NumberFormat('pt-BR', { style: 'percent', maximumFractionDigits: 1 }).format(f);
 }
 
+/**
+ * O histórico importado, resumido: total, países (sem repetir o país que
+ * aparece em mais de um período) e o rótulo dos períodos — "2025", "2025 e
+ * 2026", ou com mês quando o período não é o ano inteiro.
+ *
+ * Somar usuários de dois relatórios do GA conta duas vezes quem visitou nos
+ * dois períodos: o GA só tira repetição dentro de um mesmo relatório.
+ */
+export function resumirHistorico(linhas: Pick<LinhaHistorico, 'inicio' | 'fim' | 'pais' | 'usuarios'>[]): {
+	usuarios: number;
+	paises: number;
+	rotulo: string;
+} {
+	const usuarios = linhas.reduce((s, l) => s + l.usuarios, 0);
+	const paises = new Set(linhas.filter((l) => l.pais).map((l) => l.pais)).size;
+	const periodos = [...new Map(linhas.map((l) => [`${l.inicio}|${l.fim}`, l])).values()].sort((a, b) =>
+		a.inicio.localeCompare(b.inicio)
+	);
+	const mes = (iso: string) => {
+		const [a, m] = iso.split('-').map(Number);
+		return `${new Date(a, m - 1, 1).toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}/${a}`;
+	};
+	const umPeriodo = (p: { inicio: string; fim: string }) => {
+		const anoInteiro = p.inicio.endsWith('-01-01') && p.fim.endsWith('-12-31') && p.inicio.slice(0, 4) === p.fim.slice(0, 4);
+		return anoInteiro ? p.inicio.slice(0, 4) : `${mes(p.inicio)} a ${mes(p.fim)}`;
+	};
+	const partes = periodos.map(umPeriodo);
+	const rotulo = partes.length <= 1 ? (partes[0] ?? '') : `${partes.slice(0, -1).join(', ')} e ${partes.at(-1)}`;
+	return { usuarios, paises, rotulo };
+}
+
+/** 72 → "1 min 12 s"; 3720 → "1 h 2 min". */
+export function duracao(segundos: number): string {
+	const s = Math.round(segundos);
+	if (!(s > 0)) return '0 s';
+	if (s < 60) return `${s} s`;
+	if (s < 3600) {
+		const m = Math.floor(s / 60);
+		const r = s % 60;
+		return r ? `${m} min ${r} s` : `${m} min`;
+	}
+	const h = Math.floor(s / 3600);
+	const m = Math.round((s % 3600) / 60);
+	return m ? `${h} h ${m} min` : `${h} h`;
+}
+
 // ---- Sites -----------------------------------------------------------------
 
 /**
@@ -171,9 +230,9 @@ export function limparDominio(v: string): string {
 		.replace(/\.$/, '');
 }
 
-/** O snippet que vai no <head> do site. */
-export function snippet(origem: string, chave: string): string {
-	return `<script defer src="${origem}/dm.js" data-site="${chave}"></script>`;
+/** O código que vai no <head> do site — o mesmo para todos (o site sai do domínio). */
+export function snippet(origem: string): string {
+	return `<script defer src="${origem}/dm.js"></script>`;
 }
 
 /** "agora há pouco", "há 3 h", "há 2 dias" — para o status do site. */

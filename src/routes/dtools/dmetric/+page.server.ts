@@ -5,7 +5,7 @@ import { diaEmBrasilia } from '$lib/dmetric/coleta';
 import {
 	intervalo,
 	lerPeriodo,
-	limparDominio,
+	resumirHistorico,
 	type DMetricSite,
 	type LinhaHistorico,
 	type PainelDados
@@ -46,31 +46,24 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		// O histórico é da propriedade inteira do GA, não de um site: só entra
 		// na visão de todos os sites e no período "desde o começo".
 		historico: !site && periodo === 'tudo' ? ((historico.data ?? []) as LinhaHistorico[]) : [],
-		resumoHistorico: {
-			usuarios: ((historico.data ?? []) as LinhaHistorico[]).reduce((s, h) => s + h.usuarios, 0),
-			paises: ((historico.data ?? []) as LinhaHistorico[]).filter((h) => h.pais).length
-		},
+		resumoHistorico: resumirHistorico((historico.data ?? []) as LinhaHistorico[]),
 		painel: (painel.data as PainelDados | null) ?? VAZIO
 	};
 };
 
 export const actions: Actions = {
-	criarSite: async ({ request, locals }) => {
+	// Não há "criar site": com o código único o site aparece sozinho na
+	// primeira visita, com o domínio como nome. Aqui só se dá um nome melhor.
+	renomearSite: async ({ request, locals }) => {
 		exigirPermissao(locals, 'dmetric', 'editar');
 		const fd = await request.formData();
-		const nome = String(fd.get('nome') ?? '').trim();
-		const dominio = limparDominio(String(fd.get('dominio') ?? ''));
-		if (!nome) return fail(400, { erro: 'Dê um nome ao site.', nome, dominio });
-		if (dominio && !/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(dominio)) {
-			return fail(400, { erro: 'Domínio inválido. Use só o endereço, ex.: lojasmari.com.br', nome, dominio });
-		}
-		const { data, error } = await locals.supabase
-			.from('dmetric_sites')
-			.insert({ nome, dominio: dominio || null })
-			.select('id')
-			.single();
-		if (error) return fail(500, { erro: error.message, nome, dominio });
-		return { criado: data.id as string };
+		const id = String(fd.get('id') ?? '');
+		const nome = String(fd.get('nome') ?? '').trim().slice(0, 80);
+		if (!UUID.test(id)) return fail(400, { erro: 'Site inválido.' });
+		if (!nome) return fail(400, { erro: 'Dê um nome ao site.' });
+		const { error } = await locals.supabase.from('dmetric_sites').update({ nome }).eq('id', id);
+		if (error) return fail(500, { erro: error.message });
+		return { ok: true };
 	},
 
 	alternarSite: async ({ request, locals }) => {

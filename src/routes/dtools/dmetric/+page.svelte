@@ -8,8 +8,8 @@
 	import ListaDimensao from '$lib/components/dmetric/ListaDimensao.svelte';
 	import Sites from '$lib/components/dmetric/Sites.svelte';
 	import { podeEditar, podeExcluir } from '$lib/permissoes';
-	import { PERIODOS, nomePais, numero, porcentagem, visitasPorPais } from '$lib/dmetric/painel';
-	import { ChartSpline, Globe, Eye, Users, MapPinned, Info } from '@lucide/svelte';
+	import { PERIODOS, duracao, nomePais, numero, porcentagem, visitasPorPais } from '$lib/dmetric/painel';
+	import { ChartSpline, Globe, Eye, Users, MapPinned, Info, Timer } from '@lucide/svelte';
 
 	let { data } = $props();
 
@@ -60,6 +60,8 @@
 		return melhor ? { iso: melhor[0], fatia: melhor[1] / (soma || 1) } : null;
 	});
 	const temVivo = $derived(data.painel.visualizacoes > 0);
+	/** Tempo médio por visita — só do script (o histórico do GA não traz). */
+	const tempoMedio = $derived(data.painel.visitas ? (data.painel.segundos ?? 0) / data.painel.visitas : 0);
 
 	let destaque = $state<string | null>(null);
 
@@ -127,10 +129,11 @@
 		<Sites sites={data.sites} historico={data.resumoHistorico} podeEditar={podeEditarSites} podeExcluir={podeExcluirSites} />
 	{:else}
 		<!-- Indicadores -->
-		<div class="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+		<div class="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
 			{#each [
-				{ rotulo: 'Visitas', valor: numero(visitas), nota: comHistorico ? `inclui ${numero(totalHistorico)} do Google Analytics (2025)` : 'cada pessoa conta uma vez por dia', icon: Users },
+				{ rotulo: 'Visitas', valor: numero(visitas), nota: comHistorico ? `inclui ${numero(totalHistorico)} do Google Analytics (${data.resumoHistorico.rotulo})` : 'cada pessoa conta uma vez por dia', icon: Users },
 				{ rotulo: 'Páginas vistas', valor: numero(data.painel.visualizacoes), nota: 'registradas pelo script', icon: Eye },
+				{ rotulo: 'Tempo médio', valor: tempoMedio ? duracao(tempoMedio) : '—', nota: 'na tela, por visita', icon: Timer },
 				{ rotulo: 'Países alcançados', valor: numero(paises.size), nota: lider ? `${porcentagem(lider.fatia)} do ${nomePais(lider.iso)}` : 'nenhum ainda', icon: Globe },
 				{ rotulo: 'Sites com o script', valor: `${recebendo} de ${data.sites.length}`, nota: 'recebendo visitas', icon: MapPinned }
 			] as t (t.rotulo)}
@@ -159,7 +162,9 @@
 				<MapaMundi valores={paises} bind:destaque />
 			</Card>
 			<Card>
-				<h2 class="mb-3 text-base font-bold text-navy">Países</h2>
+				<h2 class="mb-3 flex items-baseline justify-between text-base font-bold text-navy">
+					Países <span class="text-xs font-medium text-grey">{paises.size}</span>
+				</h2>
 				<RankingPaises valores={paises} bind:destaque />
 			</Card>
 		</div>
@@ -173,7 +178,15 @@
 			<div class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
 				<ListaDimensao titulo="Páginas mais vistas" itens={data.painel.dimensoes.pagina} medida="visualizacoes" rotular={rotuloPagina} />
 				<ListaDimensao titulo="De onde chegaram" itens={data.painel.dimensoes.origem} />
+				<ListaDimensao
+					titulo="Cliques"
+					itens={data.painel.dimensoes.clique}
+					medida="visualizacoes"
+					rotuloMedida="Cliques"
+					vazio="Nenhum clique em WhatsApp, telefone ou link para fora."
+				/>
 				<ListaDimensao titulo="Cidades" itens={data.painel.dimensoes.cidade} />
+				<ListaDimensao titulo="Campanhas" itens={data.painel.dimensoes.campanha} vazio="Nenhum link com utm_campaign neste período." />
 				<ListaDimensao titulo="Aparelhos" itens={data.painel.dimensoes.dispositivo} />
 				<ListaDimensao titulo="Navegadores" itens={data.painel.dimensoes.navegador} />
 				<ListaDimensao titulo="Sistemas" itens={data.painel.dimensoes.sistema} />

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	classificarAparelho,
+	classificarClique,
 	classificarNavegador,
 	classificarOrigem,
 	classificarSistema,
@@ -95,6 +96,31 @@ describe('aparelho, navegador e sistema', () => {
 	});
 });
 
+describe('classificarClique', () => {
+	const H = 'lojasmari.com.br';
+	it('contato e mapa pelo nome', () => {
+		expect(classificarClique('https://wa.me/5515999999999?text=Oi', H)).toBe('WhatsApp');
+		expect(classificarClique('https://api.whatsapp.com/send?phone=55', H)).toBe('WhatsApp');
+		expect(classificarClique('whatsapp://send?phone=55', H)).toBe('WhatsApp');
+		expect(classificarClique('tel:+551532440000', H)).toBe('Telefone');
+		expect(classificarClique('mailto:contato@lojasmari.com.br', H)).toBe('E-mail');
+		expect(classificarClique('https://www.google.com/maps/place/Lojas+Mari', H)).toBe('Mapa');
+		expect(classificarClique('https://maps.app.goo.gl/abc', H)).toBe('Mapa');
+		expect(classificarClique('https://waze.com/ul?ll=1,2', H)).toBe('Mapa');
+	});
+	it('link para fora: rede conhecida ou o domínio', () => {
+		expect(classificarClique('https://www.instagram.com/lojasmari', H)).toBe('Instagram');
+		expect(classificarClique('https://parceiro.com.br/promo', H)).toBe('parceiro.com.br');
+	});
+	it('link do próprio site é navegação, não clique', () => {
+		expect(classificarClique('https://lojasmari.com.br/ofertas', H)).toBeNull();
+		expect(classificarClique('https://www.lojasmari.com.br/', H)).toBeNull();
+		expect(classificarClique('https://blog.lojasmari.com.br/', H)).toBeNull();
+		expect(classificarClique('javascript:void(0)', H)).toBeNull();
+		expect(classificarClique('', H)).toBeNull();
+	});
+});
+
 describe('nomeDaCidade', () => {
 	it('decodifica e junta a UF', () => {
 		expect(nomeDaCidade('S%C3%A3o%20Paulo', 'SP')).toBe('São Paulo · SP');
@@ -122,14 +148,27 @@ describe('hashVisitante', () => {
 
 describe('lerBatida', () => {
 	it('aceita o que o script manda', () => {
-		expect(lerBatida({ k: 'a1b2c3d4e5f6', h: 'LojasMari.com.br', p: '/ofertas?x=1', r: '', u: 'ig', w: 390 })).toEqual({
+		expect(lerBatida({ k: 'a1b2c3d4e5f6', h: 'LojasMari.com.br', p: '/ofertas?x=1', r: '', u: 'ig', c: 'Aniversário ', w: 390 })).toMatchObject({
+			tipo: 'v',
 			chave: 'a1b2c3d4e5f6',
 			host: 'lojasmari.com.br',
 			caminho: '/ofertas',
 			referrer: '',
 			utm: 'ig',
+			campanha: 'Aniversário',
 			largura: 390
 		});
+	});
+	it('código único: sem chave, o site sai do domínio', () => {
+		expect(lerBatida({ h: 'lojasmari.com.br', p: '/' })).toMatchObject({ chave: '', tipo: 'v' });
+	});
+	it('tempo de tela, com teto de 30 minutos', () => {
+		expect(lerBatida({ t: 'tempo', h: 'x.com.br', p: '/', s: 42.4 })).toMatchObject({ tipo: 'tempo', segundos: 42 });
+		expect(lerBatida({ t: 'tempo', h: 'x.com.br', s: 99999 })?.segundos).toBe(1800);
+		expect(lerBatida({ t: 'tempo', h: 'x.com.br', s: -5 })?.segundos).toBe(0);
+	});
+	it('tipo desconhecido vira página vista', () => {
+		expect(lerBatida({ t: 'hack', h: 'x.com.br' })?.tipo).toBe('v');
 	});
 	it('recusa chave estranha ou sem host', () => {
 		expect(lerBatida({ k: '<script>', h: 'x.com' })).toBeNull();

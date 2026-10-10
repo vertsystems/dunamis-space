@@ -856,6 +856,7 @@ export type Database = {
 					valor: string
 					visitas: number
 					visualizacoes: number
+					segundos: number
 				}
 				Insert: {
 					site_id: string
@@ -864,6 +865,7 @@ export type Database = {
 					valor?: string
 					visitas?: number
 					visualizacoes?: number
+					segundos?: number
 				}
 				Update: {
 					site_id?: string
@@ -872,6 +874,7 @@ export type Database = {
 					valor?: string
 					visitas?: number
 					visualizacoes?: number
+					segundos?: number
 				}
 				Relationships: []
 			}
@@ -939,6 +942,7 @@ export type Database = {
 					ultima_visita: string | null
 					created_at: string
 					updated_at: string
+					automatico: boolean
 				}
 				Insert: {
 					id?: string
@@ -949,6 +953,7 @@ export type Database = {
 					ultima_visita?: string | null
 					created_at?: string
 					updated_at?: string
+					automatico?: boolean
 				}
 				Update: {
 					id?: string
@@ -959,6 +964,7 @@ export type Database = {
 					ultima_visita?: string | null
 					created_at?: string
 					updated_at?: string
+					automatico?: boolean
 				}
 				Relationships: []
 			}

@@ -8,15 +8,17 @@
 
 	const linhas = $derived(ranking(valores));
 	const maior = $derived(linhas[0]?.visitas ?? 1);
-	let todos = $state(false);
-	const visiveis = $derived(todos ? linhas : linhas.slice(0, 10));
 </script>
 
 {#if linhas.length === 0}
 	<p class="py-8 text-center text-sm text-grey">Nenhum país neste período.</p>
 {:else}
-	<ol class="space-y-0.5">
-		{#each visiveis as l, i (l.iso)}
+	<!-- Todos os países, com rolagem dentro do quadro (na altura do mapa ao lado). -->
+	<!-- O esmaecido no fim avisa que a lista continua para baixo. -->
+	<ol
+		class="-mr-2 max-h-[27rem] space-y-0.5 overflow-y-auto pb-6 pr-2 [mask-image:linear-gradient(to_bottom,black_88%,transparent)] [scrollbar-color:#d3d8e0_transparent] [scrollbar-width:thin]"
+	>
+		{#each linhas as l, i (l.iso)}
 			<li>
 				<button
 					type="button"
@@ -41,9 +43,4 @@
 			</li>
 		{/each}
 	</ol>
-	{#if linhas.length > 10}
-		<button type="button" onclick={() => (todos = !todos)} class="mt-2 px-2 text-xs font-medium text-brand hover:underline">
-			{todos ? 'Mostrar só os 10 primeiros' : `Ver todos os ${linhas.length} países`}
-		</button>
-	{/if}
 {/if}

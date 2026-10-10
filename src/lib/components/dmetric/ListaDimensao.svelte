@@ -7,12 +7,17 @@
 		titulo,
 		itens,
 		medida = 'visitas',
+		rotuloMedida = medida === 'visitas' ? 'Visitas' : 'Páginas vistas',
+		vazio = 'Nada ainda neste período.',
 		rotular = (v: string) => v || '(não identificado)'
 	}: {
 		titulo: string;
 		itens: ItemDimensao[] | undefined;
 		/** Páginas contam páginas vistas; o resto, visitas (pessoas por dia). */
 		medida?: 'visitas' | 'visualizacoes';
+		/** Cabeçalho da coluna de números (cliques usam "Cliques"). */
+		rotuloMedida?: string;
+		vazio?: string;
 		rotular?: (valor: string) => string;
 	} = $props();
 
@@ -25,12 +30,10 @@
 <Card padding="sm">
 	<div class="mb-3 flex items-baseline justify-between gap-2">
 		<h3 class="text-sm font-semibold text-navy">{titulo}</h3>
-		<span class="text-[10px] font-semibold uppercase tracking-wider text-grey">
-			{medida === 'visitas' ? 'Visitas' : 'Páginas vistas'}
-		</span>
+		<span class="text-[10px] font-semibold uppercase tracking-wider text-grey">{rotuloMedida}</span>
 	</div>
 	{#if linhas.length === 0}
-		<p class="py-4 text-center text-xs text-grey">Nada ainda neste período.</p>
+		<p class="py-4 text-center text-xs text-grey">{vazio}</p>
 	{:else}
 		<ul class="space-y-1">
 			{#each visiveis as l (l.valor)}

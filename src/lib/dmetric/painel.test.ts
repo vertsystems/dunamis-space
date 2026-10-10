@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
 	bandeira,
 	diasEntre,
+	duracao,
+	resumirHistorico,
 	faixaDe,
 	haQuanto,
 	intervalo,
@@ -66,6 +68,36 @@ describe('faixaDe', () => {
 	});
 });
 
+describe('resumirHistorico', () => {
+	const l = (inicio: string, fim: string, pais: string | null, usuarios: number) => ({ inicio, fim, pais, usuarios });
+	it('um ano inteiro', () => {
+		expect(resumirHistorico([l('2025-01-01', '2025-12-31', 'BR', 100), l('2025-01-01', '2025-12-31', null, 3)])).toEqual({
+			usuarios: 103,
+			paises: 1,
+			rotulo: '2025'
+		});
+	});
+	it('dois períodos somam, e o país repetido conta uma vez', () => {
+		const r = resumirHistorico([
+			l('2026-01-01', '2026-10-10', 'BR', 50),
+			l('2025-01-01', '2025-12-31', 'BR', 100),
+			l('2026-01-01', '2026-10-10', 'PT', 2)
+		]);
+		expect(r.usuarios).toBe(152);
+		expect(r.paises).toBe(2);
+		expect(r.rotulo).toBe('2025 e jan/2026 a out/2026');
+	});
+	it('sem histórico', () => {
+		expect(resumirHistorico([])).toEqual({ usuarios: 0, paises: 0, rotulo: '' });
+	});
+});
+
+describe('duracao', () => {
+	it('segundos, minutos e horas', () => {
+		expect([0, 45, 60, 72, 3600, 3720].map(duracao)).toEqual(['0 s', '45 s', '1 min', '1 min 12 s', '1 h', '1 h 2 min']);
+	});
+});
+
 describe('formatação', () => {
 	it('país em português, bandeira, número e porcentagem', () => {
 		expect(nomePais('BR')).toBe('Brasil');
@@ -84,10 +116,8 @@ describe('sites', () => {
 		expect(limparDominio('loja.exemplo.com:8080')).toBe('loja.exemplo.com');
 		expect(limparDominio('  ')).toBe('');
 	});
-	it('snippet com a origem do sistema', () => {
-		expect(snippet('https://dspace.verts.me', 'abc123def456')).toBe(
-			'<script defer src="https://dspace.verts.me/dm.js" data-site="abc123def456"></script>'
-		);
+	it('código único, só com a origem do sistema', () => {
+		expect(snippet('https://dspace.verts.me')).toBe('<script defer src="https://dspace.verts.me/dm.js"></script>');
 	});
 	it('há quanto tempo', () => {
 		const agora = new Date('2026-10-10T12:00:00Z');

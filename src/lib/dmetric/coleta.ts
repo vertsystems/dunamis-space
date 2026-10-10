@@ -1,19 +1,25 @@
 // DMetric — como uma página vista vira contador. Só regras, sem I/O: a rota
 // /api/dm usa isto e o teste cobre (coleta.test.ts).
 //
-// O script (static/dm.js) manda pouco: chave do site, host, caminho, quem
-// indicou (document.referrer), utm_source e a largura da tela. O resto vem do
-// servidor: país e cidade pelos cabeçalhos de geolocalização da Vercel, e
-// aparelho, navegador e sistema pelo User-Agent.
+// O script (static/dm.js) manda pouco: host, caminho, quem indicou
+// (document.referrer), utm_source/utm_campaign e a largura da tela; ao sair da
+// página, o tempo que ela ficou na tela; ao clicar num link, o endereço. O
+// resto vem do servidor: país e cidade pelos cabeçalhos de geolocalização da
+// Vercel, e aparelho, navegador e sistema pelo User-Agent.
 
 /** O que o script manda (ver static/dm.js). Tudo opcional: vem da internet. */
 export type Batida = {
-	k?: unknown; // chave do site
+	t?: unknown; // tipo: 'v' (página vista, o padrão), 'tempo' ou 'clique'
+	k?: unknown; // chave do site (só o código antigo, com data-site)
 	h?: unknown; // location.hostname
 	p?: unknown; // location.pathname
 	r?: unknown; // document.referrer
 	u?: unknown; // utm_source
+	c?: unknown; // utm_campaign
 	w?: unknown; // screen.width
+	s?: unknown; // segundos de tela (tipo 'tempo')
+	l?: unknown; // endereço do link clicado (tipo 'clique')
+	e?: unknown; // nome do evento, de data-dm="…" (tipo 'clique')
 };
 
 const texto = (v: unknown, max: number) => (typeof v === 'string' ? v.slice(0, max) : '');
@@ -178,18 +184,68 @@ export async function hashVisitante(
 	return [...new Uint8Array(assinatura).slice(0, 12)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+export type BatidaLida = {
+	tipo: 'v' | 'tempo' | 'clique';
+	/** Vazia no código único: o site é achado pelo domínio. */
+	chave: string;
+	host: string;
+	caminho: string;
+	referrer: string;
+	utm: string;
+	campanha: string;
+	largura: number;
+	segundos: number;
+	link: string;
+	evento: string;
+};
+
 /** A batida, validada: devolve null quando não dá para contar. */
-export function lerBatida(b: Batida): { chave: string; host: string; caminho: string; referrer: string; utm: string; largura: number } | null {
+export function lerBatida(b: Batida): BatidaLida | null {
 	const chave = texto(b.k, 32);
-	if (!/^[a-z0-9]{6,32}$/i.test(chave)) return null;
+	if (chave && !/^[a-z0-9]{6,32}$/i.test(chave)) return null;
 	const host = texto(b.h, 253).toLowerCase();
 	if (!host) return null;
+	const tipo = b.t === 'tempo' || b.t === 'clique' ? b.t : 'v';
+	const numeroOu0 = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
 	return {
+		tipo,
 		chave,
 		host,
 		caminho: limparCaminho(texto(b.p, 400)),
 		referrer: texto(b.r, 500),
 		utm: texto(b.u, 60),
-		largura: typeof b.w === 'number' && Number.isFinite(b.w) ? b.w : 0
+		campanha: texto(b.c, 80).trim(),
+		largura: numeroOu0(b.w),
+		segundos: Math.round(Math.min(Math.max(numeroOu0(b.s), 0), 1800)),
+		link: texto(b.l, 500),
+		evento: texto(b.e, 60).trim()
 	};
+}
+
+/**
+ * O que um clique em link vira no painel: "WhatsApp", "Telefone", "E-mail",
+ * "Mapa", o nome de uma rede ou o domínio de fora. Link para o próprio site é
+ * navegação, não clique — devolve null (a próxima página vista já conta).
+ */
+export function classificarClique(link: string, host: string): string | null {
+	const l = link.trim();
+	if (!l) return null;
+	if (/^tel:/i.test(l)) return 'Telefone';
+	if (/^mailto:/i.test(l)) return 'E-mail';
+	if (/^(whatsapp|sms):/i.test(l)) return /^sms:/i.test(l) ? 'SMS' : 'WhatsApp';
+	let url: URL;
+	try {
+		url = new URL(l);
+	} catch {
+		return null;
+	}
+	if (!/^https?:$/.test(url.protocol)) return null;
+	const h = url.hostname.toLowerCase().replace(/^www\./, '');
+	if (/(^|\.)(wa\.me|whatsapp\.com)$/.test(h)) return 'WhatsApp';
+	if (/(^|\.)google\.[a-z.]+$/.test(h) && url.pathname.startsWith('/maps')) return 'Mapa';
+	if (/^(maps\.app\.goo\.gl|goo\.gl)$/.test(h) && (h.startsWith('maps') || url.pathname.startsWith('/maps'))) return 'Mapa';
+	if (/(^|\.)waze\.com$/.test(h)) return 'Mapa';
+	const semWww = (s: string) => s.toLowerCase().replace(/^www\./, '');
+	if (h === semWww(host) || h.endsWith('.' + semWww(host))) return null;
+	return nomeConhecido(h) ?? h;
 }

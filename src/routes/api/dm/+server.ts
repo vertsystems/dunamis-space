@@ -17,6 +17,7 @@ import { env as envPublic } from '$env/dynamic/public';
 import { createClient } from '@supabase/supabase-js';
 import {
 	classificarAparelho,
+	classificarClique,
 	classificarNavegador,
 	classificarOrigem,
 	classificarSistema,
@@ -82,12 +83,36 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 	const supabase = createClient(url, anon, {
 		auth: { persistSession: false, autoRefreshToken: false }
 	});
+
+	// Tempo de tela e cliques: só somam no que já existe, sem visitante.
+	if (b.tipo !== 'v') {
+		const valor = b.tipo === 'clique' ? (b.evento || classificarClique(b.link, b.host)) : null;
+		if (b.tipo === 'clique' && !valor) return pronto('ignorado');
+		if (b.tipo === 'tempo' && b.segundos < 1) return pronto('ignorado');
+		const { data: contou, error } = await supabase.rpc('dmetric_evento', {
+			p_segredo: segredo,
+			p_chave: b.chave || null,
+			p_host: b.host,
+			p_caminho: b.caminho,
+			p_tipo: b.tipo,
+			p_valor: valor,
+			p_segundos: b.segundos
+		});
+		if (error) {
+			console.error('[dmetric] evento', error.message);
+			return pronto('erro');
+		}
+		return pronto(contou ? 'ok' : 'recusado');
+	}
+
 	const { data: contou, error } = await supabase.rpc('dmetric_coletar', {
 		p_segredo: segredo,
-		p_chave: b.chave,
+		// Sem chave (código único), o banco acha — ou cria — o site pelo domínio.
+		p_chave: b.chave || null,
 		p_host: b.host,
 		p_caminho: b.caminho,
 		p_origem: classificarOrigem(b.referrer, b.host, b.utm),
+		p_campanha: b.campanha,
 		p_pais: h.get('x-vercel-ip-country') ?? '',
 		p_cidade: nomeDaCidade(h.get('x-vercel-ip-city'), h.get('x-vercel-ip-country-region')),
 		p_dispositivo: classificarAparelho(ua, b.largura),
@@ -95,12 +120,13 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 		p_sistema: classificarSistema(ua),
 		// O mesmo segredo assina o hash do visitante: trocá-lo só "zera" quem
 		// já foi visto hoje.
-		p_visitante: await hashVisitante(segredo, dia, b.chave, ip, ua)
+		p_visitante: await hashVisitante(segredo, dia, b.chave || b.host.replace(/^www\./, ''), ip, ua)
 	});
 	if (error) {
 		console.error('[dmetric] coletar', error.message);
 		return pronto('erro');
 	}
-	// false = chave desconhecida, site pausado ou domínio que não é o do site.
+	// false = chave desconhecida, site pausado, domínio que não é o do site, ou
+	// host que não é domínio público (localhost, IP) no código único.
 	return pronto(contou ? 'ok' : 'recusado');
 };
