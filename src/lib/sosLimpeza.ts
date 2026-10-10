@@ -2,12 +2,16 @@
 //
 // A imagem só é útil enquanto o chamado está sendo resolvido; depois disso é
 // peso morto no Storage. A rotina apaga TODOS os prints, menos os enviados nos
-// últimos dias (ver DIAS_DE_GRACA) — e roda a cada 15 dias (ver vercel.json).
+// últimos dias (ver DIAS_DE_GRACA) — e roda a cada 5 dias (ver vercel.json).
+//
+// Até 10/10/2026 eram 2 dias de graça e a cada 15 dias — no papel: a rota
+// nunca tinha rodado (o guarda de login do hooks a mandava para /login). O
+// Bruno ligou com 15 dias de graça, checando a cada 5.
 //
 // Aqui só a decisão, sem I/O: é o que dá para testar sem banco nem rede.
 
 /** Quanto tempo um print fica a salvo da faxina, contado do envio. */
-export const DIAS_DE_GRACA = 2;
+export const DIAS_DE_GRACA = 15;
 
 const DIA_MS = 86_400_000;
 

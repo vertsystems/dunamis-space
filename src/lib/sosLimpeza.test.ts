@@ -12,19 +12,19 @@ describe('objetosAApagar', () => {
 		expect(objetosAApagar(lista, AGORA)).toEqual(['velha.webp']);
 	});
 
-	it('poupa o que chegou nos últimos 2 dias', () => {
-		expect(DIAS_DE_GRACA).toBe(2);
-		const lista = [obj('hoje.webp', 0), obj('ontem.webp', 1), obj('anteontem.webp', 1.9)];
+	it('poupa o que chegou nos últimos 15 dias', () => {
+		expect(DIAS_DE_GRACA).toBe(15);
+		const lista = [obj('hoje.webp', 0), obj('ontem.webp', 1), obj('semana.webp', 7), obj('quase.webp', 14.9)];
 		expect(objetosAApagar(lista, AGORA)).toEqual([]);
 	});
 
-	it('a fronteira dos 2 dias: um pouco antes some, um pouco depois fica', () => {
-		const lista = [obj('passou.webp', 2.01), obj('faltou.webp', 1.99)];
+	it('a fronteira dos 15 dias: um pouco antes some, um pouco depois fica', () => {
+		const lista = [obj('passou.webp', 15.01), obj('faltou.webp', 14.99)];
 		expect(objetosAApagar(lista, AGORA)).toEqual(['passou.webp']);
 	});
 
 	it('data ilegível fica: errar guardando é barato, apagar print de chamado aberto não', () => {
-		const lista = [{ name: 'estranha.webp', created_at: 'sei lá' }, obj('velha.webp', 10)];
+		const lista = [{ name: 'estranha.webp', created_at: 'sei lá' }, obj('velha.webp', 30)];
 		expect(objetosAApagar(lista, AGORA)).toEqual(['velha.webp']);
 	});
 

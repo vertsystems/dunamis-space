@@ -1,4 +1,4 @@
-// Faxina dos prints do SOS — chamada pelo cron da Vercel a cada 15 dias
+// Faxina dos prints do SOS — chamada pelo cron da Vercel a cada 5 dias
 // (agendamento em vercel.json). Ver a regra em $lib/sosLimpeza.
 //
 // Por que precisa da service role key: apagar no Storage exige um papel com
