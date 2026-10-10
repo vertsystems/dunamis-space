@@ -32,18 +32,27 @@ const CORS = {
 	'access-control-max-age': '86400'
 };
 
-/** Sempre 204, aconteça o que acontecer: o site do cliente não tem nada a fazer com a resposta. */
-const pronto = () => new Response(null, { status: 204, headers: CORS });
+/**
+ * Sempre 204, aconteça o que acontecer: o site do cliente não tem nada a fazer
+ * com a resposta. O cabeçalho x-dmetric diz o que houve (ok, robo, recusado…)
+ * — é por ele que se descobre, na aba Rede do navegador, por que um site
+ * instalado não está contando.
+ */
+const pronto = (motivo: string) =>
+	new Response(null, {
+		status: 204,
+		headers: { ...CORS, 'x-dmetric': motivo, 'access-control-expose-headers': 'x-dmetric' }
+	});
 
-export const OPTIONS: RequestHandler = () => pronto();
+export const OPTIONS: RequestHandler = () => pronto('preflight');
 
 export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 	const url = envPublic.PUBLIC_SUPABASE_URL;
 	const chaveServico = env.SUPABASE_SERVICE_ROLE_KEY;
-	if (!url || !chaveServico) return pronto();
+	if (!url || !chaveServico) return pronto('sem-configuracao');
 
 	const ua = request.headers.get('user-agent') ?? '';
-	if (ehRobo(ua)) return pronto();
+	if (ehRobo(ua)) return pronto('robo');
 
 	let batida: Batida;
 	try {
@@ -51,10 +60,10 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 		// pela proteção de CSRF do SvelteKit e não gera preflight de CORS.
 		batida = JSON.parse((await request.text()).slice(0, 4000));
 	} catch {
-		return pronto();
+		return pronto('corpo-invalido');
 	}
 	const b = lerBatida(batida ?? {});
-	if (!b) return pronto();
+	if (!b) return pronto('batida-invalida');
 
 	const h = request.headers;
 	const dia = diaEmBrasilia();
@@ -68,7 +77,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 	const supabase = createClient(url, chaveServico, {
 		auth: { persistSession: false, autoRefreshToken: false }
 	});
-	const { error } = await supabase.rpc('dmetric_coletar', {
+	const { data: contou, error } = await supabase.rpc('dmetric_coletar', {
 		p_chave: b.chave,
 		p_host: b.host,
 		p_caminho: b.caminho,
@@ -82,6 +91,10 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 		// servidor, e trocar de chave só "zera" quem foi visto hoje.
 		p_visitante: await hashVisitante(chaveServico, dia, b.chave, ip, ua)
 	});
-	if (error) console.error('[dmetric] coletar', error.message);
-	return pronto();
+	if (error) {
+		console.error('[dmetric] coletar', error.message);
+		return pronto('erro');
+	}
+	// false = chave desconhecida, site pausado ou domínio que não é o do site.
+	return pronto(contou ? 'ok' : 'recusado');
 };
