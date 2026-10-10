@@ -53,7 +53,9 @@ const authGuard: Handle = async ({ event, resolve }) => {
 		event.url.pathname.startsWith('/aprovar') ||
 		event.url.pathname.startsWith('/pagamentos/') ||
 		// O cron da Vercel não tem sessão: a rota confere o CRON_SECRET sozinha.
-		event.url.pathname === '/api/pagsup/limpeza';
+		event.url.pathname === '/api/pagsup/limpeza' ||
+		// DMetric: quem chama é o navegador do visitante, num site de cliente.
+		event.url.pathname === '/api/dm';
 
 	// getSession() só lê e decodifica o cookie — é local, sem rede. As duas
 	// chamadas CARAS são getUser() (valida no servidor de auth) e o RPC de

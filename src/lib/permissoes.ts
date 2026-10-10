@@ -58,6 +58,8 @@ export const MODULOS: Modulo[] = [
 	{ id: 'contratos', label: 'Contratos', grupo: 'administrativo', rotas: ['/contratos'] },
 	{ id: 'projetos', label: 'Projetos', grupo: 'administrativo', rotas: ['/projetos'] },
 	{ id: 'pagsup', label: "Pag's Up", grupo: 'dtools', rotas: ['/dtools/pagsup'] },
+	// Sem seed: nasce 'nenhum' e só ceo/admin enxergam, até liberarem na tela.
+	{ id: 'dmetric', label: 'DMetric', grupo: 'dtools', rotas: ['/dtools/dmetric'] },
 	// Módulo SEM rotas: não governa telas, e sim os valores em R$ dentro delas
 	// (cliente, plano, contrato). Quem não tem 'ver' enxerga a máscara ***** e
 	// nem recebe os números do servidor. ceo/admin ganham acesso pelo

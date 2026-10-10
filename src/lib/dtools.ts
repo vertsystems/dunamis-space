@@ -24,6 +24,12 @@ export const DTOOLS_FERRAMENTAS: Ferramenta[] = [
 		descricao: 'Gestão de pagamentos de marketing: cronograma, prestadores e negociações.'
 	},
 	{
+		href: '/dtools/dmetric',
+		label: 'DMetric',
+		icon: 'dmetric',
+		descricao: 'Acessos dos sites da Dunamis e dos clientes: de onde vêm, o que veem e por onde chegam.'
+	},
+	{
 		href: '/dtools/organyze',
 		label: 'Organyze',
 		icon: 'organyze',

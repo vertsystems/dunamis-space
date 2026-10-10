@@ -1,7 +1,7 @@
 // GERADO AUTOMATICAMENTE — não edite à mão.
 // Regenerar:  PGPASSWORD='<senha-postgres>' node scripts/gen-types.mjs
 //
-// Reflete o schema public do Supabase (2026-10-09).
+// Reflete o schema public do Supabase (2026-10-10).
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -830,6 +830,138 @@ export type Database = {
 					probabilidade?: number
 					created_at?: string
 					updated_at?: string
+				}
+				Relationships: []
+			}
+			dmetric_diario: {
+				Row: {
+					site_id: string
+					dia: string
+					dimensao: string
+					valor: string
+					visitas: number
+					visualizacoes: number
+				}
+				Insert: {
+					site_id: string
+					dia: string
+					dimensao: string
+					valor?: string
+					visitas?: number
+					visualizacoes?: number
+				}
+				Update: {
+					site_id?: string
+					dia?: string
+					dimensao?: string
+					valor?: string
+					visitas?: number
+					visualizacoes?: number
+				}
+				Relationships: []
+			}
+			dmetric_historico: {
+				Row: {
+					id: string
+					fonte: string
+					propriedade: string
+					site_id: string | null
+					inicio: string
+					fim: string
+					pais: string | null
+					pais_nome: string
+					usuarios: number
+					novos_usuarios: number
+					sessoes_engajadas: number
+					taxa_engajamento: number | null
+					tempo_medio_s: number | null
+					eventos: number
+					created_at: string
+				}
+				Insert: {
+					id?: string
+					fonte?: string
+					propriedade: string
+					site_id?: string | null
+					inicio: string
+					fim: string
+					pais?: string | null
+					pais_nome: string
+					usuarios?: number
+					novos_usuarios?: number
+					sessoes_engajadas?: number
+					taxa_engajamento?: number | null
+					tempo_medio_s?: number | null
+					eventos?: number
+					created_at?: string
+				}
+				Update: {
+					id?: string
+					fonte?: string
+					propriedade?: string
+					site_id?: string | null
+					inicio?: string
+					fim?: string
+					pais?: string | null
+					pais_nome?: string
+					usuarios?: number
+					novos_usuarios?: number
+					sessoes_engajadas?: number
+					taxa_engajamento?: number | null
+					tempo_medio_s?: number | null
+					eventos?: number
+					created_at?: string
+				}
+				Relationships: []
+			}
+			dmetric_sites: {
+				Row: {
+					id: string
+					nome: string
+					dominio: string | null
+					chave: string
+					ativo: boolean
+					ultima_visita: string | null
+					created_at: string
+					updated_at: string
+				}
+				Insert: {
+					id?: string
+					nome: string
+					dominio?: string | null
+					chave?: string
+					ativo?: boolean
+					ultima_visita?: string | null
+					created_at?: string
+					updated_at?: string
+				}
+				Update: {
+					id?: string
+					nome?: string
+					dominio?: string | null
+					chave?: string
+					ativo?: boolean
+					ultima_visita?: string | null
+					created_at?: string
+					updated_at?: string
+				}
+				Relationships: []
+			}
+			dmetric_vistos: {
+				Row: {
+					site_id: string
+					dia: string
+					visitante: string
+				}
+				Insert: {
+					site_id: string
+					dia: string
+					visitante: string
+				}
+				Update: {
+					site_id?: string
+					dia?: string
+					visitante?: string
 				}
 				Relationships: []
 			}
