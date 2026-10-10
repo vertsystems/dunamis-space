@@ -2,7 +2,7 @@
 	// Os países em ordem de visitas — a leitura do mapa sem precisar do mouse.
 	// Passar o mouse numa linha, ou focar com o Tab, destaca o país no mapa (e o
 	// mouse no mapa destaca a linha aqui).
-	import { bandeira, nomePais, numero, porcentagem, ranking } from '$lib/dmetric/painel';
+	import { bandeira, corDeVisitas, nomePais, numero, porcentagem, ranking } from '$lib/dmetric/painel';
 
 	let { valores, destaque = $bindable(null) }: { valores: Map<string, number>; destaque?: string | null } = $props();
 
@@ -37,7 +37,8 @@
 				</div>
 				<!-- Barra na escala do maior: a proporção entre países, sem número em cada uma. -->
 				<div class="ml-7 mt-1 h-1 rounded-full bg-grey-200/70">
-					<div class="h-1 rounded-full bg-[#2a78d6]" style="width: {Math.max(1.5, (l.visitas / maior) * 100)}%"></div>
+					<!-- Na cor da faixa do país, a mesma do mapa. -->
+					<div class="h-1 rounded-full" style="width: {Math.max(1.5, (l.visitas / maior) * 100)}%; background: {corDeVisitas(l.visitas)}"></div>
 				</div>
 				</button>
 			</li>

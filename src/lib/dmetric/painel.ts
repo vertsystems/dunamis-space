@@ -131,6 +131,26 @@ export const FAIXAS = [
 	{ min: 10_000, rotulo: '10 mil ou mais' }
 ] as const;
 
+/**
+ * Uma cor por faixa, na ordem das FAIXAS: azul cobalto, roxo, verde, laranja e
+ * marrom (pedido do Bruno, 10/10/2026 — antes era um azul só, do claro ao
+ * escuro). Cinza fica só para "sem visitas".
+ *
+ * Validadas como paleta (separação para daltonismo e entre vizinhas, com todos
+ * os pares em jogo, como num mapa): o roxo é claro e o cobalto fundo porque, na
+ * mesma claridade, os dois se confundem para quem não distingue vermelho.
+ * Laranja e roxo têm pouco contraste com o branco — por isso o número de cada
+ * país também está no ranking, e não só na cor.
+ */
+export const CORES_FAIXAS = ['#2048c8', '#b57af0', '#139a46', '#ef9a1e', '#9a3f10'] as const;
+export const COR_SEM_VISITA = '#e2e6ee';
+
+/** Cor de um número de visitas. */
+export function corDeVisitas(n: number): string {
+	const f = faixaDe(n);
+	return f < 0 ? COR_SEM_VISITA : CORES_FAIXAS[f];
+}
+
 /** Índice da faixa (0–4) de um número de visitas; -1 = nenhuma visita. */
 export function faixaDe(n: number): number {
 	if (!(n >= 1)) return -1;
