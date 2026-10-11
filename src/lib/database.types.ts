@@ -1,7 +1,7 @@
 // GERADO AUTOMATICAMENTE — não edite à mão.
 // Regenerar:  PGPASSWORD='<senha-postgres>' node scripts/gen-types.mjs
 //
-// Reflete o schema public do Supabase (2026-10-10).
+// Reflete o schema public do Supabase (2026-10-11).
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -929,6 +929,60 @@ export type Database = {
 					tempo_medio_s?: number | null
 					eventos?: number
 					created_at?: string
+				}
+				Relationships: []
+			}
+			dmetric_recentes: {
+				Row: {
+					id: number
+					site_id: string
+					em: string
+					tipo: string
+					visitante: string | null
+					caminho: string | null
+					origem: string | null
+					campanha: string | null
+					pais: string | null
+					cidade: string | null
+					dispositivo: string | null
+					navegador: string | null
+					sistema: string | null
+					valor: string | null
+					segundos: number
+				}
+				Insert: {
+					id: number
+					site_id: string
+					em?: string
+					tipo: string
+					visitante?: string | null
+					caminho?: string | null
+					origem?: string | null
+					campanha?: string | null
+					pais?: string | null
+					cidade?: string | null
+					dispositivo?: string | null
+					navegador?: string | null
+					sistema?: string | null
+					valor?: string | null
+					segundos?: number
+				}
+				Update: {
+					id?: number
+					site_id?: string
+					em?: string
+					tipo?: string
+					visitante?: string | null
+					caminho?: string | null
+					origem?: string | null
+					campanha?: string | null
+					pais?: string | null
+					cidade?: string | null
+					dispositivo?: string | null
+					navegador?: string | null
+					sistema?: string | null
+					valor?: string | null
+					segundos?: number
 				}
 				Relationships: []
 			}

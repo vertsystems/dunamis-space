@@ -1,20 +1,10 @@
 <script lang="ts">
-	// Visitas por dia no período. Uma série só (o título do card já diz qual),
-	// com a mira: o ponteiro acha o dia mais perto e a dica mostra o número.
-	import { diasEntre, numero } from '$lib/dmetric/painel';
+	// Visitas no período, por dia ou por horário. Uma série só (o título do card
+	// já diz qual), com a mira: o ponteiro acha o ponto mais perto e a dica
+	// mostra o número. Os pontos chegam prontos (serieDiaria / serieRecente).
+	import { numero, type PontoSerie } from '$lib/dmetric/painel';
 
-	let {
-		pontos,
-		de,
-		ate
-	}: { pontos: { dia: string; visitas: number; visualizacoes: number }[]; de: string; ate: string } = $props();
-
-	// "Desde o começo" começa no primeiro dia com visita, não em 2000.
-	const inicio = $derived(de < (pontos[0]?.dia ?? ate) ? (pontos[0]?.dia ?? ate) : de);
-	const serie = $derived.by(() => {
-		const porDia = new Map(pontos.map((p) => [p.dia, p]));
-		return diasEntre(inicio, ate).map((dia) => porDia.get(dia) ?? { dia, visitas: 0, visualizacoes: 0 });
-	});
+	let { serie }: { serie: PontoSerie[] } = $props();
 
 	let largura = $state(0);
 	const ALTURA = 190;
@@ -36,10 +26,6 @@
 		serie.length ? `${linha}L${x(serie.length - 1).toFixed(1)},${y(0)}L${x(0).toFixed(1)},${y(0)}Z` : ''
 	);
 
-	const fmt = (dia: string) => {
-		const [, m, d] = dia.split('-');
-		return `${d}/${m}`;
-	};
 	const marcasX = $derived(
 		serie.length <= 1 ? [0] : [0, Math.round((serie.length - 1) / 2), serie.length - 1]
 	);
@@ -60,7 +46,7 @@
 			height={ALTURA}
 			class="block"
 			role="img"
-			aria-label="Visitas por dia, de {fmt(inicio)} a {fmt(ate)}"
+			aria-label="Visitas de {serie[0]?.rotulo ?? ''} a {serie.at(-1)?.rotulo ?? ''}"
 			onpointermove={mover}
 			onpointerleave={() => (mira = null)}
 		>
@@ -73,7 +59,7 @@
 					x={x(i)}
 					y={ALTURA - 8}
 					text-anchor={i === 0 ? 'start' : i === serie.length - 1 ? 'end' : 'middle'}
-					class="fill-grey text-[10px] tabular-nums">{serie[i] ? fmt(serie[i].dia) : ''}</text
+					class="fill-grey text-[10px] tabular-nums">{serie[i]?.rotulo ?? ''}</text
 				>
 			{/each}
 			<path d={area} fill="#2a78d6" fill-opacity="0.10" />
@@ -90,7 +76,7 @@
 				style="left: {x(mira)}px; transform: translateX({x(mira) > largura * 0.7 ? 'calc(-100% - 10px)' : '10px'});"
 			>
 				<p class="text-sm font-bold tabular-nums text-navy-900">{numero(s.visitas)} {s.visitas === 1 ? 'visita' : 'visitas'}</p>
-				<p class="text-xs tabular-nums text-slate">{numero(s.visualizacoes)} páginas vistas · {fmt(s.dia)}</p>
+				<p class="text-xs tabular-nums text-slate">{numero(s.visualizacoes)} páginas vistas · {s.rotulo}</p>
 			</div>
 		{/if}
 	{/if}

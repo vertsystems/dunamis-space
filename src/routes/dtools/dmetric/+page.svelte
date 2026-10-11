@@ -1,6 +1,6 @@
 <script lang="ts">
 	// DMetric — acessos dos sites da Dunamis e dos clientes.
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { Card } from '$lib/components/ui';
 	import MapaMundi from '$lib/components/dmetric/MapaMundi.svelte';
 	import RankingPaises from '$lib/components/dmetric/RankingPaises.svelte';
@@ -10,7 +10,17 @@
 	import ListaDimensao from '$lib/components/dmetric/ListaDimensao.svelte';
 	import Sites from '$lib/components/dmetric/Sites.svelte';
 	import { podeEditar, podeExcluir } from '$lib/permissoes';
-	import { PERIODOS, duracao, nomePais, numero, porcentagem, visitasPorPais } from '$lib/dmetric/painel';
+	import {
+		PERIODOS,
+		RECENTES,
+		duracao,
+		nomePais,
+		numero,
+		porcentagem,
+		serieDiaria,
+		serieRecente,
+		visitasPorPais
+	} from '$lib/dmetric/painel';
 	import { ChartSpline, Globe, Eye, Users, MapPinned, Info, Timer } from '@lucide/svelte';
 
 	let { data } = $props();
@@ -66,6 +76,22 @@
 	const tempoMedio = $derived(data.painel.visitas ? (data.painel.segundos ?? 0) / data.painel.visitas : 0);
 
 	let destaque = $state<string | null>(null);
+
+	// ---- Últimas horas ------------------------------------------------------------
+	const recente = $derived(!!RECENTES[data.periodo]);
+	const serie = $derived(
+		recente ? serieRecente(data.painel.serie ?? []) : serieDiaria(data.painel.por_dia, data.de, data.ate)
+	);
+	const tituloSerie = $derived(
+		data.periodo === '1h' ? 'Visitas a cada 5 minutos' : data.periodo === '24h' ? 'Visitas por hora' : 'Visitas por dia'
+	);
+
+	// Na última hora o painel se atualiza sozinho, como o "tempo real" do Analytics.
+	$effect(() => {
+		if (data.periodo !== '1h') return;
+		const t = setInterval(() => invalidateAll(), 60_000);
+		return () => clearInterval(t);
+	});
 
 	const rotuloPagina = (v: string) => (v === '/' ? '/ (página inicial)' : v);
 
@@ -133,7 +159,7 @@
 		<!-- Indicadores -->
 		<div class="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
 			{#each [
-				{ rotulo: 'Visitas', valor: numero(visitas), nota: comHistorico ? `inclui ${numero(totalHistorico)} do GA (${data.resumoHistorico.anos})` : 'cada pessoa conta uma vez por dia', icon: Users },
+				{ rotulo: 'Visitas', valor: numero(visitas), nota: comHistorico ? `inclui ${numero(totalHistorico)} do GA (${data.resumoHistorico.anos})` : recente ? 'pessoas diferentes no período' : 'cada pessoa conta uma vez por dia', icon: Users },
 				{ rotulo: 'Páginas vistas', valor: numero(data.painel.visualizacoes), nota: 'registradas pelo script', icon: Eye },
 				{ rotulo: 'Tempo médio', valor: tempoMedio ? duracao(tempoMedio) : '—', nota: 'na tela, por visita', icon: Timer },
 				{ rotulo: 'Países alcançados', valor: numero(paises.size), nota: lider ? `${porcentagem(lider.fatia)} do ${nomePais(lider.iso)}` : 'nenhum ainda', icon: Globe },
@@ -196,8 +222,11 @@
 
 		{#if temVivo}
 			<Card class="mb-5">
-				<h2 class="mb-2 text-base font-bold text-navy">Visitas por dia</h2>
-				<LinhaDoTempo pontos={data.painel.por_dia} de={data.de} ate={data.ate} />
+				<div class="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+					<h2 class="text-base font-bold text-navy">{tituloSerie}</h2>
+					{#if data.periodo === '1h'}<p class="text-[11px] text-grey">atualiza sozinho a cada minuto</p>{/if}
+				</div>
+				<LinhaDoTempo {serie} />
 			</Card>
 
 			<div class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">

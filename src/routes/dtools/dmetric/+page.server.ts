@@ -3,6 +3,7 @@ import { fail } from '@sveltejs/kit';
 import { exigirPermissao } from '$lib/server/permissao';
 import { diaEmBrasilia } from '$lib/dmetric/coleta';
 import {
+	RECENTES,
 	intervalo,
 	lerPeriodo,
 	resumirHistorico,
@@ -22,6 +23,10 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	const site = siteParam && UUID.test(siteParam) ? siteParam : null;
 	const hoje = diaEmBrasilia();
 	const { de, ate } = intervalo(periodo, hoje);
+	// Última hora e 24 horas saem da lista de acessos recentes (0077), não dos
+	// contadores do dia.
+	const recente = RECENTES[periodo];
+	const desde = recente ? new Date(Date.now() - recente.horas * 3_600_000).toISOString() : null;
 
 	const [sites, historico, painel, porSite] = await Promise.all([
 		supabase.from('dmetric_sites').select('*').order('nome'),
@@ -29,9 +34,13 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 			.from('dmetric_historico')
 			.select('propriedade, inicio, fim, pais, pais_nome, usuarios')
 			.order('usuarios', { ascending: false }),
-		supabase.rpc('dmetric_painel', { p_site: site, p_de: de, p_ate: ate }),
+		recente
+			? supabase.rpc('dmetric_painel_recente', { p_site: site, p_desde: desde, p_passo: recente.passo })
+			: supabase.rpc('dmetric_painel', { p_site: site, p_de: de, p_ate: ate }),
 		// A lista de sites mostra todos, mesmo com um site escolhido no filtro.
-		supabase.rpc('dmetric_por_site', { p_de: de, p_ate: ate })
+		recente
+			? supabase.rpc('dmetric_por_site_recente', { p_desde: desde })
+			: supabase.rpc('dmetric_por_site', { p_de: de, p_ate: ate })
 	]);
 
 	// Sem a migration 0072 a tela avisa em vez de quebrar.

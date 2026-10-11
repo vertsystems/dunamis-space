@@ -10,6 +10,8 @@ export type PainelDados = {
 	/** Tempo de tela somado (só aba visível). Médio = segundos ÷ visitas. */
 	segundos?: number;
 	por_dia: { dia: string; visitas: number; visualizacoes: number }[];
+	/** Só nos períodos de horas: a linha do tempo em degraus (5 min ou 1 h), já completa. */
+	serie?: { momento: string; visitas: number; visualizacoes: number }[];
 	dimensoes: Partial<Record<Dimensao, ItemDimensao[]>>;
 };
 
@@ -49,6 +51,8 @@ export type DMetricSite = {
 // ---- Período ---------------------------------------------------------------
 
 export const PERIODOS = [
+	{ id: '1h', rotulo: 'Última hora' },
+	{ id: '24h', rotulo: 'Últimas 24 horas' },
 	{ id: '7d', rotulo: 'Últimos 7 dias' },
 	{ id: '30d', rotulo: 'Últimos 30 dias' },
 	{ id: '12m', rotulo: 'Últimos 12 meses' },
@@ -65,14 +69,63 @@ export function lerPeriodo(v: string | null): Periodo {
 	return PERIODOS.some((p) => p.id === v) ? (v as Periodo) : 'tudo';
 }
 
+/**
+ * Períodos de horas: não saem dos contadores do dia, e sim da lista de acessos
+ * recentes (dmetric_recentes, 48 h, migration 0077). `passo` é o degrau da
+ * linha do tempo.
+ */
+export const RECENTES: Partial<Record<Periodo, { horas: number; passo: string }>> = {
+	'1h': { horas: 1, passo: '5 minutes' },
+	'24h': { horas: 24, passo: '1 hour' }
+};
+
 /** Intervalo (AAAA-MM-DD, inclusivo) de um período terminando em `hoje`. */
 export function intervalo(periodo: Periodo, hoje: string): { de: string; ate: string } {
 	if (periodo === 'tudo') return { de: '2000-01-01', ate: hoje };
+	// Hora e 24 horas: o dia de hoje (e ontem, que as 24 horas atravessam).
+	if (RECENTES[periodo]) {
+		const ontem = new Date(`${hoje}T12:00:00Z`);
+		ontem.setUTCDate(ontem.getUTCDate() - 1);
+		return { de: ontem.toISOString().slice(0, 10), ate: hoje };
+	}
 	const d = new Date(`${hoje}T12:00:00Z`);
 	if (periodo === '7d') d.setUTCDate(d.getUTCDate() - 6);
 	else if (periodo === '30d') d.setUTCDate(d.getUTCDate() - 29);
 	else d.setUTCFullYear(d.getUTCFullYear() - 1, d.getUTCMonth(), d.getUTCDate() + 1);
 	return { de: d.toISOString().slice(0, 10), ate: hoje };
+}
+
+/** Um ponto da linha do tempo, já com o rótulo que aparece no eixo e na dica. */
+export type PontoSerie = { rotulo: string; visitas: number; visualizacoes: number };
+
+/**
+ * A linha do tempo dos períodos de dias: um ponto por dia, inclusive os sem
+ * visita. "Desde o começo" começa no primeiro dia com visita, não em 2000.
+ */
+export function serieDiaria(
+	porDia: { dia: string; visitas: number; visualizacoes: number }[],
+	de: string,
+	ate: string
+): PontoSerie[] {
+	const primeiro = porDia[0]?.dia ?? ate;
+	const inicio = de < primeiro ? primeiro : de;
+	const mapa = new Map(porDia.map((p) => [p.dia, p]));
+	return diasEntre(inicio, ate).map((dia) => {
+		const [, m, d] = dia.split('-');
+		const p = mapa.get(dia);
+		return { rotulo: `${d}/${m}`, visitas: p?.visitas ?? 0, visualizacoes: p?.visualizacoes ?? 0 };
+	});
+}
+
+const horaBrasilia = new Intl.DateTimeFormat('pt-BR', {
+	timeZone: 'America/Sao_Paulo',
+	hour: '2-digit',
+	minute: '2-digit'
+});
+
+/** A linha do tempo dos períodos de horas, com o horário de Brasília ("14:35"). */
+export function serieRecente(serie: { momento: string; visitas: number; visualizacoes: number }[]): PontoSerie[] {
+	return serie.map((p) => ({ rotulo: horaBrasilia.format(new Date(p.momento)), visitas: p.visitas, visualizacoes: p.visualizacoes }));
 }
 
 /** Todos os dias do intervalo, para a linha do tempo não pular os dias sem visita. */

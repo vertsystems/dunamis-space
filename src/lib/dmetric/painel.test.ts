@@ -9,6 +9,8 @@ import {
 	intervalo,
 	linhasDosSites,
 	lerPeriodo,
+	serieDiaria,
+	serieRecente,
 	limparDominio,
 	nomePais,
 	numero,
@@ -29,6 +31,23 @@ describe('período', () => {
 		expect(intervalo('30d', '2026-10-10')).toEqual({ de: '2026-09-11', ate: '2026-10-10' });
 		expect(intervalo('12m', '2026-10-10')).toEqual({ de: '2025-10-11', ate: '2026-10-10' });
 		expect(intervalo('tudo', '2026-10-10').de).toBe('2000-01-01');
+	});
+	it('hora e 24 horas cobrem hoje e ontem (as 24 horas atravessam a meia-noite)', () => {
+		expect(lerPeriodo('1h')).toBe('1h');
+		expect(intervalo('24h', '2026-10-10')).toEqual({ de: '2026-10-09', ate: '2026-10-10' });
+	});
+	it('série diária: um ponto por dia, começando no primeiro dia com visita', () => {
+		const s = serieDiaria([{ dia: '2026-10-08', visitas: 3, visualizacoes: 5 }], '2000-01-01', '2026-10-10');
+		expect(s).toEqual([
+			{ rotulo: '08/10', visitas: 3, visualizacoes: 5 },
+			{ rotulo: '09/10', visitas: 0, visualizacoes: 0 },
+			{ rotulo: '10/10', visitas: 0, visualizacoes: 0 }
+		]);
+	});
+	it('série recente no horário de Brasília', () => {
+		expect(serieRecente([{ momento: '2026-10-11T01:35:00+00:00', visitas: 2, visualizacoes: 3 }])).toEqual([
+			{ rotulo: '22:35', visitas: 2, visualizacoes: 3 }
+		]);
 	});
 	it('diasEntre lista todos os dias, inclusive os sem visita', () => {
 		expect(diasEntre('2026-09-29', '2026-10-02')).toEqual(['2026-09-29', '2026-09-30', '2026-10-01', '2026-10-02']);
