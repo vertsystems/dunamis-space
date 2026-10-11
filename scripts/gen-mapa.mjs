@@ -28,9 +28,10 @@ const raiz = join(dirname(fileURLToPath(import.meta.url)), '..');
 const saida = join(raiz, 'src', 'lib', 'dmetric', 'mapa.generated.json');
 
 const LARGURA = 960;
-// 486 e não 470: no quadro do painel o mapa ficava achatado, e o Bruno pediu
-// ~15 px a mais de altura (10/10/2026). Ver ALONGAMENTO abaixo.
-const ALTURA = 486;
+// A altura decide o quanto o mundo é alongado na vertical (ver ALONGAMENTO):
+// 470 com a Equal Earth ficou achatado, 486 com a Natural Earth ficou
+// espremido demais, e o Bruno pediu ~20 px a menos, só na vertical (10/10/2026).
+const ALTURA = 464;
 /** Folga nas bordas: o mundo inteiro cabe no quadro, nada encosta na borda. */
 const MARGEM = 10;
 /** Antártida: ocupa um quinto da altura e ninguém visita site de lá. */
