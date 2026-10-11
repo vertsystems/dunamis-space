@@ -16,7 +16,7 @@
 		podeExcluir
 	}: {
 		sites: DMetricSite[];
-		historico: { usuarios: number; paises: number; rotulo: string };
+		historico: { usuarios: number; paises: number; rotulo: string; anos: string };
 		podeEditar: boolean;
 		podeExcluir: boolean;
 	} = $props();

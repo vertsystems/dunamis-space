@@ -132,18 +132,20 @@ export const FAIXAS = [
 ] as const;
 
 /**
- * Uma cor por faixa, na ordem das FAIXAS: azul cobalto, roxo, verde, laranja e
- * marrom (pedido do Bruno, 10/10/2026 — antes era um azul só, do claro ao
- * escuro). Cinza fica só para "sem visitas".
+ * Uma cor por faixa, na ordem das FAIXAS, em tons pastel: azul, verde,
+ * amarelo, marrom e bege (pedido do Bruno, 10/10/2026). Cinza fica só para
+ * "sem visitas".
  *
- * Validadas como paleta (separação para daltonismo e entre vizinhas, com todos
- * os pares em jogo, como num mapa): o roxo é claro e o cobalto fundo porque, na
- * mesma claridade, os dois se confundem para quem não distingue vermelho.
- * Laranja e roxo têm pouco contraste com o branco — por isso o número de cada
- * país também está no ranking, e não só na cor.
+ * Os tons exatos saíram de uma busca com o validador de paleta: entre os
+ * pastéis dessas cinco famílias, a combinação em que todos os pares (e o
+ * cinza) continuam distintos, para quem enxerga todas as cores e para quem não
+ * distingue vermelho/verde. Por isso o verde é um pouco mais fundo e o amarelo
+ * bem claro: na mesma claridade, verde, amarelo e bege se confundem. Em tons
+ * pastel o contraste com o branco é baixo — o número de cada país também está
+ * no ranking e na dica do mouse, nunca só na cor.
  */
-export const CORES_FAIXAS = ['#2048c8', '#b57af0', '#139a46', '#ef9a1e', '#9a3f10'] as const;
-export const COR_SEM_VISITA = '#e2e6ee';
+export const CORES_FAIXAS = ['#79b0e8', '#69a275', '#fce16c', '#846047', '#ceb196'] as const;
+export const COR_SEM_VISITA = '#eef1f5';
 
 /** Cor de um número de visitas. */
 export function corDeVisitas(n: number): string {
@@ -199,10 +201,14 @@ export function porcentagem(f: number): string {
 export function resumirHistorico(linhas: Pick<LinhaHistorico, 'inicio' | 'fim' | 'pais' | 'usuarios'>[]): {
 	usuarios: number;
 	paises: number;
+	/** Os períodos por extenso: "2025 e jan/2026 a out/2026". */
 	rotulo: string;
+	/** Só os anos, para onde o espaço é curto: "2025–2026". */
+	anos: string;
 } {
 	const usuarios = linhas.reduce((s, l) => s + l.usuarios, 0);
-	const paises = new Set(linhas.filter((l) => l.pais).map((l) => l.pais)).size;
+	// País com 0 usuários no período (o GA lista quem só disparou evento) não conta.
+	const paises = new Set(linhas.filter((l) => l.pais && l.usuarios > 0).map((l) => l.pais)).size;
 	const periodos = [...new Map(linhas.map((l) => [`${l.inicio}|${l.fim}`, l])).values()].sort((a, b) =>
 		a.inicio.localeCompare(b.inicio)
 	);
@@ -216,7 +222,10 @@ export function resumirHistorico(linhas: Pick<LinhaHistorico, 'inicio' | 'fim' |
 	};
 	const partes = periodos.map(umPeriodo);
 	const rotulo = partes.length <= 1 ? (partes[0] ?? '') : `${partes.slice(0, -1).join(', ')} e ${partes.at(-1)}`;
-	return { usuarios, paises, rotulo };
+	const primeiro = periodos[0]?.inicio.slice(0, 4) ?? '';
+	const ultimo = periodos.reduce((m, p) => (p.fim > m ? p.fim : m), '').slice(0, 4);
+	const anos = primeiro === ultimo ? primeiro : `${primeiro}–${ultimo}`;
+	return { usuarios, paises, rotulo, anos };
 }
 
 /** 72 → "1 min 12 s"; 3720 → "1 h 2 min". */

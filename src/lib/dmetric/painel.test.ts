@@ -74,7 +74,8 @@ describe('resumirHistorico', () => {
 		expect(resumirHistorico([l('2025-01-01', '2025-12-31', 'BR', 100), l('2025-01-01', '2025-12-31', null, 3)])).toEqual({
 			usuarios: 103,
 			paises: 1,
-			rotulo: '2025'
+			rotulo: '2025',
+			anos: '2025'
 		});
 	});
 	it('dois períodos somam, e o país repetido conta uma vez', () => {
@@ -86,9 +87,13 @@ describe('resumirHistorico', () => {
 		expect(r.usuarios).toBe(152);
 		expect(r.paises).toBe(2);
 		expect(r.rotulo).toBe('2025 e jan/2026 a out/2026');
+		expect(r.anos).toBe('2025–2026');
+	});
+	it('país com 0 usuários não conta como alcançado', () => {
+		expect(resumirHistorico([l('2026-01-01', '2026-10-10', 'TM', 0), l('2026-01-01', '2026-10-10', 'BR', 5)]).paises).toBe(1);
 	});
 	it('sem histórico', () => {
-		expect(resumirHistorico([])).toEqual({ usuarios: 0, paises: 0, rotulo: '' });
+		expect(resumirHistorico([])).toEqual({ usuarios: 0, paises: 0, rotulo: '', anos: '' });
 	});
 });
 
