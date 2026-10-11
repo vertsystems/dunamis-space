@@ -245,6 +245,54 @@ export function duracao(segundos: number): string {
 
 // ---- Sites -----------------------------------------------------------------
 
+/** Os números de um site no período (função dmetric_por_site, migration 0076). */
+export type NumerosSite = {
+	site_id: string;
+	visitas: number;
+	visualizacoes: number;
+	segundos: number;
+	cliques: number;
+};
+
+export type LinhaSite = {
+	site: DMetricSite;
+	visitas: number;
+	visualizacoes: number;
+	cliques: number;
+	/** Páginas vistas por visita; 0 sem visita. */
+	paginasPorVisita: number;
+	/** Segundos de tela por visita; 0 sem visita. */
+	tempoMedio: number;
+};
+
+/**
+ * A lista de sites do painel, como a tabela do Google Analytics: em ordem de
+ * páginas vistas, e o total no topo. Site sem nenhuma visita no período
+ * continua na lista (no fim): sumir faria parecer que o código saiu dele.
+ */
+export function linhasDosSites(
+	sites: DMetricSite[],
+	numeros: NumerosSite[]
+): { linhas: LinhaSite[]; total: Omit<LinhaSite, 'site'> } {
+	const por = new Map(numeros.map((n) => [n.site_id, n]));
+	const linha = (v: number, pv: number, s: number, c: number) => ({
+		visitas: v,
+		visualizacoes: pv,
+		cliques: c,
+		paginasPorVisita: v ? pv / v : 0,
+		tempoMedio: v ? s / v : 0
+	});
+	const linhas = sites
+		.map((site) => {
+			const n = por.get(site.id);
+			return { site, ...linha(n?.visitas ?? 0, n?.visualizacoes ?? 0, Number(n?.segundos ?? 0), n?.cliques ?? 0) };
+		})
+		.sort((a, b) => b.visualizacoes - a.visualizacoes || b.visitas - a.visitas || a.site.nome.localeCompare(b.site.nome));
+	const soma = (k: 'visitas' | 'visualizacoes' | 'cliques') => numeros.reduce((t, n) => t + (n[k] ?? 0), 0);
+	const segundos = numeros.reduce((t, n) => t + Number(n.segundos ?? 0), 0);
+	return { linhas, total: linha(soma('visitas'), soma('visualizacoes'), segundos, soma('cliques')) };
+}
+
 /**
  * Domínio como o banco compara: sem protocolo, www, porta ou caminho.
  * "https://www.LojasMari.com.br/ofertas" → "lojasmari.com.br".

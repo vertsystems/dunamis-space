@@ -13,10 +13,11 @@
 {#if linhas.length === 0}
 	<p class="py-8 text-center text-sm text-grey">Nenhum país neste período.</p>
 {:else}
-	<!-- Todos os países, com rolagem dentro do quadro (na altura do mapa ao lado). -->
-	<!-- O esmaecido no fim avisa que a lista continua para baixo. -->
+	<!-- Todos os países, com rolagem dentro do quadro. Na tela larga a lista não
+	     tem altura própria (basis-0): ocupa a altura que o mapa ao lado dá à
+	     linha. O esmaecido no fim avisa que ela continua para baixo. -->
 	<ol
-		class="-mr-2 max-h-[27rem] space-y-0.5 overflow-y-auto pb-6 pr-2 [mask-image:linear-gradient(to_bottom,black_88%,transparent)] [scrollbar-color:#d3d8e0_transparent] [scrollbar-width:thin]"
+		class="-mr-2 min-h-[18rem] flex-1 basis-0 space-y-0.5 overflow-y-auto pb-6 pr-2 xl:min-h-0 [mask-image:linear-gradient(to_bottom,black_88%,transparent)] [scrollbar-color:#d3d8e0_transparent] [scrollbar-width:thin]"
 	>
 		{#each linhas as l, i (l.iso)}
 			<li>

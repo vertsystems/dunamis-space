@@ -4,6 +4,8 @@
 	import { Card } from '$lib/components/ui';
 	import MapaMundi from '$lib/components/dmetric/MapaMundi.svelte';
 	import RankingPaises from '$lib/components/dmetric/RankingPaises.svelte';
+	import RankingCidades from '$lib/components/dmetric/RankingCidades.svelte';
+	import TabelaSites from '$lib/components/dmetric/TabelaSites.svelte';
 	import LinhaDoTempo from '$lib/components/dmetric/LinhaDoTempo.svelte';
 	import ListaDimensao from '$lib/components/dmetric/ListaDimensao.svelte';
 	import Sites from '$lib/components/dmetric/Sites.svelte';
@@ -148,9 +150,9 @@
 			{/each}
 		</div>
 
-		<!-- Mapa + ranking -->
-		<div class="mb-5 grid grid-cols-1 gap-5 xl:grid-cols-3">
-			<Card class="xl:col-span-2">
+		<!-- Mapa + países + cidades -->
+		<div class="mb-5 grid grid-cols-1 gap-5 lg:grid-cols-2 xl:grid-cols-4">
+			<Card class="lg:col-span-2">
 				<div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
 					<h2 class="text-base font-bold text-navy">De onde vêm as visitas</h2>
 					{#if comHistorico}
@@ -161,13 +163,36 @@
 				</div>
 				<MapaMundi valores={paises} bind:destaque />
 			</Card>
-			<Card>
+			<Card class="flex flex-col">
 				<h2 class="mb-3 flex items-baseline justify-between text-base font-bold text-navy">
 					Países <span class="text-xs font-medium text-grey">{paises.size}</span>
 				</h2>
 				<RankingPaises valores={paises} bind:destaque />
 			</Card>
+			<Card class="flex flex-col">
+				<h2 class="mb-3 flex items-baseline justify-between text-base font-bold text-navy">
+					Cidades
+					{#if data.painel.dimensoes.cidade?.length}
+						<span class="text-xs font-medium text-grey">{data.painel.dimensoes.cidade.filter((c) => c.valor).length}</span>
+					{/if}
+				</h2>
+				<RankingCidades itens={data.painel.dimensoes.cidade} />
+			</Card>
 		</div>
+
+		<!-- Os sites lado a lado, como a tabela do Analytics. -->
+		<Card padding="none" class="mb-5 overflow-hidden">
+			<div class="flex flex-wrap items-baseline justify-between gap-2 px-5 pb-2 pt-4">
+				<h2 class="text-base font-bold text-navy">Sites</h2>
+				<p class="text-[11px] text-grey">Só o que o script do DMetric contou · clique num site para filtrar o painel</p>
+			</div>
+			<TabelaSites
+				sites={data.sites}
+				numeros={data.porSite}
+				selecionado={data.site}
+				onescolher={(id) => filtrar('site', id ?? '')}
+			/>
+		</Card>
 
 		{#if temVivo}
 			<Card class="mb-5">
@@ -185,7 +210,6 @@
 					rotuloMedida="Cliques"
 					vazio="Nenhum clique em WhatsApp, telefone ou link para fora."
 				/>
-				<ListaDimensao titulo="Cidades" itens={data.painel.dimensoes.cidade} />
 				<ListaDimensao titulo="Campanhas" itens={data.painel.dimensoes.campanha} vazio="Nenhum link com utm_campaign neste período." />
 				<ListaDimensao titulo="Aparelhos" itens={data.painel.dimensoes.dispositivo} />
 				<ListaDimensao titulo="Navegadores" itens={data.painel.dimensoes.navegador} />

@@ -8,6 +8,7 @@ import {
 	resumirHistorico,
 	type DMetricSite,
 	type LinhaHistorico,
+	type NumerosSite,
 	type PainelDados
 } from '$lib/dmetric/painel';
 import type { Actions, PageServerLoad } from './$types';
@@ -22,18 +23,21 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	const hoje = diaEmBrasilia();
 	const { de, ate } = intervalo(periodo, hoje);
 
-	const [sites, historico, painel] = await Promise.all([
+	const [sites, historico, painel, porSite] = await Promise.all([
 		supabase.from('dmetric_sites').select('*').order('nome'),
 		supabase
 			.from('dmetric_historico')
 			.select('propriedade, inicio, fim, pais, pais_nome, usuarios')
 			.order('usuarios', { ascending: false }),
-		supabase.rpc('dmetric_painel', { p_site: site, p_de: de, p_ate: ate })
+		supabase.rpc('dmetric_painel', { p_site: site, p_de: de, p_ate: ate }),
+		// A lista de sites mostra todos, mesmo com um site escolhido no filtro.
+		supabase.rpc('dmetric_por_site', { p_de: de, p_ate: ate })
 	]);
 
 	// Sem a migration 0072 a tela avisa em vez de quebrar.
 	const pendente = !!sites.error && /dmetric_|does not exist|schema cache|relation/i.test(sites.error.message);
 	if (painel.error) console.error('[dmetric] painel', painel.error.message);
+	if (porSite.error) console.error('[dmetric] por site', porSite.error.message);
 
 	return {
 		pendente,
@@ -47,7 +51,8 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		// na visão de todos os sites e no período "desde o começo".
 		historico: !site && periodo === 'tudo' ? ((historico.data ?? []) as LinhaHistorico[]) : [],
 		resumoHistorico: resumirHistorico((historico.data ?? []) as LinhaHistorico[]),
-		painel: (painel.data as PainelDados | null) ?? VAZIO
+		painel: (painel.data as PainelDados | null) ?? VAZIO,
+		porSite: (porSite.data ?? []) as NumerosSite[]
 	};
 };
 

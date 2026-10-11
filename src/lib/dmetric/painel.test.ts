@@ -7,6 +7,7 @@ import {
 	faixaDe,
 	haQuanto,
 	intervalo,
+	linhasDosSites,
 	lerPeriodo,
 	limparDominio,
 	nomePais,
@@ -112,6 +113,23 @@ describe('formatação', () => {
 		expect(numero(109087)).toBe('109.087');
 		expect(porcentagem(0.9661)).toBe('96,6%');
 		expect(porcentagem(0.00004)).toBe('<0,1%');
+	});
+});
+
+describe('linhasDosSites', () => {
+	const site = (id: string, nome: string) => ({ id, nome, dominio: nome, chave: id, ativo: true, ultima_visita: null, created_at: '' });
+	it('em ordem de páginas vistas, com médias e o total', () => {
+		const { linhas, total } = linhasDosSites(
+			[site('a', 'Casa do Tita'), site('b', 'Lojas Mari'), site('c', 'Sem visita')],
+			[
+				{ site_id: 'a', visitas: 10, visualizacoes: 15, segundos: 300, cliques: 2 },
+				{ site_id: 'b', visitas: 40, visualizacoes: 50, segundos: 400, cliques: 9 }
+			]
+		);
+		expect(linhas.map((l) => l.site.nome)).toEqual(['Lojas Mari', 'Casa do Tita', 'Sem visita']);
+		expect(linhas[0]).toMatchObject({ paginasPorVisita: 1.25, tempoMedio: 10 });
+		expect(linhas[2]).toMatchObject({ visitas: 0, paginasPorVisita: 0, tempoMedio: 0 });
+		expect(total).toEqual({ visitas: 50, visualizacoes: 65, cliques: 11, paginasPorVisita: 1.3, tempoMedio: 14 });
 	});
 });
 
