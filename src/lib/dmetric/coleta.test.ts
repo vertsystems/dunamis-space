@@ -81,6 +81,13 @@ describe('aparelho, navegador e sistema', () => {
 		expect(classificarAparelho(WINDOWS, 1920)).toBe('Computador');
 		expect(classificarAparelho(WINDOWS, 500)).toBe('Celular');
 	});
+	it('Android sem "Mobile" (navegador do Instagram) só é tablet com tela larga', () => {
+		const IG_ANDROID =
+			'Mozilla/5.0 (Linux; Android 14; SM-A155M Build/UP1A; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/129.0 Safari/537.36 Instagram 350.0 Android';
+		expect(classificarAparelho(IG_ANDROID, 384)).toBe('Celular');
+		expect(classificarAparelho(IG_ANDROID, 0)).toBe('Celular');
+		expect(classificarAparelho(IG_ANDROID, 800)).toBe('Tablet');
+	});
 	it('navegador, com os embutidos dos apps à parte', () => {
 		expect(classificarNavegador(IPHONE)).toBe('Safari');
 		expect(classificarNavegador(ANDROID)).toBe('Chrome');
@@ -166,6 +173,12 @@ describe('lerBatida', () => {
 		expect(lerBatida({ t: 'tempo', h: 'x.com.br', p: '/', s: 42.4 })).toMatchObject({ tipo: 'tempo', segundos: 42 });
 		expect(lerBatida({ t: 'tempo', h: 'x.com.br', s: 99999 })?.segundos).toBe(1800);
 		expect(lerBatida({ t: 'tempo', h: 'x.com.br', s: -5 })?.segundos).toBe(0);
+	});
+	it('título da página, sem quebras e espaços sobrando', () => {
+		expect(lerBatida({ h: 'dnms.fun', p: '/lojasmari', ti: '  Lojas Mari®\n | PageLinks – DCo™ ' })?.titulo).toBe(
+			'Lojas Mari® | PageLinks – DCo™'
+		);
+		expect(lerBatida({ h: 'dnms.fun', ti: 42 })?.titulo).toBe('');
 	});
 	it('tipo desconhecido vira página vista', () => {
 		expect(lerBatida({ t: 'hack', h: 'x.com.br' })?.tipo).toBe('v');

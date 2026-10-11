@@ -62,13 +62,24 @@
 			if (document.visibilityState === 'visible') visivelDesde = Date.now();
 		}
 		ultimo = location.pathname;
-		enviar({
+		var caminho = location.pathname;
+		var dados = {
 			// Na navegação interna de um site de uma página só, quem indicou é o próprio site.
 			r: anterior === null ? document.referrer : location.origin,
 			u: param('utm_source'),
 			c: param('utm_campaign'),
 			w: screen.width
-		});
+		};
+		// O título vai junto (é o nome da página no painel). Numa troca sem
+		// recarregar, o site costuma mudar o título logo depois da URL: espera
+		// um instante para não mandar o título da página anterior.
+		setTimeout(
+			function () {
+				dados.ti = document.title;
+				enviar(dados, caminho);
+			},
+			anterior === null ? 0 : 400
+		);
 	}
 
 	// ---- Cliques: WhatsApp, telefone, e-mail, mapa, links para fora, data-dm ----

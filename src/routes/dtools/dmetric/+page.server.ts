@@ -28,7 +28,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	const recente = RECENTES[periodo];
 	const desde = recente ? new Date(Date.now() - recente.horas * 3_600_000).toISOString() : null;
 
-	const [sites, historico, painel, porSite] = await Promise.all([
+	const [sites, historico, painel, porSite, titulos] = await Promise.all([
 		supabase.from('dmetric_sites').select('*').order('nome'),
 		supabase
 			.from('dmetric_historico')
@@ -40,7 +40,10 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		// A lista de sites mostra todos, mesmo com um site escolhido no filtro.
 		recente
 			? supabase.rpc('dmetric_por_site_recente', { p_desde: desde })
-			: supabase.rpc('dmetric_por_site', { p_de: de, p_ate: ate })
+			: supabase.rpc('dmetric_por_site', { p_de: de, p_ate: ate }),
+		// Título de cada página (para a lista de páginas). Uma linha por página
+		// de cada site: pouca coisa, e só muda quando o título do site muda.
+		supabase.from('dmetric_paginas').select('site_id, caminho, titulo').limit(5000)
 	]);
 
 	// Sem a migration 0072 a tela avisa em vez de quebrar.
@@ -61,21 +64,49 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		historico: !site && periodo === 'tudo' ? ((historico.data ?? []) as LinhaHistorico[]) : [],
 		resumoHistorico: resumirHistorico((historico.data ?? []) as LinhaHistorico[]),
 		painel: (painel.data as PainelDados | null) ?? VAZIO,
-		porSite: (porSite.data ?? []) as NumerosSite[]
+		porSite: (porSite.data ?? []) as NumerosSite[],
+		titulos: (titulos.data ?? []) as { site_id: string; caminho: string; titulo: string }[]
 	};
 };
 
 export const actions: Actions = {
 	// Não há "criar site": com o código único o site aparece sozinho na
-	// primeira visita, com o domínio como nome. Aqui só se dá um nome melhor.
+	// primeira visita, com o título da página como nome. Aqui se dá outro nome
+	// — ou, com o campo vazio, volta a valer o título.
 	renomearSite: async ({ request, locals }) => {
 		exigirPermissao(locals, 'dmetric', 'editar');
 		const fd = await request.formData();
 		const id = String(fd.get('id') ?? '');
 		const nome = String(fd.get('nome') ?? '').trim().slice(0, 80);
 		if (!UUID.test(id)) return fail(400, { erro: 'Site inválido.' });
-		if (!nome) return fail(400, { erro: 'Dê um nome ao site.' });
-		const { error } = await locals.supabase.from('dmetric_sites').update({ nome }).eq('id', id);
+		const { error } = await locals.supabase
+			.from('dmetric_sites')
+			.update(nome ? { nome, nome_manual: true } : { nome_manual: false })
+			.eq('id', id);
+		if (error) return fail(500, { erro: error.message });
+		return { ok: true };
+	},
+
+	// Um site comum (com /ofertas, /contato…) não deve virar um site por página:
+	// juntar liga juntar_paginas na raiz do domínio, criando-a se ainda não
+	// existe. Vale para as próximas visitas; o que já foi contado fica onde está.
+	juntarPaginas: async ({ request, locals }) => {
+		exigirPermissao(locals, 'dmetric', 'editar');
+		const fd = await request.formData();
+		const dominio = String(fd.get('dominio') ?? '').toLowerCase();
+		const juntar = fd.get('juntar') === 'true';
+		if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(dominio)) return fail(400, { erro: 'Domínio inválido.' });
+		const { data: raiz } = await locals.supabase
+			.from('dmetric_sites')
+			.select('id')
+			.eq('dominio', dominio)
+			.eq('caminho', '')
+			.maybeSingle();
+		const { error } = raiz
+			? await locals.supabase.from('dmetric_sites').update({ juntar_paginas: juntar }).eq('id', raiz.id)
+			: await locals.supabase
+					.from('dmetric_sites')
+					.insert({ nome: dominio, dominio, caminho: '', automatico: true, juntar_paginas: juntar });
 		if (error) return fail(500, { erro: error.message });
 		return { ok: true };
 	},

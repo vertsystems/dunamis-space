@@ -9,7 +9,8 @@
 		medida = 'visitas',
 		rotuloMedida = medida === 'visitas' ? 'Visitas' : 'Páginas vistas',
 		vazio = 'Nada ainda neste período.',
-		rotular = (v: string) => v || '(não identificado)'
+		rotular = (v: string) => v || '(não identificado)',
+		detalhe
 	}: {
 		titulo: string;
 		itens: ItemDimensao[] | undefined;
@@ -18,7 +19,9 @@
 		/** Cabeçalho da coluna de números (cliques usam "Cliques"). */
 		rotuloMedida?: string;
 		vazio?: string;
-		rotular?: (valor: string) => string;
+		rotular?: (valor: string, item: ItemDimensao) => string;
+		/** Segunda linha, menor (ex.: o endereço da página embaixo do título). */
+		detalhe?: (item: ItemDimensao) => string | null;
 	} = $props();
 
 	const linhas = $derived((itens ?? []).filter((i) => i[medida] > 0).sort((a, b) => b[medida] - a[medida]));
@@ -36,12 +39,18 @@
 		<p class="py-4 text-center text-xs text-grey">{vazio}</p>
 	{:else}
 		<ul class="space-y-1">
-			{#each visiveis as l (l.valor)}
+			<!-- A chave leva o site: "/" de dois sites são páginas diferentes. -->
+			{#each visiveis as l (`${l.site_id ?? ''}|${l.valor}`)}
+				{@const nome = rotular(l.valor, l)}
+				{@const sub = detalhe?.(l)}
 				<li class="relative overflow-hidden rounded-[var(--radius-sm)] px-2 py-1">
 					<!-- Fundo proporcional ao maior da lista. -->
 					<div class="absolute inset-y-0 left-0 rounded-[var(--radius-sm)] bg-[#2a78d6]/10" style="width: {(l[medida] / maior) * 100}%"></div>
 					<div class="relative flex items-baseline gap-2 text-xs">
-						<span class="min-w-0 flex-1 truncate text-navy" title={rotular(l.valor)}>{rotular(l.valor)}</span>
+						<span class="min-w-0 flex-1 truncate text-navy" title={sub ? `${nome} — ${sub}` : nome}>
+							{nome}
+							{#if sub}<span class="block truncate text-[10px] text-grey">{sub}</span>{/if}
+						</span>
 						<span class="font-semibold tabular-nums text-navy-900">{numero(l[medida])}</span>
 					</div>
 				</li>

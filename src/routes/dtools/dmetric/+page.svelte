@@ -14,6 +14,8 @@
 		PERIODOS,
 		RECENTES,
 		duracao,
+		enderecoDaPagina,
+		nomeDoSite,
 		nomePais,
 		numero,
 		porcentagem,
@@ -93,7 +95,13 @@
 		return () => clearInterval(t);
 	});
 
-	const rotuloPagina = (v: string) => (v === '/' ? '/ (página inicial)' : v);
+	// Páginas: o título que o script mandou; sem título, o endereço completo.
+	const sitesPorId = $derived(new Map(data.sites.map((s) => [s.id, s])));
+	const titulos = $derived(new Map(data.titulos.map((t) => [`${t.site_id}|${t.caminho}`, t.titulo])));
+	const tituloDaPagina = (valor: string, item: { site_id?: string | null }) =>
+		titulos.get(`${item.site_id}|${valor}`) || enderecoDaPagina(sitesPorId.get(item.site_id ?? ''), valor);
+	const enderecoDoItem = (item: { valor: string; site_id?: string | null }) =>
+		titulos.get(`${item.site_id}|${item.valor}`) ? enderecoDaPagina(sitesPorId.get(item.site_id ?? ''), item.valor) : null;
 
 	const podeEditarSites = $derived(podeEditar(data.permissoes, 'dmetric'));
 	const podeExcluirSites = $derived(podeExcluir(data.permissoes, 'dmetric'));
@@ -139,7 +147,7 @@
 					onchange={(e) => filtrar('site', e.currentTarget.value)}
 				>
 					<option value="">Todos os sites</option>
-					{#each data.sites as s (s.id)}<option value={s.id}>{s.nome}</option>{/each}
+					{#each data.sites as s (s.id)}<option value={s.id}>{nomeDoSite(s)}</option>{/each}
 				</select>
 				<select
 					aria-label="Período"
@@ -230,7 +238,13 @@
 			</Card>
 
 			<div class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-				<ListaDimensao titulo="Páginas mais vistas" itens={data.painel.dimensoes.pagina} medida="visualizacoes" rotular={rotuloPagina} />
+				<ListaDimensao
+					titulo="Páginas mais vistas"
+					itens={data.painel.dimensoes.pagina}
+					medida="visualizacoes"
+					rotular={tituloDaPagina}
+					detalhe={enderecoDoItem}
+				/>
 				<ListaDimensao titulo="De onde chegaram" itens={data.painel.dimensoes.origem} />
 				<ListaDimensao
 					titulo="Cliques"

@@ -20,6 +20,7 @@ export type Batida = {
 	s?: unknown; // segundos de tela (tipo 'tempo')
 	l?: unknown; // endereço do link clicado (tipo 'clique')
 	e?: unknown; // nome do evento, de data-dm="…" (tipo 'clique')
+	ti?: unknown; // document.title (página vista)
 };
 
 const texto = (v: unknown, max: number) => (typeof v === 'string' ? v.slice(0, max) : '');
@@ -112,9 +113,17 @@ export function classificarOrigem(referrer: string, host: string, utm: string): 
 	return nomeConhecido(ref) ?? ref;
 }
 
-/** Celular, tablet ou computador. O User-Agent decide; a largura desempata. */
+/**
+ * Celular, tablet ou computador. O User-Agent decide; a largura desempata.
+ *
+ * Android sem "Mobile" no User-Agent é o jeito clássico de um tablet se
+ * anunciar — mas o navegador do Instagram no Android também vem sem, e em
+ * 11/10/2026 todo acesso de anúncio aparecia como tablet. Por isso, nesse caso,
+ * só é tablet com tela de 600 px ou mais.
+ */
 export function classificarAparelho(ua: string, largura: number): string {
-	if (/iPad|Tablet|PlayBook|Silk|(Android(?!.*Mobile))/i.test(ua)) return 'Tablet';
+	if (/iPad|Tablet|PlayBook|Silk/i.test(ua)) return 'Tablet';
+	if (/Android/i.test(ua) && !/Mobile/i.test(ua)) return largura >= 600 ? 'Tablet' : 'Celular';
 	if (/Mobi|iPhone|iPod|Android.*Mobile|Windows Phone|Opera Mini/i.test(ua)) return 'Celular';
 	if (largura > 0 && largura < 768) return 'Celular';
 	return 'Computador';
@@ -197,6 +206,8 @@ export type BatidaLida = {
 	segundos: number;
 	link: string;
 	evento: string;
+	/** Título da página (document.title), sem espaços sobrando. */
+	titulo: string;
 };
 
 /** A batida, validada: devolve null quando não dá para contar. */
@@ -218,7 +229,8 @@ export function lerBatida(b: Batida): BatidaLida | null {
 		largura: numeroOu0(b.w),
 		segundos: Math.round(Math.min(Math.max(numeroOu0(b.s), 0), 1800)),
 		link: texto(b.l, 500),
-		evento: texto(b.e, 60).trim()
+		evento: texto(b.e, 60).trim(),
+		titulo: texto(b.ti, 300).replace(/\s+/g, ' ').trim().slice(0, 150)
 	};
 }
 

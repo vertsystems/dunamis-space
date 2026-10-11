@@ -8,6 +8,9 @@ import {
 	haQuanto,
 	intervalo,
 	linhasDosSites,
+	enderecoDaPagina,
+	enderecoDoSite,
+	nomeDoSite,
 	lerPeriodo,
 	serieDiaria,
 	serieRecente,
@@ -157,6 +160,19 @@ describe('sites', () => {
 		expect(limparDominio('https://www.LojasMari.com.br/ofertas?x=1')).toBe('lojasmari.com.br');
 		expect(limparDominio('loja.exemplo.com:8080')).toBe('loja.exemplo.com');
 		expect(limparDominio('  ')).toBe('');
+	});
+	it('endereço e nome do site: manual, título ou endereço', () => {
+		const base = { nome: 'dnms.fun/lojasmari', dominio: 'dnms.fun', caminho: 'lojasmari', titulo: null, nome_manual: false };
+		expect(enderecoDoSite(base)).toBe('dnms.fun/lojasmari');
+		expect(enderecoDoSite({ dominio: 'ninasantana.com', caminho: '' })).toBe('ninasantana.com');
+		expect(nomeDoSite(base)).toBe('dnms.fun/lojasmari');
+		expect(nomeDoSite({ ...base, titulo: 'Lojas Mari® | PageLinks – DCo™' })).toBe('Lojas Mari® | PageLinks – DCo™');
+		expect(nomeDoSite({ ...base, titulo: 'Lojas Mari® | PageLinks', nome: 'Lojas Mari DCo™', nome_manual: true })).toBe('Lojas Mari DCo™');
+	});
+	it('endereço da página: domínio + caminho, a raiz sem barra', () => {
+		expect(enderecoDaPagina({ dominio: 'dnms.fun' }, '/lojasmari')).toBe('dnms.fun/lojasmari');
+		expect(enderecoDaPagina({ dominio: 'ninasantana.com' }, '/')).toBe('ninasantana.com');
+		expect(enderecoDaPagina(undefined, '/x')).toBe('/x');
 	});
 	it('código único, só com a origem do sistema', () => {
 		expect(snippet('https://dspace.verts.me')).toBe('<script defer src="https://dspace.verts.me/dm.js"></script>');

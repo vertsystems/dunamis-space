@@ -120,7 +120,9 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 		p_sistema: classificarSistema(ua),
 		// O mesmo segredo assina o hash do visitante: trocá-lo só "zera" quem
 		// já foi visto hoje.
-		p_visitante: await hashVisitante(segredo, dia, b.chave || b.host.replace(/^www\./, ''), ip, ua)
+		p_visitante: await hashVisitante(segredo, dia, b.chave || b.host.replace(/^www\./, ''), ip, ua),
+		// Nome da página no painel; o banco só regrava quando muda.
+		p_titulo: b.titulo || null
 	});
 	if (error) {
 		console.error('[dmetric] coletar', error.message);

@@ -6,8 +6,8 @@
 	import { page } from '$app/state';
 	import { Button, Card } from '$lib/components/ui';
 	import { toast } from '$lib/toast.svelte';
-	import { haQuanto, numero, snippet, type DMetricSite } from '$lib/dmetric/painel';
-	import { Check, Copy, Database, Globe, Pause, Pencil, Play, Trash2, X } from '@lucide/svelte';
+	import { enderecoDoSite, haQuanto, nomeDoSite, numero, snippet, type DMetricSite } from '$lib/dmetric/painel';
+	import { Check, Copy, Database, Globe, Merge, Pause, Pencil, Play, Split, Trash2, X } from '@lucide/svelte';
 
 	let {
 		sites,
@@ -22,6 +22,13 @@
 	} = $props();
 
 	const codigo = snippet(page.url.origin);
+
+	// Os sites de um mesmo domínio ficam juntos: a raiz e depois as páginas.
+	const ordenados = $derived(
+		[...sites].sort(
+			(a, b) => (a.dominio ?? '').localeCompare(b.dominio ?? '') || (a.caminho ?? '').localeCompare(b.caminho ?? '')
+		)
+	);
 	let confirmando = $state<string | null>(null);
 	let renomeando = $state<string | null>(null);
 
@@ -65,7 +72,9 @@
 				</p>
 			</Card>
 		{:else}
-			{#each sites as s (s.id)}
+			{#each ordenados as s (s.id)}
+				{@const nome = nomeDoSite(s)}
+				{@const endereco = enderecoDoSite(s)}
 				<Card padding="sm">
 					<div class="flex flex-wrap items-center justify-between gap-3">
 						<div class="min-w-0 flex-1">
@@ -83,26 +92,33 @@
 								>
 									<input type="hidden" name="id" value={s.id} />
 									<!-- svelte-ignore a11y_autofocus -->
-									<input name="nome" value={s.nome} aria-label="Nome do site" required autofocus class={fieldCls} />
+									<input
+										name="nome"
+										value={s.nome_manual ? s.nome : ''}
+										placeholder={s.titulo || endereco}
+										aria-label="Nome do site (vazio = o título da página)"
+										autofocus
+										class={fieldCls}
+									/>
 									<button type="submit" title="Salvar" class="rounded-[var(--radius-sm)] p-1.5 text-brand-green hover:bg-brand-green/10"><Check size={16} /></button>
 									<button type="button" title="Cancelar" onclick={() => (renomeando = null)} class="rounded-[var(--radius-sm)] p-1.5 text-grey hover:bg-bg"><X size={16} /></button>
 								</form>
 							{:else}
 								<div class="flex items-center gap-1.5">
-									<h3 class="truncate text-base font-bold text-navy">{s.nome}</h3>
+									<h3 class="truncate text-base font-bold text-navy">{nome}</h3>
 									{#if podeEditar}
 										<button
 											type="button"
 											onclick={() => (renomeando = s.id)}
-											title="Renomear"
-											aria-label="Renomear {s.nome}"
+											title="Renomear (em branco, volta a usar o título da página)"
+											aria-label="Renomear {nome}"
 											class="rounded-[var(--radius-sm)] p-1 text-grey transition-colors hover:bg-bg hover:text-navy"
 										><Pencil size={13} /></button>
 									{/if}
 								</div>
 							{/if}
 							<p class="text-xs text-slate">
-								{s.dominio ?? 'qualquer domínio'}{#if s.automatico}<span class="text-grey">{' · reconhecido pelo código'}</span>{/if}
+								{endereco || 'qualquer domínio'}{#if s.juntar_paginas}<span class="text-grey">{' · todas as páginas do domínio'}</span>{/if}
 							</p>
 						</div>
 						{#if !s.ativo}
@@ -120,6 +136,23 @@
 
 					{#if podeEditar || podeExcluir}
 						<div class="mt-2 flex flex-wrap items-center justify-end gap-2">
+							{#if podeEditar && s.dominio && (s.caminho || s.juntar_paginas)}
+								<!-- Página de um domínio → juntar; raiz que junta → separar. -->
+								<form method="POST" action="?/juntarPaginas" use:enhance>
+									<input type="hidden" name="dominio" value={s.dominio} />
+									<input type="hidden" name="juntar" value={String(!s.juntar_paginas)} />
+									<Button
+										size="sm"
+										variant="ghost"
+										type="submit"
+										title={s.juntar_paginas
+											? 'Cada página (dominio/pagina) volta a ser um site, a partir das próximas visitas'
+											: 'Para sites comuns, com seções: as próximas visitas de qualquer página contam no domínio'}
+									>
+										{#if s.juntar_paginas}<Split size={14} /> Separar páginas{:else}<Merge size={14} /> Juntar páginas de {s.dominio}{/if}
+									</Button>
+								</form>
+							{/if}
 							{#if podeEditar}
 								<form method="POST" action="?/alternarSite" use:enhance>
 									<input type="hidden" name="id" value={s.id} />

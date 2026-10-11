@@ -932,6 +932,27 @@ export type Database = {
 				}
 				Relationships: []
 			}
+			dmetric_paginas: {
+				Row: {
+					site_id: string
+					caminho: string
+					titulo: string
+					atualizado_em: string
+				}
+				Insert: {
+					site_id: string
+					caminho: string
+					titulo: string
+					atualizado_em?: string
+				}
+				Update: {
+					site_id?: string
+					caminho?: string
+					titulo?: string
+					atualizado_em?: string
+				}
+				Relationships: []
+			}
 			dmetric_recentes: {
 				Row: {
 					id: number
@@ -997,6 +1018,10 @@ export type Database = {
 					created_at: string
 					updated_at: string
 					automatico: boolean
+					caminho: string
+					titulo: string | null
+					nome_manual: boolean
+					juntar_paginas: boolean
 				}
 				Insert: {
 					id?: string
@@ -1008,6 +1033,10 @@ export type Database = {
 					created_at?: string
 					updated_at?: string
 					automatico?: boolean
+					caminho?: string
+					titulo?: string | null
+					nome_manual?: boolean
+					juntar_paginas?: boolean
 				}
 				Update: {
 					id?: string
@@ -1019,6 +1048,10 @@ export type Database = {
 					created_at?: string
 					updated_at?: string
 					automatico?: boolean
+					caminho?: string
+					titulo?: string | null
+					nome_manual?: boolean
+					juntar_paginas?: boolean
 				}
 				Relationships: []
 			}

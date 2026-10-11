@@ -1,7 +1,14 @@
 // DMetric — as regras do painel, sem I/O (testadas em painel.test.ts).
 
 /** Um item de uma dimensão (país, página, origem…) já somado no período. */
-export type ItemDimensao = { valor: string; visitas: number; visualizacoes: number; segundos?: number };
+export type ItemDimensao = {
+	valor: string;
+	visitas: number;
+	visualizacoes: number;
+	segundos?: number;
+	/** Só em 'pagina': de qual site é ("/" de dois sites são páginas diferentes). */
+	site_id?: string | null;
+};
 
 /** O que a função dmetric_painel devolve (migration 0072). */
 export type PainelDados = {
@@ -44,6 +51,14 @@ export type DMetricSite = {
 	ativo: boolean;
 	/** Criado sozinho pela primeira visita (código único). */
 	automatico?: boolean;
+	/** Primeiro trecho do endereço (dnms.fun/lojasmari → "lojasmari"); vazio = a raiz. */
+	caminho?: string;
+	/** Título (document.title) da página principal do site. */
+	titulo?: string | null;
+	/** Renomeado à mão: o título não substitui o nome. */
+	nome_manual?: boolean;
+	/** Na raiz: todas as páginas do domínio contam nela. */
+	juntar_paginas?: boolean;
 	ultima_visita: string | null;
 	created_at: string;
 };
@@ -358,6 +373,29 @@ export function limparDominio(v: string): string {
 		.replace(/^www\./, '')
 		.split(/[/?#:]/)[0]
 		.replace(/\.$/, '');
+}
+
+/** "dnms.fun/lojasmari" — o domínio e, se houver, a página que faz o site. */
+export function enderecoDoSite(s: Pick<DMetricSite, 'dominio' | 'caminho'>): string {
+	return (s.dominio ?? '') + (s.caminho ? `/${s.caminho}` : '');
+}
+
+/**
+ * O nome que aparece: o que alguém deu à mão; senão o título da página
+ * ("Lojas Mari® | PageLinks – DCo™"); senão o endereço.
+ */
+export function nomeDoSite(s: Pick<DMetricSite, 'nome' | 'nome_manual' | 'titulo' | 'dominio' | 'caminho'>): string {
+	if (s.nome_manual) return s.nome;
+	return s.titulo || enderecoDoSite(s) || s.nome;
+}
+
+/**
+ * Endereço completo de uma página da lista: o domínio do site e o caminho
+ * ("dnms.fun/lojasmari/promo"). A raiz de um domínio fica só o domínio.
+ */
+export function enderecoDaPagina(site: Pick<DMetricSite, 'dominio'> | undefined, caminho: string): string {
+	const c = caminho === '/' ? '' : caminho;
+	return site?.dominio ? site.dominio + c : caminho;
 }
 
 /** O código que vai no <head> do site — o mesmo para todos (o site sai do domínio). */

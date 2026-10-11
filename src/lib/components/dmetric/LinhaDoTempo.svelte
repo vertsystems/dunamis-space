@@ -26,9 +26,8 @@
 		serie.length ? `${linha}L${x(serie.length - 1).toFixed(1)},${y(0)}L${x(0).toFixed(1)},${y(0)}Z` : ''
 	);
 
-	const marcasX = $derived(
-		serie.length <= 1 ? [0] : [0, Math.round((serie.length - 1) / 2), serie.length - 1]
-	);
+	// Início, meio e fim — sem repetir (com 2 pontos, o "meio" é o próprio fim).
+	const marcasX = $derived([...new Set([0, Math.round((serie.length - 1) / 2), Math.max(0, serie.length - 1)])]);
 
 	let mira = $state<number | null>(null);
 	function mover(e: PointerEvent) {

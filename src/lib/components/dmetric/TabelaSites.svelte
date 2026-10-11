@@ -2,7 +2,16 @@
 	// Os sites do DMetric lado a lado, como a tabela do Google Analytics: em
 	// ordem de páginas vistas, com o total no topo e a fatia de cada site.
 	// Clicar num site filtra o painel por ele (clicar de novo volta a todos).
-	import { duracao, linhasDosSites, numero, porcentagem, type DMetricSite, type NumerosSite } from '$lib/dmetric/painel';
+	import {
+		duracao,
+		enderecoDoSite,
+		linhasDosSites,
+		nomeDoSite,
+		numero,
+		porcentagem,
+		type DMetricSite,
+		type NumerosSite
+	} from '$lib/dmetric/painel';
 
 	let {
 		sites,
@@ -53,6 +62,8 @@
 				</tr>
 				{#each dados.linhas as l, i (l.site.id)}
 					{@const marcado = selecionado === l.site.id}
+					{@const nome = nomeDoSite(l.site)}
+					{@const endereco = enderecoDoSite(l.site)}
 					<tr
 						class="cursor-pointer text-xs transition-colors hover:bg-bg/60 {marcado ? 'bg-brand/[0.06]' : ''} {l.site.ativo ? '' : 'opacity-60'}"
 						onclick={() => onescolher(marcado ? null : l.site.id)}
@@ -68,9 +79,9 @@
 								aria-pressed={marcado}
 								class="text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 rounded-[var(--radius-sm)]"
 							>
-								<span class="block font-semibold text-navy">{l.site.nome}</span>
-								{#if l.site.dominio && l.site.dominio !== l.site.nome}
-									<span class="block text-[11px] text-grey">{l.site.dominio}</span>
+								<span class="block font-semibold text-navy">{nome}</span>
+								{#if endereco && endereco !== nome}
+									<span class="block text-[11px] text-grey">{endereco}</span>
 								{/if}
 							</button>
 						</td>
