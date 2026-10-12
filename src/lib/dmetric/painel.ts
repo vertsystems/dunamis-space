@@ -17,6 +17,8 @@ export type PainelDados = {
 	/** Tempo de tela somado (só aba visível). Médio = segundos ÷ visitas. */
 	segundos?: number;
 	por_dia: { dia: string; visitas: number; visualizacoes: number }[];
+	/** Dia da semana (0 = domingo) × hora (0–23), para os horários de pico. Não vem nos períodos de horas. */
+	por_hora?: { dow: number; hora: number; visitas: number; visualizacoes: number }[];
 	/** Só nos períodos de horas: a linha do tempo em degraus (5 min ou 1 h), já completa. */
 	serie?: { momento: string; visitas: number; visualizacoes: number }[];
 	dimensoes: Partial<Record<Dimensao, ItemDimensao[]>>;
@@ -310,6 +312,95 @@ export function duracao(segundos: number): string {
 	const m = Math.round((s % 3600) / 60);
 	return m ? `${h} h ${m} min` : `${h} h`;
 }
+
+// ---- Horários de pico ---------------------------------------------------------
+
+export const DIAS_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'] as const;
+
+/**
+ * A grade do mapa de horários: 7 dias × 24 horas de visitas, o maior valor (a
+ * escala de cor sai dele), o horário de pico e o dia mais movimentado.
+ */
+export function gradeHorarios(porHora: { dow: number; hora: number; visitas: number }[]): {
+	grade: number[][];
+	maior: number;
+	pico: { dow: number; hora: number; visitas: number } | null;
+	melhorDia: { dow: number; visitas: number } | null;
+	total: number;
+} {
+	const grade = Array.from({ length: 7 }, () => Array<number>(24).fill(0));
+	for (const p of porHora) {
+		if (p.dow >= 0 && p.dow < 7 && p.hora >= 0 && p.hora < 24) grade[p.dow][p.hora] += p.visitas;
+	}
+	let maior = 0;
+	let pico: { dow: number; hora: number; visitas: number } | null = null;
+	grade.forEach((linha, dow) =>
+		linha.forEach((v, hora) => {
+			if (v > maior) {
+				maior = v;
+				pico = { dow, hora, visitas: v };
+			}
+		})
+	);
+	const porDia = grade.map((linha) => linha.reduce((s, v) => s + v, 0));
+	const total = porDia.reduce((s, v) => s + v, 0);
+	const dia = porDia.reduce((m, v, i) => (v > porDia[m] ? i : m), 0);
+	return { grade, maior, pico, melhorDia: total ? { dow: dia, visitas: porDia[dia] } : null, total };
+}
+
+/**
+ * Faixa de cor (0–5) de uma célula: 0 = nenhuma visita; 1 a 5 em proporção ao
+ * maior horário do período (uma escala por período, para o pico ser sempre o
+ * mais escuro).
+ */
+export function faixaHorario(v: number, maior: number): number {
+	if (!(v > 0) || !(maior > 0)) return 0;
+	return Math.min(5, Math.max(1, Math.ceil((v / maior) * 5)));
+}
+
+// ---- Páginas com baixo acesso --------------------------------------------------
+
+/** Abaixo disto, em 30 dias, a página entra no alerta. */
+export const LIMITE_BAIXO_ACESSO = 20;
+
+export type PaginaBaixoAcesso = { site: DMetricSite; visitas: number; diasNoAr: number };
+
+/**
+ * Páginas (sites do DMetric) ativas com menos de LIMITE_BAIXO_ACESSO visitas
+ * nos últimos 30 dias, da que menos recebeu para a que mais. Pausadas ficam
+ * fora: pausar é dizer que não interessa.
+ */
+export function paginasComBaixoAcesso(
+	sites: DMetricSite[],
+	numeros30d: Pick<NumerosSite, 'site_id' | 'visitas'>[],
+	agora = new Date(),
+	limite = LIMITE_BAIXO_ACESSO
+): PaginaBaixoAcesso[] {
+	const por = new Map(numeros30d.map((n) => [n.site_id, n.visitas]));
+	return sites
+		.filter((s) => s.ativo)
+		.map((site) => ({
+			site,
+			visitas: por.get(site.id) ?? 0,
+			diasNoAr: site.created_at
+				? Math.max(0, Math.floor((agora.getTime() - new Date(site.created_at).getTime()) / 86_400_000))
+				: 30
+		}))
+		.filter((p) => p.visitas < limite)
+		.sort((a, b) => a.visitas - b.visitas || a.site.nome.localeCompare(b.site.nome));
+}
+
+// ---- Agora no site --------------------------------------------------------------
+
+/** Quem abriu uma página nos últimos 5 minutos (função dmetric_agora, 0080). */
+export type AgoraDados = {
+	pessoas: number;
+	paises: { pais: string; pessoas: number }[];
+	paginas: { site_id: string; caminho: string; pessoas: number }[];
+	cidades: { cidade: string; pessoas: number }[];
+};
+
+export const AGORA_VAZIO: AgoraDados = { pessoas: 0, paises: [], paginas: [], cidades: [] };
 
 // ---- Sites -----------------------------------------------------------------
 

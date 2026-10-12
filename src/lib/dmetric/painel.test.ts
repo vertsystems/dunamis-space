@@ -8,6 +8,9 @@ import {
 	haQuanto,
 	intervalo,
 	linhasDosSites,
+	faixaHorario,
+	gradeHorarios,
+	paginasComBaixoAcesso,
 	enderecoDaPagina,
 	enderecoDoSite,
 	nomeDoSite,
@@ -135,6 +138,49 @@ describe('formatação', () => {
 		expect(numero(109087)).toBe('109.087');
 		expect(porcentagem(0.9661)).toBe('96,6%');
 		expect(porcentagem(0.00004)).toBe('<0,1%');
+	});
+});
+
+describe('gradeHorarios', () => {
+	it('monta 7 × 24, acha o pico e o dia mais movimentado', () => {
+		const g = gradeHorarios([
+			{ dow: 2, hora: 20, visitas: 23 },
+			{ dow: 2, hora: 21, visitas: 5 },
+			{ dow: 6, hora: 10, visitas: 9 },
+			{ dow: 9, hora: 10, visitas: 99 } // fora da grade: ignorado
+		]);
+		expect(g.grade).toHaveLength(7);
+		expect(g.grade[2][20]).toBe(23);
+		expect(g.maior).toBe(23);
+		expect(g.pico).toEqual({ dow: 2, hora: 20, visitas: 23 });
+		expect(g.melhorDia).toEqual({ dow: 2, visitas: 28 });
+		expect(g.total).toBe(37);
+	});
+	it('sem dados', () => {
+		const g = gradeHorarios([]);
+		expect(g.pico).toBeNull();
+		expect(g.melhorDia).toBeNull();
+	});
+	it('faixa de cor em proporção ao pico', () => {
+		expect([0, 1, 5, 12, 23].map((v) => faixaHorario(v, 23))).toEqual([0, 1, 2, 3, 5]);
+		expect(faixaHorario(3, 0)).toBe(0);
+	});
+});
+
+describe('paginasComBaixoAcesso', () => {
+	const site = (id: string, nome: string, ativo = true, criado = '2026-09-01T00:00:00Z') => ({
+		id, nome, dominio: 'x.com', chave: id, ativo, ultima_visita: null, created_at: criado
+	});
+	it('ativas com menos de 20 visitas em 30 dias, da menor para a maior; pausadas fora', () => {
+		const r = paginasComBaixoAcesso(
+			[site('a', 'A'), site('b', 'B'), site('c', 'C', false), site('d', 'D', true, '2026-10-10T00:00:00Z')],
+			[{ site_id: 'a', visitas: 12 }, { site_id: 'b', visitas: 40 }],
+			new Date('2026-10-12T12:00:00Z')
+		);
+		expect(r.map((p) => [p.site.nome, p.visitas, p.diasNoAr])).toEqual([
+			['D', 0, 2],
+			['A', 12, 41]
+		]);
 	});
 });
 

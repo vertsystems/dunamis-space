@@ -3,7 +3,9 @@ import { fail } from '@sveltejs/kit';
 import { exigirPermissao } from '$lib/server/permissao';
 import { diaEmBrasilia } from '$lib/dmetric/coleta';
 import {
+	AGORA_VAZIO,
 	RECENTES,
+	type AgoraDados,
 	intervalo,
 	lerPeriodo,
 	resumirHistorico,
@@ -28,7 +30,11 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	const recente = RECENTES[periodo];
 	const desde = recente ? new Date(Date.now() - recente.horas * 3_600_000).toISOString() : null;
 
-	const [sites, historico, painel, porSite, titulos] = await Promise.all([
+	// O alerta de baixo acesso olha sempre os últimos 30 dias, seja qual for o
+	// período escolhido no filtro.
+	const ultimos30 = intervalo('30d', hoje);
+
+	const [sites, historico, painel, porSite, titulos, porSite30, agora] = await Promise.all([
 		supabase.from('dmetric_sites').select('*').order('nome'),
 		supabase
 			.from('dmetric_historico')
@@ -43,7 +49,9 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 			: supabase.rpc('dmetric_por_site', { p_de: de, p_ate: ate }),
 		// Título de cada página (para a lista de páginas). Uma linha por página
 		// de cada site: pouca coisa, e só muda quando o título do site muda.
-		supabase.from('dmetric_paginas').select('site_id, caminho, titulo').limit(5000)
+		supabase.from('dmetric_paginas').select('site_id, caminho, titulo').limit(5000),
+		supabase.rpc('dmetric_por_site', { p_de: ultimos30.de, p_ate: ultimos30.ate }),
+		supabase.rpc('dmetric_agora', { p_site: site })
 	]);
 
 	// Sem a migration 0072 a tela avisa em vez de quebrar.
@@ -65,7 +73,9 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		resumoHistorico: resumirHistorico((historico.data ?? []) as LinhaHistorico[]),
 		painel: (painel.data as PainelDados | null) ?? VAZIO,
 		porSite: (porSite.data ?? []) as NumerosSite[],
-		titulos: (titulos.data ?? []) as { site_id: string; caminho: string; titulo: string }[]
+		titulos: (titulos.data ?? []) as { site_id: string; caminho: string; titulo: string }[],
+		porSite30: (porSite30.data ?? []) as NumerosSite[],
+		agora: (agora.data as AgoraDados | null) ?? AGORA_VAZIO
 	};
 };
 

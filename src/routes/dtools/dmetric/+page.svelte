@@ -6,6 +6,9 @@
 	import RankingPaises from '$lib/components/dmetric/RankingPaises.svelte';
 	import RankingCidades from '$lib/components/dmetric/RankingCidades.svelte';
 	import TabelaSites from '$lib/components/dmetric/TabelaSites.svelte';
+	import HorariosPico from '$lib/components/dmetric/HorariosPico.svelte';
+	import BaixoAcesso from '$lib/components/dmetric/BaixoAcesso.svelte';
+	import AgoraNoSite from '$lib/components/dmetric/AgoraNoSite.svelte';
 	import LinhaDoTempo from '$lib/components/dmetric/LinhaDoTempo.svelte';
 	import ListaDimensao from '$lib/components/dmetric/ListaDimensao.svelte';
 	import Sites from '$lib/components/dmetric/Sites.svelte';
@@ -18,6 +21,7 @@
 		nomeDoSite,
 		nomePais,
 		numero,
+		paginasComBaixoAcesso,
 		porcentagem,
 		serieDiaria,
 		serieRecente,
@@ -78,6 +82,14 @@
 	const tempoMedio = $derived(data.painel.visitas ? (data.painel.segundos ?? 0) / data.painel.visitas : 0);
 
 	let destaque = $state<string | null>(null);
+	/** Países com gente no site agora (vem do AgoraNoSite, vai para o mapa pulsar). */
+	let paisesAgora = $state<string[]>([]);
+
+	// Alerta de baixo acesso: últimos 30 dias, de todos os sites — ou só do
+	// site escolhido no filtro.
+	const baixoAcesso = $derived(
+		paginasComBaixoAcesso(data.site ? data.sites.filter((s) => s.id === data.site) : data.sites, data.porSite30)
+	);
 
 	// ---- Últimas horas ------------------------------------------------------------
 	const recente = $derived(!!RECENTES[data.periodo]);
@@ -102,6 +114,7 @@
 		titulos.get(`${item.site_id}|${valor}`) || enderecoDaPagina(sitesPorId.get(item.site_id ?? ''), valor);
 	const enderecoDoItem = (item: { valor: string; site_id?: string | null }) =>
 		titulos.get(`${item.site_id}|${item.valor}`) ? enderecoDaPagina(sitesPorId.get(item.site_id ?? ''), item.valor) : null;
+	const nomePagina = (siteId: string, caminho: string) => tituloDaPagina(caminho, { site_id: siteId });
 
 	const podeEditarSites = $derived(podeEditar(data.permissoes, 'dmetric'));
 	const podeExcluirSites = $derived(podeExcluir(data.permissoes, 'dmetric'));
@@ -121,6 +134,7 @@
 {:else}
 	<!-- Linha 1: abas à esquerda, filtros à direita — os filtros valem para a tela toda. -->
 	<div class="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+		<div class="flex flex-wrap items-center gap-2">
 		<nav class="inline-flex shrink-0 self-start rounded-full bg-bg p-0.5" aria-label="Seções do DMetric">
 			{#each [{ id: 'painel', label: 'Painel', icon: ChartSpline }, { id: 'sites', label: 'Sites', icon: Globe }] as const as item (item.id)}
 				{@const Ico = item.icon}
@@ -137,6 +151,10 @@
 				</button>
 			{/each}
 		</nav>
+		{#if aba === 'painel'}
+			<AgoraNoSite inicial={data.agora} site={data.site} {nomePagina} bind:paises={paisesAgora} />
+		{/if}
+		</div>
 
 		{#if aba === 'painel'}
 			<div class="flex flex-wrap items-center gap-2">
@@ -195,7 +213,7 @@
 						</p>
 					{/if}
 				</div>
-				<MapaMundi valores={paises} bind:destaque />
+				<MapaMundi valores={paises} bind:destaque pulsando={paisesAgora} />
 			</Card>
 			<Card class="flex flex-col">
 				<h2 class="mb-3 flex items-baseline justify-between text-base font-bold text-navy">
@@ -228,6 +246,10 @@
 			/>
 		</Card>
 
+		{#if baixoAcesso.length}
+			<div class="mb-5"><BaixoAcesso paginas={baixoAcesso} /></div>
+		{/if}
+
 		{#if temVivo}
 			<Card class="mb-5">
 				<div class="mb-2 flex flex-wrap items-baseline justify-between gap-2">
@@ -236,6 +258,17 @@
 				</div>
 				<LinhaDoTempo {serie} />
 			</Card>
+
+			<!-- Nos períodos de dias: em que dia e hora as pessoas chegam. -->
+			{#if !recente && data.painel.por_hora}
+				<Card class="mb-5">
+					<div class="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+						<h2 class="text-base font-bold text-navy">Horários de pico</h2>
+						<p class="text-[11px] text-grey">visitas por dia da semana e hora · horário de Brasília</p>
+					</div>
+					<HorariosPico porHora={data.painel.por_hora} />
+				</Card>
+			{/if}
 
 			<div class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
 				<ListaDimensao

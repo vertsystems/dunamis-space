@@ -10,12 +10,18 @@
 
 	let {
 		valores,
-		destaque = $bindable(null)
+		destaque = $bindable(null),
+		pulsando = []
 	}: {
 		valores: Map<string, number>;
 		/** País em destaque — vem do ranking ao lado, ou vai para ele. */
 		destaque?: string | null;
+		/** Países com gente no site agora (AgoraNoSite): pulsam no mapa. */
+		pulsando?: string[];
 	} = $props();
+
+	const CENTROS = mapa.centros as unknown as Record<string, [number, number]>;
+	const pulsos = $derived(pulsando.map((iso) => ({ iso, xy: CENTROS[iso] })).filter((p) => p.xy));
 
 	const cor = (iso: string | null) => corDeVisitas(iso ? (valores.get(iso) ?? 0) : 0);
 
@@ -69,6 +75,14 @@
 			</g>
 		{/each}
 
+		<!-- Gente no site agora: um ponto verde com uma onda que se abre. -->
+		{#each pulsos as p (p.iso)}
+			<g pointer-events="none">
+				<circle class="dm-pulso" cx={p.xy[0]} cy={p.xy[1]} r="5" fill="#17b26a" />
+				<circle cx={p.xy[0]} cy={p.xy[1]} r="3.4" fill="#17b26a" stroke="#ffffff" stroke-width="1.4" />
+			</g>
+		{/each}
+
 		<!-- O país em destaque ganha contorno por cima de tudo (a borda branca dos
 		     vizinhos esconderia um contorno desenhado no próprio país). -->
 		{#if tracoDestaque}
@@ -108,3 +122,27 @@
 		<span class="h-2.5 w-4 rounded-[2px]" style="background: {COR_SEM_VISITA}"></span>sem visitas
 	</span>
 </div>
+
+<style>
+	.dm-pulso {
+		transform-box: fill-box;
+		transform-origin: center;
+		animation: dm-pulso 2s ease-out infinite;
+	}
+	@keyframes dm-pulso {
+		from {
+			transform: scale(0.6);
+			opacity: 0.6;
+		}
+		to {
+			transform: scale(3.2);
+			opacity: 0;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.dm-pulso {
+			animation: none;
+			opacity: 0.35;
+		}
+	}
+</style>

@@ -20,7 +20,7 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { feature } from 'topojson-client';
-import { geoCentroid, geoNaturalEarth1Raw, geoPath, geoProjection } from 'd3-geo';
+import { geoArea, geoCentroid, geoNaturalEarth1Raw, geoPath, geoProjection } from 'd3-geo';
 import paises from 'i18n-iso-countries';
 
 const require = createRequire(import.meta.url);
@@ -92,11 +92,28 @@ for (const f of mundo50.features) {
 	pontos.push({ iso, x: Math.round(xy[0] * 10) / 10, y: Math.round(xy[1] * 10) / 10 });
 }
 
+// ---- O meio de cada país: onde pulsa o "agora no site" ----
+// O meio do MAIOR pedaço do país: o do país inteiro da França cairia no
+// Atlântico, por causa da Guiana.
+const centros = {};
+for (const f of dentro.features) {
+	const iso = sigla(f.id);
+	if (!iso) continue;
+	const partes =
+		f.geometry.type === 'MultiPolygon'
+			? f.geometry.coordinates.map((c) => ({ type: 'Polygon', coordinates: c }))
+			: [f.geometry];
+	const maior = partes.reduce((a, b) => (geoArea(b) > geoArea(a) ? b : a));
+	const xy = projecao(geoCentroid(maior));
+	if (xy && Number.isFinite(xy[0])) centros[iso] = [Math.round(xy[0] * 10) / 10, Math.round(xy[1] * 10) / 10];
+}
+for (const p of pontos) centros[p.iso] ??= [p.x, p.y];
+
 tracos.sort((a, b) => (a.iso ?? '').localeCompare(b.iso ?? ''));
 pontos.sort((a, b) => a.iso.localeCompare(b.iso));
 
 mkdirSync(dirname(saida), { recursive: true });
-const json = JSON.stringify({ largura: LARGURA, altura: ALTURA, paises: tracos, pontos });
+const json = JSON.stringify({ largura: LARGURA, altura: ALTURA, paises: tracos, pontos, centros });
 writeFileSync(saida, json + '\n');
 console.log(
 	`mapa.generated.json — ${tracos.length} países com traço, ${pontos.length} como ponto, alongamento ${ALONGAMENTO.toFixed(3)}, ${Math.round(json.length / 1024)} KB`
