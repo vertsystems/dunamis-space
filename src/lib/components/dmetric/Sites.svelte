@@ -137,20 +137,27 @@
 					{#if podeEditar || podeExcluir}
 						<div class="mt-2 flex flex-wrap items-center justify-end gap-2">
 							{#if podeEditar && s.dominio && (s.caminho || s.juntar_paginas)}
+								{@const legenda = s.juntar_paginas
+									? `Separar páginas: cada página de ${s.dominio} volta a ser um site (nas próximas visitas)`
+									: `Juntar páginas: as próximas visitas de qualquer página de ${s.dominio} contam num site só`}
 								<!-- Página de um domínio → juntar; raiz que junta → separar. -->
 								<form method="POST" action="?/juntarPaginas" use:enhance>
 									<input type="hidden" name="dominio" value={s.dominio} />
 									<input type="hidden" name="juntar" value={String(!s.juntar_paginas)} />
-									<Button
-										size="sm"
-										variant="ghost"
+									<!-- Só o ícone; a explicação aparece ao passar o mouse (ou focar). -->
+									<button
 										type="submit"
-										title={s.juntar_paginas
-											? 'Cada página (dominio/pagina) volta a ser um site, a partir das próximas visitas'
-											: 'Para sites comuns, com seções: as próximas visitas de qualquer página contam no domínio'}
+										aria-label={legenda}
+										class="group relative grid size-8 place-items-center rounded-[var(--radius-sm)] bg-[#fce16c]/45 text-[#846047] transition-colors hover:bg-[#fce16c]/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fce16c]"
 									>
-										{#if s.juntar_paginas}<Split size={14} /> Separar páginas{:else}<Merge size={14} /> Juntar páginas de {s.dominio}{/if}
-									</Button>
+										{#if s.juntar_paginas}<Split size={15} />{:else}<Merge size={15} />{/if}
+										<span
+											role="tooltip"
+											class="pointer-events-none absolute bottom-full right-0 z-20 mb-2 w-max max-w-64 rounded-[var(--radius-sm)] bg-navy-900 px-2.5 py-1.5 text-left text-[11px] font-medium leading-snug text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"
+										>
+											{legenda}
+										</span>
+									</button>
 								</form>
 							{/if}
 							{#if podeEditar}
