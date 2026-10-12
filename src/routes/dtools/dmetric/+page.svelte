@@ -160,6 +160,20 @@
 
 		{#if aba !== 'sites'}
 			<div class="flex flex-wrap items-center gap-2">
+				<!-- Modo TV: só o ícone; a explicação aparece ao passar o mouse (ou focar). -->
+				<a
+					href="/dtools/dmetric/tv{data.site ? `?site=${data.site}` : ''}"
+					aria-label="Modo TV: tela cheia para a TV do escritório ou a reunião com o cliente"
+					class="group relative grid size-9 shrink-0 place-items-center rounded-[var(--radius)] border border-grey-200 bg-surface text-navy shadow-xs transition-colors hover:border-grey focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25"
+				>
+					<Tv size={16} />
+					<span
+						role="tooltip"
+						class="pointer-events-none absolute left-0 top-full z-20 mt-2 w-max max-w-64 rounded-[var(--radius-sm)] bg-navy-900 px-2.5 py-1.5 text-left text-[11px] font-medium leading-snug text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"
+					>
+						Modo TV: tela cheia para a TV do escritório ou a reunião com o cliente
+					</span>
+				</a>
 				<select
 					aria-label="Site"
 					class={selectCls}
@@ -177,13 +191,6 @@
 				>
 					{#each PERIODOS as p (p.id)}<option value={p.id}>{p.rotulo}</option>{/each}
 				</select>
-				<!-- Tela cheia para a TV do escritório ou a reunião com o cliente. -->
-				<a
-					href="/dtools/dmetric/tv{data.site ? `?site=${data.site}` : ''}"
-					class="inline-flex h-9 items-center gap-1.5 rounded-[var(--radius)] border border-grey-200 bg-surface px-3 text-sm font-medium text-navy shadow-xs transition-colors hover:border-grey focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25"
-				>
-					<Tv size={15} />Modo TV
-				</a>
 			</div>
 		{/if}
 	</div>
