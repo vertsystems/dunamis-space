@@ -1,4 +1,5 @@
-// DMetric — recebe a página vista que o script dos sites manda (static/dm.js).
+// DMetric — recebe a página vista que o script dos sites manda (static/dm.js),
+// e também o tempo de tela, os cliques e a saúde da página (velocidade, erros, 404).
 //
 // Pública de propósito: quem chama é o navegador do visitante, num site que não
 // é o nosso. Por isso ela só sabe CONTAR — nada é lido daqui — e a função do
@@ -25,8 +26,12 @@ import {
 	ehRobo,
 	hashVisitante,
 	lerBatida,
+	limparErro,
+	limparRecurso,
 	nomeDaCidade,
-	type Batida
+	origemDo404,
+	type Batida,
+	type BatidaLida
 } from '$lib/dmetric/coleta';
 import type { RequestHandler } from './$types';
 
@@ -84,6 +89,26 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 		auth: { persistSession: false, autoRefreshToken: false }
 	});
 
+	// Saúde da página: velocidade, erros e 404. Também sem visitante, e nunca
+	// cria site (dmetric_saude, 0081).
+	if (b.tipo === 'vitais' || b.tipo === 'erro' || b.tipo === '404') {
+		const dados = dadosDeSaude(b);
+		if (!dados) return pronto('ignorado');
+		const { data: contou, error } = await supabase.rpc('dmetric_saude', {
+			p_segredo: segredo,
+			p_chave: b.chave || null,
+			p_host: b.host,
+			p_caminho: b.caminho,
+			p_tipo: b.tipo,
+			p_dados: dados
+		});
+		if (error) {
+			console.error('[dmetric] saude', error.message);
+			return pronto('erro');
+		}
+		return pronto(contou ? 'ok' : 'recusado');
+	}
+
 	// Tempo de tela e cliques: só somam no que já existe, sem visitante.
 	if (b.tipo !== 'v') {
 		const valor = b.tipo === 'clique' ? (b.evento || classificarClique(b.link, b.host)) : null;
@@ -132,3 +157,13 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 	// host que não é domínio público (localhost, IP) no código único.
 	return pronto(contou ? 'ok' : 'recusado');
 };
+
+/** O que vai para dmetric_saude, ou null quando não há o que guardar. */
+function dadosDeSaude(b: BatidaLida): Record<string, unknown> | null {
+	if (b.tipo === 'vitais') return Object.keys(b.vitais).length ? b.vitais : null;
+	if (b.tipo === '404') return { origem: origemDo404(b.origem, b.referrer, b.host) };
+	const mensagem = b.recurso ? limparRecurso(b.mensagem) : limparErro(b.mensagem);
+	if (!mensagem) return null;
+	const dominio = b.origem.toLowerCase();
+	return { mensagem, recurso: b.recurso, origem: /^[a-z0-9.-]{1,253}$/.test(dominio) ? dominio : '' };
+}

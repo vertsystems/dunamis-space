@@ -12,6 +12,7 @@
 	import LinhaDoTempo from '$lib/components/dmetric/LinhaDoTempo.svelte';
 	import ListaDimensao from '$lib/components/dmetric/ListaDimensao.svelte';
 	import Sites from '$lib/components/dmetric/Sites.svelte';
+	import Saude from '$lib/components/dmetric/Saude.svelte';
 	import { podeEditar, podeExcluir } from '$lib/permissoes';
 	import {
 		PERIODOS,
@@ -27,16 +28,17 @@
 		serieRecente,
 		visitasPorPais
 	} from '$lib/dmetric/painel';
-	import { ChartSpline, Globe, Eye, Users, MapPinned, Info, Timer } from '@lucide/svelte';
+	import { ChartSpline, Globe, Eye, Users, MapPinned, Info, Timer, HeartPulse, Tv } from '@lucide/svelte';
 
 	let { data } = $props();
 
 	// ---- Abas -----------------------------------------------------------------
-	type Aba = 'painel' | 'sites';
+	type Aba = 'painel' | 'saude' | 'sites';
 	const K_ABA = 'dmetric_aba';
 	function abaSalva(): Aba {
 		try {
-			return localStorage.getItem(K_ABA) === 'sites' ? 'sites' : 'painel';
+			const a = localStorage.getItem(K_ABA);
+			return a === 'sites' || a === 'saude' ? a : 'painel';
 		} catch {
 			return 'painel';
 		}
@@ -136,7 +138,7 @@
 	<div class="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
 		<div class="flex flex-wrap items-center gap-2">
 		<nav class="inline-flex shrink-0 self-start rounded-full bg-bg p-0.5" aria-label="Seções do DMetric">
-			{#each [{ id: 'painel', label: 'Painel', icon: ChartSpline }, { id: 'sites', label: 'Sites', icon: Globe }] as const as item (item.id)}
+			{#each [{ id: 'painel', label: 'Painel', icon: ChartSpline }, { id: 'saude', label: 'Saúde', icon: HeartPulse }, { id: 'sites', label: 'Sites', icon: Globe }] as const as item (item.id)}
 				{@const Ico = item.icon}
 				<button
 					type="button"
@@ -156,7 +158,7 @@
 		{/if}
 		</div>
 
-		{#if aba === 'painel'}
+		{#if aba !== 'sites'}
 			<div class="flex flex-wrap items-center gap-2">
 				<select
 					aria-label="Site"
@@ -175,12 +177,21 @@
 				>
 					{#each PERIODOS as p (p.id)}<option value={p.id}>{p.rotulo}</option>{/each}
 				</select>
+				<!-- Tela cheia para a TV do escritório ou a reunião com o cliente. -->
+				<a
+					href="/dtools/dmetric/tv{data.site ? `?site=${data.site}` : ''}"
+					class="inline-flex h-9 items-center gap-1.5 rounded-[var(--radius)] border border-grey-200 bg-surface px-3 text-sm font-medium text-navy shadow-xs transition-colors hover:border-grey focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25"
+				>
+					<Tv size={15} />Modo TV
+				</a>
 			</div>
 		{/if}
 	</div>
 
 	{#if aba === 'sites'}
 		<Sites sites={data.sites} historico={data.resumoHistorico} podeEditar={podeEditarSites} podeExcluir={podeExcluirSites} />
+	{:else if aba === 'saude'}
+		<Saude saude={data.saude} sites={data.sites} />
 	{:else}
 		<!-- Indicadores -->
 		<div class="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">

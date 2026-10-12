@@ -209,7 +209,9 @@
 		page.url.pathname === '/login' ||
 			page.url.pathname.startsWith('/redefinir-senha') ||
 			page.url.pathname.startsWith('/aprovar') ||
-			page.url.pathname.startsWith('/pagamentos/')
+			page.url.pathname.startsWith('/pagamentos/') ||
+			// Modo TV do DMetric: a tela inteira é o painel.
+			page.url.pathname === '/dtools/dmetric/tv'
 	);
 
 	async function signOut() {

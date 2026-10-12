@@ -6,10 +6,14 @@
 // página, o tempo que ela ficou na tela; ao clicar num link, o endereço. O
 // resto vem do servidor: país e cidade pelos cabeçalhos de geolocalização da
 // Vercel, e aparelho, navegador e sistema pelo User-Agent.
+//
+// Para a saúde da página (0081), também: as medidas de velocidade do aparelho
+// (Web Vitals), os erros de JavaScript, as imagens que não carregaram e as
+// páginas que deram 404.
 
 /** O que o script manda (ver static/dm.js). Tudo opcional: vem da internet. */
 export type Batida = {
-	t?: unknown; // tipo: 'v' (página vista, o padrão), 'tempo' ou 'clique'
+	t?: unknown; // tipo: 'v' (página vista, o padrão), 'tempo', 'clique', 'vitais', 'erro' ou '404'
 	k?: unknown; // chave do site (só o código antigo, com data-site)
 	h?: unknown; // location.hostname
 	p?: unknown; // location.pathname
@@ -21,6 +25,10 @@ export type Batida = {
 	l?: unknown; // endereço do link clicado (tipo 'clique')
 	e?: unknown; // nome do evento, de data-dm="…" (tipo 'clique')
 	ti?: unknown; // document.title (página vista)
+	vi?: unknown; // medidas de velocidade {lcp, inp, cls, fcp, ttfb} (tipo 'vitais')
+	m?: unknown; // mensagem do erro, ou o arquivo que não carregou (tipo 'erro')
+	o?: unknown; // erro: domínio do script/arquivo; 404: a página anterior do próprio site
+	x?: unknown; // erro: 1 = arquivo (imagem, script, estilo) que não carregou
 };
 
 const texto = (v: unknown, max: number) => (typeof v === 'string' ? v.slice(0, max) : '');
@@ -193,8 +201,14 @@ export async function hashVisitante(
 	return [...new Uint8Array(assinatura).slice(0, 12)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+export type TipoBatida = 'v' | 'tempo' | 'clique' | 'vitais' | 'erro' | '404';
+const TIPOS: TipoBatida[] = ['tempo', 'clique', 'vitais', 'erro', '404'];
+
+/** As medidas de velocidade, em ms (cls: o número puro do Google, sem unidade). */
+export type Vitais = Partial<Record<'lcp' | 'inp' | 'cls' | 'fcp' | 'ttfb', number>>;
+
 export type BatidaLida = {
-	tipo: 'v' | 'tempo' | 'clique';
+	tipo: TipoBatida;
 	/** Vazia no código único: o site é achado pelo domínio. */
 	chave: string;
 	host: string;
@@ -208,6 +222,12 @@ export type BatidaLida = {
 	evento: string;
 	/** Título da página (document.title), sem espaços sobrando. */
 	titulo: string;
+	vitais: Vitais;
+	/** Erro: a mensagem, já limpa (ver limparErro); arquivo: o endereço. */
+	mensagem: string;
+	/** Erro: domínio do script/arquivo. 404: a página anterior, do próprio site. */
+	origem: string;
+	recurso: boolean;
 };
 
 /** A batida, validada: devolve null quando não dá para contar. */
@@ -216,7 +236,7 @@ export function lerBatida(b: Batida): BatidaLida | null {
 	if (chave && !/^[a-z0-9]{6,32}$/i.test(chave)) return null;
 	const host = texto(b.h, 253).toLowerCase();
 	if (!host) return null;
-	const tipo = b.t === 'tempo' || b.t === 'clique' ? b.t : 'v';
+	const tipo = TIPOS.find((t) => t === b.t) ?? 'v';
 	const numeroOu0 = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
 	return {
 		tipo,
@@ -230,8 +250,72 @@ export function lerBatida(b: Batida): BatidaLida | null {
 		segundos: Math.round(Math.min(Math.max(numeroOu0(b.s), 0), 1800)),
 		link: texto(b.l, 500),
 		evento: texto(b.e, 60).trim(),
-		titulo: texto(b.ti, 300).replace(/\s+/g, ' ').trim().slice(0, 150)
+		titulo: texto(b.ti, 300).replace(/\s+/g, ' ').trim().slice(0, 150),
+		vitais: lerVitais(b.vi),
+		mensagem: texto(b.m, 400),
+		origem: texto(b.o, 300),
+		recurso: b.x === 1 || b.x === true
 	};
+}
+
+/**
+ * Só número de verdade entra: ms arredondados, cls com 4 casas. O teto de cada
+ * medida (valor absurdo de aba esquecida aberta) fica no banco (0081).
+ */
+export function lerVitais(v: unknown): Vitais {
+	const fora: Vitais = {};
+	if (!v || typeof v !== 'object') return fora;
+	for (const k of ['lcp', 'inp', 'cls', 'fcp', 'ttfb'] as const) {
+		const n = (v as Record<string, unknown>)[k];
+		if (typeof n !== 'number' || !Number.isFinite(n) || n < 0) continue;
+		fora[k] = k === 'cls' ? Math.round(n * 10_000) / 10_000 : Math.round(n);
+	}
+	return fora;
+}
+
+/**
+ * Erro de JavaScript que vale contar, já com a mensagem limpa — ou null.
+ *
+ * "Script error." é o que o navegador mostra de um script de outro domínio:
+ * esconde a mensagem, então não tem o que consertar. Extensão do navegador e
+ * script que o app do Instagram/Facebook injeta não são do site. O aviso do
+ * ResizeObserver é inofensivo. Números e endereços variam a cada vez (ids,
+ * tokens): saem, para o mesmo erro somar numa linha só.
+ */
+export function limparErro(mensagem: string): string | null {
+	let m = mensagem.replace(/\s+/g, ' ').trim();
+	if (!m || /^(uncaught )?script error\.?$/i.test(m)) return null;
+	if (/ResizeObserver loop|(chrome|moz|safari(-web)?)-extension:|instantSearchSDKJSBridgeClearHighlight|_AutofillCallbackHandler|zaloJSV2|webkit\.messageHandlers/i.test(m))
+		return null;
+	m = m.replace(/^uncaught (\w*error: )?/i, (_, tipo) => tipo ?? '');
+	m = m.replace(/https?:\/\/[^\s'")]+/g, (u) => u.split(/[?#]/)[0]);
+	m = m.replace(/\b\d{4,}\b/g, '…');
+	return m.slice(0, 200);
+}
+
+/**
+ * Arquivo que não carregou (imagem, script, estilo): o endereço sem query, ou
+ * null se não é um endereço da web (data:, blob:, extensão).
+ */
+export function limparRecurso(endereco: string): string | null {
+	let url: URL;
+	try {
+		url = new URL(endereco);
+	} catch {
+		return null;
+	}
+	if (!/^https?:$/.test(url.protocol)) return null;
+	return `${url.origin}${url.pathname}`.slice(0, 200);
+}
+
+/**
+ * De onde veio quem caiu num 404: a página do próprio site que tinha o link
+ * (é ali que se conserta) ou, vindo de fora, a origem de sempre (Instagram,
+ * Google, Direto…).
+ */
+export function origemDo404(paginaAnterior: string, referrer: string, host: string): string {
+	if (paginaAnterior.startsWith('/')) return limparCaminho(paginaAnterior);
+	return classificarOrigem(referrer, host, '');
 }
 
 /**

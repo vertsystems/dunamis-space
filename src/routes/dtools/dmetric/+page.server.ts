@@ -14,6 +14,7 @@ import {
 	type NumerosSite,
 	type PainelDados
 } from '$lib/dmetric/painel';
+import { SAUDE_VAZIA, saudePorSite, type SaudeDados } from '$lib/dmetric/saude';
 import type { Actions, PageServerLoad } from './$types';
 
 const VAZIO: PainelDados = { visitas: 0, visualizacoes: 0, por_dia: [], dimensoes: {} };
@@ -34,7 +35,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	// período escolhido no filtro.
 	const ultimos30 = intervalo('30d', hoje);
 
-	const [sites, historico, painel, porSite, titulos, porSite30, agora] = await Promise.all([
+	const [sites, historico, painel, porSite, titulos, porSite30, agora, saude] = await Promise.all([
 		supabase.from('dmetric_sites').select('*').order('nome'),
 		supabase
 			.from('dmetric_historico')
@@ -51,13 +52,17 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		// de cada site: pouca coisa, e só muda quando o título do site muda.
 		supabase.from('dmetric_paginas').select('site_id, caminho, titulo').limit(5000),
 		supabase.rpc('dmetric_por_site', { p_de: ultimos30.de, p_ate: ultimos30.ate }),
-		supabase.rpc('dmetric_agora', { p_site: site })
+		supabase.rpc('dmetric_agora', { p_site: site }),
+		// Saúde da página (0081): as medidas são por dia — na última hora e nas
+		// 24 horas, valem hoje e ontem (o mesmo `de` de intervalo()).
+		supabase.rpc('dmetric_saude_painel', { p_site: site, p_de: de, p_ate: ate })
 	]);
 
 	// Sem a migration 0072 a tela avisa em vez de quebrar.
 	const pendente = !!sites.error && /dmetric_|does not exist|schema cache|relation/i.test(sites.error.message);
 	if (painel.error) console.error('[dmetric] painel', painel.error.message);
 	if (porSite.error) console.error('[dmetric] por site', porSite.error.message);
+	if (saude.error) console.error('[dmetric] saude', saude.error.message);
 
 	return {
 		pendente,
@@ -75,7 +80,8 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		porSite: (porSite.data ?? []) as NumerosSite[],
 		titulos: (titulos.data ?? []) as { site_id: string; caminho: string; titulo: string }[],
 		porSite30: (porSite30.data ?? []) as NumerosSite[],
-		agora: (agora.data as AgoraDados | null) ?? AGORA_VAZIO
+		agora: (agora.data as AgoraDados | null) ?? AGORA_VAZIO,
+		saude: saudePorSite((saude.data as SaudeDados | null) ?? SAUDE_VAZIA)
 	};
 };
 

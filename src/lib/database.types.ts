@@ -878,6 +878,36 @@ export type Database = {
 				}
 				Relationships: []
 			}
+			dmetric_erros: {
+				Row: {
+					site_id: string
+					dia: string
+					tipo: string
+					mensagem: string
+					pagina: string
+					origem: string
+					ocorrencias: number
+				}
+				Insert: {
+					site_id: string
+					dia: string
+					tipo: string
+					mensagem: string
+					pagina?: string
+					origem?: string
+					ocorrencias?: number
+				}
+				Update: {
+					site_id?: string
+					dia?: string
+					tipo?: string
+					mensagem?: string
+					pagina?: string
+					origem?: string
+					ocorrencias?: number
+				}
+				Relationships: []
+			}
 			dmetric_historico: {
 				Row: {
 					id: string
@@ -1070,6 +1100,36 @@ export type Database = {
 					site_id?: string
 					dia?: string
 					visitante?: string
+				}
+				Relationships: []
+			}
+			dmetric_vitais: {
+				Row: {
+					site_id: string
+					dia: string
+					metrica: string
+					bons: number
+					medios: number
+					ruins: number
+					soma: number
+				}
+				Insert: {
+					site_id: string
+					dia: string
+					metrica: string
+					bons?: number
+					medios?: number
+					ruins?: number
+					soma?: number
+				}
+				Update: {
+					site_id?: string
+					dia?: string
+					metrica?: string
+					bons?: number
+					medios?: number
+					ruins?: number
+					soma?: number
 				}
 				Relationships: []
 			}

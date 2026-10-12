@@ -9,8 +9,12 @@ import {
 	ehRobo,
 	hashVisitante,
 	lerBatida,
+	lerVitais,
 	limparCaminho,
-	nomeDaCidade
+	limparErro,
+	limparRecurso,
+	nomeDaCidade,
+	origemDo404
 } from './coleta';
 
 const IPHONE =
@@ -180,6 +184,19 @@ describe('lerBatida', () => {
 		);
 		expect(lerBatida({ h: 'dnms.fun', ti: 42 })?.titulo).toBe('');
 	});
+	it('saúde: medidas, erro e 404', () => {
+		expect(lerBatida({ t: 'vitais', h: 'x.com.br', p: '/', vi: { lcp: 1834.6, cls: 0.123456, inp: 'x', fcp: -1 } })).toMatchObject({
+			tipo: 'vitais',
+			vitais: { lcp: 1835, cls: 0.1235 }
+		});
+		expect(lerBatida({ t: 'erro', h: 'x.com.br', m: 'x is not defined', o: 'cdn.x.com', x: 1 })).toMatchObject({
+			tipo: 'erro',
+			mensagem: 'x is not defined',
+			origem: 'cdn.x.com',
+			recurso: true
+		});
+		expect(lerBatida({ t: '404', h: 'x.com.br', p: '/velha', o: '/promo' })).toMatchObject({ tipo: '404', caminho: '/velha', origem: '/promo' });
+	});
 	it('tipo desconhecido vira página vista', () => {
 		expect(lerBatida({ t: 'hack', h: 'x.com.br' })?.tipo).toBe('v');
 	});
@@ -187,5 +204,44 @@ describe('lerBatida', () => {
 		expect(lerBatida({ k: '<script>', h: 'x.com' })).toBeNull();
 		expect(lerBatida({ k: 'a1b2c3d4e5f6' })).toBeNull();
 		expect(lerBatida({})).toBeNull();
+	});
+});
+
+describe('lerVitais', () => {
+	it('só números de verdade', () => {
+		expect(lerVitais(null)).toEqual({});
+		expect(lerVitais({ ttfb: 120.4, lcp: Infinity, cls: 0 })).toEqual({ ttfb: 120, cls: 0 });
+	});
+});
+
+describe('limparErro', () => {
+	it('junta o mesmo erro de navegadores diferentes', () => {
+		expect(limparErro("Uncaught TypeError: Cannot read properties of undefined (reading 'x')")).toBe(
+			"TypeError: Cannot read properties of undefined (reading 'x')"
+		);
+		expect(limparErro('Uncaught foo is not defined')).toBe('foo is not defined');
+		expect(limparErro('Falhou o pedido 123456 em https://api.x.com/v1/a?token=abc')).toBe('Falhou o pedido … em https://api.x.com/v1/a');
+	});
+	it('descarta o que não é do site ou não dá para consertar', () => {
+		expect(limparErro('Script error.')).toBeNull();
+		expect(limparErro('ResizeObserver loop completed with undelivered notifications.')).toBeNull();
+		expect(limparErro('TypeError: x at chrome-extension://abc/a.js')).toBeNull();
+		expect(limparErro('   ')).toBeNull();
+	});
+});
+
+describe('limparRecurso', () => {
+	it('o endereço sem query; só da web', () => {
+		expect(limparRecurso('https://x.com.br/img/a.jpg?v=3')).toBe('https://x.com.br/img/a.jpg');
+		expect(limparRecurso('data:image/png;base64,AAA')).toBeNull();
+		expect(limparRecurso('nada')).toBeNull();
+	});
+});
+
+describe('origemDo404', () => {
+	it('a página do próprio site que tinha o link, ou de onde a pessoa veio', () => {
+		expect(origemDo404('/promo/', '', 'x.com.br')).toBe('/promo');
+		expect(origemDo404('', 'https://l.instagram.com/', 'x.com.br')).toBe('Instagram');
+		expect(origemDo404('', '', 'x.com.br')).toBe('Direto');
 	});
 });

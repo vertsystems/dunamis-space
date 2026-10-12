@@ -198,6 +198,7 @@
 				<li>País e cidade, aparelho, navegador e sistema</li>
 				<li>De onde chegaram (Instagram, Google, WhatsApp…) e a campanha (utm_campaign)</li>
 				<li>Cliques em WhatsApp, telefone, e-mail, mapa e links para outros sites</li>
+				<li>A saúde da página: velocidade no aparelho de quem visita, erros e links quebrados (404)</li>
 			</ul>
 			<p class="mt-3 text-xs text-grey">
 				Para contar um botão específico, acrescente <code class="font-mono">data-dm="Nome"</code> nele. Sem cookie e sem
