@@ -174,9 +174,10 @@
 						Modo TV: tela cheia para a TV do escritório ou a reunião com o cliente
 					</span>
 				</a>
+				<!-- Largura fixa: sem ela, a caixa cresce até o nome de site mais longo. -->
 				<select
 					aria-label="Site"
-					class={selectCls}
+					class="{selectCls} w-[17.5rem] max-w-full truncate"
 					value={data.site ?? ''}
 					onchange={(e) => filtrar('site', e.currentTarget.value)}
 				>
