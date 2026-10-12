@@ -145,7 +145,14 @@
 	}
 
 	// ---- Saúde: erros de JavaScript e arquivos que não carregaram ----
-	var erros = 0, errosVistos = {};
+	// Até a primeira página vista sair, os erros esperam na fila: na primeira
+	// visita de um site, é ela que cria o site no painel.
+	var erros = 0, errosVistos = {}, fila = [];
+	function esvaziarFila() {
+		var f = fila;
+		fila = null;
+		for (var i = 0; i < f.length; i++) enviar(f[i][0], f[i][1]);
+	}
 	function erro(mensagem, arquivo, recurso) {
 		if (erros >= 10 || !mensagem || errosVistos[mensagem]) return;
 		errosVistos[mensagem] = 1;
@@ -154,7 +161,9 @@
 		try {
 			dominio = arquivo ? new URL(arquivo, location.href).hostname : '';
 		} catch (e) {}
-		enviar({ t: 'erro', m: String(mensagem).slice(0, 400), o: dominio, x: recurso ? 1 : 0 });
+		var dados = { t: 'erro', m: String(mensagem).slice(0, 400), o: dominio, x: recurso ? 1 : 0 };
+		if (fila) fila.push([dados, location.pathname]);
+		else enviar(dados);
 	}
 	addEventListener(
 		'error',
@@ -229,10 +238,12 @@
 					// saúde, com a página de onde veio o clique.
 					quebrada = true;
 					if (anterior === null) quebradaNaChegada = true;
+					if (fila) setTimeout(esvaziarFila, 1000);
 					return enviar({ t: '404', o: anterior !== null ? anterior : mesmoSite(document.referrer), r: document.referrer }, caminho);
 				}
 				dados.ti = document.title;
 				enviar(dados, caminho);
+				if (fila) setTimeout(esvaziarFila, 1000);
 			},
 			anterior === null ? 0 : 400
 		);
