@@ -176,6 +176,14 @@
 		var r = e.reason;
 		erro(r && r.message ? (r.name ? r.name + ': ' : '') + r.message : typeof r === 'string' ? r : '', '', false);
 	});
+	// O script chega depois (defer): o que quebrou antes dele, a lista de
+	// arquivos do navegador conta — inclusive fundo e fonte do CSS (responseStatus:
+	// Chrome, Edge, Firefox).
+	try {
+		performance.getEntriesByType('resource').forEach(function (r) {
+			if (r.responseStatus >= 400 && /^(img|script|link|css|video|audio)$/.test(r.initiatorType)) erro(r.name, r.name, true);
+		});
+	} catch (e) {}
 
 	// ---- Saúde: página que não existe (404) ----
 	// O servidor diz (Chrome, Edge, Firefox) — ou a própria página diz, no título
