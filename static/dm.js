@@ -165,13 +165,27 @@
 		if (fila) fila.push([dados, location.pathname]);
 		else enviar(dados);
 	}
+	// <source> que o navegador só pulou também dispara 'error': o vídeo de
+	// celular aberto no computador (media), ou o AV1 num aparelho que não toca
+	// AV1 (type). Não é arquivo quebrado: o vídeo segue para a próxima opção.
+	function fontePulada(fonte) {
+		var midia = fonte.parentNode;
+		if (fonte.media && window.matchMedia && !matchMedia(fonte.media).matches) return true;
+		return !!(fonte.type && midia && midia.canPlayType && !midia.canPlayType(fonte.type));
+	}
 	addEventListener(
 		'error',
 		function (e) {
 			var el = e.target;
 			if (el && el !== window && el.tagName) {
 				// Imagem, script, estilo ou vídeo que não carregou.
+				if (el.tagName === 'SOURCE' && fontePulada(el)) return;
 				var src = el.currentSrc || el.src || el.href;
+				// Imagem quebrada no Chrome: o currentSrc vem como está no HTML
+				// ("/img/x.webp"), sem o domínio. Completa antes de conferir o http.
+				try {
+					if (src) src = new URL(src, document.baseURI).href;
+				} catch (e2) {}
 				if (/^(IMG|SCRIPT|LINK|VIDEO|AUDIO|SOURCE)$/.test(el.tagName) && /^https?:/.test(src || '')) erro(src, src, true);
 				return;
 			}
