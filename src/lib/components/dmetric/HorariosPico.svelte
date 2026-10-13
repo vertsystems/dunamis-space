@@ -12,7 +12,10 @@
 	const CORES = ['#eef1f5', '#cde2fb', '#9ec5f4', '#5598e7', '#256abf', '#104281'];
 	const CURTO = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
+	// A dica mora fora da área que rola de lado (no celular a grade rola): lá
+	// dentro, a da primeira linha, que abre para cima, ficava cortada.
 	let caixa = $state<HTMLDivElement>();
+	let largura = $state(0);
 	let dica = $state<{ dow: number; hora: number; x: number; y: number } | null>(null);
 
 	function mostrar(e: PointerEvent, dow: number, hora: number) {
@@ -21,6 +24,9 @@
 		const r = caixa.getBoundingClientRect();
 		dica = { dow, hora, x: alvo.left + alvo.width / 2 - r.left, y: alvo.top - r.top };
 	}
+
+	// Perto das bordas a dica vira para dentro, para não sair do card.
+	const lado = (x: number) => (x > largura * 0.8 ? 'calc(-100% + 12px)' : x < largura * 0.2 ? '-12px' : '-50%');
 
 	const faixa = (h: number) => `${h}h–${(h + 1) % 24}h`;
 	const resumo = $derived(
@@ -50,33 +56,37 @@
 		{/if}
 	</div>
 
-	<div class="relative overflow-x-auto" bind:this={caixa} role="img" aria-label={resumo}>
-		<div class="grid min-w-[640px] gap-[3px]" style="grid-template-columns: 2.25rem repeat(24, minmax(0, 1fr));">
-			<!-- Horas, de 3 em 3 -->
-			<span></span>
-			{#each Array(24) as _, h (h)}
-				<span class="text-center text-[9px] tabular-nums text-grey">{h % 3 === 0 ? `${h}h` : ''}</span>
-			{/each}
-
-			{#each g.grade as linha, dow (dow)}
-				<span class="self-center pr-1 text-[10px] font-medium text-slate">{CURTO[dow]}</span>
-				{#each linha as v, hora (hora)}
-					<!-- svelte-ignore a11y_no_static_element_interactions -->
-					<div
-						class="h-[18px] rounded-[3px] transition-[filter] hover:brightness-90"
-						style="background: {CORES[faixaHorario(v, g.maior)]}"
-						onpointerenter={(e) => mostrar(e, dow, hora)}
-						onpointerleave={() => (dica = null)}
-					></div>
+	<div class="relative" bind:this={caixa} bind:clientWidth={largura} role="img" aria-label={resumo}>
+		<div class="overflow-x-auto" onscroll={() => (dica = null)}>
+			<div class="grid min-w-[640px] gap-[3px]" style="grid-template-columns: 2.25rem repeat(24, minmax(0, 1fr));">
+				<!-- Horas, de 3 em 3 -->
+				<span></span>
+				{#each Array(24) as _, h (h)}
+					<span class="text-center text-[9px] tabular-nums text-grey">{h % 3 === 0 ? `${h}h` : ''}</span>
 				{/each}
-			{/each}
+
+				{#each g.grade as linha, dow (dow)}
+					<span class="self-center pr-1 text-[10px] font-medium text-slate">{CURTO[dow]}</span>
+					{#each linha as v, hora (hora)}
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<div
+							class="h-[18px] rounded-[3px] transition-[filter] hover:brightness-90 {dica?.dow === dow && dica?.hora === hora
+								? 'ring-2 ring-navy-900/70 ring-offset-1'
+								: ''}"
+							style="background: {CORES[faixaHorario(v, g.maior)]}"
+							onpointerenter={(e) => mostrar(e, dow, hora)}
+							onpointerleave={() => (dica = null)}
+						></div>
+					{/each}
+				{/each}
+			</div>
 		</div>
 
 		{#if dica}
 			{@const v = g.grade[dica.dow][dica.hora]}
 			<div
-				class="pointer-events-none absolute z-10 whitespace-nowrap rounded-[var(--radius)] border border-grey-200 bg-surface px-3 py-2 shadow-lg"
-				style="left: {dica.x}px; top: {dica.y}px; transform: translate(-50%, calc(-100% - 6px));"
+				class="pointer-events-none absolute z-20 whitespace-nowrap rounded-[var(--radius)] border border-grey-200 bg-surface px-3 py-2 shadow-lg"
+				style="left: {dica.x}px; top: {dica.y}px; transform: translate({lado(dica.x)}, calc(-100% - 8px));"
 			>
 				<p class="text-sm font-bold tabular-nums text-navy-900">{numero(v)} {v === 1 ? 'visita' : 'visitas'}</p>
 				<p class="text-xs text-slate">{DIAS_SEMANA[dica.dow]} · {faixa(dica.hora)}</p>
