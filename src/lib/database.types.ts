@@ -1,7 +1,7 @@
 // GERADO AUTOMATICAMENTE — não edite à mão.
 // Regenerar:  PGPASSWORD='<senha-postgres>' node scripts/gen-types.mjs
 //
-// Reflete o schema public do Supabase (2026-10-12).
+// Reflete o schema public do Supabase (2026-10-14).
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -887,6 +887,7 @@ export type Database = {
 					pagina: string
 					origem: string
 					ocorrencias: number
+					ultimo_em: string
 				}
 				Insert: {
 					site_id: string
@@ -896,6 +897,7 @@ export type Database = {
 					pagina?: string
 					origem?: string
 					ocorrencias?: number
+					ultimo_em?: string
 				}
 				Update: {
 					site_id?: string
@@ -905,6 +907,7 @@ export type Database = {
 					pagina?: string
 					origem?: string
 					ocorrencias?: number
+					ultimo_em?: string
 				}
 				Relationships: []
 			}

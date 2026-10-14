@@ -70,9 +70,10 @@ describe('saudePorSite', () => {
 	it('erros e 404 pela proporção das páginas abertas', () => {
 		const [s] = saudePorSite({
 			vitais: [vital('lcp', 90, 0, 0, 90000)],
-			// 9 erros de JS + 2 arquivos (meio peso) = 10 em 100 páginas abertas
+			// 9 erros de JS + 2 arquivos (meio peso) = 10 em 100 páginas abertas nas 72 horas
 			erros: [erro('js', 9, 'a'), erro('recurso', 2, 'b'), erro('404', 10, '/velha')],
-			visualizacoes: [{ site_id: A, visualizacoes: 90 }]
+			visualizacoes: [{ site_id: A, visualizacoes: 90 }],
+			visualizacoes_72h: [{ site_id: A, visualizacoes: 100 }]
 		});
 		expect(s.cargas).toBe(100);
 		// 10% com erro, 4 pontos por ponto percentual → 60
@@ -84,6 +85,16 @@ describe('saudePorSite', () => {
 		expect(s.quebrados).toHaveLength(1);
 	});
 
+	it('a nota de erros compara com as páginas das 72 horas, não do período todo', () => {
+		const [s] = saudePorSite({
+			vitais: [vital('lcp', 10, 0, 0, 1000)],
+			// 5 erros em 3 dias com 50 páginas = 10% → 60; contra 1.000 páginas do mês daria 98.
+			erros: [erro('js', 5)],
+			visualizacoes: [{ site_id: A, visualizacoes: 1000 }],
+			visualizacoes_72h: [{ site_id: A, visualizacoes: 50 }]
+		});
+		expect(s.erros).toBe(60);
+	});
 	it('sem medida de velocidade não tem nota, mas os erros aparecem', () => {
 		const [s] = saudePorSite({ vitais: [], erros: [erro('js', 3)], visualizacoes: [] });
 		expect(s.nota).toBeNull();

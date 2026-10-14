@@ -6,7 +6,8 @@
 //   velocidade (60%) — as medidas do Google (Web Vitals), cada visita contando
 //     100 se foi boa, 50 se "a melhorar" e 0 se ruim, com o peso de cada medida;
 //   erros (25%) — erros de JavaScript e arquivos que não carregaram, por página
-//     aberta;
+//     aberta, nas últimas 72 horas (é o que a lista mostra: o que foi corrigido
+//     sai sozinho; migration 0083);
 //   links quebrados (15%) — quantas das páginas abertas deram 404.
 // As faixas são as do Lighthouse: 90+ ótima, 50–89 pode melhorar, abaixo ruim.
 
@@ -31,16 +32,24 @@ export type LinhaErro = {
 	/** js/recurso: domínio do arquivo; 404: a página que tinha o link, ou a origem (Instagram…). */
 	origem: string;
 	ocorrencias: number;
+	/** O último dia em que aconteceu. */
 	ultimo: string;
+	/** Quando aconteceu pela última vez (JS e arquivo: é o que conta nas 72 horas). */
+	ultimo_em?: string;
 };
 
 export type SaudeDados = {
 	vitais: LinhaVital[];
 	erros: LinhaErro[];
 	visualizacoes: { site_id: string; visualizacoes: number }[];
+	/** Páginas vistas nos dias que as 72 horas alcançam: a base da nota de erros. */
+	visualizacoes_72h?: { site_id: string; visualizacoes: number }[];
 };
 
-export const SAUDE_VAZIA: SaudeDados = { vitais: [], erros: [], visualizacoes: [] };
+export const SAUDE_VAZIA: SaudeDados = { vitais: [], erros: [], visualizacoes: [], visualizacoes_72h: [] };
+
+/** Os erros da página (JS e arquivo) valem por este tanto: depois, saem da lista e do banco. */
+export const HORAS_ERROS = 72;
 
 export const MEDIDAS: {
 	id: MetricaVital;
@@ -148,6 +157,7 @@ export function saudePorSite(dados: SaudeDados): SaudeSite[] {
 	for (const l of dados.vitais) ids.add(l.site_id);
 	for (const e of dados.erros) ids.add(e.site_id);
 	const vistas = new Map(dados.visualizacoes.map((v) => [v.site_id, v.visualizacoes]));
+	const vistas72 = new Map((dados.visualizacoes_72h ?? []).map((v) => [v.site_id, v.visualizacoes]));
 
 	const fora: SaudeSite[] = [];
 	for (const site_id of ids) {
@@ -169,9 +179,11 @@ export function saudePorSite(dados: SaudeDados): SaudeSite[] {
 		const cargas = (vistas.get(site_id) ?? 0) + n404;
 		// O script manda cada erro uma vez por página aberta: as ocorrências são,
 		// no máximo, páginas com aquele erro. Arquivo que não carregou pesa metade.
+		// Os erros são das últimas 72 horas: comparam com as páginas do mesmo trecho.
 		const pesoErros = listaErros.reduce((s, e) => s + e.ocorrencias * (e.tipo === 'js' ? 1 : 0.5), 0);
+		const cargas72 = vistas72.get(site_id) ?? 0;
 		// Erro de 1 em cada 4 páginas zera a parte de erros; 404 em 1 de cada 10, a de links.
-		const erros = cargas ? pelaTaxa(pesoErros / cargas, 4) : pesoErros ? 0 : 100;
+		const erros = cargas72 ? pelaTaxa(pesoErros / cargas72, 4) : pesoErros ? 0 : 100;
 		const links = cargas ? pelaTaxa(n404 / cargas, 10) : n404 ? 0 : 100;
 
 		const nota =

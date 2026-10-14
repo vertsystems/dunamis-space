@@ -4,9 +4,10 @@
 	// src/lib/dmetric/saude.ts). À esquerda a lista, o pior primeiro; à direita,
 	// o site escolhido.
 	import { Card } from '$lib/components/ui';
-	import { enderecoDaPagina, enderecoDoSite, nomeDoSite, numero, porcentagem, type DMetricSite } from '$lib/dmetric/painel';
+	import { enderecoDaPagina, enderecoDoSite, haQuanto, nomeDoSite, numero, porcentagem, type DMetricSite } from '$lib/dmetric/painel';
 	import {
 		AMOSTRA_MINIMA,
+		HORAS_ERROS,
 		MEDIDAS,
 		ROTULO_AVALIACAO,
 		ROTULO_FAIXA,
@@ -86,7 +87,8 @@
 		<Info size={13} class="mt-0.5 shrink-0 text-grey" />
 		<span>
 			Medido no celular e no computador de quem visitou de verdade, não num teste de laboratório. A nota vai de 0 a 100: velocidade
-			(60%), erros (25%) e links quebrados (15%). As medidas são por dia: na última hora e nas 24 horas, valem hoje e ontem.
+			(60%), erros (25%) e links quebrados (15%). As medidas são por dia: na última hora e nas 24 horas, valem hoje e ontem. Os erros da
+			página valem só pelas últimas {HORAS_ERROS} horas: o que você corrigir some sozinho.
 		</span>
 	</p>
 
@@ -156,7 +158,7 @@
 					<div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
 						{#each [
 							{ rotulo: 'Velocidade', nota: atual.velocidade, nota2: 'no aparelho de quem visitou', icon: Gauge },
-							{ rotulo: 'Erros', nota: atual.erros, nota2: atual.listaErros.length ? `${atual.listaErros.length} ${atual.listaErros.length === 1 ? 'tipo de erro' : 'tipos de erro'}` : 'nenhum erro', icon: Bug },
+							{ rotulo: 'Erros', nota: atual.erros, nota2: atual.listaErros.length ? `${atual.listaErros.length} ${atual.listaErros.length === 1 ? 'tipo de erro' : 'tipos de erro'} em ${HORAS_ERROS} h` : `nenhum em ${HORAS_ERROS} h`, icon: Bug },
 							{ rotulo: 'Links quebrados', nota: atual.links, nota2: atual.quebrados.length ? `${atual.quebrados.length} ${atual.quebrados.length === 1 ? 'endereço deu 404' : 'endereços deram 404'}` : 'nenhum 404', icon: Unlink }
 						] as p (p.rotulo)}
 							{@const Ico = p.icon}
@@ -234,13 +236,17 @@
 				<div class="grid grid-cols-1 gap-5 xl:grid-cols-2">
 					<!-- Erros -->
 					<Card class="min-w-0">
-						<h3 class="mb-3 flex items-baseline justify-between text-base font-bold text-navy">
+						<h3 class="flex items-baseline justify-between text-base font-bold text-navy">
 							Erros na página
 							<span class="text-xs font-medium text-grey">{atual.listaErros.length}</span>
 						</h3>
+						<!-- A lista anda sozinha: só as últimas 72 horas (migration 0083). -->
+						<p class="mb-3 mt-0.5 text-[11px] text-grey">
+							Últimas {HORAS_ERROS} horas · o que for corrigido some quando passar {HORAS_ERROS} h sem acontecer
+						</p>
 						{#if !atual.listaErros.length}
 							<p class="flex items-center gap-1.5 py-2 text-xs text-slate">
-								<CircleCheck size={14} class="text-[#107d4a]" /> Nenhum erro de JavaScript nem arquivo que não carregou no período.
+								<CircleCheck size={14} class="text-[#107d4a]" /> Nenhum erro de JavaScript nem arquivo que não carregou nas últimas {HORAS_ERROS} horas.
 							</p>
 						{:else}
 							<ul class="max-h-80 space-y-2 overflow-y-auto pr-1">
@@ -254,7 +260,7 @@
 											<span class="font-semibold text-slate">{e.tipo === 'js' ? 'Erro de JavaScript' : 'Arquivo não carregou'}</span>
 											· em {enderecoDaPagina(siteAtual, e.pagina)}
 											{#if e.origem && e.tipo === 'js'}· script de {e.origem}{/if}
-											· último em {dataCurta(e.ultimo)}
+											· última vez {e.ultimo_em ? haQuanto(e.ultimo_em) : `em ${dataCurta(e.ultimo)}`}
 										</p>
 									</li>
 								{/each}
