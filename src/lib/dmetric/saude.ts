@@ -103,6 +103,8 @@ export type SaudeSite = {
 	amostra: number;
 	/** Páginas abertas: as vistas mais as que deram 404. */
 	cargas: number;
+	/** Páginas vistas nos dias das últimas 72 horas (a base da nota de erros). */
+	cargas72: number;
 	/** Erros de JavaScript e arquivos que não carregaram, os mais frequentes primeiro. */
 	listaErros: LinhaErro[];
 	/** Os 404, os mais frequentes primeiro. */
@@ -200,6 +202,7 @@ export function saudePorSite(dados: SaudeDados): SaudeSite[] {
 			medidas,
 			amostra: Math.max(0, ...medidas.map((m) => m.n)),
 			cargas,
+			cargas72,
 			listaErros,
 			quebrados
 		});

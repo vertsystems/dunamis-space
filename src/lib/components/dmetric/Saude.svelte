@@ -16,7 +16,8 @@
 		type Faixa,
 		type SaudeSite
 	} from '$lib/dmetric/saude';
-	import { CircleCheck, CircleX, TriangleAlert, Gauge, Bug, Unlink, Info } from '@lucide/svelte';
+	import { CircleCheck, CircleX, TriangleAlert, Gauge, Bug, Unlink, Info, FileDown, LoaderCircle } from '@lucide/svelte';
+	import { toast } from '$lib/toast.svelte';
 
 	let { saude, sites }: { saude: SaudeSite[]; sites: DMetricSite[] } = $props();
 
@@ -32,6 +33,38 @@
 	const deFaixa = (f: Faixa): Avaliacao => (f === 'otima' ? 'bom' : f === 'melhorar' ? 'medio' : 'ruim');
 	const ICONE = { bom: CircleCheck, medio: TriangleAlert, ruim: CircleX } as const;
 	const deNota = (n: number): Avaliacao => (n >= 90 ? 'bom' : n >= 50 ? 'medio' : 'ruim');
+
+	// O PDF dos erros, para mandar a uma IA e pedir a correção. Feito aqui no
+	// navegador (relatorioErros.ts), com o que a tela já tem.
+	let gerando = $state(false);
+	async function baixarPdf() {
+		if (!atual || gerando) return;
+		gerando = true;
+		try {
+			const { gerarPdfErros, nomeDoArquivo } = await import('$lib/dmetric/relatorioErros');
+			const endereco = siteAtual ? enderecoDoSite(siteAtual) : '';
+			const geradoEm = new Date();
+			const bytes = await gerarPdfErros({
+				site: { nome: siteAtual ? nomeDoSite(siteAtual) : 'Site', endereco },
+				erros: atual.listaErros,
+				paginas: atual.cargas72,
+				nota: atual.erros,
+				horas: HORAS_ERROS,
+				geradoEm
+			});
+			const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'application/pdf' }));
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = nomeDoArquivo(endereco, geradoEm);
+			a.click();
+			setTimeout(() => URL.revokeObjectURL(url), 10_000);
+		} catch (e) {
+			console.error('[dmetric] pdf dos erros', e);
+			toast.error('Não foi possível gerar o PDF dos erros.');
+		} finally {
+			gerando = false;
+		}
+	}
 
 	const limites = (m: (typeof MEDIDAS)[number]) => `bom até ${valorDaMedida(m.id, m.bom)} · ruim acima de ${valorDaMedida(m.id, m.ruim)}`;
 	const dataCurta = (d: string) => d.split('-').reverse().slice(0, 2).join('/');
@@ -236,10 +269,30 @@
 				<div class="grid grid-cols-1 gap-5 xl:grid-cols-2">
 					<!-- Erros -->
 					<Card class="min-w-0">
-						<h3 class="flex items-baseline justify-between text-base font-bold text-navy">
-							Erros na página
-							<span class="text-xs font-medium text-grey">{atual.listaErros.length}</span>
-						</h3>
+						<div class="flex items-center justify-between gap-2">
+							<h3 class="text-base font-bold text-navy">Erros na página</h3>
+							<div class="flex items-center gap-2">
+								<span class="text-xs font-medium text-grey">{atual.listaErros.length}</span>
+								{#if atual.listaErros.length}
+									<!-- Só o ícone; a explicação aparece ao passar o mouse (ou focar). -->
+									<button
+										type="button"
+										onclick={baixarPdf}
+										disabled={gerando}
+										aria-label="Baixar PDF com estes erros, para mandar a uma IA e pedir a correção"
+										class="group relative grid size-8 place-items-center rounded-[var(--radius-sm)] bg-[#f04438]/10 text-[#b42318] transition-colors hover:bg-[#f04438]/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f04438]/40 disabled:opacity-60"
+									>
+										{#if gerando}<LoaderCircle size={15} class="animate-spin" />{:else}<FileDown size={15} />{/if}
+										<span
+											role="tooltip"
+											class="pointer-events-none absolute bottom-full right-0 z-20 mb-2 w-max max-w-64 rounded-[var(--radius-sm)] bg-navy-900 px-2.5 py-1.5 text-left text-[11px] font-medium leading-snug text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"
+										>
+											Baixar PDF com estes erros, organizado para mandar a uma IA e pedir a correção
+										</span>
+									</button>
+								{/if}
+							</div>
+						</div>
 						<!-- A lista anda sozinha: só as últimas 72 horas (migration 0083). -->
 						<p class="mb-3 mt-0.5 text-[11px] text-grey">
 							Últimas {HORAS_ERROS} horas · o que for corrigido some quando passar {HORAS_ERROS} h sem acontecer
