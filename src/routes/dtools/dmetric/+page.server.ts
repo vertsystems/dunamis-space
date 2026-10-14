@@ -5,6 +5,9 @@ import { diaEmBrasilia } from '$lib/dmetric/coleta';
 import {
 	AGORA_VAZIO,
 	RECENTES,
+	anosDisponiveis,
+	lerGrafico,
+	mesesDisponiveis,
 	type AgoraDados,
 	intervalo,
 	lerPeriodo,
@@ -35,7 +38,11 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	// período escolhido no filtro.
 	const ultimos30 = intervalo('30d', hoje);
 
-	const [sites, historico, painel, porSite, titulos, porSite30, agora, saude] = await Promise.all([
+	// O gráfico "Visitas por dia" tem a própria escolha (?grafico=): um mês, um
+	// ano inteiro ou os dias do calendário. Sem escolha, o mês de hoje.
+	const grafico = lerGrafico(url.searchParams.get('grafico'), hoje);
+
+	const [sites, historico, painel, porSite, titulos, porSite30, agora, saude, porDia, primeiro] = await Promise.all([
 		supabase.from('dmetric_sites').select('*').order('nome'),
 		supabase
 			.from('dmetric_historico')
@@ -55,7 +62,11 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		supabase.rpc('dmetric_agora', { p_site: site }),
 		// Saúde da página (0081): as medidas são por dia — na última hora e nas
 		// 24 horas, valem hoje e ontem (o mesmo `de` de intervalo()).
-		supabase.rpc('dmetric_saude_painel', { p_site: site, p_de: de, p_ate: ate })
+		supabase.rpc('dmetric_saude_painel', { p_site: site, p_de: de, p_ate: ate }),
+		// O gráfico por dia (0082): os dias do período já somados entre os sites,
+		// e o primeiro dia contado (antes dele, "sem dados").
+		supabase.rpc('dmetric_por_dia', { p_site: site, p_de: grafico.de, p_ate: grafico.ate }),
+		supabase.rpc('dmetric_primeiro_dia', { p_site: site })
 	]);
 
 	// Sem a migration 0072 a tela avisa em vez de quebrar.
@@ -63,6 +74,8 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	if (painel.error) console.error('[dmetric] painel', painel.error.message);
 	if (porSite.error) console.error('[dmetric] por site', porSite.error.message);
 	if (saude.error) console.error('[dmetric] saude', saude.error.message);
+	if (porDia.error) console.error('[dmetric] por dia', porDia.error.message);
+	const primeiroDia = (primeiro.data as string | null) ?? null;
 
 	return {
 		pendente,
@@ -81,7 +94,12 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		titulos: (titulos.data ?? []) as { site_id: string; caminho: string; titulo: string }[],
 		porSite30: (porSite30.data ?? []) as NumerosSite[],
 		agora: (agora.data as AgoraDados | null) ?? AGORA_VAZIO,
-		saude: saudePorSite((saude.data as SaudeDados | null) ?? SAUDE_VAZIA)
+		saude: saudePorSite((saude.data as SaudeDados | null) ?? SAUDE_VAZIA),
+		grafico,
+		porDia: (porDia.data ?? []) as { dia: string; visitas: number; visualizacoes: number }[],
+		primeiroDia,
+		meses: mesesDisponiveis(primeiroDia, hoje),
+		anos: anosDisponiveis(primeiroDia, hoje)
 	};
 };
 

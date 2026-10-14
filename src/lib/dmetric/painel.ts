@@ -113,38 +113,165 @@ export function intervalo(periodo: Periodo, hoje: string): { de: string; ate: st
 }
 
 /**
- * Um ponto da linha do tempo, já com o rótulo que aparece no eixo e na dica.
+ * Um ponto da linha do tempo, já com o rótulo que aparece na dica.
  * `semDados`: dia de antes de o script começar a contar (não é "zero visitas").
+ * `futuro`: dia do mês que ainda não chegou. `eixo`: o que vai embaixo do
+ * gráfico (o número do dia, no gráfico do mês); `hoje` destaca o dia de hoje.
  */
-export type PontoSerie = { rotulo: string; visitas: number; visualizacoes: number; semDados?: boolean };
+export type PontoSerie = {
+	rotulo: string;
+	visitas: number;
+	visualizacoes: number;
+	semDados?: boolean;
+	futuro?: boolean;
+	eixo?: string;
+	hoje?: boolean;
+};
 
-/** Quantos dias a linha do tempo mostra, no mínimo, em "desde o começo" e "12 meses". */
-export const DIAS_MINIMOS_SERIE = 30;
+// ---- Período do gráfico "Visitas por dia" ----------------------------------
+// O gráfico tem a própria escolha, separada do filtro do topo: um mês, um ano
+// inteiro ou os dias do calendário (até 1 ano).
+
+const NOMES_MES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+const MES_CURTO = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+const DIA_SEMANA_CURTO = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+
+/** O maior período do calendário: 1 ano (de 1º de janeiro a 31 de dezembro, inclusive em ano bissexto). */
+export const MAX_DIAS_GRAFICO = 366;
+
+export type EscolhaGrafico = {
+	tipo: 'mes' | 'ano' | 'dias';
+	/** O que vai na URL (?grafico=): "AAAA-MM", "AAAA" ou "AAAA-MM-DD_AAAA-MM-DD". */
+	id: string;
+	de: string;
+	ate: string;
+	rotulo: string;
+};
+
+/** "2026-10" → "outubro de 2026". */
+export function rotuloMes(mes: string): string {
+	const [a, m] = mes.split('-').map(Number);
+	return `${NOMES_MES[m - 1]} de ${a}`;
+}
+
+/** "2026-10-14" → "14/10/2026". */
+export const dataBr = (dia: string) => dia.split('-').reverse().join('/');
+
+/** Um dia somado a n dias (AAAA-MM-DD). */
+export function somarDias(dia: string, n: number): string {
+	const d = new Date(`${dia}T12:00:00Z`);
+	d.setUTCDate(d.getUTCDate() + n);
+	return d.toISOString().slice(0, 10);
+}
+
+const diaValido = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d) && somarDias(d, 0) === d;
+
+/** "1/10 a 14/10/2026" (mesmo ano) ou "20/12/2025 a 10/01/2026". */
+export function rotuloDias(de: string, ate: string): string {
+	if (de === ate) return dataBr(de);
+	if (de.slice(0, 4) === ate.slice(0, 4)) return `${dataBr(de).slice(0, 5)} a ${dataBr(ate)}`;
+	return `${dataBr(de)} a ${dataBr(ate)}`;
+}
+
+/** O primeiro e o último dia do mês. */
+export function diasDoMes(mes: string): { de: string; ate: string } {
+	const [a, m] = mes.split('-').map(Number);
+	const ultimo = new Date(Date.UTC(a, m, 0)).getUTCDate();
+	return { de: `${mes}-01`, ate: `${mes}-${String(ultimo).padStart(2, '0')}` };
+}
 
 /**
- * A linha do tempo dos períodos de dias: um ponto por dia, inclusive os sem
- * visita. "Desde o começo" começa no primeiro dia com visita, não em 2000 —
- * mas mostra pelo menos 30 dias, para o gráfico ter forma. Os dias de antes do
- * primeiro registro saem marcados `semDados`: o script ainda não contava, e
- * desenhar zero ali diria que ninguém visitou.
+ * O que a URL pede para o gráfico: "AAAA-MM" (um mês), "AAAA" (o ano inteiro)
+ * ou "AAAA-MM-DD_AAAA-MM-DD" (dias do calendário — invertidos se vierem ao
+ * contrário, e cortados em 1 ano). Mês ou ano do futuro, ou qualquer outra
+ * coisa: o mês de hoje.
  */
-export function serieDiaria(
+export function lerGrafico(v: string | null, hoje: string): EscolhaGrafico {
+	const mesAtual = hoje.slice(0, 7);
+	const doMes = (mes: string): EscolhaGrafico => ({ tipo: 'mes', id: mes, ...diasDoMes(mes), rotulo: rotuloMes(mes) });
+	if (v && /^\d{4}-(0[1-9]|1[0-2])$/.test(v) && v >= '2000-01' && v <= mesAtual) return doMes(v);
+	if (v && /^\d{4}$/.test(v) && v >= '2000' && v <= hoje.slice(0, 4))
+		return { tipo: 'ano', id: v, de: `${v}-01-01`, ate: `${v}-12-31`, rotulo: `ano de ${v}` };
+	const m = v?.match(/^(\d{4}-\d{2}-\d{2})_(\d{4}-\d{2}-\d{2})$/);
+	if (m && diaValido(m[1]) && diaValido(m[2])) {
+		let [de, ate] = [m[1], m[2]].sort();
+		if (de < '2000-01-01') de = '2000-01-01';
+		const limite = somarDias(de, MAX_DIAS_GRAFICO - 1);
+		if (ate > limite) ate = limite;
+		return { tipo: 'dias', id: `${de}_${ate}`, de, ate, rotulo: rotuloDias(de, ate) };
+	}
+	return doMes(mesAtual);
+}
+
+/**
+ * Os meses que a caixinha oferece: do mês do primeiro registro até o de hoje,
+ * o mais novo primeiro (até 36). Sem registro nenhum, só o mês de hoje.
+ */
+export function mesesDisponiveis(primeiroDia: string | null, hoje: string): { id: string; rotulo: string }[] {
+	const atual = hoje.slice(0, 7);
+	const inicio = primeiroDia && primeiroDia.slice(0, 7) < atual ? primeiroDia.slice(0, 7) : atual;
+	const fora: { id: string; rotulo: string }[] = [];
+	let [a, m] = atual.split('-').map(Number);
+	while (fora.length < 36) {
+		const id = `${a}-${String(m).padStart(2, '0')}`;
+		fora.push({ id, rotulo: rotuloMes(id) });
+		if (id <= inicio) break;
+		m -= 1;
+		if (!m) {
+			m = 12;
+			a -= 1;
+		}
+	}
+	return fora;
+}
+
+/** Os anos inteiros que a caixinha oferece, o mais novo primeiro. */
+export function anosDisponiveis(primeiroDia: string | null, hoje: string): string[] {
+	const atual = Number(hoje.slice(0, 4));
+	const inicio = Math.max(Math.min(primeiroDia ? Number(primeiroDia.slice(0, 4)) : atual, atual), atual - 10);
+	return Array.from({ length: atual - inicio + 1 }, (_, i) => String(atual - i));
+}
+
+/**
+ * O gráfico do período: um ponto por dia. Antes do primeiro registro do
+ * script, `semDados` (desenhar zero diria que ninguém visitou); depois de
+ * hoje, `futuro`. Embaixo do gráfico: até 31 dias, o número de cada dia; mais
+ * que isso, o nome de cada mês no dia 1º (365 números não cabem).
+ */
+export function serieDoPeriodo(
 	porDia: { dia: string; visitas: number; visualizacoes: number }[],
 	de: string,
-	ate: string
+	ate: string,
+	hoje: string,
+	primeiroDia: string | null
 ): PontoSerie[] {
-	const primeiro = porDia[0]?.dia ?? ate;
-	const minimo = new Date(`${ate}T12:00:00Z`);
-	minimo.setUTCDate(minimo.getUTCDate() - (DIAS_MINIMOS_SERIE - 1));
-	const minimoDia = minimo.toISOString().slice(0, 10);
-	// Nunca antes do começo do período escolhido (7 dias continuam 7 dias).
-	const inicio = [de, primeiro < minimoDia ? primeiro : minimoDia].sort().at(-1)!;
+	const dias = diasEntre(de, ate);
+	const curto = dias.length <= 31;
+	const variosAnos = de.slice(0, 4) !== ate.slice(0, 4);
+	// Dias que atravessam a virada do mês: o dia 1º leva o mês junto ("1/10").
+	const variosMeses = de.slice(0, 7) !== ate.slice(0, 7);
 	const mapa = new Map(porDia.map((p) => [p.dia, p]));
-	return diasEntre(inicio, ate).map((dia) => {
-		const [, m, d] = dia.split('-');
+	return dias.map((dia) => {
+		const [a, m, d] = dia.split('-').map(Number);
 		const p = mapa.get(dia);
-		const ponto: PontoSerie = { rotulo: `${d}/${m}`, visitas: p?.visitas ?? 0, visualizacoes: p?.visualizacoes ?? 0 };
-		if (dia < primeiro) ponto.semDados = true;
+		const semana = DIA_SEMANA_CURTO[new Date(Date.UTC(a, m - 1, d)).getUTCDay()];
+		const ponto: PontoSerie = {
+			rotulo: `${semana}, ${dataBr(dia).slice(0, variosAnos ? 10 : 5)}`,
+			visitas: p?.visitas ?? 0,
+			visualizacoes: p?.visualizacoes ?? 0,
+			eixo: curto
+				? d === 1 && variosMeses
+					? `1/${String(m).padStart(2, '0')}`
+					: String(d)
+				: d === 1
+					? m === 1 && variosAnos
+						? `jan ${a}`
+						: MES_CURTO[m - 1]
+					: ''
+		};
+		if (dia > hoje) ponto.futuro = true;
+		else if (!primeiroDia || dia < primeiroDia) ponto.semDados = true;
+		if (dia === hoje) ponto.hoje = true;
 		return ponto;
 	});
 }

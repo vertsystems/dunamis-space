@@ -15,7 +15,10 @@ import {
 	enderecoDoSite,
 	nomeDoSite,
 	lerPeriodo,
-	serieDiaria,
+	anosDisponiveis,
+	lerGrafico,
+	mesesDisponiveis,
+	serieDoPeriodo,
 	serieRecente,
 	limparDominio,
 	nomePais,
@@ -41,27 +44,6 @@ describe('período', () => {
 	it('hora e 24 horas cobrem hoje e ontem (as 24 horas atravessam a meia-noite)', () => {
 		expect(lerPeriodo('1h')).toBe('1h');
 		expect(intervalo('24h', '2026-10-10')).toEqual({ de: '2026-10-09', ate: '2026-10-10' });
-	});
-	it('série diária: pelo menos 30 dias; os de antes do primeiro registro, sem dados', () => {
-		const s = serieDiaria([{ dia: '2026-10-08', visitas: 3, visualizacoes: 5 }], '2000-01-01', '2026-10-10');
-		expect(s).toHaveLength(30);
-		expect(s[0]).toEqual({ rotulo: '11/09', visitas: 0, visualizacoes: 0, semDados: true });
-		expect(s.filter((p) => p.semDados)).toHaveLength(27);
-		expect(s.slice(-3)).toEqual([
-			{ rotulo: '08/10', visitas: 3, visualizacoes: 5 },
-			{ rotulo: '09/10', visitas: 0, visualizacoes: 0 },
-			{ rotulo: '10/10', visitas: 0, visualizacoes: 0 }
-		]);
-	});
-	it('série diária: com mais de 30 dias de registro, começa no primeiro', () => {
-		const s = serieDiaria([{ dia: '2026-08-01', visitas: 1, visualizacoes: 1 }], '2000-01-01', '2026-10-10');
-		expect(s[0]).toEqual({ rotulo: '01/08', visitas: 1, visualizacoes: 1 });
-		expect(s.some((p) => p.semDados)).toBe(false);
-	});
-	it('série diária: o período escolhido manda (7 dias são 7 dias)', () => {
-		const s = serieDiaria([{ dia: '2026-10-08', visitas: 3, visualizacoes: 5 }], '2026-10-04', '2026-10-10');
-		expect(s).toHaveLength(7);
-		expect(s.filter((p) => p.semDados).map((p) => p.rotulo)).toEqual(['04/10', '05/10', '06/10', '07/10']);
 	});
 	it('série recente no horário de Brasília', () => {
 		expect(serieRecente([{ momento: '2026-10-11T01:35:00+00:00', visitas: 2, visualizacoes: 3 }])).toEqual([
@@ -244,5 +226,69 @@ describe('sites', () => {
 		expect(haQuanto('2026-10-10T07:00:00Z', agora)).toBe('há 5 h');
 		expect(haQuanto('2026-10-09T10:00:00Z', agora)).toBe('ontem');
 		expect(haQuanto('2026-10-05T12:00:00Z', agora)).toBe('há 5 dias');
+	});
+});
+
+describe('gráfico por dia: a escolha (mês, ano ou dias)', () => {
+	const hoje = '2026-10-14';
+	it('sem escolha, ou escolha estranha: o mês de hoje', () => {
+		expect(lerGrafico(null, hoje)).toEqual({ tipo: 'mes', id: '2026-10', de: '2026-10-01', ate: '2026-10-31', rotulo: 'outubro de 2026' });
+		expect(lerGrafico('xyz', hoje).id).toBe('2026-10');
+		expect(lerGrafico('2026-13', hoje).id).toBe('2026-10');
+	});
+	it('um mês (fevereiro de ano bissexto tem 29) — nunca do futuro', () => {
+		expect(lerGrafico('2024-02', hoje)).toMatchObject({ tipo: 'mes', de: '2024-02-01', ate: '2024-02-29' });
+		expect(lerGrafico('2026-11', hoje).id).toBe('2026-10');
+	});
+	it('o ano inteiro, de 1º de janeiro a 31 de dezembro', () => {
+		expect(lerGrafico('2026', hoje)).toEqual({ tipo: 'ano', id: '2026', de: '2026-01-01', ate: '2026-12-31', rotulo: 'ano de 2026' });
+		expect(lerGrafico('2027', hoje).tipo).toBe('mes');
+	});
+	it('dias do calendário: invertidos viram certos, e no máximo 1 ano', () => {
+		expect(lerGrafico('2026-10-14_2026-10-01', hoje)).toMatchObject({ tipo: 'dias', de: '2026-10-01', ate: '2026-10-14', rotulo: '01/10 a 14/10/2026' });
+		expect(lerGrafico('2026-01-01_2026-12-31', hoje)).toMatchObject({ de: '2026-01-01', ate: '2026-12-31' });
+		expect(lerGrafico('2025-01-01_2026-12-31', hoje)).toMatchObject({ de: '2025-01-01', ate: '2026-01-01' });
+		expect(lerGrafico('2025-12-20_2026-01-10', hoje).rotulo).toBe('20/12/2025 a 10/01/2026');
+		expect(lerGrafico('2026-02-30_2026-03-01', hoje).tipo).toBe('mes');
+	});
+	it('meses e anos da caixinha: do primeiro registro até hoje, o mais novo primeiro', () => {
+		expect(mesesDisponiveis('2026-08-20', hoje).map((m) => m.id)).toEqual(['2026-10', '2026-09', '2026-08']);
+		expect(mesesDisponiveis(null, hoje)).toEqual([{ id: '2026-10', rotulo: 'outubro de 2026' }]);
+		expect(mesesDisponiveis('2025-12-01', '2026-01-05').map((m) => m.id)).toEqual(['2026-01', '2025-12']);
+		expect(anosDisponiveis('2024-05-01', hoje)).toEqual(['2026', '2025', '2024']);
+		expect(anosDisponiveis(null, hoje)).toEqual(['2026']);
+	});
+});
+
+describe('serieDoPeriodo', () => {
+	const porDia = [
+		{ dia: '2026-10-10', visitas: 19, visualizacoes: 27 },
+		{ dia: '2026-10-12', visitas: 217, visualizacoes: 233 }
+	];
+	it('o mês: os dias 1 a 31 embaixo; antes do script sem dados, depois de hoje futuro', () => {
+		const s = serieDoPeriodo(porDia, '2026-10-01', '2026-10-31', '2026-10-14', '2026-10-10');
+		expect(s).toHaveLength(31);
+		expect(s.map((p) => p.eixo).slice(0, 3)).toEqual(['1', '2', '3']);
+		expect(s[0]).toMatchObject({ rotulo: 'qui, 01/10', semDados: true });
+		expect(s[9]).toEqual({ rotulo: 'sáb, 10/10', visitas: 19, visualizacoes: 27, eixo: '10' });
+		expect(s[10]).toMatchObject({ visitas: 0, eixo: '11' });
+		expect(s[10].semDados).toBeUndefined();
+		expect(s[13]).toMatchObject({ hoje: true });
+		expect(s[14]).toMatchObject({ futuro: true });
+		expect(s.filter((p) => p.futuro)).toHaveLength(17);
+	});
+	it('dias que atravessam a virada do mês: o dia 1º leva o mês', () => {
+		const s = serieDoPeriodo(porDia, '2026-09-28', '2026-10-03', '2026-10-14', '2026-10-10');
+		expect(s.map((p) => p.eixo)).toEqual(['28', '29', '30', '1/10', '2', '3']);
+	});
+	it('o ano: embaixo, o nome de cada mês no dia 1º', () => {
+		const s = serieDoPeriodo(porDia, '2026-01-01', '2026-12-31', '2026-10-14', '2026-10-10');
+		expect(s).toHaveLength(365);
+		expect(s.map((p) => p.eixo).filter(Boolean)).toEqual(['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']);
+	});
+	it('virada de ano: o ano aparece no janeiro e na dica', () => {
+		const s = serieDoPeriodo([], '2025-12-01', '2026-01-31', '2026-10-14', '2026-10-10');
+		expect(s.map((p) => p.eixo).filter(Boolean)).toEqual(['dez', 'jan 2026']);
+		expect(s[0].rotulo).toBe('seg, 01/12/2025');
 	});
 });

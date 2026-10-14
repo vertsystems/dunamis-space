@@ -10,6 +10,7 @@
 	import BaixoAcesso from '$lib/components/dmetric/BaixoAcesso.svelte';
 	import AgoraNoSite from '$lib/components/dmetric/AgoraNoSite.svelte';
 	import LinhaDoTempo from '$lib/components/dmetric/LinhaDoTempo.svelte';
+	import EscolhaPeriodo from '$lib/components/dmetric/EscolhaPeriodo.svelte';
 	import ListaDimensao from '$lib/components/dmetric/ListaDimensao.svelte';
 	import Sites from '$lib/components/dmetric/Sites.svelte';
 	import Saude from '$lib/components/dmetric/Saude.svelte';
@@ -24,7 +25,7 @@
 		numero,
 		paginasComBaixoAcesso,
 		porcentagem,
-		serieDiaria,
+		serieDoPeriodo,
 		serieRecente,
 		visitasPorPais
 	} from '$lib/dmetric/painel';
@@ -57,9 +58,11 @@
 	}
 
 	// ---- Filtros (na URL: o link do painel abre no mesmo recorte) -------------
-	function filtrar(chave: 'site' | 'periodo', valor: string) {
+	function filtrar(chave: 'site' | 'periodo' | 'grafico', valor: string) {
 		const p = new URLSearchParams({ periodo: data.periodo, ...(data.site ? { site: data.site } : {}) });
-		if (valor) p.set(chave, valor);
+		// A escolha do gráfico por dia só vai na URL quando não é o mês de hoje.
+		if (data.grafico.id !== data.hoje.slice(0, 7)) p.set('grafico', data.grafico.id);
+		if (valor && !(chave === 'grafico' && valor === data.hoje.slice(0, 7))) p.set(chave, valor);
 		else p.delete(chave);
 		goto(`?${p}`, { keepFocus: true, noScroll: true, replaceState: true });
 	}
@@ -96,8 +99,11 @@
 	// ---- Últimas horas ------------------------------------------------------------
 	const recente = $derived(!!RECENTES[data.periodo]);
 	const serie = $derived(
-		recente ? serieRecente(data.painel.serie ?? []) : serieDiaria(data.painel.por_dia, data.de, data.ate)
+		recente
+			? serieRecente(data.painel.serie ?? [])
+			: serieDoPeriodo(data.porDia, data.grafico.de, data.grafico.ate, data.hoje, data.primeiroDia)
 	);
+	const visitasDoGrafico = $derived(data.porDia.reduce((t, d) => t + d.visitas, 0));
 	const tituloSerie = $derived(
 		data.periodo === '1h' ? 'Visitas a cada 5 minutos' : data.periodo === '24h' ? 'Visitas por hora' : 'Visitas por dia'
 	);
@@ -271,9 +277,29 @@
 
 		{#if temVivo}
 			<Card class="mb-5">
-				<div class="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-					<h2 class="text-base font-bold text-navy">{tituloSerie}</h2>
-					{#if data.periodo === '1h'}<p class="text-[11px] text-grey">atualiza sozinho a cada minuto</p>{/if}
+				<div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+					<div class="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+						<h2 class="text-base font-bold text-navy">{tituloSerie}</h2>
+						{#if !recente}
+							<p class="text-[11px] tabular-nums text-grey">
+								{numero(visitasDoGrafico)} {visitasDoGrafico === 1 ? 'visita' : 'visitas'}
+								{data.grafico.tipo === 'dias' ? `de ${data.grafico.rotulo}` : `em ${data.grafico.rotulo.replace(/^ano de /, '')}`}
+							</p>
+						{/if}
+					</div>
+					{#if data.periodo === '1h'}
+						<p class="text-[11px] text-grey">atualiza sozinho a cada minuto</p>
+					{:else if !recente}
+						<!-- O gráfico por dia tem a própria escolha: mês, ano inteiro ou dias do calendário. -->
+						<EscolhaPeriodo
+							escolha={data.grafico}
+							meses={data.meses}
+							anos={data.anos}
+							hoje={data.hoje}
+							primeiroDia={data.primeiroDia}
+							onescolher={(id) => filtrar('grafico', id)}
+						/>
+					{/if}
 				</div>
 				<LinhaDoTempo {serie} />
 			</Card>
