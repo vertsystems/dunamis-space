@@ -42,13 +42,26 @@ describe('período', () => {
 		expect(lerPeriodo('1h')).toBe('1h');
 		expect(intervalo('24h', '2026-10-10')).toEqual({ de: '2026-10-09', ate: '2026-10-10' });
 	});
-	it('série diária: um ponto por dia, começando no primeiro dia com visita', () => {
+	it('série diária: pelo menos 30 dias; os de antes do primeiro registro, sem dados', () => {
 		const s = serieDiaria([{ dia: '2026-10-08', visitas: 3, visualizacoes: 5 }], '2000-01-01', '2026-10-10');
-		expect(s).toEqual([
+		expect(s).toHaveLength(30);
+		expect(s[0]).toEqual({ rotulo: '11/09', visitas: 0, visualizacoes: 0, semDados: true });
+		expect(s.filter((p) => p.semDados)).toHaveLength(27);
+		expect(s.slice(-3)).toEqual([
 			{ rotulo: '08/10', visitas: 3, visualizacoes: 5 },
 			{ rotulo: '09/10', visitas: 0, visualizacoes: 0 },
 			{ rotulo: '10/10', visitas: 0, visualizacoes: 0 }
 		]);
+	});
+	it('série diária: com mais de 30 dias de registro, começa no primeiro', () => {
+		const s = serieDiaria([{ dia: '2026-08-01', visitas: 1, visualizacoes: 1 }], '2000-01-01', '2026-10-10');
+		expect(s[0]).toEqual({ rotulo: '01/08', visitas: 1, visualizacoes: 1 });
+		expect(s.some((p) => p.semDados)).toBe(false);
+	});
+	it('série diária: o período escolhido manda (7 dias são 7 dias)', () => {
+		const s = serieDiaria([{ dia: '2026-10-08', visitas: 3, visualizacoes: 5 }], '2026-10-04', '2026-10-10');
+		expect(s).toHaveLength(7);
+		expect(s.filter((p) => p.semDados).map((p) => p.rotulo)).toEqual(['04/10', '05/10', '06/10', '07/10']);
 	});
 	it('série recente no horário de Brasília', () => {
 		expect(serieRecente([{ momento: '2026-10-11T01:35:00+00:00', visitas: 2, visualizacoes: 3 }])).toEqual([

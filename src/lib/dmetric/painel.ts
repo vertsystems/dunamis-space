@@ -112,12 +112,21 @@ export function intervalo(periodo: Periodo, hoje: string): { de: string; ate: st
 	return { de: d.toISOString().slice(0, 10), ate: hoje };
 }
 
-/** Um ponto da linha do tempo, já com o rótulo que aparece no eixo e na dica. */
-export type PontoSerie = { rotulo: string; visitas: number; visualizacoes: number };
+/**
+ * Um ponto da linha do tempo, já com o rótulo que aparece no eixo e na dica.
+ * `semDados`: dia de antes de o script começar a contar (não é "zero visitas").
+ */
+export type PontoSerie = { rotulo: string; visitas: number; visualizacoes: number; semDados?: boolean };
+
+/** Quantos dias a linha do tempo mostra, no mínimo, em "desde o começo" e "12 meses". */
+export const DIAS_MINIMOS_SERIE = 30;
 
 /**
  * A linha do tempo dos períodos de dias: um ponto por dia, inclusive os sem
- * visita. "Desde o começo" começa no primeiro dia com visita, não em 2000.
+ * visita. "Desde o começo" começa no primeiro dia com visita, não em 2000 —
+ * mas mostra pelo menos 30 dias, para o gráfico ter forma. Os dias de antes do
+ * primeiro registro saem marcados `semDados`: o script ainda não contava, e
+ * desenhar zero ali diria que ninguém visitou.
  */
 export function serieDiaria(
 	porDia: { dia: string; visitas: number; visualizacoes: number }[],
@@ -125,12 +134,18 @@ export function serieDiaria(
 	ate: string
 ): PontoSerie[] {
 	const primeiro = porDia[0]?.dia ?? ate;
-	const inicio = de < primeiro ? primeiro : de;
+	const minimo = new Date(`${ate}T12:00:00Z`);
+	minimo.setUTCDate(minimo.getUTCDate() - (DIAS_MINIMOS_SERIE - 1));
+	const minimoDia = minimo.toISOString().slice(0, 10);
+	// Nunca antes do começo do período escolhido (7 dias continuam 7 dias).
+	const inicio = [de, primeiro < minimoDia ? primeiro : minimoDia].sort().at(-1)!;
 	const mapa = new Map(porDia.map((p) => [p.dia, p]));
 	return diasEntre(inicio, ate).map((dia) => {
 		const [, m, d] = dia.split('-');
 		const p = mapa.get(dia);
-		return { rotulo: `${d}/${m}`, visitas: p?.visitas ?? 0, visualizacoes: p?.visualizacoes ?? 0 };
+		const ponto: PontoSerie = { rotulo: `${d}/${m}`, visitas: p?.visitas ?? 0, visualizacoes: p?.visualizacoes ?? 0 };
+		if (dia < primeiro) ponto.semDados = true;
+		return ponto;
 	});
 }
 
