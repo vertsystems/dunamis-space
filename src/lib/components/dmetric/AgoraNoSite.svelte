@@ -1,8 +1,8 @@
 <script lang="ts">
-	// "Agora no site": quantas pessoas abriram uma página nos últimos 5 minutos.
+	// "Agora no site": quantas pessoas abriram uma página nos últimos 15 minutos.
 	// Atualiza sozinho a cada 30 segundos, sem recarregar o painel, e devolve os
 	// países (`paises`) para o mapa pulsar onde tem gente agora.
-	import { numero, type AgoraDados } from '$lib/dmetric/painel';
+	import { MINUTOS_AGORA, numero, type AgoraDados } from '$lib/dmetric/painel';
 
 	let {
 		inicial,
@@ -71,7 +71,7 @@
 		role="tooltip"
 		class="pointer-events-none absolute left-0 top-full z-30 mt-2 w-72 rounded-[var(--radius)] border border-grey-200 bg-surface p-3 text-xs opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
 	>
-		<p class="mb-2 text-[10px] font-bold uppercase tracking-wider text-grey">Abriram uma página nos últimos 5 minutos</p>
+		<p class="mb-2 text-[10px] font-bold uppercase tracking-wider text-grey">Abriram uma página nos últimos {MINUTOS_AGORA} minutos</p>
 		{#if !vivo}
 			<p class="text-slate">Ninguém por enquanto. Atualiza sozinho a cada 30 segundos.</p>
 		{:else}

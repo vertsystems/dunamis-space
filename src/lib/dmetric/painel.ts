@@ -534,7 +534,10 @@ export function paginasComBaixoAcesso(
 
 // ---- Agora no site --------------------------------------------------------------
 
-/** Quem abriu uma página nos últimos 5 minutos (função dmetric_agora, 0080). */
+/** Quantos minutos contam como "agora no site" (função dmetric_agora, 0084). */
+export const MINUTOS_AGORA = 15;
+
+/** Quem abriu uma página nos últimos MINUTOS_AGORA minutos (função dmetric_agora). */
 export type AgoraDados = {
 	pessoas: number;
 	paises: { pais: string; pessoas: number }[];

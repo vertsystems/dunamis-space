@@ -12,7 +12,17 @@
 	import { MediaQuery } from 'svelte/reactivity';
 	import { fly } from 'svelte/transition';
 	import MapaMundi from '$lib/components/dmetric/MapaMundi.svelte';
-	import { bandeira, duracao, enderecoDaPagina, nomeDoSite, nomePais, numero, porcentagem, visitasPorPais } from '$lib/dmetric/painel';
+	import {
+		MINUTOS_AGORA,
+		bandeira,
+		duracao,
+		enderecoDaPagina,
+		nomeDoSite,
+		nomePais,
+		numero,
+		porcentagem,
+		visitasPorPais
+	} from '$lib/dmetric/painel';
 	import { haQuantoCurto, horasDeHoje, melhorPagina, variacao, type TvDados } from '$lib/dmetric/tv';
 	import {
 		ChartSpline,
@@ -304,7 +314,7 @@
 					{#if tv.agora.cidades.length}
 						{tv.agora.cidades.slice(0, 3).map((c) => c.cidade).join(' · ')}
 					{:else}
-						abriram uma página nos últimos 5 minutos
+						abriram uma página nos últimos {MINUTOS_AGORA} minutos
 					{/if}
 				</p>
 			</div>

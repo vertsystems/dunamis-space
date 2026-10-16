@@ -1,4 +1,4 @@
-// DMetric — "agora no site": quem abriu uma página nos últimos 5 minutos.
+// DMetric — "agora no site": quem abriu uma página nos últimos 15 minutos.
 // O painel chama a cada 30 segundos (AgoraNoSite.svelte), sem recarregar o resto.
 // Mora dentro de /dtools/dmetric, então herda a permissão do módulo.
 import { json } from '@sveltejs/kit';
