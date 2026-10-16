@@ -42,7 +42,10 @@
 	}
 
 	const fieldCls =
-		'h-9 w-full rounded-[var(--radius)] border border-grey-200 bg-surface px-3 text-sm text-navy-900 shadow-xs transition-colors hover:border-grey focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25';
+		'h-8 w-full rounded-[var(--radius)] border border-grey-200 bg-surface px-2.5 text-sm text-navy-900 shadow-xs transition-colors hover:border-grey focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/25';
+	// Ações da linha: pequenas, sem moldura, como um botão "fantasma".
+	const acaoCls =
+		'inline-flex h-7 items-center gap-1 rounded-[var(--radius-sm)] px-2 text-xs font-medium text-slate transition-colors hover:bg-bg hover:text-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/25';
 </script>
 
 <div class="grid grid-cols-1 gap-5 lg:grid-cols-3">
@@ -72,106 +75,131 @@
 				</p>
 			</Card>
 		{:else}
-			{#each ordenados as s (s.id)}
-				{@const nome = nomeDoSite(s)}
-				{@const endereco = enderecoDoSite(s)}
-				<Card padding="sm">
-					<div class="flex flex-wrap items-center justify-between gap-3">
-						<div class="min-w-0 flex-1">
-							{#if renomeando === s.id}
-								<form
-									method="POST"
-									action="?/renomearSite"
-									class="flex max-w-md items-center gap-1.5"
-									use:enhance={() =>
-										async ({ result, update }) => {
-											if (result.type === 'failure') toast.error((result.data?.erro as string) ?? 'Não foi possível renomear.');
-											else renomeando = null;
-											await update();
-										}}
-								>
-									<input type="hidden" name="id" value={s.id} />
-									<!-- svelte-ignore a11y_autofocus -->
-									<input
-										name="nome"
-										value={s.nome_manual ? s.nome : ''}
-										placeholder={s.titulo || endereco}
-										aria-label="Nome do site (vazio = o título da página)"
-										autofocus
-										class={fieldCls}
-									/>
-									<button type="submit" title="Salvar" class="rounded-[var(--radius-sm)] p-1.5 text-brand-green hover:bg-brand-green/10"><Check size={16} /></button>
-									<button type="button" title="Cancelar" onclick={() => (renomeando = null)} class="rounded-[var(--radius-sm)] p-1.5 text-grey hover:bg-bg"><X size={16} /></button>
-								</form>
-							{:else}
-								<div class="flex items-center gap-1.5">
-									<h3 class="truncate text-base font-bold text-navy">{nome}</h3>
+			<!-- Uma linha fina por site: nome e endereço à esquerda; estado e ações à direita. -->
+			<Card padding="none" class="overflow-hidden">
+				<div class="flex items-baseline justify-between gap-2 border-b border-grey-200 px-4 py-2.5">
+					<h3 class="text-sm font-semibold text-navy">Sites</h3>
+					<p class="text-[11px] text-grey">{sites.length} {sites.length === 1 ? 'site' : 'sites'} · os do mesmo domínio ficam juntos</p>
+				</div>
+				<ul class="divide-y divide-grey-200/70">
+					{#each ordenados as s (s.id)}
+						{@const nome = nomeDoSite(s)}
+						{@const endereco = enderecoDoSite(s)}
+						<!-- Colunas fixas (nome · estado · ações): tudo alinhado de uma linha para a outra.
+						     No celular, o nome vai em cima e o estado e as ações embaixo. -->
+						<li
+							class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 px-4 py-2 transition-colors hover:bg-bg/50 sm:grid-cols-[minmax(0,1fr)_10.5rem_auto]"
+						>
+							<div class="col-span-2 min-w-0 sm:col-span-1">
+								{#if renomeando === s.id}
+									<form
+										method="POST"
+										action="?/renomearSite"
+										class="flex max-w-md items-center gap-1"
+										use:enhance={() =>
+											async ({ result, update }) => {
+												if (result.type === 'failure') toast.error((result.data?.erro as string) ?? 'Não foi possível renomear.');
+												else renomeando = null;
+												await update();
+											}}
+									>
+										<input type="hidden" name="id" value={s.id} />
+										<!-- svelte-ignore a11y_autofocus -->
+										<input
+											name="nome"
+											value={s.nome_manual ? s.nome : ''}
+											placeholder={s.titulo || endereco}
+											aria-label="Nome do site (vazio = o título da página)"
+											autofocus
+											class={fieldCls}
+										/>
+										<button type="submit" title="Salvar" class="rounded-[var(--radius-sm)] p-1 text-brand-green hover:bg-brand-green/10"><Check size={15} /></button>
+										<button type="button" title="Cancelar" onclick={() => (renomeando = null)} class="rounded-[var(--radius-sm)] p-1 text-grey hover:bg-bg"><X size={15} /></button>
+									</form>
+								{:else}
+									<!-- O nome e, logo embaixo, o endereço pequeno: toda linha com a mesma altura. -->
+									<div class="min-w-0">
+										<span class="flex min-w-0 max-w-full items-center gap-1 leading-tight">
+											<span class="truncate text-sm font-semibold text-navy" title={nome}>{nome}</span>
+											{#if podeEditar}
+												<button
+													type="button"
+													onclick={() => (renomeando = s.id)}
+													title="Renomear (em branco, volta a usar o título da página)"
+													aria-label="Renomear {nome}"
+													class="shrink-0 rounded-[var(--radius-sm)] p-0.5 text-grey transition-colors hover:bg-bg hover:text-navy"
+												><Pencil size={12} /></button>
+											{/if}
+										</span>
+										<span class="block min-w-0 truncate text-[11px] leading-tight text-slate">
+											{endereco || 'qualquer domínio'}{#if s.juntar_paginas}<span class="text-grey">{' · todas as páginas do domínio'}</span>{/if}
+										</span>
+									</div>
+								{/if}
+							</div>
+
+							<div class="justify-self-start">
+								{#if !s.ativo}
+									<span class="rounded-full bg-grey-200 px-2 py-0.5 text-[10.5px] font-semibold text-slate">Pausado</span>
+								{:else if s.ultima_visita}
+									<span class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-brand-green/12 px-2 py-0.5 text-[10.5px] font-semibold text-[#107d4a]">
+										<span class="size-1.5 rounded-full bg-brand-green"></span> Recebendo · {haQuanto(s.ultima_visita)}
+									</span>
+								{:else}
+									<span class="whitespace-nowrap rounded-full bg-brand-amber/15 px-2 py-0.5 text-[10.5px] font-semibold text-brand-brown">
+										Aguardando a primeira visita
+									</span>
+								{/if}
+							</div>
+
+							{#if podeEditar || podeExcluir}
+								<div class="flex items-center gap-0.5 justify-self-end">
+									{#if podeEditar && s.dominio && (s.caminho || s.juntar_paginas)}
+										{@const legenda = s.juntar_paginas
+											? `Separar páginas: cada página de ${s.dominio} volta a ser um site (nas próximas visitas)`
+											: `Juntar páginas: as próximas visitas de qualquer página de ${s.dominio} contam num site só`}
+										<!-- Página de um domínio → juntar; raiz que junta → separar. -->
+										<form method="POST" action="?/juntarPaginas" use:enhance class="mr-1">
+											<input type="hidden" name="dominio" value={s.dominio} />
+											<input type="hidden" name="juntar" value={String(!s.juntar_paginas)} />
+											<!-- Só o ícone; a explicação aparece ao passar o mouse (ou focar). -->
+											<button
+												type="submit"
+												aria-label={legenda}
+												class="group relative grid size-7 place-items-center rounded-[var(--radius-sm)] bg-[#fce16c]/45 text-[#846047] transition-colors hover:bg-[#fce16c]/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fce16c]"
+											>
+												{#if s.juntar_paginas}<Split size={14} />{:else}<Merge size={14} />{/if}
+												<span
+													role="tooltip"
+													class="pointer-events-none absolute bottom-full right-0 z-20 mb-2 w-max max-w-64 rounded-[var(--radius-sm)] bg-navy-900 px-2.5 py-1.5 text-left text-[11px] font-medium leading-snug text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"
+												>
+													{legenda}
+												</span>
+											</button>
+										</form>
+									{:else if podeEditar}
+										<!-- Sem o ícone de juntar, o espaço dele fica: os botões não andam. -->
+										<span class="mr-1 size-7" aria-hidden="true"></span>
+									{/if}
 									{#if podeEditar}
-										<button
-											type="button"
-											onclick={() => (renomeando = s.id)}
-											title="Renomear (em branco, volta a usar o título da página)"
-											aria-label="Renomear {nome}"
-											class="rounded-[var(--radius-sm)] p-1 text-grey transition-colors hover:bg-bg hover:text-navy"
-										><Pencil size={13} /></button>
+										<form method="POST" action="?/alternarSite" use:enhance>
+											<input type="hidden" name="id" value={s.id} />
+											<input type="hidden" name="ativo" value={String(!s.ativo)} />
+											<button type="submit" class="{acaoCls} min-w-[8.5rem]">
+												{#if s.ativo}<Pause size={13} /> Pausar contagem{:else}<Play size={13} /> Retomar contagem{/if}
+											</button>
+										</form>
+									{/if}
+									{#if podeExcluir && confirmando !== s.id}
+										<button type="button" class={acaoCls} onclick={() => (confirmando = s.id)}><Trash2 size={13} /> Excluir</button>
 									{/if}
 								</div>
 							{/if}
-							<p class="text-xs text-slate">
-								{endereco || 'qualquer domínio'}{#if s.juntar_paginas}<span class="text-grey">{' · todas as páginas do domínio'}</span>{/if}
-							</p>
-						</div>
-						{#if !s.ativo}
-							<span class="rounded-full bg-grey-200 px-2.5 py-1 text-[11px] font-semibold text-slate">Pausado</span>
-						{:else if s.ultima_visita}
-							<span class="inline-flex items-center gap-1.5 rounded-full bg-brand-green/12 px-2.5 py-1 text-[11px] font-semibold text-[#107d4a]">
-								<span class="size-1.5 rounded-full bg-brand-green"></span> Recebendo · {haQuanto(s.ultima_visita)}
-							</span>
-						{:else}
-							<span class="rounded-full bg-brand-amber/15 px-2.5 py-1 text-[11px] font-semibold text-brand-brown">
-								Aguardando a primeira visita
-							</span>
-						{/if}
-					</div>
 
-					{#if podeEditar || podeExcluir}
-						<div class="mt-2 flex flex-wrap items-center justify-end gap-2">
-							{#if podeEditar && s.dominio && (s.caminho || s.juntar_paginas)}
-								{@const legenda = s.juntar_paginas
-									? `Separar páginas: cada página de ${s.dominio} volta a ser um site (nas próximas visitas)`
-									: `Juntar páginas: as próximas visitas de qualquer página de ${s.dominio} contam num site só`}
-								<!-- Página de um domínio → juntar; raiz que junta → separar. -->
-								<form method="POST" action="?/juntarPaginas" use:enhance>
-									<input type="hidden" name="dominio" value={s.dominio} />
-									<input type="hidden" name="juntar" value={String(!s.juntar_paginas)} />
-									<!-- Só o ícone; a explicação aparece ao passar o mouse (ou focar). -->
-									<button
-										type="submit"
-										aria-label={legenda}
-										class="group relative grid size-8 place-items-center rounded-[var(--radius-sm)] bg-[#fce16c]/45 text-[#846047] transition-colors hover:bg-[#fce16c]/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fce16c]"
-									>
-										{#if s.juntar_paginas}<Split size={15} />{:else}<Merge size={15} />{/if}
-										<span
-											role="tooltip"
-											class="pointer-events-none absolute bottom-full right-0 z-20 mb-2 w-max max-w-64 rounded-[var(--radius-sm)] bg-navy-900 px-2.5 py-1.5 text-left text-[11px] font-medium leading-snug text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"
-										>
-											{legenda}
-										</span>
-									</button>
-								</form>
-							{/if}
-							{#if podeEditar}
-								<form method="POST" action="?/alternarSite" use:enhance>
-									<input type="hidden" name="id" value={s.id} />
-									<input type="hidden" name="ativo" value={String(!s.ativo)} />
-									<Button size="sm" variant="ghost" type="submit">
-										{#if s.ativo}<Pause size={14} /> Pausar contagem{:else}<Play size={14} /> Retomar contagem{/if}
-									</Button>
-								</form>
-							{/if}
-							{#if podeExcluir}
-								{#if confirmando === s.id}
-									<span class="text-xs text-slate">
+							<!-- Excluir pede confirmação numa linha curta, embaixo do próprio site. -->
+							{#if podeExcluir && confirmando === s.id}
+								<div class="col-span-full flex flex-wrap items-center justify-end gap-2 rounded-[var(--radius)] bg-brand-danger/5 px-3 py-1.5">
+									<span class="mr-auto text-[11px] text-slate">
 										Apaga o site e os números. Se o código continuar nele, ele volta na próxima visita — para bloquear, pause.
 									</span>
 									<form method="POST" action="?/excluirSite" use:enhance={() => async ({ update }) => { confirmando = null; await update(); }}>
@@ -179,14 +207,12 @@
 										<Button size="sm" variant="danger" type="submit">Excluir</Button>
 									</form>
 									<Button size="sm" variant="ghost" onclick={() => (confirmando = null)}>Cancelar</Button>
-								{:else}
-									<Button size="sm" variant="ghost" onclick={() => (confirmando = s.id)}><Trash2 size={14} /> Excluir</Button>
-								{/if}
+								</div>
 							{/if}
-						</div>
-					{/if}
-				</Card>
-			{/each}
+						</li>
+					{/each}
+				</ul>
+			</Card>
 		{/if}
 	</div>
 
