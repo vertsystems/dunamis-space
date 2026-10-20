@@ -32,11 +32,11 @@
 
 	const th = 'px-3 py-2.5 text-right font-semibold';
 
-	// Faixas do ranking: do 1º ao 5º verde claro, do 6º ao 15º cinza claro. A
+	// Faixas do ranking: do 1º ao 5º verde claro, do 6º ao 15º marrom claro. A
 	// cor vai cheia no número e, com 15%, no fundo da linha inteira.
 	const VERDE = '#abffca';
-	const CINZA = '#dedede';
-	const tomDa = (posicao: number) => (posicao <= 5 ? VERDE : posicao <= 15 ? CINZA : null);
+	const MARROM = '#c4a484';
+	const tomDa = (posicao: number) => (posicao <= 5 ? VERDE : posicao <= 15 ? MARROM : null);
 </script>
 
 {#if sites.length === 0}
