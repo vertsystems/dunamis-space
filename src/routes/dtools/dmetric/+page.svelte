@@ -261,13 +261,13 @@
 		<Card padding="none" class="mb-5 overflow-hidden">
 			<div class="flex flex-wrap items-baseline justify-between gap-2 px-5 pb-2 pt-4">
 				<h2 class="text-base font-bold text-navy">Sites</h2>
-				<p class="text-[11px] text-grey">Só o que o script do DMetric contou · clique num site para filtrar o painel</p>
+				<p class="text-[11px] text-grey">Só o que o script do DMetric contou · clique num site para abrir a página dele</p>
 			</div>
 			<TabelaSites
 				sites={data.sites}
 				numeros={data.porSite}
 				selecionado={data.site}
-				onescolher={(id) => filtrar('site', id ?? '')}
+				onescolher={(id) => goto(`/dtools/dmetric/site/${id}?periodo=${data.periodo}`)}
 			/>
 		</Card>
 

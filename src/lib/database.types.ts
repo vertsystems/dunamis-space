@@ -1,7 +1,7 @@
 // GERADO AUTOMATICAMENTE — não edite à mão.
 // Regenerar:  PGPASSWORD='<senha-postgres>' node scripts/gen-types.mjs
 //
-// Reflete o schema public do Supabase (2026-10-14).
+// Reflete o schema public do Supabase (2026-10-20).
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -830,6 +830,24 @@ export type Database = {
 					probabilidade?: number
 					created_at?: string
 					updated_at?: string
+				}
+				Relationships: []
+			}
+			dmetric_cidades_pais: {
+				Row: {
+					cidade: string
+					pais: string
+					atualizado_em: string
+				}
+				Insert: {
+					cidade: string
+					pais: string
+					atualizado_em?: string
+				}
+				Update: {
+					cidade?: string
+					pais?: string
+					atualizado_em?: string
 				}
 				Relationships: []
 			}

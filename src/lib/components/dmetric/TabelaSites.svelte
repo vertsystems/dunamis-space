@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Os sites do DMetric lado a lado, como a tabela do Google Analytics: em
 	// ordem de páginas vistas, com o total no topo e a fatia de cada site.
-	// Clicar num site filtra o painel por ele (clicar de novo volta a todos).
+	// Clicar num site abre a página dele (/dtools/dmetric/site/[id]).
 	import {
 		duracao,
 		enderecoDoSite,
@@ -23,7 +23,7 @@
 		numeros: NumerosSite[];
 		/** Site do filtro, se houver: a linha dele fica marcada. */
 		selecionado: string | null;
-		onescolher: (id: string | null) => void;
+		onescolher: (id: string) => void;
 	} = $props();
 
 	const dados = $derived(linhasDosSites(sites, numeros));
@@ -77,7 +77,7 @@
 							? 'shadow-[inset_3px_0_0_var(--color-brand)]'
 							: ''} {l.site.ativo ? '' : 'opacity-60'}"
 						style={tom ? `--tom: ${tom}` : undefined}
-						onclick={() => onescolher(marcado ? null : l.site.id)}
+						onclick={() => onescolher(l.site.id)}
 					>
 						<td class="py-2 pl-5 pr-2">
 							{#if tom}
@@ -91,9 +91,9 @@
 								type="button"
 								onclick={(e) => {
 									e.stopPropagation();
-									onescolher(marcado ? null : l.site.id);
+									onescolher(l.site.id);
 								}}
-								aria-pressed={marcado}
+								aria-label="Abrir a página de {nome}"
 								class="text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 rounded-[var(--radius-sm)]"
 							>
 								<span class="block font-semibold text-navy">{nome}</span>

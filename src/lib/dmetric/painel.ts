@@ -650,3 +650,57 @@ export function haQuanto(iso: string | null, agora = new Date()): string {
 	const d = Math.round(h / 24);
 	return d === 1 ? 'ontem' : `há ${d} dias`;
 }
+
+// ---- Página do site: países e, dentro de cada um, as cidades -----------------
+
+/** Todos os países e cidades de um site (dmetric_lugares, 0085). */
+export type Lugares = {
+	paises: { pais: string; visitas: number; visualizacoes: number }[];
+	/** pais = null: cidade antiga cujo país não deu para saber. */
+	cidades: { cidade: string; pais: string | null; visitas: number; visualizacoes: number }[];
+};
+
+export const LUGARES_VAZIO: Lugares = { paises: [], cidades: [] };
+
+export type GrupoLugar = {
+	/** null = o grupo "país não identificado". */
+	pais: string | null;
+	visitas: number;
+	/** Fatia das visitas do site no período. */
+	fatia: number;
+	cidades: { cidade: string; visitas: number; visualizacoes: number }[];
+	/** Visitas do país que não têm cidade registrada (a soma das cidades não chega no país). */
+	semCidade: number;
+};
+
+/**
+ * Os países do site, do que mais trouxe visitas para o que menos, cada um com
+ * as suas cidades. As cidades sem país conhecido vão num grupo no fim. As
+ * visitas do país são as do contador de países (exatas); as cidades somam
+ * igual ou menos — a diferença vira "semCidade".
+ */
+export function agruparLugares(l: Lugares): GrupoLugar[] {
+	const total = l.paises.reduce((t, p) => t + p.visitas, 0) || 1;
+	const porPais = new Map<string, GrupoLugar['cidades']>();
+	const soltas: GrupoLugar['cidades'] = [];
+	for (const c of l.cidades) {
+		const item = { cidade: c.cidade, visitas: c.visitas, visualizacoes: c.visualizacoes };
+		if (!c.pais) soltas.push(item);
+		else porPais.set(c.pais, [...(porPais.get(c.pais) ?? []), item]);
+	}
+	const ordem = (a: { visitas: number; visualizacoes: number }, b: { visitas: number; visualizacoes: number }) =>
+		b.visitas - a.visitas || b.visualizacoes - a.visualizacoes;
+	const grupos: GrupoLugar[] = [...l.paises].sort(ordem).map((p) => {
+		const cidades = (porPais.get(p.pais) ?? []).sort(ordem);
+		const somadas = cidades.reduce((t, c) => t + c.visitas, 0);
+		porPais.delete(p.pais);
+		return { pais: p.pais, visitas: p.visitas, fatia: p.visitas / total, cidades, semCidade: Math.max(0, p.visitas - somadas) };
+	});
+	// Cidade de um país que não aparece na lista de países (raro: o país veio vazio).
+	for (const cidades of porPais.values()) soltas.push(...cidades);
+	if (soltas.length) {
+		const visitas = soltas.reduce((t, c) => t + c.visitas, 0);
+		grupos.push({ pais: null, visitas, fatia: visitas / total, cidades: soltas.sort(ordem), semCidade: 0 });
+	}
+	return grupos;
+}
