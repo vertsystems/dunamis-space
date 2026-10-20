@@ -1,8 +1,8 @@
 <script lang="ts">
 	// Página do site: os países de onde vieram as visitas e, dentro de cada um,
-	// todas as cidades (agruparLugares). O nome do país fica preso no topo da
-	// rolagem enquanto as cidades dele passam; clicar no país fecha ou abre as
-	// cidades. A busca acha a cidade em qualquer país.
+	// todas as cidades (agruparLugares). Os países começam fechados: clicar num
+	// país abre as cidades dele (e o nome fica preso no topo da rolagem enquanto
+	// elas passam). A busca acha a cidade em qualquer país e abre o país dela.
 	import { agruparLugares, bandeira, nomePais, numero, porcentagem, type Lugares } from '$lib/dmetric/painel';
 	import { ChevronDown, Search } from '@lucide/svelte';
 
@@ -10,7 +10,7 @@
 
 	const grupos = $derived(agruparLugares(lugares));
 	let busca = $state('');
-	let fechados = $state<Record<string, boolean>>({});
+	let abertos = $state<Record<string, boolean>>({});
 
 	const sem = (t: string) =>
 		t
@@ -47,22 +47,27 @@
 			{@const chave = g.pais ?? 'sem-pais'}
 			{@const doPais = termo && g.pais && sem(nomePais(g.pais)).includes(termo)}
 			{@const cidades = termo && !doPais ? g.cidades.filter((c) => sem(c.cidade).includes(termo)) : g.cidades}
-			{@const aberto = !!termo || !fechados[chave]}
+			{@const aberto = !!termo || !!abertos[chave]}
 			{#if !termo || doPais || cidades.length}
 				<section class="mb-1">
 					<button
 						type="button"
-						onclick={() => (fechados[chave] = !fechados[chave])}
+						onclick={() => (abertos[chave] = !abertos[chave])}
 						aria-expanded={aberto}
 						class="sticky top-0 z-10 flex w-full items-center gap-2 rounded-[var(--radius-sm)] bg-surface/95 px-2 py-1.5 text-left text-xs backdrop-blur transition-colors hover:bg-bg"
 					>
 						<span class="w-5 shrink-0 text-center text-sm leading-none">{g.pais ? bandeira(g.pais) : '🌐'}</span>
 						<span class="min-w-0 flex-1 truncate font-semibold text-navy">
 							{g.pais ? nomePais(g.pais) : 'País não identificado'}
-							<span class="font-normal text-grey">· {numero(g.cidades.length)} {g.cidades.length === 1 ? 'cidade' : 'cidades'}</span>
+							<span class="font-normal text-grey">
+								· {g.cidades.length
+									? `${numero(g.cidades.length)} ${g.cidades.length === 1 ? 'cidade' : 'cidades'}`
+									: 'sem cidade registrada'}
+							</span>
 						</span>
 						<span class="font-bold tabular-nums text-navy-900">{numero(g.visitas)}</span>
-						<span class="w-12 shrink-0 text-right tabular-nums text-grey">{porcentagem(g.fatia)}</span>
+						<!-- O grupo sem país não tem fatia: as visitas dele já estão dentro dos países. -->
+						<span class="w-12 shrink-0 text-right tabular-nums text-grey">{g.pais ? porcentagem(g.fatia) : ''}</span>
 						<ChevronDown size={14} class="shrink-0 text-grey transition-transform {aberto ? 'rotate-180' : ''}" />
 					</button>
 					{#if aberto}
