@@ -31,6 +31,12 @@
 	const decimal = (n: number) => n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 	const th = 'px-3 py-2.5 text-right font-semibold';
+
+	// Faixas do ranking: do 1º ao 5º verde claro, do 6º ao 15º cinza claro. A
+	// cor vai cheia no número e, com 15%, no fundo da linha inteira.
+	const VERDE = '#abffca';
+	const CINZA = '#dedede';
+	const tomDa = (posicao: number) => (posicao <= 5 ? VERDE : posicao <= 15 ? CINZA : null);
 </script>
 
 {#if sites.length === 0}
@@ -64,11 +70,22 @@
 					{@const marcado = selecionado === l.site.id}
 					{@const nome = nomeDoSite(l.site)}
 					{@const endereco = enderecoDoSite(l.site)}
+					{@const tom = tomDa(i + 1)}
+					<!-- O site do filtro ganha uma barra azul à esquerda (o fundo é o da faixa). -->
 					<tr
-						class="cursor-pointer text-xs transition-colors hover:bg-bg/60 {marcado ? 'bg-brand/[0.06]' : ''} {l.site.ativo ? '' : 'opacity-60'}"
+						class="cursor-pointer text-xs transition-colors {tom ? 'linha-tom' : 'hover:bg-bg/60'} {marcado
+							? 'shadow-[inset_3px_0_0_var(--color-brand)]'
+							: ''} {l.site.ativo ? '' : 'opacity-60'}"
+						style={tom ? `--tom: ${tom}` : undefined}
 						onclick={() => onescolher(marcado ? null : l.site.id)}
 					>
-						<td class="py-2 pl-5 pr-2 tabular-nums text-grey">{i + 1}</td>
+						<td class="py-2 pl-5 pr-2">
+							{#if tom}
+								<span class="inline-grid h-6 min-w-6 place-items-center rounded-full px-1.5 text-[11px] font-bold tabular-nums text-navy-900" style="background: {tom}">{i + 1}</span>
+							{:else}
+								<span class="inline-block min-w-6 text-center tabular-nums text-grey">{i + 1}</span>
+							{/if}
+						</td>
 						<td class="px-3 py-2">
 							<button
 								type="button"
@@ -109,3 +126,13 @@
 		</table>
 	</div>
 {/if}
+
+<style>
+	/* A linha inteira com a cor da faixa a 15%; passando o mouse, um pouco mais forte. */
+	.linha-tom {
+		background: color-mix(in srgb, var(--tom) 15%, transparent);
+	}
+	.linha-tom:hover {
+		background: color-mix(in srgb, var(--tom) 32%, transparent);
+	}
+</style>
