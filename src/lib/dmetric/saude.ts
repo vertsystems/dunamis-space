@@ -38,15 +38,28 @@ export type LinhaErro = {
 	ultimo_em?: string;
 };
 
+/** Todos os erros de um site, contados por tipo (dmetric_saude_painel, 0089): a base da nota. */
+export type ResumoErros = {
+	site_id: string;
+	tipo: LinhaErro['tipo'];
+	/** Quantos erros diferentes. */
+	distintos: number;
+	/** Quantas vezes, somando todos. */
+	ocorrencias: number;
+};
+
 export type SaudeDados = {
 	vitais: LinhaVital[];
+	/** Os 60 mais frequentes de cada site: o que a tela e o PDF mostram. */
 	erros: LinhaErro[];
+	/** Todos os erros de cada site, contados. Sem ele (dados antigos), a conta sai da lista. */
+	erros_resumo?: ResumoErros[];
 	visualizacoes: { site_id: string; visualizacoes: number }[];
 	/** Páginas vistas nos dias que as 72 horas alcançam: a base da nota de erros. */
 	visualizacoes_72h?: { site_id: string; visualizacoes: number }[];
 };
 
-export const SAUDE_VAZIA: SaudeDados = { vitais: [], erros: [], visualizacoes: [], visualizacoes_72h: [] };
+export const SAUDE_VAZIA: SaudeDados = { vitais: [], erros: [], erros_resumo: [], visualizacoes: [], visualizacoes_72h: [] };
 
 /** Os erros da página (JS e arquivo) valem por este tanto: depois, saem da lista e do banco. */
 export const HORAS_ERROS = 72;
@@ -105,10 +118,14 @@ export type SaudeSite = {
 	cargas: number;
 	/** Páginas vistas nos dias das últimas 72 horas (a base da nota de erros). */
 	cargas72: number;
-	/** Erros de JavaScript e arquivos que não carregaram, os mais frequentes primeiro. */
+	/** Erros de JavaScript e arquivos que não carregaram, os mais frequentes primeiro (até 60). */
 	listaErros: LinhaErro[];
-	/** Os 404, os mais frequentes primeiro. */
+	/** Os 404, os mais frequentes primeiro (até 60, junto com os erros). */
 	quebrados: LinhaErro[];
+	/** Quantos erros diferentes (JS e arquivo) o site teve de verdade — a lista pode mostrar menos. */
+	nErros: number;
+	/** Quantos endereços diferentes deram 404. */
+	nQuebrados: number;
 };
 
 export function avaliar(id: MetricaVital, valor: number): Avaliacao {
@@ -158,6 +175,7 @@ export function saudePorSite(dados: SaudeDados): SaudeSite[] {
 	const ids = new Set<string>();
 	for (const l of dados.vitais) ids.add(l.site_id);
 	for (const e of dados.erros) ids.add(e.site_id);
+	for (const r of dados.erros_resumo ?? []) ids.add(r.site_id);
 	const vistas = new Map(dados.visualizacoes.map((v) => [v.site_id, v.visualizacoes]));
 	const vistas72 = new Map((dados.visualizacoes_72h ?? []).map((v) => [v.site_id, v.visualizacoes]));
 
@@ -177,12 +195,19 @@ export function saudePorSite(dados: SaudeDados): SaudeSite[] {
 		const doSite = dados.erros.filter((e) => e.site_id === site_id).sort((a, b) => b.ocorrencias - a.ocorrencias);
 		const listaErros = doSite.filter((e) => e.tipo !== '404');
 		const quebrados = doSite.filter((e) => e.tipo === '404');
-		const n404 = quebrados.reduce((s, e) => s + e.ocorrencias, 0);
+		// A conta usa todos os erros do site (o resumo), não só os que cabem na lista:
+		// com a lista cortada, um site parecia sem erro e tirava 100.
+		const resumo = dados.erros_resumo
+			? dados.erros_resumo.filter((r) => r.site_id === site_id)
+			: doSite.map((e) => ({ site_id, tipo: e.tipo, distintos: 1, ocorrencias: e.ocorrencias }));
+		const doTipo = (tipos: LinhaErro['tipo'][], campo: 'distintos' | 'ocorrencias') =>
+			resumo.filter((r) => tipos.includes(r.tipo)).reduce((t, r) => t + r[campo], 0);
+		const n404 = doTipo(['404'], 'ocorrencias');
 		const cargas = (vistas.get(site_id) ?? 0) + n404;
 		// O script manda cada erro uma vez por página aberta: as ocorrências são,
 		// no máximo, páginas com aquele erro. Arquivo que não carregou pesa metade.
 		// Os erros são das últimas 72 horas: comparam com as páginas do mesmo trecho.
-		const pesoErros = listaErros.reduce((s, e) => s + e.ocorrencias * (e.tipo === 'js' ? 1 : 0.5), 0);
+		const pesoErros = doTipo(['js'], 'ocorrencias') + doTipo(['recurso'], 'ocorrencias') * 0.5;
 		const cargas72 = vistas72.get(site_id) ?? 0;
 		// Erro de 1 em cada 4 páginas zera a parte de erros; 404 em 1 de cada 10, a de links.
 		const erros = cargas72 ? pelaTaxa(pesoErros / cargas72, 4) : pesoErros ? 0 : 100;
@@ -204,7 +229,9 @@ export function saudePorSite(dados: SaudeDados): SaudeSite[] {
 			cargas,
 			cargas72,
 			listaErros,
-			quebrados
+			quebrados,
+			nErros: doTipo(['js', 'recurso'], 'distintos'),
+			nQuebrados: doTipo(['404'], 'distintos')
 		});
 	}
 	// Pior primeiro (é o que precisa de atenção); sem nota, por último.

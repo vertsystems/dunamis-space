@@ -12,8 +12,10 @@ import type { LinhaErro } from './saude';
 
 export type DadosRelatorio = {
 	site: { nome: string; endereco: string };
-	/** Os erros de JS e arquivos das últimas 72 horas (SaudeSite.listaErros). */
+	/** Os erros de JS e arquivos das últimas 72 horas (SaudeSite.listaErros, até 60). */
 	erros: LinhaErro[];
+	/** Quantos erros diferentes o site teve de verdade (SaudeSite.nErros); a lista pode trazer menos. */
+	distintos?: number;
 	/** Páginas abertas nos dias das 72 horas. */
 	paginas: number;
 	/** A nota da parte "Erros" (0–100). */
@@ -113,6 +115,10 @@ export function montarRelatorio(d: DadosRelatorio): Bloco[] {
 				.filter(Boolean)
 				.join(', ') || 'nenhum'})`
 		},
+		// Site com mais erros do que a lista traz (até 60): o resumo diz o total de verdade.
+		...((d.distintos ?? 0) > d.erros.length
+			? [{ tipo: 'campo', rotulo: 'Neste relatório:', texto: `os ${numero(d.erros.length)} mais frequentes de ${numero(d.distintos!)} erros diferentes` } as Bloco]
+			: []),
 		{ tipo: 'campo', rotulo: 'Ocorrências somadas:', texto: numero(ocorrencias) },
 		{ tipo: 'campo', rotulo: 'Nota de erros no DMetric:', texto: `${d.nota} de 100` },
 

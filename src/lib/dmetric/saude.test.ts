@@ -95,6 +95,36 @@ describe('saudePorSite', () => {
 		});
 		expect(s.erros).toBe(60);
 	});
+	it('a nota conta todos os erros do site, mesmo os que não cabem na lista', () => {
+		// A lista veio vazia para este site (os 60 mais frequentes eram de outro), mas o
+		// resumo diz que ele teve 3 erros diferentes, 10 vezes, em 100 páginas: 10% → 60.
+		const [s] = saudePorSite({
+			vitais: [vital('lcp', 10, 0, 0, 1000)],
+			erros: [],
+			erros_resumo: [
+				{ site_id: A, tipo: 'js', distintos: 3, ocorrencias: 10 },
+				{ site_id: A, tipo: '404', distintos: 2, ocorrencias: 5 }
+			],
+			visualizacoes: [{ site_id: A, visualizacoes: 95 }],
+			visualizacoes_72h: [{ site_id: A, visualizacoes: 100 }]
+		});
+		expect(s.erros).toBe(60);
+		expect(s.nErros).toBe(3);
+		expect(s.nQuebrados).toBe(2);
+		// 5 de 100 páginas abertas deram 404 → 50
+		expect(s.links).toBe(50);
+		expect(s.listaErros).toHaveLength(0);
+	});
+	it('site que só aparece no resumo entra na lista de sites', () => {
+		const lista = saudePorSite({
+			vitais: [],
+			erros: [],
+			erros_resumo: [{ site_id: B, tipo: 'recurso', distintos: 1, ocorrencias: 2 }],
+			visualizacoes: []
+		});
+		expect(lista.map((x) => x.site_id)).toEqual([B]);
+		expect(lista[0].nErros).toBe(1);
+	});
 	it('sem medida de velocidade não tem nota, mas os erros aparecem', () => {
 		const [s] = saudePorSite({ vitais: [], erros: [erro('js', 3)], visualizacoes: [] });
 		expect(s.nota).toBeNull();

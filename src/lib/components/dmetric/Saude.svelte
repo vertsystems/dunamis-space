@@ -47,6 +47,7 @@
 			const bytes = await gerarPdfErros({
 				site: { nome: siteAtual ? nomeDoSite(siteAtual) : 'Site', endereco },
 				erros: atual.listaErros,
+				distintos: atual.nErros,
 				paginas: atual.cargas72,
 				nota: atual.erros,
 				horas: HORAS_ERROS,
@@ -191,8 +192,8 @@
 					<div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
 						{#each [
 							{ rotulo: 'Velocidade', nota: atual.velocidade, nota2: 'no aparelho de quem visitou', icon: Gauge },
-							{ rotulo: 'Erros', nota: atual.erros, nota2: atual.listaErros.length ? `${atual.listaErros.length} ${atual.listaErros.length === 1 ? 'tipo de erro' : 'tipos de erro'} em ${HORAS_ERROS} h` : `nenhum em ${HORAS_ERROS} h`, icon: Bug },
-							{ rotulo: 'Links quebrados', nota: atual.links, nota2: atual.quebrados.length ? `${atual.quebrados.length} ${atual.quebrados.length === 1 ? 'endereço deu 404' : 'endereços deram 404'}` : 'nenhum 404', icon: Unlink }
+							{ rotulo: 'Erros', nota: atual.erros, nota2: atual.nErros ? `${numero(atual.nErros)} ${atual.nErros === 1 ? 'tipo de erro' : 'tipos de erro'} em ${HORAS_ERROS} h` : `nenhum em ${HORAS_ERROS} h`, icon: Bug },
+							{ rotulo: 'Links quebrados', nota: atual.links, nota2: atual.nQuebrados ? `${numero(atual.nQuebrados)} ${atual.nQuebrados === 1 ? 'endereço deu 404' : 'endereços deram 404'}` : 'nenhum 404', icon: Unlink }
 						] as p (p.rotulo)}
 							{@const Ico = p.icon}
 							<div class="rounded-[var(--radius)] border border-grey-200 px-3 py-2.5">
@@ -272,7 +273,7 @@
 						<div class="flex items-center justify-between gap-2">
 							<h3 class="text-base font-bold text-navy">Erros na página</h3>
 							<div class="flex items-center gap-2">
-								<span class="text-xs font-medium text-grey">{atual.listaErros.length}</span>
+								<span class="text-xs font-medium text-grey">{numero(atual.nErros)}</span>
 								{#if atual.listaErros.length}
 									<!-- Só o ícone; a explicação aparece ao passar o mouse (ou focar). -->
 									<button
@@ -318,6 +319,11 @@
 									</li>
 								{/each}
 							</ul>
+							{#if atual.nErros > atual.listaErros.length}
+								<p class="mt-2 text-[11px] text-grey">
+									Mostrando os {atual.listaErros.length} mais frequentes de {numero(atual.nErros)} erros diferentes.
+								</p>
+							{/if}
 						{/if}
 					</Card>
 
@@ -325,7 +331,7 @@
 					<Card class="min-w-0">
 						<h3 class="mb-3 flex items-baseline justify-between text-base font-bold text-navy">
 							Links quebrados (404)
-							<span class="text-xs font-medium text-grey">{atual.quebrados.length}</span>
+							<span class="text-xs font-medium text-grey">{numero(atual.nQuebrados)}</span>
 						</h3>
 						{#if !atual.quebrados.length}
 							<p class="flex items-center gap-1.5 py-2 text-xs text-slate">
@@ -352,6 +358,11 @@
 									</li>
 								{/each}
 							</ul>
+							{#if atual.nQuebrados > atual.quebrados.length}
+								<p class="mt-2 text-[11px] text-grey">
+									Mostrando os {atual.quebrados.length} mais frequentes de {numero(atual.nQuebrados)} endereços.
+								</p>
+							{/if}
 						{/if}
 					</Card>
 				</div>

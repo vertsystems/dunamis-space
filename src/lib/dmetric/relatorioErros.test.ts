@@ -51,6 +51,11 @@ describe('montarRelatorio', () => {
 		const pistasDo2 = b.slice(b.findIndex((x) => x.tipo === 'erro' && x.texto.startsWith('2.'))).filter((x) => x.tipo === 'campo' && x.rotulo === 'Pista:');
 		expect(pistasDo2).toEqual([{ tipo: 'campo', rotulo: 'Pista:', texto: 'a mesma do erro 1.' }]);
 	});
+	it('com mais erros do que a lista, avisa quantos são de verdade', () => {
+		const b = montarRelatorio({ ...dados(ERROS), distintos: 75 });
+		expect(b).toContainEqual({ tipo: 'campo', rotulo: 'Neste relatório:', texto: 'os 3 mais frequentes de 75 erros diferentes' });
+		expect(montarRelatorio(dados(ERROS)).some((x) => x.tipo === 'campo' && x.rotulo === 'Neste relatório:')).toBe(false);
+	});
 	it('sem erros, diz que não há', () => {
 		const b = montarRelatorio(dados([]));
 		expect(b.some((x) => x.tipo === 'paragrafo' && x.texto === 'Nenhum erro nas últimas 72 horas.')).toBe(true);
