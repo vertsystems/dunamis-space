@@ -4,7 +4,9 @@
  *  O mesmo código para qualquer site (o site é reconhecido pelo domínio):
  *    <script defer src="https://dspace.verts.me/dm.js"></script>
  *  Opcional: data-local (conta também em localhost, para testar);
- *  data-dm="Nome" em qualquer botão/link do site conta os cliques nele. */
+ *  data-dm="Nome" em qualquer botão/link do site conta os cliques nele;
+ *  data-dm-link="https://…" num link que passa por um redirecionamento do próprio
+ *  site (o /ir/ do PageLinks) diz o destino de verdade, e o clique conta por ele. */
 (function () {
 	var s = document.currentScript;
 	if (!s) return;
@@ -272,6 +274,11 @@
 			if (quebrada) return;
 			var nome = alvo.getAttribute('data-dm');
 			if (nome) return enviar({ t: 'clique', e: nome });
+			// O link passa por um redirecionamento do próprio site (o /ir/ do PageLinks):
+			// o destino de verdade vem em data-dm-link, e é por ele que o clique conta
+			// (WhatsApp, Mapa, Instagram…). Sem isso, parecia navegação e não contava.
+			var destino = alvo.getAttribute('data-dm-link');
+			if (destino) return enviar({ t: 'clique', l: destino });
 			// Link para o próprio site é navegação (a página vista já conta).
 			if (/^https?:$/.test(alvo.protocol) && alvo.hostname === location.hostname) return;
 			enviar({ t: 'clique', l: alvo.href });
