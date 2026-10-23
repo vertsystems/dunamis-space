@@ -341,6 +341,10 @@ export function classificarClique(link: string, host: string): string | null {
 	if (/(^|\.)google\.[a-z.]+$/.test(h) && url.pathname.startsWith('/maps')) return 'Mapa';
 	if (/^(maps\.app\.goo\.gl|goo\.gl)$/.test(h) && (h.startsWith('maps') || url.pathname.startsWith('/maps'))) return 'Mapa';
 	if (/(^|\.)waze\.com$/.test(h)) return 'Mapa';
+	// O arquivo no Drive (o jornal de ofertas, o cardápio) e o app na loja: "Google" sozinho não
+	// dizia o que a pessoa abriu.
+	if (/^(drive|docs)\.google\.com$/.test(h)) return 'Google Drive';
+	if (h === 'play.google.com') return 'Google Play';
 	const semWww = (s: string) => s.toLowerCase().replace(/^www\./, '');
 	if (h === semWww(host) || h.endsWith('.' + semWww(host))) return null;
 	return nomeConhecido(h) ?? h;

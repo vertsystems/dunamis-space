@@ -109,6 +109,13 @@ describe('aparelho, navegador e sistema', () => {
 
 describe('classificarClique', () => {
 	const H = 'lojasmari.com.br';
+	it('arquivo no Google Drive e app no Google Play têm nome próprio', () => {
+		expect(classificarClique('https://drive.google.com/file/d/1HEb/view?usp=sharing', 'dnms.fun')).toBe('Google Drive');
+		expect(classificarClique('https://drive.google.com/open?id=17lA&usp=drive_fs', 'dnms.fun')).toBe('Google Drive');
+		expect(classificarClique('https://docs.google.com/forms/d/e/x/viewform', 'dnms.fun')).toBe('Google Drive');
+		expect(classificarClique('https://play.google.com/store/apps/details?id=br.com.x', 'dnms.fun')).toBe('Google Play');
+		expect(classificarClique('https://www.google.com/maps/place/x', 'dnms.fun')).toBe('Mapa');
+	});
 	it('contato e mapa pelo nome', () => {
 		expect(classificarClique('https://wa.me/5515999999999?text=Oi', H)).toBe('WhatsApp');
 		expect(classificarClique('https://api.whatsapp.com/send?phone=55', H)).toBe('WhatsApp');
