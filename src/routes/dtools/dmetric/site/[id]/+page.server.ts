@@ -22,7 +22,7 @@ import { janelaDoPeriodo, lerFiltros, temFiltro } from '$lib/dmetric/recorte';
 import { slugDoPageLinks } from '$lib/dmetric/botoes';
 import { botoesDaPagina } from '$lib/server/pagelinks';
 import { lerMetas, metasDoSite, opcoesDeMeta } from '$lib/dmetric/resultados';
-import { lerPeriodoPortal, novoToken, type Portal } from '$lib/dmetric/portal';
+import { lerPeriodoPortal, novoToken, origemDoPortal, type Portal } from '$lib/dmetric/portal';
 import { normalizaWhatsApp } from '$lib/pagsup/whatsapp';
 import { SAUDE_VAZIA, saudePorSite, type SaudeDados } from '$lib/dmetric/saude';
 import { carregarRecorte, notaDoRecorte } from '$lib/server/dmetricRecorte';
@@ -122,7 +122,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, params, url }
 		opcoesMetas: opcoesDeMeta((destinos.data ?? []) as { valor: string; cliques: number }[], escolhidas.padrao ? [] : escolhidas.metas),
 		botoes: slug ? botoesDaPagina(slug, janela.desde, janela.ate) : null,
 		portais: (portais.data ?? []) as Portal[],
-		origem: url.origin
+		origem: origemDoPortal(url)
 	};
 };
 

@@ -22,6 +22,7 @@ import { lerFiltros, temFiltro } from '$lib/dmetric/recorte';
 import { SAUDE_VAZIA, saudePorSite, type SaudeDados } from '$lib/dmetric/saude';
 import { carregarRecorte, notaDoRecorte } from '$lib/server/dmetricRecorte';
 import { mesAnterior, prepararRelatorios } from '$lib/server/dmetricRelatorios';
+import { origemDoPortal } from '$lib/dmetric/portal';
 import type { Actions, PageServerLoad } from './$types';
 
 const VAZIO: PainelDados = { visitas: 0, visualizacoes: 0, por_dia: [], dimensoes: {} };
@@ -212,7 +213,7 @@ export const actions: Actions = {
 		if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mes) || mes > diaEmBrasilia().slice(0, 7)) return fail(400, { erro: 'Mês inválido.' });
 		const segredo = env.DMETRIC_SEGREDO;
 		if (!segredo) return fail(500, { erro: 'Falta a configuração do DMetric.' });
-		const r = await prepararRelatorios(locals.supabase, segredo, mes, url.origin);
+		const r = await prepararRelatorios(locals.supabase, segredo, mes, origemDoPortal(url));
 		if (r.erro) return fail(500, { erro: r.erro });
 		return { ok: true, novas: r.novas };
 	},

@@ -6,6 +6,7 @@ import { env } from '$env/dynamic/private';
 import { env as envPublic } from '$env/dynamic/public';
 import { createClient } from '@supabase/supabase-js';
 import { diaEmBrasilia } from '$lib/dmetric/coleta';
+import { origemDoPortal } from '$lib/dmetric/portal';
 import { mesAnterior, prepararRelatorios } from '$lib/server/dmetricRelatorios';
 import type { RequestHandler } from './$types';
 
@@ -25,7 +26,7 @@ export const GET: RequestHandler = async ({ request, url }) => {
 	if (!supa || !anon || !segredo) error(500, 'Falta a configuração do DMetric.');
 	const supabase = createClient(supa, anon, { auth: { persistSession: false, autoRefreshToken: false } });
 	const mes = mesAnterior(diaEmBrasilia());
-	const r = await prepararRelatorios(supabase, segredo, mes, url.origin);
+	const r = await prepararRelatorios(supabase, segredo, mes, origemDoPortal(url));
 	if (r.erro) console.error('[dmetric] relatórios', r.erro);
 	return json({ mes, ...r });
 };

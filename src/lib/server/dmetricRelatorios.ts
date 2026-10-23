@@ -21,7 +21,8 @@ export async function prepararRelatorios(
 ): Promise<{ clientes: number; novas: number; erro?: string }> {
 	const { data, error } = await supabase.rpc('dmetric_relatorios_dados', { p_segredo: segredo, p_mes: `${mes}-01` });
 	if (error || !data) return { clientes: 0, novas: 0, erro: error?.message ?? 'sem resposta' };
-	const itens = data as DadosDoRelatorio[];
+	// Mês sem nenhuma visita não vira mensagem: "0 visitas" não ajuda o cliente.
+	const itens = (data as DadosDoRelatorio[]).filter((d) => d.numeros.visitas > 0);
 	// O mês inteiro, em Brasília, para os cliques dos botões do PageLinks.
 	const desde = inicioDoDia(`${mes}-01`);
 	const ate = inicioDoDia(somarDias(`${mes}-01`, 40).slice(0, 7) + '-01');

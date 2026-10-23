@@ -108,7 +108,7 @@
 	{#if !doMes.length}
 		<p class="rounded-[var(--radius)] border border-dashed border-grey-200 px-4 py-6 text-center text-xs text-grey">
 			{recebem
-				? `Nada preparado para ${rotuloMes(mesAtivo)} ainda. O DMetric prepara no dia 1º — ou use o botão "Preparar".`
+				? `Nada preparado para ${rotuloMes(mesAtivo)} ainda. O DMetric prepara no dia 1º — ou use o botão "Preparar". Cliente sem visita no mês fica sem mensagem.`
 				: 'Nenhum cliente recebe o resumo do mês ainda. Ligue em "Compartilhar com o cliente", na página do site dele.'}
 		</p>
 	{:else}

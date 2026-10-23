@@ -40,6 +40,15 @@ export function novoToken(): string {
 	return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
+/**
+ * O endereço que vai para o cliente: sempre o domínio da Dunamis. O cron roda
+ * no endereço interno da Vercel (*.vercel.app), que pede login da Vercel — um
+ * link de lá não abre para o cliente (visto no primeiro teste, 23/10/2026).
+ * Rodando na máquina, o endereço local.
+ */
+export const ORIGEM_DO_PORTAL = 'https://dspace.verts.me';
+export const origemDoPortal = (url: URL) => (/^(localhost|127\.0\.0\.1)$/.test(url.hostname) ? url.origin : ORIGEM_DO_PORTAL);
+
 /** O endereço do link. Com mês (o do relatório), ele abre naquele mês — se o link não travar o período. */
 export function linkDoPortal(origem: string, token: string, mes?: string | null): string {
 	return `${origem}/relatorio/${token}${mes ? `?mes=${mes}` : ''}`;

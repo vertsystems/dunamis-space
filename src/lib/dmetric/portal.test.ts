@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CONVERSAO_VAZIA } from './resultados';
 import {
 	lerPeriodoPortal,
+	origemDoPortal,
 	linkDaMensagem,
 	linkDoPortal,
 	mensagemDoRelatorio,
@@ -20,6 +21,11 @@ describe('o link do cliente', () => {
 	it('o endereço, com ou sem o mês', () => {
 		expect(linkDoPortal('https://dspace.verts.me', 'abc')).toBe('https://dspace.verts.me/relatorio/abc');
 		expect(linkDoPortal('https://dspace.verts.me', 'abc', '2026-10')).toBe('https://dspace.verts.me/relatorio/abc?mes=2026-10');
+	});
+	it('o link do cliente é sempre o domínio da Dunamis (o endereço da Vercel pede login)', () => {
+		expect(origemDoPortal(new URL('https://dunamis-space-9x5x9nzdv-vert-projects.vercel.app/api/dmetric/relatorios'))).toBe('https://dspace.verts.me');
+		expect(origemDoPortal(new URL('https://dspace.verts.me/dtools/dmetric'))).toBe('https://dspace.verts.me');
+		expect(origemDoPortal(new URL('http://localhost:5180/x'))).toBe('http://localhost:5180');
 	});
 	it('período desconhecido vira "o cliente escolhe"', () => {
 		expect(lerPeriodoPortal('mes_passado')).toBe('mes_passado');
