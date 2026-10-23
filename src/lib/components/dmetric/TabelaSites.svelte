@@ -17,23 +17,28 @@
 		sites,
 		numeros,
 		selecionado,
-		onescolher
+		onescolher,
+		soComVisitas = false
 	}: {
 		sites: DMetricSite[];
 		numeros: NumerosSite[];
 		/** Site do filtro, se houver: a linha dele fica marcada. */
 		selecionado: string | null;
 		onescolher: (id: string) => void;
+		/** Com filtro, só os sites que tiveram visita (os outros só não bateram com o filtro). */
+		soComVisitas?: boolean;
 	} = $props();
 
 	const dados = $derived(linhasDosSites(sites, numeros));
+	const linhas = $derived(soComVisitas ? dados.linhas.filter((l) => l.visualizacoes > 0) : dados.linhas);
 	const fatia = (n: number, t: number) => (t ? porcentagem(n / t) : '');
 	const decimal = (n: number) => n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 	const th = 'px-3 py-2.5 text-right font-semibold';
 
 	// Faixas do ranking: do 1º ao 5º verde claro, do 6º ao 15º marrom claro. A
-	// cor vai cheia no número e, com 15%, no fundo da linha inteira.
+	// cor vai cheia no número e, com 15%, no fundo da linha inteira. Site sem
+	// visita no período não entra na faixa.
 	const VERDE = '#abffca';
 	const MARROM = '#c4a484';
 	const tomDa = (posicao: number) => (posicao <= 5 ? VERDE : posicao <= 15 ? MARROM : null);
@@ -66,11 +71,11 @@
 					<td class="px-3 py-2.5 text-right tabular-nums">{dados.total.visitas ? duracao(dados.total.tempoMedio) : '—'}</td>
 					<td class="py-2.5 pl-3 pr-5 text-right tabular-nums">{numero(dados.total.cliques)}</td>
 				</tr>
-				{#each dados.linhas as l, i (l.site.id)}
+				{#each linhas as l, i (l.site.id)}
 					{@const marcado = selecionado === l.site.id}
 					{@const nome = nomeDoSite(l.site)}
 					{@const endereco = enderecoDoSite(l.site)}
-					{@const tom = tomDa(i + 1)}
+					{@const tom = l.visualizacoes ? tomDa(i + 1) : null}
 					<!-- O site do filtro ganha uma barra azul à esquerda (o fundo é o da faixa). -->
 					<tr
 						class="cursor-pointer text-xs transition-colors {tom ? 'linha-tom' : 'hover:bg-bg/60'} {marcado

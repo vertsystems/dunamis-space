@@ -28,6 +28,17 @@ export type PainelDados = {
 	 * o resto 25); contagem e porcentagem saem daqui, não do tamanho da lista.
 	 */
 	totais?: Partial<Record<Dimensao, TotalDimensao>>;
+	// Só no painel filtrado (dmetric_eventos_painel, 0091):
+	/** Cliques no período (os contadores somam pela lista de cliques). */
+	cliques?: number;
+	/** A tabela de sites com o filtro aplicado. */
+	por_site?: NumerosSite[];
+	/** Países e cidades, sem corte (a página do site). */
+	lugares?: Lugares;
+	/** Onde a lista de acessos começa (os filtros valem a partir daí). */
+	desde_dados?: string | null;
+	/** Desde quando clique e tempo de tela sabem de quem são. */
+	desde_eventos?: string | null;
 };
 
 /** Quantos valores uma lista tem de verdade e a soma deles (o vazio fica fora). */
@@ -97,8 +108,8 @@ export function lerPeriodo(v: string | null): Periodo {
 
 /**
  * Períodos de horas: não saem dos contadores do dia, e sim da lista de acessos
- * recentes (dmetric_recentes, 48 h, migration 0077). `passo` é o degrau da
- * linha do tempo.
+ * (dmetric_recentes, migration 0077; guardada por 13 meses desde a 0091, que
+ * também monta dela o painel filtrado). `passo` é o degrau da linha do tempo.
  */
 export const RECENTES: Partial<Record<Periodo, { horas: number; passo: string }>> = {
 	'1h': { horas: 1, passo: '5 minutes' },
@@ -135,6 +146,8 @@ export type PontoSerie = {
 	futuro?: boolean;
 	eixo?: string;
 	hoje?: boolean;
+	/** O ponto de mesma posição no período de comparação (a linha tracejada); null = sem dados. */
+	anterior?: { visitas: number; visualizacoes: number; rotulo: string } | null;
 };
 
 // ---- Período do gráfico "Visitas por dia" ----------------------------------

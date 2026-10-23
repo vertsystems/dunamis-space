@@ -17,7 +17,9 @@ import {
 	type NumerosSite,
 	type PainelDados
 } from '$lib/dmetric/painel';
+import { lerFiltros, temFiltro } from '$lib/dmetric/recorte';
 import { SAUDE_VAZIA, saudePorSite, type SaudeDados } from '$lib/dmetric/saude';
+import { carregarRecorte, notaDoRecorte } from '$lib/server/dmetricRecorte';
 import type { Actions, PageServerLoad } from './$types';
 
 const VAZIO: PainelDados = { visitas: 0, visualizacoes: 0, por_dia: [], dimensoes: {} };
@@ -29,8 +31,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	const site = siteParam && UUID.test(siteParam) ? siteParam : null;
 	const hoje = diaEmBrasilia();
 	const { de, ate } = intervalo(periodo, hoje);
-	// Última hora e 24 horas saem da lista de acessos recentes (0077), não dos
-	// contadores do dia.
+	// Última hora e 24 horas saem da lista de acessos (0077), não dos contadores do dia.
 	const recente = RECENTES[periodo];
 	const desde = recente ? new Date(Date.now() - recente.horas * 3_600_000).toISOString() : null;
 
@@ -42,19 +43,27 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	// ano inteiro ou os dias do calendário. Sem escolha, o mês de hoje.
 	const grafico = lerGrafico(url.searchParams.get('grafico'), hoje);
 
-	const [sites, historico, painel, porSite, titulos, porSite30, agora, saude, porDia, primeiro] = await Promise.all([
+	// Com filtro (clicar num item), o painel sai da lista de acessos (0091) e os
+	// contadores ficam de fora; a comparação vale com ou sem filtro.
+	const filtrado = temFiltro(lerFiltros(url.searchParams));
+
+	const [sites, historico, painel, porSite, titulos, porSite30, agora, saude, porDia, recorte] = await Promise.all([
 		supabase.from('dmetric_sites').select('*').order('nome'),
 		supabase
 			.from('dmetric_historico')
 			.select('propriedade, inicio, fim, pais, pais_nome, usuarios')
 			.order('usuarios', { ascending: false }),
-		recente
-			? supabase.rpc('dmetric_painel_recente', { p_site: site, p_desde: desde, p_passo: recente.passo })
-			: supabase.rpc('dmetric_painel', { p_site: site, p_de: de, p_ate: ate }),
+		filtrado
+			? null
+			: recente
+				? supabase.rpc('dmetric_painel_recente', { p_site: site, p_desde: desde, p_passo: recente.passo })
+				: supabase.rpc('dmetric_painel', { p_site: site, p_de: de, p_ate: ate }),
 		// A lista de sites mostra todos, mesmo com um site escolhido no filtro.
-		recente
-			? supabase.rpc('dmetric_por_site_recente', { p_desde: desde })
-			: supabase.rpc('dmetric_por_site', { p_de: de, p_ate: ate }),
+		filtrado
+			? null
+			: recente
+				? supabase.rpc('dmetric_por_site_recente', { p_desde: desde })
+				: supabase.rpc('dmetric_por_site', { p_de: de, p_ate: ate }),
 		// Título de cada página (para a lista de páginas). Uma linha por página
 		// de cada site: pouca coisa, e só muda quando o título do site muda.
 		supabase.from('dmetric_paginas').select('site_id, caminho, titulo').limit(5000),
@@ -63,19 +72,19 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		// Saúde da página (0081): as medidas são por dia — na última hora e nas
 		// 24 horas, valem hoje e ontem (o mesmo `de` de intervalo()).
 		supabase.rpc('dmetric_saude_painel', { p_site: site, p_de: de, p_ate: ate }),
-		// O gráfico por dia (0082): os dias do período já somados entre os sites,
-		// e o primeiro dia contado (antes dele, "sem dados").
-		supabase.rpc('dmetric_por_dia', { p_site: site, p_de: grafico.de, p_ate: grafico.ate }),
-		supabase.rpc('dmetric_primeiro_dia', { p_site: site })
+		// O gráfico por dia (0082): os dias do período já somados entre os sites.
+		filtrado ? null : supabase.rpc('dmetric_por_dia', { p_site: site, p_de: grafico.de, p_ate: grafico.ate }),
+		// O primeiro dia contado, o painel filtrado e a comparação.
+		carregarRecorte(supabase, { site, siteFixo: false, periodo, hoje, agora: new Date(), busca: url.searchParams, grafico })
 	]);
 
 	// Sem a migration 0072 a tela avisa em vez de quebrar.
 	const pendente = !!sites.error && /dmetric_|does not exist|schema cache|relation/i.test(sites.error.message);
-	if (painel.error) console.error('[dmetric] painel', painel.error.message);
-	if (porSite.error) console.error('[dmetric] por site', porSite.error.message);
+	if (painel?.error) console.error('[dmetric] painel', painel.error.message);
+	if (porSite?.error) console.error('[dmetric] por site', porSite.error.message);
 	if (saude.error) console.error('[dmetric] saude', saude.error.message);
-	if (porDia.error) console.error('[dmetric] por dia', porDia.error.message);
-	const primeiroDia = (primeiro.data as string | null) ?? null;
+	if (porDia?.error) console.error('[dmetric] por dia', porDia.error.message);
+	const primeiroDia = recorte.primeiroDia;
 
 	return {
 		pendente,
@@ -86,20 +95,30 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		ate,
 		sites: (sites.data ?? []) as DMetricSite[],
 		// O histórico é da propriedade inteira do GA, não de um site: só entra
-		// na visão de todos os sites e no período "desde o começo".
-		historico: !site && periodo === 'tudo' ? ((historico.data ?? []) as LinhaHistorico[]) : [],
+		// na visão de todos os sites, no período "desde o começo" e sem filtro.
+		historico: !site && periodo === 'tudo' && !filtrado ? ((historico.data ?? []) as LinhaHistorico[]) : [],
 		resumoHistorico: resumirHistorico((historico.data ?? []) as LinhaHistorico[]),
-		painel: (painel.data as PainelDados | null) ?? VAZIO,
-		porSite: (porSite.data ?? []) as NumerosSite[],
+		painel: (filtrado ? recorte.painel : (painel?.data as PainelDados | null)) ?? VAZIO,
+		porSite: (filtrado ? (recorte.painel?.por_site ?? []) : (porSite?.data ?? [])) as NumerosSite[],
 		titulos: (titulos.data ?? []) as { site_id: string; caminho: string; titulo: string }[],
 		porSite30: (porSite30.data ?? []) as NumerosSite[],
 		agora: (agora.data as AgoraDados | null) ?? AGORA_VAZIO,
 		saude: saudePorSite((saude.data as SaudeDados | null) ?? SAUDE_VAZIA),
 		grafico,
-		porDia: (porDia.data ?? []) as { dia: string; visitas: number; visualizacoes: number }[],
+		porDia: ((filtrado ? recorte.porDia : porDia?.data) ?? []) as { dia: string; visitas: number; visualizacoes: number }[],
 		primeiroDia,
+		// Com filtro, o gráfico só conta a partir do primeiro dia inteiro da lista de acessos.
+		primeiroGrafico: filtrado ? recorte.primeiroDiaFiltro : primeiroDia,
 		meses: mesesDisponiveis(primeiroDia, hoje),
-		anos: anosDisponiveis(primeiroDia, hoje)
+		anos: anosDisponiveis(primeiroDia, hoje),
+		filtros: recorte.filtros,
+		filtrado,
+		comparacao: recorte.comparacao,
+		comparativo: recorte.comparativo,
+		nota: notaDoRecorte(recorte),
+		serieAnterior: recorte.serieAnterior,
+		porDiaAnterior: recorte.porDiaAnterior,
+		graficoAnterior: recorte.graficoAnterior
 	};
 };
 

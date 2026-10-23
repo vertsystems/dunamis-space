@@ -4,21 +4,30 @@
 	// Os traços vêm prontos de scripts/gen-mapa.mjs, sem biblioteca de mapa no
 	// navegador. Passar o mouse mostra o país e o número. Teclado e leitor de
 	// tela usam o ranking ao lado (RankingPaises), que tem os mesmos números e,
-	// ao focar uma linha, destaca o país aqui.
+	// ao focar uma linha, destaca o país aqui. Com `onescolher`, clicar num país
+	// com visitas filtra o painel por ele (pelo teclado, a mesma coisa no ranking).
 	import mapa from '$lib/dmetric/mapa.generated.json';
 	import { COR_SEM_VISITA, CORES_FAIXAS, FAIXAS, bandeira, corDeVisitas, nomePais, numero } from '$lib/dmetric/painel';
 
 	let {
 		valores,
 		destaque = $bindable(null),
-		pulsando = []
+		pulsando = [],
+		onescolher
 	}: {
 		valores: Map<string, number>;
 		/** País em destaque — vem do ranking ao lado, ou vai para ele. */
 		destaque?: string | null;
 		/** Países com gente no site agora (AgoraNoSite): pulsam no mapa. */
 		pulsando?: string[];
+		/** Clique num país com visitas (filtrar o painel por ele). */
+		onescolher?: (iso: string) => void;
 	} = $props();
+
+	const clicavel = (iso: string | null) => !!onescolher && !!iso && (valores.get(iso) ?? 0) > 0;
+	function escolher(iso: string | null) {
+		if (iso && clicavel(iso)) onescolher?.(iso);
+	}
 
 	const CENTROS = mapa.centros as unknown as Record<string, [number, number]>;
 	const pulsos = $derived(pulsando.map((iso) => ({ iso, xy: CENTROS[iso] })).filter((p) => p.xy));
@@ -53,22 +62,28 @@
 <div class="relative" bind:this={caixa} bind:clientWidth={largura}>
 	<svg viewBox="0 0 {mapa.largura} {mapa.altura}" class="block h-auto w-full select-none" role="img" aria-label={resumo}>
 		{#each mapa.paises as p, i (p.iso ?? `sem-${i}`)}
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
 			<path
 				d={p.d}
 				data-iso={p.iso}
 				fill={cor(p.iso)}
 				stroke="#ffffff"
 				stroke-width="0.6"
-				class="transition-[filter] duration-100 {p.iso ? 'hover:brightness-95' : ''}"
+				class="transition-[filter] duration-100 {p.iso ? 'hover:brightness-95' : ''} {clicavel(p.iso) ? 'cursor-pointer' : ''}"
 				onpointermove={(e) => noPonteiro(e, p.iso)}
 				onpointerleave={esconder}
+				onclick={() => escolher(p.iso)}
 			/>
 		{/each}
 
 		{#each pontosComVisita as p (p.iso)}
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<g onpointermove={(e) => noPonteiro(e, p.iso)} onpointerleave={esconder}>
+			<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
+			<g
+				onpointermove={(e) => noPonteiro(e, p.iso)}
+				onpointerleave={esconder}
+				onclick={() => escolher(p.iso)}
+				class={clicavel(p.iso) ? 'cursor-pointer' : ''}
+			>
 				<!-- Alvo maior que o ponto: ninguém acerta 3 px com o mouse. -->
 				<circle cx={p.x} cy={p.y} r="9" fill="transparent" />
 				<circle cx={p.x} cy={p.y} r="3.2" fill={cor(p.iso)} stroke="#ffffff" stroke-width="1.2" />
@@ -106,6 +121,7 @@
 				{n ? `${numero(n)} ${n === 1 ? 'visita' : 'visitas'}` : 'Nenhuma visita ainda'}
 			</p>
 			<p class="text-xs text-slate">{bandeira(dica.iso)} {nomePais(dica.iso)}</p>
+			{#if clicavel(dica.iso)}<p class="mt-0.5 text-[10px] text-grey">clique para filtrar o painel</p>{/if}
 		</div>
 	{/if}
 </div>

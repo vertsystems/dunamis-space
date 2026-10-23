@@ -109,7 +109,12 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 		return pronto(contou ? 'ok' : 'recusado');
 	}
 
-	// Tempo de tela e cliques: só somam no que já existe, sem visitante.
+	// O visitante do dia: o mesmo hash em todas as batidas da mesma pessoa no dia.
+	const visitante = await hashVisitante(segredo, dia, b.chave || b.host.replace(/^www\./, ''), ip, ua);
+
+	// Tempo de tela e cliques: só somam no que já existe. Levam o visitante para o
+	// painel filtrado (0091) saber de quem é o clique — quem chegou pelo Instagram
+	// clicou no WhatsApp?
 	if (b.tipo !== 'v') {
 		const valor = b.tipo === 'clique' ? (b.evento || classificarClique(b.link, b.host)) : null;
 		if (b.tipo === 'clique' && !valor) return pronto('ignorado');
@@ -121,7 +126,8 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 			p_caminho: b.caminho,
 			p_tipo: b.tipo,
 			p_valor: valor,
-			p_segundos: b.segundos
+			p_segundos: b.segundos,
+			p_visitante: visitante
 		});
 		if (error) {
 			console.error('[dmetric] evento', error.message);
@@ -145,7 +151,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 		p_sistema: classificarSistema(ua),
 		// O mesmo segredo assina o hash do visitante: trocá-lo só "zera" quem
 		// já foi visto hoje.
-		p_visitante: await hashVisitante(segredo, dia, b.chave || b.host.replace(/^www\./, ''), ip, ua),
+		p_visitante: visitante,
 		// Nome da página no painel; o banco só regrava quando muda.
 		p_titulo: b.titulo || null
 	});

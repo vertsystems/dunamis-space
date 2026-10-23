@@ -2,6 +2,7 @@
 	// DMetric — a página de um site (um cliente): os números só dele, na ordem
 	// em que se lê um relatório — quanto, quando, de onde, o quê e como.
 	import { goto, invalidateAll } from '$app/navigation';
+	import { navigating, page } from '$app/state';
 	import { Card } from '$lib/components/ui';
 	import MapaMundi from '$lib/components/dmetric/MapaMundi.svelte';
 	import LugaresDoSite from '$lib/components/dmetric/LugaresDoSite.svelte';
@@ -10,19 +11,25 @@
 	import HorariosPico from '$lib/components/dmetric/HorariosPico.svelte';
 	import ListaDimensao from '$lib/components/dmetric/ListaDimensao.svelte';
 	import AgoraNoSite from '$lib/components/dmetric/AgoraNoSite.svelte';
+	import FiltrosAtivos from '$lib/components/dmetric/FiltrosAtivos.svelte';
+	import Variacao from '$lib/components/dmetric/Variacao.svelte';
 	import {
 		PERIODOS,
 		RECENTES,
+		bandeira,
 		dataBr,
 		duracao,
 		enderecoDaPagina,
 		enderecoDoSite,
 		haQuanto,
 		nomeDoSite,
+		nomePais,
 		numero,
 		serieDoPeriodo,
-		serieRecente
+		serieRecente,
+		type ItemDimensao
 	} from '$lib/dmetric/painel';
+	import { buscaCom, buscaParaTodos, comSerieAnterior, semFiltros, type Comparacao, type DimensaoFiltro } from '$lib/dmetric/recorte';
 	import { ROTULO_FAIXA } from '$lib/dmetric/saude';
 	import { ArrowLeft, Eye, ExternalLink, Globe, HeartPulse, MousePointerClick, Timer, Tv, Users } from '@lucide/svelte';
 
@@ -33,14 +40,25 @@
 	const recente = $derived(!!RECENTES[data.periodo]);
 
 	// ---- Filtros (na URL: o link abre no mesmo recorte) ---------------------------
-	function filtrar(chave: 'periodo' | 'grafico', valor: string) {
-		const p = new URLSearchParams({ periodo: data.periodo });
-		if (data.grafico.id !== data.hoje.slice(0, 7)) p.set('grafico', data.grafico.id);
-		if (valor && !(chave === 'grafico' && valor === data.hoje.slice(0, 7))) p.set(chave, valor);
-		else p.delete(chave);
-		goto(`?${p}`, { keepFocus: true, noScroll: true, replaceState: true });
+	// O resto do endereço fica: trocar o período mantém os filtros e a comparação.
+	function filtrar(chave: 'periodo' | 'grafico' | 'comparar', valor: string) {
+		const padrao = (chave === 'grafico' && valor === data.hoje.slice(0, 7)) || (chave === 'comparar' && valor === 'anterior');
+		goto(buscaCom(page.url.searchParams, { [chave]: padrao ? null : valor }), { keepFocus: true, noScroll: true, replaceState: true });
 	}
-	const voltar = $derived(`/dtools/dmetric?periodo=${data.periodo}`);
+	// De volta ao painel de todos os sites, com o mesmo recorte.
+	const voltar = $derived(`/dtools/dmetric${buscaParaTodos(page.url.searchParams, data.site.id)}`);
+
+	// Clicar num item de uma lista filtra a página toda; clicar no item do filtro ligado tira o filtro.
+	const linkFiltro = (d: DimensaoFiltro, valor: string) =>
+		buscaCom(page.url.searchParams, { [d]: data.filtros[d] === valor ? null : valor });
+	const linkDo = (d: DimensaoFiltro) => (i: ItemDimensao) => linkFiltro(d, i.valor);
+	const ativoEm = (d: DimensaoFiltro) => (i: ItemDimensao) => data.filtros[d] === i.valor;
+	function rotularFiltro(d: DimensaoFiltro, v: string): string {
+		if (d === 'pais') return `${bandeira(v)} ${nomePais(v)}`;
+		if (d === 'pagina') return tituloDaPagina(v);
+		return v;
+	}
+	const carregando = $derived(!!navigating.to && navigating.to.url.pathname === page.url.pathname);
 
 	// Na última hora a página se atualiza sozinha, como o painel.
 	$effect(() => {
@@ -54,7 +72,7 @@
 	const tempoMedio = $derived(p.visitas ? (p.segundos ?? 0) / p.visitas : 0);
 	const porVisita = $derived(p.visitas ? p.visualizacoes / p.visitas : 0);
 	// O total de verdade (0088): a lista de destinos vem cortada nos 25 primeiros.
-	const cliques = $derived(p.totais?.clique?.visualizacoes ?? (p.dimensoes.clique ?? []).reduce((t, c) => t + c.visualizacoes, 0));
+	const cliques = $derived(p.cliques ?? p.totais?.clique?.visualizacoes ?? (p.dimensoes.clique ?? []).reduce((t, c) => t + c.visualizacoes, 0));
 	const cliqueMaior = $derived((p.dimensoes.clique ?? []).toSorted((a, b) => b.visualizacoes - a.visualizacoes)[0]);
 	const nPaises = $derived(data.lugares.paises.length);
 	const nCidades = $derived(data.lugares.cidades.length);
@@ -63,11 +81,37 @@
 	const paises = $derived(new Map(data.lugares.paises.map((x) => [x.pais, x.visitas])));
 	let paisesAgora = $state<string[]>([]);
 
-	const serie = $derived(
+	const serieAtual = $derived(
 		recente
 			? serieRecente(p.serie ?? [])
-			: serieDoPeriodo(data.porDia, data.grafico.de, data.grafico.ate, data.hoje, data.primeiroDia)
+			: serieDoPeriodo(data.porDia, data.grafico.de, data.grafico.ate, data.hoje, data.primeiroGrafico)
 	);
+	// A linha tracejada: a série de antes, ponto a ponto com a de agora.
+	const serieAntes = $derived(
+		recente
+			? data.serieAnterior
+				? serieRecente(data.serieAnterior)
+				: null
+			: data.porDiaAnterior && data.graficoAnterior
+				? serieDoPeriodo(data.porDiaAnterior, data.graficoAnterior.de, data.graficoAnterior.ate, data.hoje, data.primeiroGrafico)
+				: null
+	);
+	const serie = $derived(serieAntes ? comSerieAnterior(serieAtual, serieAntes) : serieAtual);
+	const legenda = $derived(
+		!data.comparativo
+			? null
+			: recente
+				? { atual: data.periodo === '1h' ? 'esta hora' : 'estas 24 horas', anterior: data.comparativo.descricao }
+				: data.graficoAnterior
+					? { atual: data.grafico.rotulo.replace(/^ano de /, ''), anterior: data.graficoAnterior.rotulo }
+					: null
+	);
+
+	// ---- Comparação ------------------------------------------------------------------
+	const antes = $derived(data.comparativo?.numeros ?? null);
+	const dicaAntes = (n: string) => `Antes: ${n} · ${data.comparativo?.descricao} (${data.comparativo?.datas})`;
+	const tempoAntes = $derived(antes && antes.visitas ? antes.segundos / antes.visitas : 0);
+	const eventosComparaveis = $derived(!!antes && !data.comparativo?.semEventos);
 	const visitasDoGrafico = $derived(data.porDia.reduce((t, d) => t + d.visitas, 0));
 	const tituloSerie = $derived(
 		data.periodo === '1h' ? 'Visitas a cada 5 minutos' : data.periodo === '24h' ? 'Visitas por hora' : 'Visitas por dia'
@@ -136,19 +180,38 @@
 	</div>
 </div>
 
+<!-- O recorte: os filtros ligados e com o que comparar (presa no topo, com filtro). -->
+<FiltrosAtivos
+	filtros={data.filtros}
+	rotular={rotularFiltro}
+	comparacao={data.comparacao}
+	podeComparar={data.periodo !== 'tudo'}
+	oncomparar={(c: Comparacao) => filtrar('comparar', c)}
+	nota={data.nota}
+/>
+
+<div class="transition-opacity duration-150 {carregando ? 'opacity-60' : ''}" aria-busy={carregando}>
 <!-- Os números do período -->
 <div class="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
 	{#each [
-		{ rotulo: 'Visitas', valor: numero(p.visitas), nota: recente ? 'pessoas diferentes no período' : 'cada pessoa conta uma vez por dia', icon: Users },
-		{ rotulo: 'Páginas vistas', valor: numero(p.visualizacoes), nota: porVisita ? `${decimal(porVisita)} por visita` : 'nenhuma ainda', icon: Eye },
-		{ rotulo: 'Tempo médio', valor: tempoMedio ? duracao(tempoMedio) : '—', nota: 'na tela, por visita', icon: Timer },
-		{ rotulo: 'Cliques', valor: numero(cliques), nota: cliqueMaior ? `mais em ${cliqueMaior.valor}` : 'em WhatsApp, links e botões', icon: MousePointerClick },
-		{ rotulo: 'Lugares', valor: `${numero(nPaises)} ${nPaises === 1 ? 'país' : 'países'}`, nota: `${numero(nCidades)} ${nCidades === 1 ? 'cidade' : 'cidades'}`, icon: Globe }
+		{ rotulo: 'Visitas', valor: numero(p.visitas), nota: recente ? 'pessoas diferentes no período' : 'cada pessoa conta uma vez por dia', icon: Users,
+			atual: p.visitas, antes: antes?.visitas ?? null, dica: antes ? dicaAntes(`${numero(antes.visitas)} visitas`) : '' },
+		{ rotulo: 'Páginas vistas', valor: numero(p.visualizacoes), nota: porVisita ? `${decimal(porVisita)} por visita` : 'nenhuma ainda', icon: Eye,
+			atual: p.visualizacoes, antes: antes?.visualizacoes ?? null, dica: antes ? dicaAntes(`${numero(antes.visualizacoes)} páginas vistas`) : '' },
+		{ rotulo: 'Tempo médio', valor: tempoMedio ? duracao(tempoMedio) : '—', nota: 'na tela, por visita', icon: Timer,
+			atual: tempoMedio, antes: eventosComparaveis && tempoAntes ? tempoAntes : null, dica: dicaAntes(`${duracao(tempoAntes)} por visita`) },
+		{ rotulo: 'Cliques', valor: numero(cliques), nota: cliqueMaior ? `mais em ${cliqueMaior.valor}` : 'em WhatsApp, links e botões', icon: MousePointerClick,
+			atual: cliques, antes: eventosComparaveis ? (antes?.cliques ?? null) : null, dica: antes ? dicaAntes(`${numero(antes.cliques)} cliques`) : '' },
+		{ rotulo: 'Lugares', valor: `${numero(nPaises)} ${nPaises === 1 ? 'país' : 'países'}`, nota: `${numero(nCidades)} ${nCidades === 1 ? 'cidade' : 'cidades'}`, icon: Globe,
+			atual: 0, antes: null, dica: '' }
 	] as t (t.rotulo)}
 		{@const Ico = t.icon}
 		<Card padding="sm">
 			<p class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-grey"><Ico size={13} />{t.rotulo}</p>
-			<p class="mt-1.5 truncate text-2xl font-bold tabular-nums text-navy-900">{t.valor}</p>
+			<div class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+				<p class="truncate text-2xl font-bold tabular-nums text-navy-900">{t.valor}</p>
+				{#if t.antes !== null}<Variacao atual={t.atual} anterior={t.antes} dica={t.dica} />{/if}
+			</div>
 			<p class="mt-0.5 truncate text-[11px] text-grey" title={t.nota}>{t.nota}</p>
 		</Card>
 	{/each}
@@ -168,8 +231,16 @@
 
 {#if !temVisitas && !data.porDia.length}
 	<Card class="border-dashed py-10 text-center">
-		<p class="text-sm font-medium text-navy">Este site ainda não teve visitas neste período.</p>
-		<p class="mx-auto mt-1 max-w-md text-xs text-grey">Escolha um período maior no canto de cima, ou confira se o código do DMetric está no site.</p>
+		{#if data.filtrado}
+			<p class="text-sm font-medium text-navy">Nenhuma visita com estes filtros neste período.</p>
+			<p class="mx-auto mt-1 max-w-md text-xs text-grey">Experimente um período maior ou tire um dos filtros.</p>
+			<a href={semFiltros(page.url.searchParams)} data-sveltekit-noscroll class="mt-3 inline-block text-sm font-medium text-brand hover:underline">
+				Limpar filtros
+			</a>
+		{:else}
+			<p class="text-sm font-medium text-navy">Este site ainda não teve visitas neste período.</p>
+			<p class="mx-auto mt-1 max-w-md text-xs text-grey">Escolha um período maior no canto de cima, ou confira se o código do DMetric está no site.</p>
+		{/if}
 	</Card>
 {:else}
 	<!-- Quando: a linha do tempo, com o próprio mês ou calendário -->
@@ -197,21 +268,34 @@
 				/>
 			{/if}
 		</div>
-		<LinhaDoTempo {serie} />
+		<LinhaDoTempo
+			{serie}
+			{legenda}
+			textoSemDados={data.filtrado && data.primeiroGrafico ? `com filtro, a contagem começa em ${dataBr(data.primeiroGrafico).slice(0, 5)}` : null}
+		/>
 	</Card>
 
 	<!-- De onde: o mapa e, ao lado, cada país com as suas cidades -->
 	<div class="mb-5 grid grid-cols-1 gap-5 lg:grid-cols-5">
 		<Card class="lg:col-span-3">
 			<h2 class="mb-3 text-base font-bold text-navy">De onde vêm as visitas</h2>
-			<MapaMundi valores={paises} pulsando={paisesAgora} />
+			<MapaMundi
+				valores={paises}
+				pulsando={paisesAgora}
+				onescolher={(iso) => goto(linkFiltro('pais', iso), { noScroll: true, keepFocus: true })}
+			/>
 		</Card>
 		<Card class="flex flex-col lg:col-span-2">
 			<h2 class="mb-3 flex items-baseline justify-between text-base font-bold text-navy">
 				Países e cidades
 				<span class="text-xs font-medium text-grey">{numero(nPaises)} · {numero(nCidades)}</span>
 			</h2>
-			<LugaresDoSite lugares={data.lugares} />
+			<LugaresDoSite
+				lugares={data.lugares}
+				link={linkFiltro}
+				pais={data.filtros.pais ?? null}
+				cidade={data.filtros.cidade ?? null}
+			/>
 		</Card>
 	</div>
 
@@ -233,18 +317,23 @@
 			medida="visualizacoes"
 			rotular={tituloDaPagina}
 			detalhe={enderecoDoItem}
+			link={linkDo('pagina')}
+			ativo={ativoEm('pagina')}
 		/>
-		<ListaDimensao titulo="De onde chegaram" itens={p.dimensoes.origem} total={p.totais?.origem?.n} />
+		<ListaDimensao titulo="De onde chegaram" itens={p.dimensoes.origem} total={p.totais?.origem?.n} link={linkDo('origem')} ativo={ativoEm('origem')} />
 		<ListaDimensao
 			titulo="Cliques"
 			itens={p.dimensoes.clique} total={p.totais?.clique?.n}
 			medida="visualizacoes"
 			rotuloMedida="Cliques"
 			vazio="Nenhum clique em WhatsApp, telefone ou link para fora."
+			link={linkDo('clique')}
+			ativo={ativoEm('clique')}
 		/>
-		<ListaDimensao titulo="Campanhas" itens={p.dimensoes.campanha} total={p.totais?.campanha?.n} vazio="Nenhum link com utm_campaign neste período." />
-		<ListaDimensao titulo="Aparelhos" itens={p.dimensoes.dispositivo} total={p.totais?.dispositivo?.n} />
-		<ListaDimensao titulo="Navegadores" itens={p.dimensoes.navegador} total={p.totais?.navegador?.n} />
-		<ListaDimensao titulo="Sistemas" itens={p.dimensoes.sistema} total={p.totais?.sistema?.n} />
+		<ListaDimensao titulo="Campanhas" itens={p.dimensoes.campanha} total={p.totais?.campanha?.n} vazio="Nenhum link com utm_campaign neste período." link={linkDo('campanha')} ativo={ativoEm('campanha')} />
+		<ListaDimensao titulo="Aparelhos" itens={p.dimensoes.dispositivo} total={p.totais?.dispositivo?.n} link={linkDo('dispositivo')} ativo={ativoEm('dispositivo')} />
+		<ListaDimensao titulo="Navegadores" itens={p.dimensoes.navegador} total={p.totais?.navegador?.n} link={linkDo('navegador')} ativo={ativoEm('navegador')} />
+		<ListaDimensao titulo="Sistemas" itens={p.dimensoes.sistema} total={p.totais?.sistema?.n} link={linkDo('sistema')} ativo={ativoEm('sistema')} />
 	</div>
 {/if}
+</div>

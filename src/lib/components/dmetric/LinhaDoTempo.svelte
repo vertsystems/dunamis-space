@@ -6,9 +6,24 @@
 	// Dias `semDados` (antes de o script começar a contar) não são zero: ficam
 	// numa faixa hachurada, sem linha. Dias `futuro` (do período que ainda não
 	// chegaram) ficam em branco: a linha para em hoje.
+	//
+	// Comparando, cada ponto traz o `anterior` (o de mesma posição no período de
+	// comparação): uma linha cinza tracejada, que segue mesmo nos dias que ainda
+	// não chegaram — é o que o período de antes fez neles. Com duas linhas, a
+	// legenda embaixo diz qual é qual.
 	import { numero, type PontoSerie } from '$lib/dmetric/painel';
 
-	let { serie }: { serie: PontoSerie[] } = $props();
+	let {
+		serie,
+		legenda = null,
+		textoSemDados = null
+	}: {
+		serie: PontoSerie[];
+		/** Os nomes das duas linhas ("outubro de 2026", "setembro de 2026"). */
+		legenda?: { atual: string; anterior: string } | null;
+		/** A frase da faixa hachurada, no lugar de "o DMetric começou a contar em…". */
+		textoSemDados?: string | null;
+	} = $props();
 
 	const uid = $props.id();
 	let largura = $state(0);
@@ -22,7 +37,7 @@
 		for (const m of [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) if (m * p >= v) return m * p;
 		return 10 * p;
 	}
-	const maxY = $derived(teto(Math.max(0, ...serie.map((s) => s.visitas))));
+	const maxY = $derived(teto(Math.max(0, ...serie.map((s) => Math.max(s.visitas, s.anterior?.visitas ?? 0)))));
 	const x = (i: number) => M.l + (serie.length < 2 ? 0.5 : i / (serie.length - 1)) * (largura - M.l - M.r);
 	const y = (v: number) => M.t + (1 - v / maxY) * (ALTURA - M.t - M.b);
 
@@ -35,6 +50,20 @@
 		contados.map((s, k) => `${k ? 'L' : 'M'}${x(inicio + k).toFixed(1)},${y(s.visitas).toFixed(1)}`).join('')
 	);
 	const area = $derived(contados.length ? `${linha}L${x(fim).toFixed(1)},${y(0)}L${x(inicio).toFixed(1)},${y(0)}Z` : '');
+
+	// A linha de antes: um trecho por sequência de pontos com dados.
+	const comAnterior = $derived(serie.some((s) => s.anterior));
+	const linhaAnterior = $derived(
+		serie
+			.map((s, i) =>
+				s.anterior ? `${serie[i - 1]?.anterior ? 'L' : 'M'}${x(i).toFixed(1)},${y(s.anterior.visitas).toFixed(1)}` : ''
+			)
+			.join('')
+	);
+	// Um ponto de antes isolado (sem vizinho) não forma traço: vira marca.
+	const soltosAnterior = $derived(
+		serie.map((s, i) => (s.anterior && !serie[i - 1]?.anterior && !serie[i + 1]?.anterior ? i : -1)).filter((i) => i >= 0)
+	);
 
 	// A faixa "sem dados" vai do começo até o primeiro dia contado (ou até o
 	// último dia sem dados, se o período inteiro é de antes do script).
@@ -102,7 +131,8 @@
 					<text x={meio} y={(M.t + y(0)) / 2} text-anchor="middle" class="fill-grey text-[11px]">
 						<tspan x={meio} class="font-semibold">Sem dados</tspan>
 						<tspan x={meio} dy="15">
-							{primeiroContado ? `o DMetric começou a contar em ${primeiroContado.rotulo.slice(5)}` : 'o DMetric ainda não contava'}
+							{textoSemDados ??
+								(primeiroContado ? `o DMetric começou a contar em ${primeiroContado.rotulo.slice(5)}` : 'o DMetric ainda não contava')}
 						</tspan>
 					</text>
 				{/if}
@@ -124,6 +154,12 @@
 							: 'fill-grey'}">{serie[i]?.eixo ?? serie[i]?.rotulo ?? ''}</text
 				>
 			{/each}
+			{#if comAnterior}
+				<path d={linhaAnterior} fill="none" stroke="#98a2b3" stroke-width="1.5" stroke-dasharray="4 4" stroke-linejoin="round" stroke-linecap="round" />
+				{#each soltosAnterior as i (i)}
+					<circle cx={x(i)} cy={y(serie[i].anterior?.visitas ?? 0)} r="3" fill="#98a2b3" />
+				{/each}
+			{/if}
 			<path d={area} fill="#2a78d6" fill-opacity="0.10" />
 			<path d={linha} fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
 			<!-- Um ponto só não forma linha: o dia aparece como marca. -->
@@ -132,6 +168,9 @@
 			{/if}
 			{#if mira !== null && serie[mira]}
 				<line x1={x(mira)} x2={x(mira)} y1={M.t} y2={y(0)} stroke="#98a2b3" stroke-width="1" />
+				{#if serie[mira].anterior}
+					<circle cx={x(mira)} cy={y(serie[mira].anterior?.visitas ?? 0)} r="3.5" fill="#98a2b3" stroke="#ffffff" stroke-width="2" />
+				{/if}
 				{#if !serie[mira].semDados && !serie[mira].futuro}
 					<circle cx={x(mira)} cy={y(serie[mira].visitas)} r="4" fill="#2a78d6" stroke="#ffffff" stroke-width="2" />
 				{/if}
@@ -153,7 +192,28 @@
 					<p class="text-sm font-bold tabular-nums text-navy-900">{numero(s.visitas)} {s.visitas === 1 ? 'visita' : 'visitas'}</p>
 					<p class="text-xs tabular-nums text-slate">{numero(s.visualizacoes)} páginas vistas · {s.rotulo}{s.hoje ? ' (hoje, até agora)' : ''}</p>
 				{/if}
+				{#if s.anterior}
+					<p class="mt-1 flex items-center gap-1.5 border-t border-grey-200 pt-1 text-xs tabular-nums text-slate">
+						<svg width="14" height="2" aria-hidden="true"><line x1="0" y1="1" x2="14" y2="1" stroke="#98a2b3" stroke-width="2" stroke-dasharray="3 2" /></svg>
+						antes: <span class="font-semibold text-navy-900">{numero(s.anterior.visitas)}</span>
+						{s.anterior.visitas === 1 ? 'visita' : 'visitas'} · {s.anterior.rotulo}
+					</p>
+				{/if}
 			</div>
 		{/if}
 	{/if}
 </div>
+
+{#if comAnterior && legenda}
+	<!-- Duas linhas: a legenda diz qual é qual (a cor nunca fala sozinha). -->
+	<div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate" aria-label="Legenda do gráfico">
+		<span class="inline-flex items-center gap-1.5">
+			<svg width="18" height="2" aria-hidden="true"><line x1="0" y1="1" x2="18" y2="1" stroke="#2a78d6" stroke-width="2" /></svg>
+			{legenda.atual}
+		</span>
+		<span class="inline-flex items-center gap-1.5">
+			<svg width="18" height="2" aria-hidden="true"><line x1="0" y1="1" x2="18" y2="1" stroke="#98a2b3" stroke-width="2" stroke-dasharray="4 3" /></svg>
+			{legenda.anterior}
+		</span>
+	</div>
+{/if}

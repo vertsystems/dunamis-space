@@ -1,7 +1,10 @@
 <script lang="ts">
 	// Uma lista "top" de uma dimensão (páginas, origens, cidades, aparelhos…).
+	// Com `link`, cada item filtra o painel inteiro por ele (e o item do filtro
+	// ligado fica marcado, com o × para tirar).
 	import { numero, type ItemDimensao } from '$lib/dmetric/painel';
 	import { Card } from '$lib/components/ui';
+	import { X } from '@lucide/svelte';
 
 	let {
 		titulo,
@@ -11,7 +14,9 @@
 		vazio = 'Nada ainda neste período.',
 		rotular = (v: string) => v || '(não identificado)',
 		detalhe,
-		total
+		total,
+		link,
+		ativo
 	}: {
 		titulo: string;
 		itens: ItemDimensao[] | undefined;
@@ -25,6 +30,10 @@
 		detalhe?: (item: ItemDimensao) => string | null;
 		/** Quantos itens a lista tem de verdade (PainelDados.totais): ela vem cortada nos primeiros. */
 		total?: number;
+		/** O endereço que filtra por este item (ou tira o filtro, se é o ligado); null = não filtra. */
+		link?: (item: ItemDimensao) => string | null;
+		/** O item é o do filtro ligado? */
+		ativo?: (item: ItemDimensao) => boolean;
 	} = $props();
 
 	const linhas = $derived((itens ?? []).filter((i) => i[medida] > 0).sort((a, b) => b[medida] - a[medida]));
@@ -48,16 +57,27 @@
 			{#each visiveis as l (`${l.site_id ?? ''}|${l.valor}`)}
 				{@const nome = rotular(l.valor, l)}
 				{@const sub = detalhe?.(l)}
-				<li class="relative overflow-hidden rounded-[var(--radius-sm)] px-2 py-1">
+				{@const href = l.valor ? link?.(l) : null}
+				{@const marcado = !!ativo?.(l)}
+				<li class="relative overflow-hidden rounded-[var(--radius-sm)] {marcado ? 'ring-1 ring-brand/40' : ''}">
 					<!-- Fundo proporcional ao maior da lista. -->
-					<div class="absolute inset-y-0 left-0 rounded-[var(--radius-sm)] bg-[#2a78d6]/10" style="width: {(l[medida] / maior) * 100}%"></div>
-					<div class="relative flex items-baseline gap-2 text-xs">
-						<span class="min-w-0 flex-1 truncate text-navy" title={sub ? `${nome} — ${sub}` : nome}>
+					<div class="pointer-events-none absolute inset-y-0 left-0 rounded-[var(--radius-sm)] {marcado ? 'bg-brand/20' : 'bg-[#2a78d6]/10'}" style="width: {(l[medida] / maior) * 100}%"></div>
+					<svelte:element
+						this={href ? 'a' : 'div'}
+						href={href ?? undefined}
+						data-sveltekit-noscroll={href ? '' : undefined}
+						aria-label={href ? (marcado ? `Tirar o filtro ${nome}` : `Filtrar o painel por ${nome}: ${numero(l[medida])}`) : undefined}
+						class="relative flex items-baseline gap-2 px-2 py-1 text-xs {href
+							? 'rounded-[var(--radius-sm)] transition-colors hover:bg-[#2a78d6]/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30'
+							: ''}"
+					>
+						<span class="min-w-0 flex-1 truncate text-navy {marcado ? 'font-semibold' : ''}" title={sub ? `${nome} — ${sub}` : nome}>
 							{nome}
-							{#if sub}<span class="block truncate text-[10px] text-grey">{sub}</span>{/if}
+							{#if sub}<span class="block truncate text-[10px] font-normal text-grey">{sub}</span>{/if}
 						</span>
 						<span class="font-semibold tabular-nums text-navy-900">{numero(l[medida])}</span>
-					</div>
+						{#if marcado}<X size={12} class="shrink-0 self-center text-grey" />{/if}
+					</svelte:element>
 				</li>
 			{/each}
 		</ul>
