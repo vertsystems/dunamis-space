@@ -15,6 +15,7 @@
 	import Variacao from '$lib/components/dmetric/Variacao.svelte';
 	import Resultados from '$lib/components/dmetric/Resultados.svelte';
 	import BotoesDaPagina from '$lib/components/dmetric/BotoesDaPagina.svelte';
+	import PortaisDoSite from '$lib/components/dmetric/PortaisDoSite.svelte';
 	import { podeEditar } from '$lib/permissoes';
 	import {
 		PERIODOS,
@@ -355,4 +356,9 @@
 		<ListaDimensao titulo="Sistemas" itens={p.dimensoes.sistema} total={p.totais?.sistema?.n} link={linkDo('sistema')} ativo={ativoEm('sistema')} />
 	</div>
 {/if}
+</div>
+
+<!-- O link do cliente: fora do esmaecido (não depende do recorte). -->
+<div class="mt-5">
+	<PortaisDoSite portais={data.portais} podeEditar={podeEditar(data.permissoes, 'dmetric')} origem={data.origem} />
 </div>

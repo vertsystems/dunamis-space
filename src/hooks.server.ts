@@ -56,6 +56,9 @@ const authGuard: Handle = async ({ event, resolve }) => {
 		event.url.pathname === '/api/pagsup/limpeza' ||
 		event.url.pathname === '/api/sos/limpeza' ||
 		event.url.pathname === '/api/dmetric/robos' ||
+		event.url.pathname === '/api/dmetric/relatorios' ||
+		// Portal do cliente (DMetric): o link sem login; a página confere o token.
+		event.url.pathname.startsWith('/relatorio/') ||
 		// DMetric: quem chama é o navegador do visitante, num site de cliente.
 		event.url.pathname === '/api/dm';
 

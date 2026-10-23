@@ -22,6 +22,8 @@ import { janelaDoPeriodo, lerFiltros, temFiltro } from '$lib/dmetric/recorte';
 import { slugDoPageLinks } from '$lib/dmetric/botoes';
 import { botoesDaPagina } from '$lib/server/pagelinks';
 import { lerMetas, metasDoSite, opcoesDeMeta } from '$lib/dmetric/resultados';
+import { lerPeriodoPortal, novoToken, type Portal } from '$lib/dmetric/portal';
+import { normalizaWhatsApp } from '$lib/pagsup/whatsapp';
 import { SAUDE_VAZIA, saudePorSite, type SaudeDados } from '$lib/dmetric/saude';
 import { carregarRecorte, notaDoRecorte } from '$lib/server/dmetricRecorte';
 import type { Actions, PageServerLoad } from './$types';
@@ -46,7 +48,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, params, url }
 	const filtrado = temFiltro(lerFiltros(url.searchParams));
 	const agoraMesmo = new Date();
 
-	const [painel, lugares, porDia, agora, titulos, saude, robos, metas, destinos, recorte] = await Promise.all([
+	const [painel, lugares, porDia, agora, titulos, saude, robos, metas, destinos, portais, recorte] = await Promise.all([
 		filtrado
 			? null
 			: recente
@@ -62,6 +64,12 @@ export const load: PageServerLoad = async ({ locals: { supabase }, params, url }
 		// O que conta como resultado neste site (0093) e os destinos para escolher.
 		supabase.from('dmetric_metas').select('valor').eq('site_id', id).order('criado_em'),
 		supabase.rpc('dmetric_destinos_do_site', { p_site: id }),
+		// Os links do cliente (0094) — o hash da senha nem é legível pelo app.
+		supabase
+			.from('dmetric_portais')
+			.select('id, site_id, token, contato, com_senha, periodo, ativo, whatsapp, relatorio_mensal, acessos, ultimo_acesso, criado_em')
+			.eq('site_id', id)
+			.order('criado_em'),
 		carregarRecorte(supabase, { site: id, siteFixo: true, periodo, hoje, agora: agoraMesmo, busca: url.searchParams, grafico })
 	]);
 	for (const [nome, r] of [
@@ -71,7 +79,8 @@ export const load: PageServerLoad = async ({ locals: { supabase }, params, url }
 		['saude', saude],
 		['robos', robos],
 		['metas', metas],
-		['destinos', destinos]
+		['destinos', destinos],
+		['portais', portais]
 	] as const)
 		if (r?.error) console.error(`[dmetric] site ${nome}`, r.error.message);
 
@@ -111,7 +120,9 @@ export const load: PageServerLoad = async ({ locals: { supabase }, params, url }
 		metas: escolhidas.metas,
 		metasPadrao: escolhidas.padrao,
 		opcoesMetas: opcoesDeMeta((destinos.data ?? []) as { valor: string; cliques: number }[], escolhidas.padrao ? [] : escolhidas.metas),
-		botoes: slug ? botoesDaPagina(slug, janela.desde, janela.ate) : null
+		botoes: slug ? botoesDaPagina(slug, janela.desde, janela.ate) : null,
+		portais: (portais.data ?? []) as Portal[],
+		origem: url.origin
 	};
 };
 
@@ -128,6 +139,60 @@ export const actions: Actions = {
 			const { error: e2 } = await locals.supabase.from('dmetric_metas').insert(metas.map((valor) => ({ site_id: params.id, valor })));
 			if (e2) return fail(500, { erro: e2.message });
 		}
+		return { ok: true };
+	},
+
+	// ---- O link do cliente (portal, 0094) ----
+	criarPortal: async ({ locals, params }) => {
+		exigirPermissao(locals, 'dmetric', 'editar');
+		if (!UUID.test(params.id)) return fail(400, { erro: 'Site inválido.' });
+		const { error: e } = await locals.supabase.from('dmetric_portais').insert({ site_id: params.id, token: novoToken() });
+		if (e) return fail(500, { erro: e.message });
+		return { ok: true };
+	},
+
+	salvarPortal: async ({ request, locals }) => {
+		exigirPermissao(locals, 'dmetric', 'editar');
+		const fd = await request.formData();
+		const id = String(fd.get('id') ?? '');
+		if (!UUID.test(id)) return fail(400, { erro: 'Link inválido.' });
+		const bruto = String(fd.get('whatsapp') ?? '').trim();
+		const whatsapp = bruto ? normalizaWhatsApp(bruto) : null;
+		if (bruto && !whatsapp) return fail(400, { erro: 'WhatsApp inválido: use o celular com DDD.' });
+		const relatorio = fd.get('relatorio_mensal') === 'on';
+		const { error: e } = await locals.supabase
+			.from('dmetric_portais')
+			.update({
+				periodo: lerPeriodoPortal(fd.get('periodo')),
+				contato: String(fd.get('contato') ?? '').trim().slice(0, 60) || null,
+				whatsapp,
+				// Sem número não há para onde mandar o resumo do mês.
+				relatorio_mensal: relatorio && !!whatsapp,
+				ativo: fd.get('ativo') === 'on'
+			})
+			.eq('id', id);
+		if (e) return fail(500, { erro: e.message });
+		return { ok: true };
+	},
+
+	senhaPortal: async ({ request, locals }) => {
+		exigirPermissao(locals, 'dmetric', 'editar');
+		const fd = await request.formData();
+		const id = String(fd.get('id') ?? '');
+		const senha = String(fd.get('senha') ?? '');
+		if (!UUID.test(id)) return fail(400, { erro: 'Link inválido.' });
+		if (senha && (senha.length < 4 || senha.length > 60)) return fail(400, { erro: 'A senha precisa ter de 4 a 60 caracteres.' });
+		const { error: e } = await locals.supabase.rpc('dmetric_portal_senha', { p_id: id, p_senha: senha || null });
+		if (e) return fail(500, { erro: e.message });
+		return { ok: true };
+	},
+
+	excluirPortal: async ({ request, locals }) => {
+		exigirPermissao(locals, 'dmetric', 'editar');
+		const id = String((await request.formData()).get('id') ?? '');
+		if (!UUID.test(id)) return fail(400, { erro: 'Link inválido.' });
+		const { error: e } = await locals.supabase.from('dmetric_portais').delete().eq('id', id);
+		if (e) return fail(500, { erro: e.message });
 		return { ok: true };
 	}
 };

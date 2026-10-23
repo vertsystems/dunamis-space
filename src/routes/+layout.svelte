@@ -211,7 +211,9 @@
 			page.url.pathname.startsWith('/aprovar') ||
 			page.url.pathname.startsWith('/pagamentos/') ||
 			// Modo TV do DMetric: a tela inteira é o painel.
-			page.url.pathname === '/dtools/dmetric/tv'
+			page.url.pathname === '/dtools/dmetric/tv' ||
+			// Portal do cliente do DMetric: a página é do cliente, sem o app.
+			page.url.pathname.startsWith('/relatorio/')
 	);
 
 	async function signOut() {

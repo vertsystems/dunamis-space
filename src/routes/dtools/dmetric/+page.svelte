@@ -18,6 +18,7 @@
 	import FiltrosAtivos from '$lib/components/dmetric/FiltrosAtivos.svelte';
 	import Variacao from '$lib/components/dmetric/Variacao.svelte';
 	import Resultados from '$lib/components/dmetric/Resultados.svelte';
+	import RelatoriosMensais from '$lib/components/dmetric/RelatoriosMensais.svelte';
 	import { podeEditar, podeExcluir } from '$lib/permissoes';
 	import {
 		PERIODOS,
@@ -46,17 +47,17 @@
 		type Comparacao,
 		type DimensaoFiltro
 	} from '$lib/dmetric/recorte';
-	import { ChartSpline, Globe, Eye, Users, MapPinned, Info, Timer, HeartPulse, Tv } from '@lucide/svelte';
+	import { ChartSpline, Globe, Eye, Users, MapPinned, Info, Timer, HeartPulse, Tv, MessageCircle } from '@lucide/svelte';
 
 	let { data } = $props();
 
 	// ---- Abas -----------------------------------------------------------------
-	type Aba = 'painel' | 'saude' | 'sites';
+	type Aba = 'painel' | 'saude' | 'sites' | 'relatorios';
 	const K_ABA = 'dmetric_aba';
 	function abaSalva(): Aba {
 		try {
 			const a = localStorage.getItem(K_ABA);
-			return a === 'sites' || a === 'saude' ? a : 'painel';
+			return a === 'sites' || a === 'saude' || a === 'relatorios' ? a : 'painel';
 		} catch {
 			return 'painel';
 		}
@@ -188,6 +189,8 @@
 	const nomePagina = (siteId: string, caminho: string) => tituloDaPagina(caminho, { site_id: siteId });
 
 	const podeEditarSites = $derived(podeEditar(data.permissoes, 'dmetric'));
+	/** Mensagens do mês esperando revisão: o número vai na aba. */
+	const pendentesRelatorio = $derived(data.relatorios.filter((r) => r.status === 'pendente').length);
 	const podeExcluirSites = $derived(podeExcluir(data.permissoes, 'dmetric'));
 
 	const selectCls =
@@ -207,7 +210,7 @@
 	<div class="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
 		<div class="flex flex-wrap items-center gap-2">
 		<nav class="inline-flex shrink-0 self-start rounded-full bg-bg p-0.5" aria-label="Seções do DMetric">
-			{#each [{ id: 'painel', label: 'Painel', icon: ChartSpline }, { id: 'saude', label: 'Saúde', icon: HeartPulse }, { id: 'sites', label: 'Sites', icon: Globe }] as const as item (item.id)}
+			{#each [{ id: 'painel', label: 'Painel', icon: ChartSpline }, { id: 'saude', label: 'Saúde', icon: HeartPulse }, { id: 'sites', label: 'Sites', icon: Globe }, { id: 'relatorios', label: 'Relatórios', icon: MessageCircle }] as const as item (item.id)}
 				{@const Ico = item.icon}
 				<button
 					type="button"
@@ -219,6 +222,7 @@
 				>
 					<Ico size={15} />{item.label}
 					{#if item.id === 'sites'}<span class="tabular-nums text-grey">({data.sites.length})</span>{/if}
+					{#if item.id === 'relatorios' && pendentesRelatorio}<span class="rounded-full bg-[#fff4e5] px-1.5 text-[11px] font-bold tabular-nums text-[#9a6b16]">{pendentesRelatorio}</span>{/if}
 				</button>
 			{/each}
 		</nav>
@@ -227,7 +231,7 @@
 		{/if}
 		</div>
 
-		{#if aba !== 'sites'}
+		{#if aba === 'painel' || aba === 'saude'}
 			<div class="flex flex-wrap items-center gap-2">
 				<!-- Modo TV: só o ícone; a explicação aparece ao passar o mouse (ou focar). -->
 				<a
@@ -267,6 +271,14 @@
 
 	{#if aba === 'sites'}
 		<Sites sites={data.sites} historico={data.resumoHistorico} podeEditar={podeEditarSites} podeExcluir={podeExcluirSites} />
+	{:else if aba === 'relatorios'}
+		<RelatoriosMensais
+			relatorios={data.relatorios}
+			recebem={data.recebem}
+			sites={data.sites}
+			mesPadrao={data.mesRelatorio}
+			podeEditar={podeEditarSites}
+		/>
 	{:else if aba === 'saude'}
 		<Saude saude={data.saude} sites={data.sites} />
 	{:else}

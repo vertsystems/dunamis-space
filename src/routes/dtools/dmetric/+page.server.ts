@@ -1,5 +1,6 @@
 // DMetric — painel de acessos dos sites (ver supabase/migrations/0072_dmetric.sql).
 import { fail } from '@sveltejs/kit';
+import { env } from '$env/dynamic/private';
 import { exigirPermissao } from '$lib/server/permissao';
 import { diaEmBrasilia } from '$lib/dmetric/coleta';
 import {
@@ -20,6 +21,7 @@ import {
 import { lerFiltros, temFiltro } from '$lib/dmetric/recorte';
 import { SAUDE_VAZIA, saudePorSite, type SaudeDados } from '$lib/dmetric/saude';
 import { carregarRecorte, notaDoRecorte } from '$lib/server/dmetricRecorte';
+import { mesAnterior, prepararRelatorios } from '$lib/server/dmetricRelatorios';
 import type { Actions, PageServerLoad } from './$types';
 
 const VAZIO: PainelDados = { visitas: 0, visualizacoes: 0, por_dia: [], dimensoes: {} };
@@ -47,7 +49,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	// contadores ficam de fora; a comparação vale com ou sem filtro.
 	const filtrado = temFiltro(lerFiltros(url.searchParams));
 
-	const [sites, historico, painel, porSite, titulos, porSite30, agora, saude, porDia, robos, recorte] = await Promise.all([
+	const [sites, historico, painel, porSite, titulos, porSite30, agora, saude, porDia, robos, relatorios, recebem, recorte] = await Promise.all([
 		supabase.from('dmetric_sites').select('*').order('nome'),
 		supabase
 			.from('dmetric_historico')
@@ -76,6 +78,17 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		filtrado ? null : supabase.rpc('dmetric_por_dia', { p_site: site, p_de: grafico.de, p_ate: grafico.ate }),
 		// Os robôs que ficaram de fora no período (0092).
 		supabase.rpc('dmetric_robos_resumo', { p_site: site, p_de: de, p_ate: ate }),
+		// A aba Relatórios (0094): as mensagens dos meses e quantos clientes recebem.
+		supabase
+			.from('dmetric_relatorios')
+			.select('id, mes, mensagem, status, enviado_em, portal:dmetric_portais(id, contato, whatsapp, site_id)')
+			.order('mes', { ascending: false })
+			.limit(300),
+		supabase
+			.from('dmetric_portais')
+			.select('id', { count: 'exact', head: true })
+			.eq('relatorio_mensal', true)
+			.eq('ativo', true),
 		// O primeiro dia contado, o painel filtrado e a comparação.
 		carregarRecorte(supabase, { site, siteFixo: false, periodo, hoje, agora: new Date(), busca: url.searchParams, grafico })
 	]);
@@ -87,6 +100,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	if (saude.error) console.error('[dmetric] saude', saude.error.message);
 	if (porDia?.error) console.error('[dmetric] por dia', porDia.error.message);
 	if (robos.error) console.error('[dmetric] robos', robos.error.message);
+	if (relatorios.error) console.error('[dmetric] relatorios', relatorios.error.message);
 	const primeiroDia = recorte.primeiroDia;
 
 	return {
@@ -123,7 +137,17 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		porDiaAnterior: recorte.porDiaAnterior,
 		graficoAnterior: recorte.graficoAnterior,
 		robos: (robos.data ?? []) as { rede: string; acessos: number }[],
-		conversao: recorte.conversao
+		conversao: recorte.conversao,
+		relatorios: (relatorios.data ?? []) as unknown as {
+			id: string;
+			mes: string;
+			mensagem: string;
+			status: 'pendente' | 'enviado' | 'ignorado';
+			enviado_em: string | null;
+			portal: { id: string; contato: string | null; whatsapp: string | null; site_id: string } | null;
+		}[],
+		recebem: recebem.count ?? 0,
+		mesRelatorio: mesAnterior(hoje)
 	};
 };
 
@@ -176,6 +200,49 @@ export const actions: Actions = {
 		const ativo = fd.get('ativo') === 'true';
 		if (!UUID.test(id)) return fail(400, { erro: 'Site inválido.' });
 		const { error } = await locals.supabase.from('dmetric_sites').update({ ativo }).eq('id', id);
+		if (error) return fail(500, { erro: error.message });
+		return { ok: true };
+	},
+
+	// ---- Relatório do mês pelo WhatsApp (0094) ----
+	// Prepara agora as mensagens de um mês (o cron faz isso sozinho no dia 1º).
+	prepararRelatorios: async ({ request, locals, url }) => {
+		exigirPermissao(locals, 'dmetric', 'editar');
+		const mes = String((await request.formData()).get('mes') ?? '');
+		if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mes) || mes > diaEmBrasilia().slice(0, 7)) return fail(400, { erro: 'Mês inválido.' });
+		const segredo = env.DMETRIC_SEGREDO;
+		if (!segredo) return fail(500, { erro: 'Falta a configuração do DMetric.' });
+		const r = await prepararRelatorios(locals.supabase, segredo, mes, url.origin);
+		if (r.erro) return fail(500, { erro: r.erro });
+		return { ok: true, novas: r.novas };
+	},
+
+	// Abriu no WhatsApp: guarda o texto como foi e marca como enviado.
+	enviarRelatorio: async ({ request, locals }) => {
+		exigirPermissao(locals, 'dmetric', 'editar');
+		const fd = await request.formData();
+		const id = String(fd.get('id') ?? '');
+		const mensagem = String(fd.get('mensagem') ?? '').trim().slice(0, 4000);
+		if (!UUID.test(id) || !mensagem) return fail(400, { erro: 'Relatório inválido.' });
+		const { data: usuario } = await locals.supabase.auth.getUser();
+		const { error } = await locals.supabase
+			.from('dmetric_relatorios')
+			.update({ mensagem, status: 'enviado', enviado_em: new Date().toISOString(), enviado_por: usuario.user?.id ?? null })
+			.eq('id', id);
+		if (error) return fail(500, { erro: error.message });
+		return { ok: true };
+	},
+
+	statusRelatorio: async ({ request, locals }) => {
+		exigirPermissao(locals, 'dmetric', 'editar');
+		const fd = await request.formData();
+		const id = String(fd.get('id') ?? '');
+		const status = String(fd.get('status') ?? '');
+		if (!UUID.test(id) || !['pendente', 'ignorado'].includes(status)) return fail(400, { erro: 'Pedido inválido.' });
+		const { error } = await locals.supabase
+			.from('dmetric_relatorios')
+			.update({ status, ...(status === 'pendente' ? { enviado_em: null, enviado_por: null } : {}) })
+			.eq('id', id);
 		if (error) return fail(500, { erro: error.message });
 		return { ok: true };
 	},
