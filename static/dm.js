@@ -176,20 +176,59 @@
 		if (fonte.media && window.matchMedia && !matchMedia(fonte.media).matches) return true;
 		return !!(fonte.type && midia && midia.canPlayType && !midia.canPlayType(fonte.type));
 	}
+	function proximaOpcao(fonte) {
+		for (var f = fonte.nextElementSibling; f; f = f.nextElementSibling) {
+			if (f.tagName === 'SOURCE' && !fontePulada(f)) return true;
+		}
+		return false;
+	}
+	// Vídeo que falhou vem com código 0 na lista de arquivos do Chrome (nem o 404
+	// aparece): pergunta ao servidor, uma vez, se o arquivo existe. Só no próprio site.
+	var perguntados = {};
+	function conferirSeExiste(src) {
+		if (perguntados[src] || !window.fetch || src.indexOf(location.origin + '/') !== 0) return;
+		perguntados[src] = 1;
+		fetch(src, { method: 'HEAD' }).then(
+			function (r) {
+				if (r.status === 404 || r.status === 410) arquivoQuebrado(src);
+			},
+			function () {}
+		);
+	}
+	// Imagem quebrada no Chrome: o currentSrc vem como está no HTML
+	// ("/img/x.webp"), sem o domínio. Completa antes de conferir o http.
+	function absoluto(src) {
+		try {
+			return src ? new URL(src, document.baseURI).href : '';
+		} catch (e) {
+			return src || '';
+		}
+	}
+	function arquivoQuebrado(src) {
+		if (/^https?:/.test(src)) erro(src, src, true);
+	}
+	// Opção que o navegador tentou e não conseguiu (a rede caiu no meio, o
+	// aparelho diz que toca AV1 e não toca): com outra opção depois, o vídeo
+	// segue por ela e a pessoa vê o vídeo. Só conta se o arquivo nem existe, ou
+	// quando a última também falha — aí ficou sem vídeo, e cada opção tentada conta.
+	function fonteFalhou(fonte) {
+		if (fontePulada(fonte)) return;
+		var src = absoluto(fonte.src);
+		if (proximaOpcao(fonte)) return conferirSeExiste(src);
+		var f = fonte.parentNode ? fonte.parentNode.firstElementChild : null;
+		for (; f && f !== fonte; f = f.nextElementSibling) {
+			if (f.tagName === 'SOURCE' && !fontePulada(f)) arquivoQuebrado(absoluto(f.src));
+		}
+		arquivoQuebrado(src);
+	}
 	addEventListener(
 		'error',
 		function (e) {
 			var el = e.target;
 			if (el && el !== window && el.tagName) {
 				// Imagem, script, estilo ou vídeo que não carregou.
-				if (el.tagName === 'SOURCE' && fontePulada(el)) return;
-				var src = el.currentSrc || el.src || el.href;
-				// Imagem quebrada no Chrome: o currentSrc vem como está no HTML
-				// ("/img/x.webp"), sem o domínio. Completa antes de conferir o http.
-				try {
-					if (src) src = new URL(src, document.baseURI).href;
-				} catch (e2) {}
-				if (/^(IMG|SCRIPT|LINK|VIDEO|AUDIO|SOURCE)$/.test(el.tagName) && /^https?:/.test(src || '')) erro(src, src, true);
+				if (el.tagName === 'SOURCE') return fonteFalhou(el);
+				if (/^(IMG|SCRIPT|LINK|VIDEO|AUDIO)$/.test(el.tagName)) arquivoQuebrado(absoluto(el.currentSrc || el.src || el.href));
 				return;
 			}
 			// Script de extensão do navegador não é do site.
