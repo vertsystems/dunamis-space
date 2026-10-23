@@ -188,6 +188,7 @@
 	podeComparar={data.periodo !== 'tudo'}
 	oncomparar={(c: Comparacao) => filtrar('comparar', c)}
 	nota={data.nota}
+	robos={data.robos}
 />
 
 <div class="transition-opacity duration-150 {carregando ? 'opacity-60' : ''}" aria-busy={carregando}>

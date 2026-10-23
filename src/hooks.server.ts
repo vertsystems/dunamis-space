@@ -55,6 +55,7 @@ const authGuard: Handle = async ({ event, resolve }) => {
 		// O cron da Vercel não tem sessão: as rotas conferem o CRON_SECRET sozinhas.
 		event.url.pathname === '/api/pagsup/limpeza' ||
 		event.url.pathname === '/api/sos/limpeza' ||
+		event.url.pathname === '/api/dmetric/robos' ||
 		// DMetric: quem chama é o navegador do visitante, num site de cliente.
 		event.url.pathname === '/api/dm';
 

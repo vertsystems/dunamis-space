@@ -129,7 +129,8 @@
 
 	var vitaisForam = false;
 	function mandarVitais() {
-		if (vitaisForam || quebradaNaChegada) return;
+		// Página que ninguém chegou a ver (pré-carregada e descartada) não mede nada.
+		if (vitaisForam || quebradaNaChegada || ultimo === null) return;
 		vitaisForam = true;
 		var d = [];
 		for (var id in toques) d.push(toques[id]);
@@ -293,5 +294,23 @@
 		contar();
 	};
 	addEventListener('popstate', contar);
-	contar();
+
+	// Pré-carregada pelo navegador ou aberta escondida — o app do Instagram e do
+	// Facebook carrega a página do anúncio em segundo plano, antes do toque —:
+	// só conta quando aparecer na tela. Ninguém viu, não é visita.
+	function quandoAparecer(fn) {
+		if (document.prerendering) {
+			document.addEventListener('prerenderingchange', function () {
+				quandoAparecer(fn);
+			}, { once: true });
+			return;
+		}
+		if (document.visibilityState === 'visible') return fn();
+		document.addEventListener('visibilitychange', function ver() {
+			if (document.visibilityState !== 'visible') return;
+			document.removeEventListener('visibilitychange', ver);
+			fn();
+		});
+	}
+	quandoAparecer(contar);
 })();

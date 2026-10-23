@@ -13,9 +13,14 @@
 // (x-vercel-ip-*): não dá para o visitante forjar, e não precisa de serviço de
 // geolocalização. Rodando fora da Vercel (npm run dev), eles não existem e a
 // visita entra sem país.
+//
+// Robôs (0092): o que se diz robô pelo navegador vai só para o contador de robôs
+// do site. O que finge ser gente sai pela rede: o IP vai junto para o banco
+// conferir se é da Meta ou de uma nuvem de servidores — e não fica guardado.
 import { env } from '$env/dynamic/private';
 import { env as envPublic } from '$env/dynamic/public';
 import { createClient } from '@supabase/supabase-js';
+import { ipLimpo, nomeDoRobo } from '$lib/dmetric/robos';
 import {
 	classificarAparelho,
 	classificarClique,
@@ -63,7 +68,6 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 	if (!url || !anon || !segredo) return pronto('sem-configuracao');
 
 	const ua = request.headers.get('user-agent') ?? '';
-	if (ehRobo(ua)) return pronto('robo');
 
 	let batida: Batida;
 	try {
@@ -89,6 +93,24 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 		auth: { persistSession: false, autoRefreshToken: false }
 	});
 
+	// Robô que se diz robô: a página vista dele entra só no contador de robôs do
+	// site (com o nome: Google, Bing, prévia do WhatsApp…). O resto não entra.
+	if (ehRobo(ua)) {
+		if (b.tipo === 'v') {
+			const { error } = await supabase.rpc('dmetric_robo_declarado', {
+				p_segredo: segredo,
+				p_chave: b.chave || null,
+				p_host: b.host,
+				p_caminho: b.caminho,
+				p_robo: nomeDoRobo(ua)
+			});
+			if (error) console.error('[dmetric] robo', error.message);
+		}
+		return pronto('robo');
+	}
+	// Só para o banco conferir a rede (robô de data center); não é guardado.
+	const ipRede = ipLimpo(ip) || null;
+
 	// Saúde da página: velocidade, erros e 404. Também sem visitante, e nunca
 	// cria site (dmetric_saude, 0081).
 	if (b.tipo === 'vitais' || b.tipo === 'erro' || b.tipo === '404') {
@@ -100,7 +122,8 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 			p_host: b.host,
 			p_caminho: b.caminho,
 			p_tipo: b.tipo,
-			p_dados: dados
+			p_dados: dados,
+			p_ip: ipRede
 		});
 		if (error) {
 			console.error('[dmetric] saude', error.message);
@@ -127,7 +150,8 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 			p_tipo: b.tipo,
 			p_valor: valor,
 			p_segundos: b.segundos,
-			p_visitante: visitante
+			p_visitante: visitante,
+			p_ip: ipRede
 		});
 		if (error) {
 			console.error('[dmetric] evento', error.message);
@@ -153,14 +177,16 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 		// já foi visto hoje.
 		p_visitante: visitante,
 		// Nome da página no painel; o banco só regrava quando muda.
-		p_titulo: b.titulo || null
+		p_titulo: b.titulo || null,
+		p_ip: ipRede
 	});
 	if (error) {
 		console.error('[dmetric] coletar', error.message);
 		return pronto('erro');
 	}
-	// false = chave desconhecida, site pausado, domínio que não é o do site, ou
-	// host que não é domínio público (localhost, IP) no código único.
+	// false = chave desconhecida, site pausado, domínio que não é o do site, host
+	// que não é domínio público (localhost, IP) no código único, ou robô de data
+	// center (que foi para o contador de robôs).
 	return pronto(contou ? 'ok' : 'recusado');
 };
 

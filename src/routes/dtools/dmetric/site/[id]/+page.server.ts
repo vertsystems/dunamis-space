@@ -41,7 +41,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, params, url }
 	// Com filtro (clicar num item), o painel e os lugares saem da lista de acessos (0091).
 	const filtrado = temFiltro(lerFiltros(url.searchParams));
 
-	const [painel, lugares, porDia, agora, titulos, saude, recorte] = await Promise.all([
+	const [painel, lugares, porDia, agora, titulos, saude, robos, recorte] = await Promise.all([
 		filtrado
 			? null
 			: recente
@@ -52,13 +52,16 @@ export const load: PageServerLoad = async ({ locals: { supabase }, params, url }
 		supabase.rpc('dmetric_agora', { p_site: id }),
 		supabase.from('dmetric_paginas').select('site_id, caminho, titulo').eq('site_id', id).limit(2000),
 		supabase.rpc('dmetric_saude_painel', { p_site: id, p_de: de, p_ate: ate }),
+		// Os robôs que ficaram de fora no período (0092).
+		supabase.rpc('dmetric_robos_resumo', { p_site: id, p_de: de, p_ate: ate }),
 		carregarRecorte(supabase, { site: id, siteFixo: true, periodo, hoje, agora: new Date(), busca: url.searchParams, grafico })
 	]);
 	for (const [nome, r] of [
 		['painel', painel],
 		['lugares', lugares],
 		['por dia', porDia],
-		['saude', saude]
+		['saude', saude],
+		['robos', robos]
 	] as const)
 		if (r?.error) console.error(`[dmetric] site ${nome}`, r.error.message);
 
@@ -87,6 +90,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, params, url }
 		nota: notaDoRecorte(recorte),
 		serieAnterior: recorte.serieAnterior,
 		porDiaAnterior: recorte.porDiaAnterior,
-		graficoAnterior: recorte.graficoAnterior
+		graficoAnterior: recorte.graficoAnterior,
+		robos: (robos.data ?? []) as { rede: string; acessos: number }[]
 	};
 };
