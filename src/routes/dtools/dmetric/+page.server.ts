@@ -122,7 +122,8 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		serieAnterior: recorte.serieAnterior,
 		porDiaAnterior: recorte.porDiaAnterior,
 		graficoAnterior: recorte.graficoAnterior,
-		robos: (robos.data ?? []) as { rede: string; acessos: number }[]
+		robos: (robos.data ?? []) as { rede: string; acessos: number }[],
+		conversao: recorte.conversao
 	};
 };
 

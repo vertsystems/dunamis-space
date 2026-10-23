@@ -17,6 +17,7 @@
 	import Saude from '$lib/components/dmetric/Saude.svelte';
 	import FiltrosAtivos from '$lib/components/dmetric/FiltrosAtivos.svelte';
 	import Variacao from '$lib/components/dmetric/Variacao.svelte';
+	import Resultados from '$lib/components/dmetric/Resultados.svelte';
 	import { podeEditar, podeExcluir } from '$lib/permissoes';
 	import {
 		PERIODOS,
@@ -401,6 +402,18 @@
 					textoSemDados={data.filtrado && data.primeiroGrafico ? `com filtro, a contagem começa em ${dataBr(data.primeiroGrafico).slice(0, 5)}` : null}
 				/>
 			</Card>
+
+			<!-- Resultado: quantas visitas viraram contato, cada site com as metas dele. -->
+			<Resultados
+				conversao={data.conversao}
+				metas={null}
+				padrao={false}
+				nomeDoSite={(id) => {
+					const s = sitesPorId.get(id);
+					return s ? nomeDoSite(s) : 'Site removido';
+				}}
+				filtrado={data.filtrado}
+			/>
 
 			<!-- Nos períodos de dias: em que dia e hora as pessoas chegam. -->
 			{#if !recente && data.painel.por_hora}

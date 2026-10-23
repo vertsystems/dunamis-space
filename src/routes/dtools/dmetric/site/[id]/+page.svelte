@@ -13,6 +13,9 @@
 	import AgoraNoSite from '$lib/components/dmetric/AgoraNoSite.svelte';
 	import FiltrosAtivos from '$lib/components/dmetric/FiltrosAtivos.svelte';
 	import Variacao from '$lib/components/dmetric/Variacao.svelte';
+	import Resultados from '$lib/components/dmetric/Resultados.svelte';
+	import BotoesDaPagina from '$lib/components/dmetric/BotoesDaPagina.svelte';
+	import { podeEditar } from '$lib/permissoes';
 	import {
 		PERIODOS,
 		RECENTES,
@@ -275,6 +278,21 @@
 			textoSemDados={data.filtrado && data.primeiroGrafico ? `com filtro, a contagem começa em ${dataBr(data.primeiroGrafico).slice(0, 5)}` : null}
 		/>
 	</Card>
+
+	<!-- Resultado: quantas visitas viraram contato (WhatsApp, Mapa…) -->
+	<Resultados
+		conversao={data.conversao}
+		metas={data.metas}
+		padrao={data.metasPadrao}
+		opcoes={data.opcoesMetas}
+		podeEditar={podeEditar(data.permissoes, 'dmetric')}
+		filtrado={data.filtrado}
+	/>
+
+	<!-- Página do PageLinks: o que cada botão rende -->
+	{#if data.botoes}
+		<BotoesDaPagina dados={data.botoes} visualizacoes={p.visualizacoes} filtrado={data.filtrado} />
+	{/if}
 
 	<!-- De onde: o mapa e, ao lado, cada país com as suas cidades -->
 	<div class="mb-5 grid grid-cols-1 gap-5 lg:grid-cols-5">

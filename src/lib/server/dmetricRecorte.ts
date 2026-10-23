@@ -2,8 +2,10 @@
 // filtro, o painel sai da lista de acessos (dmetric_eventos_painel, 0091). A
 // comparação busca os números do período anterior — sem filtro, nos períodos de
 // dias, pelos contadores (dmetric_resumo); nas horas ou com filtro, pela lista
-// de acessos — e, para o gráfico, a linha de antes.
+// de acessos — e, para o gráfico, a linha de antes. E os resultados (a conversão,
+// 0093), com o mesmo recorte.
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { CONVERSAO_VAZIA, type Conversao } from '$lib/dmetric/resultados';
 import { RECENTES, dataBr, somarDias, type EscolhaGrafico, type PainelDados, type Periodo } from '$lib/dmetric/painel';
 import {
 	datasDaJanela,
@@ -61,6 +63,8 @@ export type Recorte = {
 	serieAnterior: Degrau[] | null;
 	porDiaAnterior: Dia[] | null;
 	graficoAnterior: { de: string; ate: string; rotulo: string } | null;
+	/** Quantas visitas deram resultado, com o mesmo recorte (dmetric_conversao, 0093). */
+	conversao: Conversao;
 };
 
 /** "21/10 às 15h37" (Brasília). */
@@ -105,7 +109,7 @@ export async function carregarRecorte(
 		});
 	const dias = (de: string, ate: string) => ({ desde: inicioDoDia(de), ate: inicioDoDia(somarDias(ate, 1)) });
 
-	const [primeiro, painel, porDia, ant, porDiaAnt] = (await Promise.all([
+	const [primeiro, painel, porDia, ant, porDiaAnt, conversao] = (await Promise.all([
 		supabase.rpc('dmetric_primeiro_dia', { p_site: p.site }),
 		filtrado ? eventos(janela, false, passo) : null,
 		filtrado && !recente ? eventos(dias(p.grafico.de, p.grafico.ate), true) : null,
@@ -123,14 +127,16 @@ export async function carregarRecorte(
 			? null
 			: filtrado
 				? eventos(dias(gAnterior.de, gAnterior.ate), true)
-				: supabase.rpc('dmetric_por_dia', { p_site: p.site, p_de: gAnterior.de, p_ate: gAnterior.ate })
+				: supabase.rpc('dmetric_por_dia', { p_site: p.site, p_de: gAnterior.de, p_ate: gAnterior.ate }),
+		supabase.rpc('dmetric_conversao', { p_site: p.site, p_desde: janela.desde, p_ate: janela.ate, p_filtros: banco })
 	])) as Resposta[];
 	for (const [nome, r] of [
 		['primeiro dia', primeiro],
 		['filtrado', painel],
 		['filtrado por dia', porDia],
 		['anterior', ant],
-		['gráfico anterior', porDiaAnt]
+		['gráfico anterior', porDiaAnt],
+		['conversão', conversao]
 	] as const)
 		if (r?.error) console.error(`[dmetric] recorte ${nome}`, r.error.message);
 
@@ -195,7 +201,8 @@ export async function carregarRecorte(
 				? ((porDiaAnt?.data as Resumo | null)?.por_dia ?? [])
 				: ((porDiaAnt?.data as Dia[] | null) ?? [])
 			: null,
-		graficoAnterior: gAnterior
+		graficoAnterior: gAnterior,
+		conversao: (conversao?.data as Conversao | null) ?? CONVERSAO_VAZIA
 	};
 }
 

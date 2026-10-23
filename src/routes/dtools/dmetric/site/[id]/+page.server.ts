@@ -1,7 +1,8 @@
 // DMetric — a página de um site: só os números dele, organizados, com todos os
 // países e cidades (dmetric_lugares, 0085). Abre ao clicar no site no ranking.
 // Mora dentro de /dtools/dmetric, então herda a permissão do módulo.
-import { error } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
+import { exigirPermissao } from '$lib/server/permissao';
 import { diaEmBrasilia } from '$lib/dmetric/coleta';
 import {
 	AGORA_VAZIO,
@@ -17,10 +18,13 @@ import {
 	type Lugares,
 	type PainelDados
 } from '$lib/dmetric/painel';
-import { lerFiltros, temFiltro } from '$lib/dmetric/recorte';
+import { janelaDoPeriodo, lerFiltros, temFiltro } from '$lib/dmetric/recorte';
+import { slugDoPageLinks } from '$lib/dmetric/botoes';
+import { botoesDaPagina } from '$lib/server/pagelinks';
+import { lerMetas, metasDoSite, opcoesDeMeta } from '$lib/dmetric/resultados';
 import { SAUDE_VAZIA, saudePorSite, type SaudeDados } from '$lib/dmetric/saude';
 import { carregarRecorte, notaDoRecorte } from '$lib/server/dmetricRecorte';
-import type { PageServerLoad } from './$types';
+import type { Actions, PageServerLoad } from './$types';
 
 const UUID = /^[0-9a-f-]{36}$/i;
 const VAZIO: PainelDados = { visitas: 0, visualizacoes: 0, por_dia: [], dimensoes: {} };
@@ -40,8 +44,9 @@ export const load: PageServerLoad = async ({ locals: { supabase }, params, url }
 
 	// Com filtro (clicar num item), o painel e os lugares saem da lista de acessos (0091).
 	const filtrado = temFiltro(lerFiltros(url.searchParams));
+	const agoraMesmo = new Date();
 
-	const [painel, lugares, porDia, agora, titulos, saude, robos, recorte] = await Promise.all([
+	const [painel, lugares, porDia, agora, titulos, saude, robos, metas, destinos, recorte] = await Promise.all([
 		filtrado
 			? null
 			: recente
@@ -54,18 +59,28 @@ export const load: PageServerLoad = async ({ locals: { supabase }, params, url }
 		supabase.rpc('dmetric_saude_painel', { p_site: id, p_de: de, p_ate: ate }),
 		// Os robôs que ficaram de fora no período (0092).
 		supabase.rpc('dmetric_robos_resumo', { p_site: id, p_de: de, p_ate: ate }),
-		carregarRecorte(supabase, { site: id, siteFixo: true, periodo, hoje, agora: new Date(), busca: url.searchParams, grafico })
+		// O que conta como resultado neste site (0093) e os destinos para escolher.
+		supabase.from('dmetric_metas').select('valor').eq('site_id', id).order('criado_em'),
+		supabase.rpc('dmetric_destinos_do_site', { p_site: id }),
+		carregarRecorte(supabase, { site: id, siteFixo: true, periodo, hoje, agora: agoraMesmo, busca: url.searchParams, grafico })
 	]);
 	for (const [nome, r] of [
 		['painel', painel],
 		['lugares', lugares],
 		['por dia', porDia],
 		['saude', saude],
-		['robos', robos]
+		['robos', robos],
+		['metas', metas],
+		['destinos', destinos]
 	] as const)
 		if (r?.error) console.error(`[dmetric] site ${nome}`, r.error.message);
 
 	const primeiroDia = recorte.primeiroDia;
+	// Página do PageLinks: os botões e os cliques de cada um vêm de lá, depois da
+	// página (a promessa vai sem esperar; o quadro mostra um esqueleto até chegar).
+	const slug = slugDoPageLinks(site as DMetricSite);
+	const janela = janelaDoPeriodo(periodo, hoje, agoraMesmo);
+	const escolhidas = metasDoSite(((metas.data ?? []) as { valor: string }[]).map((m) => m.valor));
 	return {
 		site: site as DMetricSite,
 		periodo,
@@ -91,6 +106,28 @@ export const load: PageServerLoad = async ({ locals: { supabase }, params, url }
 		serieAnterior: recorte.serieAnterior,
 		porDiaAnterior: recorte.porDiaAnterior,
 		graficoAnterior: recorte.graficoAnterior,
-		robos: (robos.data ?? []) as { rede: string; acessos: number }[]
+		robos: (robos.data ?? []) as { rede: string; acessos: number }[],
+		conversao: recorte.conversao,
+		metas: escolhidas.metas,
+		metasPadrao: escolhidas.padrao,
+		opcoesMetas: opcoesDeMeta((destinos.data ?? []) as { valor: string; cliques: number }[], escolhidas.padrao ? [] : escolhidas.metas),
+		botoes: slug ? botoesDaPagina(slug, janela.desde, janela.ate) : null
 	};
+};
+
+export const actions: Actions = {
+	// O que conta como resultado neste site. Sem nenhum marcado (ou o padrão
+	// inteiro), a lista fica vazia e vale o padrão (METAS_PADRAO).
+	salvarMetas: async ({ request, locals, params }) => {
+		exigirPermissao(locals, 'dmetric', 'editar');
+		if (!UUID.test(params.id)) return fail(400, { erro: 'Site inválido.' });
+		const metas = lerMetas((await request.formData()).getAll('meta').map(String));
+		const { error: e1 } = await locals.supabase.from('dmetric_metas').delete().eq('site_id', params.id);
+		if (e1) return fail(500, { erro: e1.message });
+		if (metas.length) {
+			const { error: e2 } = await locals.supabase.from('dmetric_metas').insert(metas.map((valor) => ({ site_id: params.id, valor })));
+			if (e2) return fail(500, { erro: e2.message });
+		}
+		return { ok: true };
+	}
 };
