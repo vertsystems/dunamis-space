@@ -53,7 +53,8 @@
 	const p = $derived(data.painel);
 	const tempoMedio = $derived(p.visitas ? (p.segundos ?? 0) / p.visitas : 0);
 	const porVisita = $derived(p.visitas ? p.visualizacoes / p.visitas : 0);
-	const cliques = $derived((p.dimensoes.clique ?? []).reduce((t, c) => t + c.visualizacoes, 0));
+	// O total de verdade (0088): a lista de destinos vem cortada nos 25 primeiros.
+	const cliques = $derived(p.totais?.clique?.visualizacoes ?? (p.dimensoes.clique ?? []).reduce((t, c) => t + c.visualizacoes, 0));
 	const cliqueMaior = $derived((p.dimensoes.clique ?? []).toSorted((a, b) => b.visualizacoes - a.visualizacoes)[0]);
 	const nPaises = $derived(data.lugares.paises.length);
 	const nCidades = $derived(data.lugares.cidades.length);
@@ -228,22 +229,22 @@
 	<div class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
 		<ListaDimensao
 			titulo="Páginas mais vistas"
-			itens={p.dimensoes.pagina}
+			itens={p.dimensoes.pagina} total={p.totais?.pagina?.n}
 			medida="visualizacoes"
 			rotular={tituloDaPagina}
 			detalhe={enderecoDoItem}
 		/>
-		<ListaDimensao titulo="De onde chegaram" itens={p.dimensoes.origem} />
+		<ListaDimensao titulo="De onde chegaram" itens={p.dimensoes.origem} total={p.totais?.origem?.n} />
 		<ListaDimensao
 			titulo="Cliques"
-			itens={p.dimensoes.clique}
+			itens={p.dimensoes.clique} total={p.totais?.clique?.n}
 			medida="visualizacoes"
 			rotuloMedida="Cliques"
 			vazio="Nenhum clique em WhatsApp, telefone ou link para fora."
 		/>
-		<ListaDimensao titulo="Campanhas" itens={p.dimensoes.campanha} vazio="Nenhum link com utm_campaign neste período." />
-		<ListaDimensao titulo="Aparelhos" itens={p.dimensoes.dispositivo} />
-		<ListaDimensao titulo="Navegadores" itens={p.dimensoes.navegador} />
-		<ListaDimensao titulo="Sistemas" itens={p.dimensoes.sistema} />
+		<ListaDimensao titulo="Campanhas" itens={p.dimensoes.campanha} total={p.totais?.campanha?.n} vazio="Nenhum link com utm_campaign neste período." />
+		<ListaDimensao titulo="Aparelhos" itens={p.dimensoes.dispositivo} total={p.totais?.dispositivo?.n} />
+		<ListaDimensao titulo="Navegadores" itens={p.dimensoes.navegador} total={p.totais?.navegador?.n} />
+		<ListaDimensao titulo="Sistemas" itens={p.dimensoes.sistema} total={p.totais?.sistema?.n} />
 	</div>
 {/if}

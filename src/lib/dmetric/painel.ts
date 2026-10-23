@@ -22,7 +22,16 @@ export type PainelDados = {
 	/** Só nos períodos de horas: a linha do tempo em degraus (5 min ou 1 h), já completa. */
 	serie?: { momento: string; visitas: number; visualizacoes: number }[];
 	dimensoes: Partial<Record<Dimensao, ItemDimensao[]>>;
+	/**
+	 * O tamanho de verdade de cada lista, antes do corte (0088): quantos valores
+	 * existem e a soma de todos. As listas vêm cortadas (cidades 100, páginas 50,
+	 * o resto 25); contagem e porcentagem saem daqui, não do tamanho da lista.
+	 */
+	totais?: Partial<Record<Dimensao, TotalDimensao>>;
 };
+
+/** Quantos valores uma lista tem de verdade e a soma deles (o vazio fica fora). */
+export type TotalDimensao = { n: number; visitas: number; visualizacoes: number };
 
 export type Dimensao =
 	| 'pais'

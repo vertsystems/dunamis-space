@@ -1,14 +1,16 @@
 <script lang="ts">
 	// As cidades com mais visitas, no mesmo formato do ranking de países. Só do
 	// script do DMetric: o histórico importado do GA não traz cidade.
-	import { corDeVisitas, numero, porcentagem, type ItemDimensao } from '$lib/dmetric/painel';
+	import { corDeVisitas, numero, porcentagem, type ItemDimensao, type TotalDimensao } from '$lib/dmetric/painel';
 
-	let { itens }: { itens: ItemDimensao[] | undefined } = $props();
+	let { itens, total: totalDaLista }: { itens: ItemDimensao[] | undefined; total?: TotalDimensao } = $props();
 
 	const linhas = $derived(
 		(itens ?? []).filter((i) => i.valor && i.visitas > 0).sort((a, b) => b.visitas - a.visitas)
 	);
-	const total = $derived(linhas.reduce((s, l) => s + l.visitas, 0) || 1);
+	// A lista vem cortada (as 100 primeiras): a porcentagem é sobre todas as cidades.
+	const total = $derived(totalDaLista?.visitas || linhas.reduce((s, l) => s + l.visitas, 0) || 1);
+	const fora = $derived(Math.max(0, (totalDaLista?.n ?? 0) - linhas.length));
 	const maior = $derived(linhas[0]?.visitas ?? 1);
 </script>
 
@@ -34,5 +36,10 @@
 				</div>
 			</li>
 		{/each}
+		{#if fora}
+			<li class="px-2 pb-1 pt-2 text-[11px] text-grey">
+				e mais {numero(fora)} {fora === 1 ? 'cidade' : 'cidades'} com menos visitas
+			</li>
+		{/if}
 	</ol>
 {/if}

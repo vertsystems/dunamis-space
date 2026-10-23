@@ -10,7 +10,8 @@
 		rotuloMedida = medida === 'visitas' ? 'Visitas' : 'Páginas vistas',
 		vazio = 'Nada ainda neste período.',
 		rotular = (v: string) => v || '(não identificado)',
-		detalhe
+		detalhe,
+		total
 	}: {
 		titulo: string;
 		itens: ItemDimensao[] | undefined;
@@ -22,12 +23,16 @@
 		rotular?: (valor: string, item: ItemDimensao) => string;
 		/** Segunda linha, menor (ex.: o endereço da página embaixo do título). */
 		detalhe?: (item: ItemDimensao) => string | null;
+		/** Quantos itens a lista tem de verdade (PainelDados.totais): ela vem cortada nos primeiros. */
+		total?: number;
 	} = $props();
 
 	const linhas = $derived((itens ?? []).filter((i) => i[medida] > 0).sort((a, b) => b[medida] - a[medida]));
 	const maior = $derived(linhas[0]?.[medida] ?? 1);
 	let todos = $state(false);
 	const visiveis = $derived(todos ? linhas : linhas.slice(0, 7));
+	// Itens que existem mas não vieram (ficaram depois do corte, com menos visitas).
+	const fora = $derived(Math.max(0, (total ?? 0) - linhas.length));
 </script>
 
 <Card padding="sm">
@@ -58,8 +63,11 @@
 		</ul>
 		{#if linhas.length > 7}
 			<button type="button" onclick={() => (todos = !todos)} class="mt-2 px-2 text-xs font-medium text-brand hover:underline">
-				{todos ? 'Mostrar menos' : `Ver todos (${linhas.length})`}
+				{todos ? 'Mostrar menos' : fora ? `Ver os ${linhas.length} primeiros` : `Ver todos (${linhas.length})`}
 			</button>
+		{/if}
+		{#if fora && (todos || linhas.length <= 7)}
+			<p class="mt-1 px-2 text-[11px] text-grey">e mais {numero(fora)} com menos {rotuloMedida.toLowerCase()}</p>
 		{/if}
 	{/if}
 </Card>

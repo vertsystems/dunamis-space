@@ -250,10 +250,11 @@
 				<h2 class="mb-3 flex items-baseline justify-between text-base font-bold text-navy">
 					Cidades
 					{#if data.painel.dimensoes.cidade?.length}
-						<span class="text-xs font-medium text-grey">{data.painel.dimensoes.cidade.filter((c) => c.valor).length}</span>
+						<!-- O total de verdade: a lista vem com as 100 primeiras (0088). -->
+						<span class="text-xs font-medium text-grey">{numero(data.painel.totais?.cidade?.n ?? data.painel.dimensoes.cidade.filter((c) => c.valor).length)}</span>
 					{/if}
 				</h2>
-				<RankingCidades itens={data.painel.dimensoes.cidade} />
+				<RankingCidades itens={data.painel.dimensoes.cidade} total={data.painel.totais?.cidade} />
 			</Card>
 		</div>
 
@@ -318,23 +319,23 @@
 			<div class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
 				<ListaDimensao
 					titulo="Páginas mais vistas"
-					itens={data.painel.dimensoes.pagina}
+					itens={data.painel.dimensoes.pagina} total={data.painel.totais?.pagina?.n}
 					medida="visualizacoes"
 					rotular={tituloDaPagina}
 					detalhe={enderecoDoItem}
 				/>
-				<ListaDimensao titulo="De onde chegaram" itens={data.painel.dimensoes.origem} />
+				<ListaDimensao titulo="De onde chegaram" itens={data.painel.dimensoes.origem} total={data.painel.totais?.origem?.n} />
 				<ListaDimensao
 					titulo="Cliques"
-					itens={data.painel.dimensoes.clique}
+					itens={data.painel.dimensoes.clique} total={data.painel.totais?.clique?.n}
 					medida="visualizacoes"
 					rotuloMedida="Cliques"
 					vazio="Nenhum clique em WhatsApp, telefone ou link para fora."
 				/>
-				<ListaDimensao titulo="Campanhas" itens={data.painel.dimensoes.campanha} vazio="Nenhum link com utm_campaign neste período." />
-				<ListaDimensao titulo="Aparelhos" itens={data.painel.dimensoes.dispositivo} />
-				<ListaDimensao titulo="Navegadores" itens={data.painel.dimensoes.navegador} />
-				<ListaDimensao titulo="Sistemas" itens={data.painel.dimensoes.sistema} />
+				<ListaDimensao titulo="Campanhas" itens={data.painel.dimensoes.campanha} total={data.painel.totais?.campanha?.n} vazio="Nenhum link com utm_campaign neste período." />
+				<ListaDimensao titulo="Aparelhos" itens={data.painel.dimensoes.dispositivo} total={data.painel.totais?.dispositivo?.n} />
+				<ListaDimensao titulo="Navegadores" itens={data.painel.dimensoes.navegador} total={data.painel.totais?.navegador?.n} />
+				<ListaDimensao titulo="Sistemas" itens={data.painel.dimensoes.sistema} total={data.painel.totais?.sistema?.n} />
 			</div>
 		{:else}
 			<Card class="border-dashed py-8 text-center">
