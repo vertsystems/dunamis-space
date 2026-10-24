@@ -13,9 +13,7 @@
 		type DimensaoFiltro,
 		type Filtros
 	} from '$lib/dmetric/recorte';
-	import { numero } from '$lib/dmetric/painel';
-	import { resumoDosRobos } from '$lib/dmetric/robos';
-	import { Bot, Funnel, GitCompareArrows, MousePointerClick, X } from '@lucide/svelte';
+	import { Funnel, GitCompareArrows, MousePointerClick, X } from '@lucide/svelte';
 
 	let {
 		filtros,
@@ -23,8 +21,7 @@
 		comparacao,
 		podeComparar = true,
 		oncomparar,
-		nota = null,
-		robos = []
+		nota = null
 	}: {
 		filtros: Filtros;
 		/** Como o valor aparece na etiqueta (o título da página, o nome do país…). */
@@ -35,11 +32,8 @@
 		oncomparar: (c: Comparacao) => void;
 		/** Até onde o filtro vai para trás, ou por que ainda não dá para comparar. */
 		nota?: string | null;
-		/** Os robôs que ficaram de fora no período, por rede (0092). */
-		robos?: { rede: string; acessos: number }[];
 	} = $props();
 
-	const filtrados = $derived(resumoDosRobos(robos));
 
 	const ligados = $derived(
 		DIMENSOES_FILTRO.filter((d) => filtros[d]).map((d) => ({
@@ -87,17 +81,7 @@
 			</span>
 		{/if}
 
-		{#if filtrados.total}
-			<!-- Os números já vêm sem eles; aqui só se diz quantos ficaram de fora. -->
-			<span
-				class="ml-auto inline-flex shrink-0 items-center gap-1 text-[11px] text-grey"
-				title="Robôs não contam como visita. {filtrados.dica}"
-			>
-				<Bot size={13} />
-				{numero(filtrados.total)} {filtrados.total === 1 ? 'robô filtrado' : 'robôs filtrados'}
-			</span>
-		{/if}
-		<label class="{filtrados.total ? '' : 'ml-auto'} inline-flex shrink-0 items-center gap-1.5 text-[11px] font-medium text-grey">
+		<label class="ml-auto inline-flex shrink-0 items-center gap-1.5 text-[11px] font-medium text-grey">
 			<GitCompareArrows size={14} />
 			<span class="hidden sm:inline">Comparar com</span>
 			<select

@@ -1,6 +1,6 @@
 // DMetric — robôs: de onde vêm as faixas de rede da Meta e das nuvens (o cron
-// semanal /api/dmetric/robos as busca e grava em dmetric_redes_robo, 0092) e o
-// nome do robô que se diz robô pelo navegador. Sem I/O (testado em robos.test.ts).
+// semanal /api/dmetric/robos as busca e grava em dmetric_redes_robo, 0092). O
+// acesso que vem delas é só descartado, sem registro. Sem I/O (testado em robos.test.ts).
 
 /**
  * Uma fonte de faixas: a lista oficial do provedor ou, para quem não publica, as
@@ -95,42 +95,4 @@ export function faixasDe(fonte: FonteRobo, dados: unknown): string[] {
 export function ipLimpo(ip: string): string {
 	const v = (ip || '').trim().replace(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i, '$1');
 	return /^[0-9a-f:.]{2,45}$/i.test(v) ? v : '';
-}
-
-/** Os robôs que se dizem robôs, pelo navegador, com o nome que vai no contador. */
-const ROBOS: [RegExp, string][] = [
-	[/googlebot|google-inspectiontool|adsbot-google|mediapartners-google|googleother|storebot-google|google-read-aloud|apis-google|feedfetcher-google/i, 'Google'],
-	[/bingbot|bingpreview|msnbot|adidxbot/i, 'Bing'],
-	[/facebookexternalhit|facebookcatalog|meta-external|facebookbot/i, 'Meta'],
-	[/whatsapp/i, 'WhatsApp'],
-	[/telegrambot/i, 'Telegram'],
-	[/twitterbot/i, 'X (Twitter)'],
-	[/linkedinbot/i, 'LinkedIn'],
-	[/applebot/i, 'Apple'],
-	[/bytespider|tiktok/i, 'TikTok'],
-	[/gptbot|chatgpt|oai-searchbot/i, 'OpenAI'],
-	[/claudebot|claude-web|anthropic/i, 'Anthropic'],
-	[/perplexity/i, 'Perplexity'],
-	[/yandex/i, 'Yandex'],
-	[/baiduspider/i, 'Baidu'],
-	[/duckduckbot|duckassist/i, 'DuckDuckGo'],
-	[/petalbot/i, 'Huawei'],
-	[/semrush|ahrefs|mj12bot|dotbot|dataforseo|serpstat|seznam/i, 'Robô de SEO'],
-	[/lighthouse|pagespeed|gtmetrix|pingdom|uptime|statuscake/i, 'Medidor de velocidade'],
-	[/headless/i, 'Navegador automatizado'],
-	[/curl|wget|python|axios|node-fetch|go-http/i, 'Programa']
-];
-
-/** "Mozilla/5.0 (compatible; Googlebot/2.1…)" → "Google". Sem navegador nenhum, "Sem navegador". */
-export function nomeDoRobo(ua: string): string {
-	if (!ua) return 'Sem navegador';
-	for (const [teste, nome] of ROBOS) if (teste.test(ua)) return nome;
-	return 'Robô declarado';
-}
-
-/** O total de robôs do período e o "Meta 120 · Amazon 30" da dica. */
-export function resumoDosRobos(redes: { rede: string; acessos: number }[]): { total: number; dica: string } {
-	const total = redes.reduce((t, r) => t + r.acessos, 0);
-	const fmt = new Intl.NumberFormat('pt-BR');
-	return { total, dica: redes.map((r) => `${r.rede} ${fmt.format(r.acessos)}`).join(' · ') };
 }

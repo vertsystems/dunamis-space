@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FONTES, faixasDe, ipLimpo, nomeDoRobo, resumoDosRobos } from './robos';
+import { FONTES, faixasDe, ipLimpo } from './robos';
 
 const fonte = (id: string) => FONTES.find((f) => f.id === id)!;
 
@@ -36,20 +36,6 @@ describe('fontes das faixas de robô', () => {
 	});
 });
 
-describe('robô que se diz robô', () => {
-	it('o nome pelo navegador', () => {
-		expect(nomeDoRobo('Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)')).toBe('Google');
-		expect(nomeDoRobo('facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)')).toBe('Meta');
-		expect(nomeDoRobo('meta-externalagent/1.1')).toBe('Meta');
-		expect(nomeDoRobo('WhatsApp/2.23.20.0')).toBe('WhatsApp');
-		expect(nomeDoRobo('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 HeadlessChrome/120.0.0.0')).toBe('Navegador automatizado');
-		expect(nomeDoRobo('Mozilla/5.0 (compatible; GPTBot/1.2)')).toBe('OpenAI');
-		expect(nomeDoRobo('python-requests/2.31')).toBe('Programa');
-		expect(nomeDoRobo('')).toBe('Sem navegador');
-		expect(nomeDoRobo('Mozilla/5.0 (compatible; AlgumOutroBot/1.0)')).toBe('Robô declarado');
-	});
-});
-
 describe('IP', () => {
 	it('IPv4 escrito como IPv6 vira IPv4; lixo vira vazio', () => {
 		expect(ipLimpo('::ffff:157.240.1.1')).toBe('157.240.1.1');
@@ -57,12 +43,5 @@ describe('IP', () => {
 		expect(ipLimpo(' 189.6.2.10 ')).toBe('189.6.2.10');
 		expect(ipLimpo('unknown')).toBe('');
 		expect(ipLimpo('')).toBe('');
-	});
-});
-
-describe('o contador da barra', () => {
-	it('total e dica', () => {
-		expect(resumoDosRobos([{ rede: 'Meta', acessos: 1200 }, { rede: 'Amazon', acessos: 30 }])).toEqual({ total: 1230, dica: 'Meta 1.200 · Amazon 30' });
-		expect(resumoDosRobos([])).toEqual({ total: 0, dica: '' });
 	});
 });

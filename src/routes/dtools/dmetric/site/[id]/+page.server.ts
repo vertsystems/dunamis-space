@@ -48,7 +48,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, params, url }
 	const filtrado = temFiltro(lerFiltros(url.searchParams));
 	const agoraMesmo = new Date();
 
-	const [painel, lugares, porDia, agora, titulos, saude, robos, metas, destinos, portais, recorte] = await Promise.all([
+	const [painel, lugares, porDia, agora, titulos, saude, metas, destinos, portais, recorte] = await Promise.all([
 		filtrado
 			? null
 			: recente
@@ -59,8 +59,6 @@ export const load: PageServerLoad = async ({ locals: { supabase }, params, url }
 		supabase.rpc('dmetric_agora', { p_site: id }),
 		supabase.from('dmetric_paginas').select('site_id, caminho, titulo').eq('site_id', id).limit(2000),
 		supabase.rpc('dmetric_saude_painel', { p_site: id, p_de: de, p_ate: ate }),
-		// Os robôs que ficaram de fora no período (0092).
-		supabase.rpc('dmetric_robos_resumo', { p_site: id, p_de: de, p_ate: ate }),
 		// O que conta como resultado neste site (0093) e os destinos para escolher.
 		supabase.from('dmetric_metas').select('valor').eq('site_id', id).order('criado_em'),
 		supabase.rpc('dmetric_destinos_do_site', { p_site: id }),
@@ -77,7 +75,6 @@ export const load: PageServerLoad = async ({ locals: { supabase }, params, url }
 		['lugares', lugares],
 		['por dia', porDia],
 		['saude', saude],
-		['robos', robos],
 		['metas', metas],
 		['destinos', destinos],
 		['portais', portais]
@@ -115,7 +112,6 @@ export const load: PageServerLoad = async ({ locals: { supabase }, params, url }
 		serieAnterior: recorte.serieAnterior,
 		porDiaAnterior: recorte.porDiaAnterior,
 		graficoAnterior: recorte.graficoAnterior,
-		robos: (robos.data ?? []) as { rede: string; acessos: number }[],
 		conversao: recorte.conversao,
 		metas: escolhidas.metas,
 		metasPadrao: escolhidas.padrao,

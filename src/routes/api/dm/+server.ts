@@ -14,13 +14,14 @@
 // geolocalização. Rodando fora da Vercel (npm run dev), eles não existem e a
 // visita entra sem país.
 //
-// Robôs (0092): o que se diz robô pelo navegador vai só para o contador de robôs
-// do site. O que finge ser gente sai pela rede: o IP vai junto para o banco
-// conferir se é da Meta ou de uma nuvem de servidores — e não fica guardado.
+// Robôs são descartados, sem registro nenhum (decisão do Bruno, 24/10/2026): o que
+// se diz robô pelo navegador sai aqui mesmo; o que finge ser gente sai pela rede —
+// o IP vai junto para o banco conferir se é da Meta ou de uma nuvem de servidores
+// (0092) e não fica guardado.
 import { env } from '$env/dynamic/private';
 import { env as envPublic } from '$env/dynamic/public';
 import { createClient } from '@supabase/supabase-js';
-import { ipLimpo, nomeDoRobo } from '$lib/dmetric/robos';
+import { ipLimpo } from '$lib/dmetric/robos';
 import {
 	classificarAparelho,
 	classificarClique,
@@ -68,6 +69,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 	if (!url || !anon || !segredo) return pronto('sem-configuracao');
 
 	const ua = request.headers.get('user-agent') ?? '';
+	if (ehRobo(ua)) return pronto('robo');
 
 	let batida: Batida;
 	try {
@@ -93,21 +95,6 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 		auth: { persistSession: false, autoRefreshToken: false }
 	});
 
-	// Robô que se diz robô: a página vista dele entra só no contador de robôs do
-	// site (com o nome: Google, Bing, prévia do WhatsApp…). O resto não entra.
-	if (ehRobo(ua)) {
-		if (b.tipo === 'v') {
-			const { error } = await supabase.rpc('dmetric_robo_declarado', {
-				p_segredo: segredo,
-				p_chave: b.chave || null,
-				p_host: b.host,
-				p_caminho: b.caminho,
-				p_robo: nomeDoRobo(ua)
-			});
-			if (error) console.error('[dmetric] robo', error.message);
-		}
-		return pronto('robo');
-	}
 	// Só para o banco conferir a rede (robô de data center); não é guardado.
 	const ipRede = ipLimpo(ip) || null;
 

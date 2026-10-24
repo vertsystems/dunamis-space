@@ -50,7 +50,7 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	// contadores ficam de fora; a comparação vale com ou sem filtro.
 	const filtrado = temFiltro(lerFiltros(url.searchParams));
 
-	const [sites, historico, painel, porSite, titulos, porSite30, agora, saude, porDia, robos, relatorios, recebem, recorte] = await Promise.all([
+	const [sites, historico, painel, porSite, titulos, porSite30, agora, saude, porDia, relatorios, recebem, recorte] = await Promise.all([
 		supabase.from('dmetric_sites').select('*').order('nome'),
 		supabase
 			.from('dmetric_historico')
@@ -77,8 +77,6 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		supabase.rpc('dmetric_saude_painel', { p_site: site, p_de: de, p_ate: ate }),
 		// O gráfico por dia (0082): os dias do período já somados entre os sites.
 		filtrado ? null : supabase.rpc('dmetric_por_dia', { p_site: site, p_de: grafico.de, p_ate: grafico.ate }),
-		// Os robôs que ficaram de fora no período (0092).
-		supabase.rpc('dmetric_robos_resumo', { p_site: site, p_de: de, p_ate: ate }),
 		// A aba Relatórios (0094): as mensagens dos meses e quantos clientes recebem.
 		supabase
 			.from('dmetric_relatorios')
@@ -100,7 +98,6 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 	if (porSite?.error) console.error('[dmetric] por site', porSite.error.message);
 	if (saude.error) console.error('[dmetric] saude', saude.error.message);
 	if (porDia?.error) console.error('[dmetric] por dia', porDia.error.message);
-	if (robos.error) console.error('[dmetric] robos', robos.error.message);
 	if (relatorios.error) console.error('[dmetric] relatorios', relatorios.error.message);
 	const primeiroDia = recorte.primeiroDia;
 
@@ -137,7 +134,6 @@ export const load: PageServerLoad = async ({ locals: { supabase }, url }) => {
 		serieAnterior: recorte.serieAnterior,
 		porDiaAnterior: recorte.porDiaAnterior,
 		graficoAnterior: recorte.graficoAnterior,
-		robos: (robos.data ?? []) as { rede: string; acessos: number }[],
 		conversao: recorte.conversao,
 		relatorios: (relatorios.data ?? []) as unknown as {
 			id: string;
