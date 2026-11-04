@@ -9,7 +9,8 @@
 		prestador,
 		nome,
 		size = 17,
-		reservaEspaco = false
+		reservaEspaco = false,
+		tom = 'verde'
 	}: {
 		prestador: { whatsapp?: string | null; pix?: string | null };
 		nome: string;
@@ -17,6 +18,8 @@
 		/** Mantém o vão do ícone quando não há número — usado em coluna de tabela,
 		 *  onde a ausência desalinharia o texto das outras linhas. */
 		reservaEspaco?: boolean;
+		/** 'discreto': cinza escuro e menor, ao lado do nome numa lista (Planilha Mensal). */
+		tom?: 'verde' | 'discreto';
 	} = $props();
 
 	const numero = $derived(whatsappDoPrestador(prestador));
@@ -32,9 +35,12 @@
 		target="_blank"
 		rel="noopener noreferrer"
 		onclick={(e) => e.stopPropagation()}
+		onkeydown={(e) => e.stopPropagation()}
 		title="Conversar com {nome} no WhatsApp — {formataWhatsApp(numero)}"
 		aria-label="Conversar com {nome} no WhatsApp"
-		class="inline-grid size-8 shrink-0 place-items-center rounded-[var(--radius-sm)] text-[#1c8c4c] transition-colors hover:bg-[#25d366]/15"
+		class="inline-grid shrink-0 place-items-center rounded-[var(--radius-sm)] transition-colors {tom === 'discreto'
+			? '-my-1 size-6 text-slate hover:bg-bg hover:text-navy-900'
+			: 'size-8 text-[#1c8c4c] hover:bg-[#25d366]/15'}"
 	>
 		<!-- Logo do WhatsApp: o @lucide/svelte não traz marcas. -->
 		<svg viewBox="0 0 24 24" width={size} height={size} fill="currentColor" aria-hidden="true">

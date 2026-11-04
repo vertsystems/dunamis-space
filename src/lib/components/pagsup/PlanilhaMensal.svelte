@@ -10,6 +10,7 @@
 	import { hojeISO } from '$lib/datas';
 	import { contarDocs, statusDoc } from '$lib/pagsup/documentos';
 	import DocumentoCelula from './DocumentoCelula.svelte';
+	import BotaoWhatsApp from './BotaoWhatsApp.svelte';
 	import LinkFinanceiro from './LinkFinanceiro.svelte';
 	import { Search, Trash2, FileSpreadsheet, Plus, X, DollarSign, Pencil, Check, Link2, FileText } from '@lucide/svelte';
 
@@ -25,6 +26,13 @@
 		pagsup.filteredPayments.filter((p) => (p.date ?? '').startsWith(mes))
 	);
 	const total = $derived(doMes.reduce((s, p) => s + (Number(p.value) || 0), 0));
+
+	// O prestador de cada pagamento, para o atalho do WhatsApp ao lado do nome.
+	// Pelo id; lançamento antigo sem id, pelo nome (dentro do cliente escolhido).
+	const prestadorPorId = $derived(new Map(pagsup.providers.map((pr) => [pr.id, pr])));
+	const prestadorPorNome = $derived(new Map(pagsup.filteredProviders.map((pr) => [pr.name.trim().toLowerCase(), pr])));
+	const prestadorDe = (p: Payment) =>
+		(p.providerId ? prestadorPorId.get(p.providerId) : undefined) ?? prestadorPorNome.get((p.providerName ?? '').trim().toLowerCase());
 
 	// ---- NF / recibo ----
 	// Só controle interno: nada disto entra na planilha .xlsx (gerarPlanilha
@@ -466,7 +474,12 @@
 											role="button"
 											aria-label="Editar pagamento de {p.providerName}"
 										>
-											<td class="px-5 py-1.5 text-xs font-medium text-navy">{p.providerName}</td>
+											<td class="px-5 py-1.5 text-xs font-medium text-navy">
+												<span class="inline-flex items-center gap-1">
+													{p.providerName}
+													{#if prestadorDe(p)}<BotaoWhatsApp prestador={prestadorDe(p)!} nome={p.providerName} size={13} tom="discreto" />{/if}
+												</span>
+											</td>
 											<td class="px-5 py-1.5 text-[11px] text-slate">{p.service}</td>
 											<td class="px-5 py-1.5 text-[11px] text-slate">{p.region || '-'}</td>
 											<td class="px-5 py-1.5">
