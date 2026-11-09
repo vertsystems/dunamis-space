@@ -502,6 +502,25 @@ function montarItens(): Item[] {
 		add({ tipo: 'cadeira', x: x + 0.26, y: y + 1.22, w: 0.48, d: 0.48, h: 0.92, frente: '-y', cor: opcoes.cadeira });
 	};
 
+	/**
+	 * Baia inteira (pedido do Bruno, 09/11/2026): mesa grande com 3 lugares de
+	 * cada lado, 6 computadores costas com costas e 6 cadeiras para agentes.
+	 * Ocupa 3 casas de largura e 3 de fundo, a partir de (x, y): cadeiras do
+	 * norte na linha y, mesa na y+1, cadeiras do sul na y+2. Deixar uma linha
+	 * livre acima e abaixo, que é por onde se chega às cadeiras.
+	 */
+	const baia = (x: number, y: number, telas: string[], opcoes: { cor?: string; cadeira?: string } = {}) => {
+		add({ tipo: 'mesa', x: x + 0.05, y: y + 1.05, w: 2.9, d: 0.9, h: 0.52, cor: opcoes.cor ?? '#f3f0ea' });
+		for (let i = 0; i < 3; i++) {
+			const cx = x + i + 0.5;
+			// De costas um para o outro: o de trás vira para o norte, o da frente para o sul
+			add({ tipo: 'monitor', x: cx - 0.36, y: y + 1.42, w: 0.72, d: 0.08, h: 0.46, z: 0.52, frente: '-y', variante: telas[i % telas.length], bloqueia: false });
+			add({ tipo: 'monitor', x: cx - 0.36, y: y + 1.5, w: 0.72, d: 0.08, h: 0.46, z: 0.52, frente: 'y', variante: telas[(i + 1) % telas.length], bloqueia: false });
+			add({ tipo: 'cadeira', x: cx - 0.24, y: y + 0.3, w: 0.48, d: 0.48, h: 0.92, frente: 'y', cor: opcoes.cadeira, nome: 'Cadeira de agente' });
+			add({ tipo: 'cadeira', x: cx - 0.24, y: y + 2.22, w: 0.48, d: 0.48, h: 0.92, frente: '-y', cor: opcoes.cadeira, nome: 'Cadeira de agente' });
+		}
+	};
+
 	// Diretoria
 	add({ tipo: 'estante', x: 4.06, y: 5, w: 0.42, d: 3, h: 1.75, frente: 'x' });
 	add({ tipo: 'mesa', x: 6, y: 6.15, w: 3, d: 0.85, h: 0.54, cor: '#7a5236', variante: 'executiva' });
@@ -548,10 +567,9 @@ function montarItens(): Item[] {
 
 	// Desenvolvimento & IA
 	for (const x of [41, 42, 43]) add({ tipo: 'rack', x: x + 0.12, y: 4.12, w: 0.76, d: 0.72, h: 1.95, frente: 'y' });
-	estacao(35, 6, 'codigo', { duplo: true, cor: '#3a465c', cadeira: '#11161f' });
-	estacao(38, 6, 'codigo', { duplo: true, cor: '#3a465c', cadeira: '#11161f' });
-	estacao(35, 9, 'codigo', { duplo: true, cor: '#3a465c', cadeira: '#11161f' });
-	estacao(38, 9, 'design', { duplo: true, cor: '#3a465c', cadeira: '#11161f' });
+	// Duas baias de 6 lugares (os agentes de desenvolvimento e IA)
+	baia(35, 5, ['codigo', 'codigo', 'design'], { cor: '#3a465c', cadeira: '#11161f' });
+	baia(35, 9, ['codigo', 'grafico', 'codigo'], { cor: '#3a465c', cadeira: '#11161f' });
 	add({ tipo: 'nucleo', x: 41.35, y: 8.35, w: 1.3, d: 1.3, h: 1.6 });
 	planta(43, 12);
 	planta(34, 4);

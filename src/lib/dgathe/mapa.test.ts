@@ -84,6 +84,13 @@ describe('mapa do escritório', () => {
 		expect(altas.every((s) => (s.orient === 'x' && s.y === 4) || (s.orient === 'y' && s.x === 4))).toBe(true);
 	});
 
+	it('a sala de Desenvolvimento tem 2 baias de 6 lugares (12 cadeiras, 12 computadores)', () => {
+		const dev = ITENS.filter((i) => i.sala === 'dev');
+		expect(dev.filter((i) => i.tipo === 'cadeira' && i.nome === 'Cadeira de agente')).toHaveLength(12);
+		expect(dev.filter((i) => i.tipo === 'monitor')).toHaveLength(12);
+		expect(dev.filter((i) => i.tipo === 'mesa')).toHaveLength(2);
+	});
+
 	it('o contador de setores não inclui o corredor', () => {
 		expect(SETORES.some((s) => s.id === 'corredor')).toBe(false);
 		expect(SETORES.length).toBe(SALAS.length - 1);
