@@ -17,7 +17,6 @@ import {
 	SALA_POR_ID,
 	INICIO,
 	PREDIO,
-	ASSENTOS,
 	celulaLivre,
 	paredeEntre,
 	zonaNoPonto,
@@ -25,10 +24,9 @@ import {
 	pisoDaCelula,
 	chegadaDaSala,
 	type Item,
-	type Segmento,
-	type Assento
+	type Segmento
 } from './mapa';
-import { aEstrela, suavizar, type Grade } from './caminho';
+import { aEstrela, suavizar, livreMaisProxima, type Grade } from './caminho';
 import { ordenar, posicaoDinamica, telaDaCaixa, chave, type Desenhavel } from './profundidade';
 import {
 	desenharLadrilho,
@@ -44,7 +42,8 @@ import {
 import { desenharAvatar, areaDoAvatar, ABAIXA_SENTADO } from './avatar';
 import { APARENCIA_PADRAO, type Aparencia } from './aparencia';
 import type { Pessoa, Situacao } from './presenca';
-import { decidir } from './movimento';
+import { alvos, deveMover } from './movimento';
+import { SENTADO_MEIA, type Assento } from './assentos';
 
 export const GRADE: Grade = { largura: LARGURA, altura: ALTURA, livre: celulaLivre, parede: paredeEntre };
 
@@ -59,7 +58,7 @@ export type OutroResumo = {
 	cor: string | null;
 	sala: string | null;
 	andando: boolean;
-	/** Ausente = sentado na recepção (saiu do dspace ou está sem sinal). */
+	/** inativo = 15 min sem mexer (sentado em algum lugar); offline = saiu (sofá da recepção). */
 	situacao: Situacao;
 };
 
@@ -72,10 +71,10 @@ export type Avisos = {
 	movimento(andando: boolean, destino: string | null): void;
 	/** Recado curto no topo da tela. */
 	aviso(texto: string): void;
-	/** Comecei a andar por este trajeto (para os outros verem). */
-	rota?(pontos: Ponto[]): void;
-	/** Parei aqui. */
-	parou?(x: number, y: number, dirX: number, dirY: number): void;
+	/** Comecei a andar por este trajeto (para os outros verem); `assento` = vou sentar no fim. */
+	rota?(pontos: Ponto[], assento?: string | null): void;
+	/** Parei aqui (sentado em `assento`, se for o caso). */
+	parou?(x: number, y: number, dirX: number, dirY: number, assento?: string | null): void;
 	/** Quem mais está no escritório mudou: entrou, saiu, trocou de sala, andou ou parou. */
 	outros?(lista: OutroResumo[]): void;
 };
@@ -94,7 +93,19 @@ type Peca = Desenhavel & ({ tipo: 'item'; item: Item; contorno: Ponto[] } | { ti
 type Hover = { tipo: 'avatar' } | { tipo: 'pessoa'; id: string } | { tipo: 'item'; item: Item } | { tipo: 'sala'; id: string } | null;
 
 /** Um bonequinho que anda: o meu e o de cada pessoa online. */
-type Corpo = { x: number; y: number; dirX: number; dirY: number; andando: boolean; fase: number; caminho: Ponto[] };
+type Corpo = {
+	x: number;
+	y: number;
+	dirX: number;
+	dirY: number;
+	andando: boolean;
+	fase: number;
+	caminho: Ponto[];
+	/** Onde está sentado (o corpo fica na beira do assento). */
+	sentado?: Assento | null;
+	/** Ao chegar no fim do caminho, senta aqui. */
+	vaiSentar?: Assento | null;
+};
 type Outro = Corpo & {
 	pessoa: Pessoa;
 	/** Para onde olhar ao chegar (a direção de quem andou). */
@@ -102,9 +113,8 @@ type Outro = Corpo & {
 	sala: string | null;
 	mov: number;
 	situacao: Situacao;
-	sentado: boolean;
-	indo: 'assento' | 'lugar' | null;
-	assento: Assento;
+	/** O alvo que está valendo (movimento.ts). */
+	chave: string;
 };
 type Desenho = { peca: Desenhavel; atras: boolean; desenhar: () => void };
 
@@ -330,56 +340,48 @@ export class Jogo {
 	}
 
 	/**
-	 * Quem já entrou no escritório (vem do banco, presenca.ts), online ou
-	 * ausente. Ninguém pula: quem andou faz o caminho aqui, quem ficou ausente
-	 * vai andando sentar na recepção, quem voltou levanta e vai para o lugar.
+	 * Quem já entrou no escritório (vem do banco, presenca.ts): online, inativo
+	 * (sentado onde escolheu) ou offline (sofá da recepção). Ninguém pula: quem
+	 * muda de alvo faz o caminho aqui, levantando antes se estava sentado.
 	 */
 	definirPessoas(lista: Pessoa[]) {
-		// O assento de cada um sai da ordem dos ids (com o meu): igual em todas as telas
-		const ids = [...lista.map((p) => p.id), ...(this.opcoes.id ? [this.opcoes.id] : [])].sort();
+		const metas = alvos(lista);
 		const vistos = new Set<string>();
 		for (const p of lista) {
 			vistos.add(p.id);
-			const assento = ASSENTOS[ids.indexOf(p.id) % ASSENTOS.length];
-			let o = this.outros.get(p.id);
+			const alvo = metas.get(p.id)!;
+			const o = this.outros.get(p.id);
 			if (!o) {
 				// Primeira vez: aparece direto no lugar (ou já sentado), sem andar
-				const fora = p.situacao === 'ausente';
-				o = {
+				const a = alvo.assento;
+				const novo: Outro = {
 					pessoa: p,
-					x: fora ? assento.x : p.x,
-					y: fora ? assento.y : p.y,
-					dirX: fora ? assento.dirX : p.dirX,
-					dirY: fora ? assento.dirY : p.dirY,
+					x: a ? (a.sentado ? a.sx : a.x) : alvo.x,
+					y: a ? (a.sentado ? a.sy : a.y) : alvo.y,
+					dirX: a ? a.dirX : p.dirX,
+					dirY: a ? a.dirY : p.dirY,
 					andando: false,
 					fase: 0,
 					caminho: [],
+					sentado: a?.sentado ? a : null,
+					vaiSentar: null,
 					sala: null,
-					mov: p.mov,
+					mov: alvo.mov,
 					situacao: p.situacao,
-					sentado: fora && assento.sentado,
-					indo: null,
-					fim: null,
-					assento
+					chave: alvo.chave,
+					fim: null
 				};
-				o.sala = zonaNoPonto(o.x, o.y);
-				this.outros.set(p.id, o);
+				novo.sala = zonaNoPonto(novo.x, novo.y);
+				this.outros.set(p.id, novo);
 				continue;
 			}
 			o.pessoa = p;
-			if (o.assento !== assento && (o.sentado || o.indo === 'assento')) {
-				// Mudou a lista de gente (alguém novo): troca de assento sem atravessar a sala
-				Object.assign(o, { x: assento.x, y: assento.y, dirX: assento.dirX, dirY: assento.dirY, caminho: [], indo: null, sentado: assento.sentado });
-			}
-			o.assento = assento;
-			const acao = decidir(o, p);
 			o.situacao = p.situacao;
-			if (acao === 'ao-assento') this.levarOutro(o, assento, 'assento');
-			else if (acao === 'ao-lugar') {
-				o.sentado = false;
-				o.mov = p.mov;
-				this.levarOutro(o, { x: p.x, y: p.y }, 'lugar', { dirX: p.dirX, dirY: p.dirY });
-			}
+			if (!deveMover(o, alvo)) continue;
+			o.chave = alvo.chave;
+			o.mov = Math.max(o.mov, alvo.mov);
+			if (alvo.assento) this.levarOutro(o, alvo.assento, null);
+			else this.levarOutro(o, null, { x: alvo.x, y: alvo.y, dirX: p.dirX, dirY: p.dirY });
 		}
 		for (const id of [...this.outros.keys()]) if (!vistos.has(id)) this.outros.delete(id);
 		if (this.selecao.tipo === 'pessoa' && !this.outros.has(this.selecao.id)) this.selecionar({ tipo: 'avatar' });
@@ -387,39 +389,73 @@ export class Jogo {
 		this.emitirOutros();
 	}
 
-	/** Faz o caminho de outra pessoa até `alvo` (sem caminho: aparece lá). */
-	private levarOutro(o: Outro, alvo: Ponto, indo: 'assento' | 'lugar', dir?: { dirX: number; dirY: number }) {
-		const rota = Math.hypot(alvo.x - o.x, alvo.y - o.y) < 0.05 ? null : this.caminhoEntre(o, alvo);
+	/** O caminho até um ponto, ou até um assento (o chão ao lado e, por fim, a beira dele). */
+	private planejar(c: Corpo, assento: Assento | null, ponto: Ponto | null): Ponto[] | null {
+		const alvo = assento ? { x: assento.x, y: assento.y } : ponto!;
+		const rota = Math.hypot(alvo.x - c.x, alvo.y - c.y) < 0.05 ? [{ x: c.x, y: c.y }, alvo] : this.caminhoEntre(c, alvo);
+		if (!rota) return null;
+		if (assento?.sentado) rota.push({ x: assento.sx, y: assento.sy });
+		return rota;
+	}
+
+	/** Faz o caminho de outra pessoa (sem caminho: aparece lá). */
+	private levarOutro(o: Outro, assento: Assento | null, ponto: (Ponto & { dirX: number; dirY: number }) | null) {
+		o.sentado = null;
+		o.vaiSentar = assento;
+		o.fim = ponto ? { dirX: ponto.dirX, dirY: ponto.dirY } : null;
+		const rota = this.planejar(o, assento, ponto);
 		if (rota && rota.length > 1) {
 			o.caminho = rota.slice(1);
 			o.andando = true;
-			o.indo = indo;
-			o.fim = dir ?? null;
 			return;
 		}
-		o.x = alvo.x;
-		o.y = alvo.y;
+		const fim = assento ? (assento.sentado ? { x: assento.sx, y: assento.sy } : assento) : ponto!;
+		o.x = fim.x;
+		o.y = fim.y;
 		o.caminho = [];
 		o.andando = false;
-		o.indo = indo;
-		o.fim = dir ?? null;
 		this.chegou(o);
 	}
 
-	/** Terminou o caminho: senta, se foi para o assento; olha para onde a pessoa olhava. */
+	/** Terminou o caminho: senta, se ia sentar; senão olha para onde a pessoa olhava. */
 	private chegou(o: Outro) {
-		if (o.indo === 'assento') {
-			o.x = o.assento.x;
-			o.y = o.assento.y;
-			o.dirX = o.assento.dirX;
-			o.dirY = o.assento.dirY;
-			o.sentado = o.assento.sentado;
+		const a = o.vaiSentar;
+		if (a) {
+			o.dirX = a.dirX;
+			o.dirY = a.dirY;
+			o.sentado = a.sentado ? a : null;
 		} else if (o.fim) {
 			o.dirX = o.fim.dirX;
 			o.dirY = o.fim.dirY;
 		}
-		o.indo = null;
+		o.vaiSentar = null;
 		o.fim = null;
+	}
+
+	/** O meu boneco vai sentar (15 min sem mexer, com o DGathe aberto). */
+	sentarEm(a: Assento): boolean {
+		const rota = this.planejar(this.av, a, null);
+		if (!rota) return false;
+		this.av.sentado = null;
+		this.av.vaiSentar = a;
+		this.av.caminho = rota.slice(1);
+		// Para os outros, o destino é o chão ao lado do lugar, com o assento
+		this.avisos.rota?.(a.sentado ? rota.slice(0, -1) : rota, a.id);
+		this.destinoSala = a.sala;
+		this.avisos.movimento(true, a.sala);
+		return true;
+	}
+
+	/** Mexeu de novo: o meu boneco levanta e fica de pé ao lado do lugar. */
+	levantar() {
+		const a = this.av.sentado ?? this.av.vaiSentar;
+		this.av.vaiSentar = null;
+		if (!a) return;
+		this.av.sentado = null;
+		const rota = [{ x: this.av.x, y: this.av.y }, { x: a.x, y: a.y }];
+		this.av.caminho = rota.slice(1);
+		this.avisos.rota?.(rota, null);
+		this.avisos.movimento(true, a.sala);
 	}
 
 	/** Vai até a pessoa e para ao lado dela. */
@@ -452,6 +488,9 @@ export class Jogo {
 	// --------------------------------------------------------------- andar
 
 	private andarAte(p: Ponto, salaDestino: string | null = null, folga = 0): boolean {
+		// Mandou andar: se estava sentado, levanta
+		this.av.sentado = null;
+		this.av.vaiSentar = null;
 		const rota = this.caminhoEntre(this.av, p);
 		if (!rota) {
 			this.avisos.aviso('Sem passagem até esse ponto');
@@ -469,7 +508,9 @@ export class Jogo {
 
 	/** O caminho de `de` até `p` (ou até o chão livre mais perto de `p`), já suavizado. */
 	private caminhoEntre(de: Ponto, p: Ponto): Ponto[] | null {
-		const inicio = { x: Math.floor(de.x), y: Math.floor(de.y) };
+		let inicio = { x: Math.floor(de.x), y: Math.floor(de.y) };
+		// Levantando de um assento (dentro do móvel): sai pelo chão livre ao lado
+		if (!celulaLivre(inicio.x, inicio.y)) inicio = livreMaisProxima(GRADE, de, 2) ?? inicio;
 		const cx = Math.floor(p.x);
 		const cy = Math.floor(p.y);
 
@@ -520,8 +561,19 @@ export class Jogo {
 		const av = this.av;
 		if (av.caminho.length && this.mover(av, dt)) {
 			this.avisos.movimento(false, null);
-			this.avisos.parou?.(av.x, av.y, av.dirX, av.dirY);
-			gravar(CHAVE_POSICAO, { x: av.x, y: av.y });
+			const a = av.vaiSentar;
+			av.vaiSentar = null;
+			if (a) {
+				// Sentou: para os outros (e para a próxima visita) vale o chão ao lado
+				av.sentado = a.sentado ? a : null;
+				av.dirX = a.dirX;
+				av.dirY = a.dirY;
+				this.avisos.parou?.(a.x, a.y, a.dirX, a.dirY, a.id);
+				gravar(CHAVE_POSICAO, { x: a.x, y: a.y });
+			} else {
+				this.avisos.parou?.(av.x, av.y, av.dirX, av.dirY);
+				gravar(CHAVE_POSICAO, { x: av.x, y: av.y });
+			}
 		}
 
 		// Os outros
@@ -677,20 +729,23 @@ export class Jogo {
 	private corposParaDesenhar(): Desenho[] {
 		const lista: Desenho[] = [];
 		const add = (c: Corpo, aparencia: Aparencia, o?: Outro) => {
-			// A ordem de desenho usa o chão em frente ao assento; o boneco sentado é
-			// desenhado na beira do sofá
-			const caixa = { x0: c.x - 0.22, y0: c.y - 0.22, z0: 0, x1: c.x + 0.22, y1: c.y + 0.22, z1: 1.4 };
-			const onde = this.ondeDesenhar(c, o);
+			// Sentado, a ordem de desenho usa o ponto do assento (assentos.ts), que
+			// decide se o encosto fica atrás ou na frente do boneco
+			const s = c.sentado;
+			const m = s ? SENTADO_MEIA : 0.22;
+			const cx = s ? s.ox : c.x;
+			const cy = s ? s.oy : c.y;
+			const caixa = { x0: cx - m, y0: cy - m, z0: 0, x1: cx + m, y1: cy + m, z1: 1.4 };
 			lista.push({
-				peca: { caixa, tela: expandir(telaDaCaixa(caixa), 14) },
+				peca: { caixa, tela: expandir(telaDaCaixa(caixa), 16) },
 				atras: c.x < PREDIO.x0 || c.y < PREDIO.y0,
 				desenhar: () => {
 					desenharAvatar(
 						this.ctx,
-						{ x: onde.x, y: onde.y, dirX: c.dirX, dirY: c.dirY, andando: c.andando, fase: c.fase, t: this.t, sentado: o?.sentado },
+						{ x: c.x, y: c.y, dirX: c.dirX, dirY: c.dirY, andando: c.andando, fase: c.fase, t: this.t, sentado: !!s },
 						aparencia
 					);
-					if (o?.situacao === 'ausente' && !c.andando) this.desenharSono(onde, o.sentado);
+					if (o && o.situacao !== 'online' && !c.andando) this.desenharSono(c, !!s);
 				}
 			});
 		};
@@ -699,12 +754,7 @@ export class Jogo {
 		return lista;
 	}
 
-	/** Onde o boneco aparece: sentado, na beira do sofá; senão, onde está. */
-	private ondeDesenhar(c: Corpo, o?: Outro): Ponto {
-		return o?.sentado ? { x: o.assento.sx, y: o.assento.sy } : { x: c.x, y: c.y };
-	}
-
-	/** "z z z" subindo da cabeça de quem está ausente. */
+	/** "z z z" subindo da cabeça de quem está ausente ou offline. */
 	private desenharSono(onde: Ponto, sentado: boolean) {
 		const ctx = this.ctx;
 		const b = paraTela(onde.x, onde.y, 0);
@@ -800,8 +850,7 @@ export class Jogo {
 			const sel = this.selecao.tipo === 'pessoa' && this.selecao.id === o.pessoa.id;
 			// Quem está sentado na recepção só ganha anel quando selecionado
 			if (o.sentado && !sel) continue;
-			const onde = this.ondeDesenhar(o, o);
-			anel(onde.x, onde.y, sel ? ouro : 'rgba(255, 255, 255, 0.45)', sel ? 2.2 : 1.2);
+			anel(o.x, o.y, sel ? ouro : 'rgba(255, 255, 255, 0.45)', sel ? 2.2 : 1.2);
 		}
 		const eu = this.selecao.tipo === 'avatar';
 		anel(this.av.x, this.av.y, eu ? ouro : 'rgba(255, 255, 255, 0.7)', eu ? 2.2 : 1.4);
@@ -850,15 +899,14 @@ export class Jogo {
 		crachas.push({
 			texto: `${this.opcoes.nome} · ${this.opcoes.cargo}`,
 			x: meu.x,
-			y: meu.y - 62 * this.zoom - 6,
+			y: meu.y - (62 - (this.av.sentado ? ABAIXA_SENTADO : 0)) * this.zoom - 6,
 			o: { fundo: 'rgba(11, 18, 32, 0.86)', cor: '#ffd58a' }
 		});
 		for (const o of this.outros.values()) {
-			const onde = this.ondeDesenhar(o, o);
-			const c = pe(onde.x, onde.y);
-			const ausente = o.situacao === 'ausente';
+			const c = pe(o.x, o.y);
+			const ausente = o.situacao !== 'online';
 			crachas.push({
-				texto: ausente ? `${primeiroNome(o.pessoa.nome)} · ausente` : `${primeiroNome(o.pessoa.nome)} · ${o.pessoa.cargo}`,
+				texto: `${primeiroNome(o.pessoa.nome)} · ${o.situacao === 'inativo' ? 'ausente' : o.situacao === 'offline' ? 'offline' : o.pessoa.cargo}`,
 				x: c.x,
 				y: c.y - (62 - (o.sentado ? ABAIXA_SENTADO : 0)) * this.zoom - 6,
 				o: ausente
@@ -887,7 +935,9 @@ export class Jogo {
 			if (this.hover.tipo === 'avatar') texto = `${this.opcoes.nome} (você)`;
 			else if (this.hover.tipo === 'pessoa') {
 				const o = this.outros.get(this.hover.id);
-				texto = o ? `${o.pessoa.nome} · ${o.situacao === 'ausente' ? 'ausente, na recepção' : o.pessoa.cargo}` : '';
+				texto = o
+					? `${o.pessoa.nome} · ${o.situacao === 'inativo' ? 'ausente (15 min sem mexer)' : o.situacao === 'offline' ? 'offline, na recepção' : o.pessoa.cargo}`
+					: '';
 			}
 			else if (this.hover.tipo === 'sala') texto = SALA_POR_ID.get(this.hover.id)?.nome ?? '';
 			else {
@@ -907,11 +957,10 @@ export class Jogo {
 
 	private oQueEstaEm(sx: number, sy: number): Hover {
 		const p = this.paraCena(sx, sy);
-		const a = areaDoAvatar(this.av.x, this.av.y);
+		const a = areaDoAvatar(this.av.x, this.av.y, !!this.av.sentado);
 		if (p.x >= a.x0 && p.x <= a.x1 && p.y >= a.y0 && p.y <= a.y1) return { tipo: 'avatar' };
 		for (const o of this.outros.values()) {
-			const onde = this.ondeDesenhar(o, o);
-			const b = areaDoAvatar(onde.x, onde.y, o.sentado);
+			const b = areaDoAvatar(o.x, o.y, !!o.sentado);
 			if (p.x >= b.x0 && p.x <= b.x1 && p.y >= b.y0 && p.y <= b.y1) return { tipo: 'pessoa', id: o.pessoa.id };
 		}
 		for (const lista of [this.frente, this.atras]) {
@@ -1187,7 +1236,7 @@ export class Jogo {
 			const q = m(paraTela(o.x, o.y));
 			c.beginPath();
 			c.arc(q.x, q.y, 3, 0, Math.PI * 2);
-			c.fillStyle = o.situacao === 'ausente' ? '#9aa6ba' : (o.pessoa.cor ?? '#ffffff');
+			c.fillStyle = o.situacao !== 'online' ? '#9aa6ba' : (o.pessoa.cor ?? '#ffffff');
 			c.fill();
 			c.strokeStyle = '#ffffff';
 			c.lineWidth = 1.2;

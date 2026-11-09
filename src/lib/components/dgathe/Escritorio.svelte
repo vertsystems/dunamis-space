@@ -7,6 +7,7 @@
 	import type { SupabaseClient } from '@supabase/supabase-js';
 	import { Jogo, type Selecao, type OutroResumo } from '$lib/dgathe/jogo';
 	import { Presenca, type EstadoConexao } from '$lib/dgathe/presenca';
+	import { assentoPorId } from '$lib/dgathe/assentos';
 	import { lerAparencia, type Aparencia } from '$lib/dgathe/aparencia';
 	import { SALA_POR_ID, SETORES } from '$lib/dgathe/mapa';
 	import {
@@ -102,10 +103,15 @@
 	let falhou = $state(false);
 	/** Painel recolhido: só o cabeçalho, para sobrar mapa (no celular, principalmente). */
 	let recolhido = $state(false);
-	/** Quem mais já entrou no escritório: online, ou ausente (sentado na recepção). */
+	/**
+	 * Quem mais já entrou no escritório: online, ausente (15 min sem mexer,
+	 * sentado em algum lugar) ou offline (saiu; sentado na recepção).
+	 */
 	let outros = $state<OutroResumo[]>([]);
 	const presentes = $derived(outros.filter((o) => o.situacao === 'online'));
-	const ausentes = $derived(outros.filter((o) => o.situacao === 'ausente'));
+	const ausentes = $derived(outros.filter((o) => o.situacao === 'inativo'));
+	const offline = $derived(outros.filter((o) => o.situacao === 'offline'));
+	const nomeDaSala = (id: string | null) => (id ? (SALA_POR_ID.get(id)?.nome ?? id) : 'lado de fora');
 	let conexao = $state<EstadoConexao | 'sozinho'>('sozinho');
 
 	// Tela de boas-vindas: fica pelo menos MINIMO_BOAS_VINDAS e, se a conexão
@@ -127,8 +133,9 @@
 		const nomes = [`${nome} (você)`, ...presentes.map((o) => o.nome)].join(', ');
 		if (conexao === 'conectando') return `Conectando… ${nomes}`;
 		if (conexao === 'offline') return 'Sem conexão agora: a lista volta sozinha quando a internet voltar';
-		const fora = ausentes.length ? `. Na recepção (ausentes): ${ausentes.map((o) => o.nome).join(', ')}` : '';
-		return `Online: ${nomes}${fora}`;
+		const parados = ausentes.length ? `. Ausentes: ${ausentes.map((o) => o.nome).join(', ')}` : '';
+		const fora = offline.length ? `. Offline, na recepção: ${offline.map((o) => o.nome).join(', ')}` : '';
+		return `Online: ${nomes}${parados}${fora}`;
 	});
 	const nomeLocal = $derived(local ? (SALA_POR_ID.get(local)?.nome ?? 'Lado de fora') : 'Lado de fora');
 	const iniciais = $derived(iniciaisDe(nome));
@@ -177,20 +184,23 @@
 					},
 					aviso: (t) => avisar(t),
 					// O destino vale para os outros desde o primeiro passo (eles fazem o caminho)
-					rota: (pontos) => {
+					rota: (pontos, assento) => {
 						const fim = pontos[pontos.length - 1];
 						const antes = pontos[pontos.length - 2] ?? fim;
 						const d = Math.hypot(fim.x - antes.x, fim.y - antes.y) || 1;
-						presenca?.andar(fim, (fim.x - antes.x) / d, (fim.y - antes.y) / d);
+						presenca?.andar(fim, (fim.x - antes.x) / d, (fim.y - antes.y) / d, assento ?? null);
 					},
-					parou: (x, y, dx, dy) => presenca?.parou(x, y, dx, dy),
+					parou: (x, y, dx, dy, assento) => presenca?.parou(x, y, dx, dy, assento ?? null),
 					outros: (lista) => {
 						if (jaSincronizou) {
 							const antes = new Map(outros.map((o) => [o.id, o.situacao]));
 							for (const o of lista) {
 								const era = antes.get(o.id);
-								if (o.situacao === 'online' && era !== 'online') avisar(`${primeiroNome(o.nome)} chegou ao escritório`);
-								if (o.situacao === 'ausente' && era === 'online') avisar(`${primeiroNome(o.nome)} saiu e foi para a recepção`);
+								const n = primeiroNome(o.nome);
+								if (era === o.situacao) continue;
+								if (o.situacao === 'online') avisar(era === 'inativo' ? `${n} voltou` : `${n} chegou ao escritório`);
+								else if (o.situacao === 'inativo') avisar(`${n} está ausente (15 min sem mexer)`);
+								else if (era) avisar(`${n} saiu e foi para a recepção`);
 							}
 						}
 						jaSincronizou = true;
@@ -212,6 +222,19 @@
 			});
 			presenca.iniciar(jg.posicao());
 		}
+		// 15 min sem mexer (a vigia é do layout, presenca.ts): com o DGathe aberto
+		// nesta aba, é o meu boneco que anda até o lugar e grava, e levanta ao voltar
+		const aoFicarInativo = (e: Event) => {
+			const a = assentoPorId((e as CustomEvent<{ assento: string | null }>).detail?.assento);
+			if (jogo && a && jogo.sentarEm(a)) e.preventDefault();
+		};
+		const aoVoltar = (e: Event) => {
+			if (!jogo) return;
+			jogo.levantar();
+			e.preventDefault();
+		};
+		window.addEventListener('dgathe:inativo', aoFicarInativo);
+		window.addEventListener('dgathe:ativo', aoVoltar);
 		try {
 			if (!localStorage.getItem(CHAVE_AJUDA)) ajuda = true;
 		} catch {
@@ -222,6 +245,8 @@
 		tela.focus({ preventScroll: true });
 		return () => {
 			document.removeEventListener('fullscreenchange', mudouTelaCheia);
+			window.removeEventListener('dgathe:inativo', aoFicarInativo);
+			window.removeEventListener('dgathe:ativo', aoVoltar);
 			clearTimeout(timerAviso);
 			clearTimeout(tempoMinimo);
 			clearTimeout(tempoMaximo);
@@ -283,7 +308,7 @@
 			<span title="Setores do escritório"><MapPin size={14} /><b>{SETORES.length}</b><em>setores</em></span>
 			<span title={tituloPessoas}>
 				<Users size={14} /><b>{1 + presentes.length}</b><em>online</em>
-			{#if ausentes.length}<small class="dg-ausentes">+{ausentes.length} na recepção</small>{/if}
+			{#if ausentes.length || offline.length}<small class="dg-ausentes">{[ausentes.length ? `${ausentes.length} ausente${ausentes.length > 1 ? 's' : ''}` : '', offline.length ? `${offline.length} offline` : ''].filter(Boolean).join(' · ')}</small>{/if}
 				{#if conexao !== 'sozinho'}<i class="dg-sinal {conexao}" aria-hidden="true"></i>{/if}
 			</span>
 			<span title="Agentes trabalhando (próxima fase)"><Bot size={14} /><b>0</b><em>agentes</em></span>
@@ -333,8 +358,8 @@
 					<h4>Na sala agora</h4>
 					{#if aqui}<p class="dg-pessoa"><span style="--cor: #ffd58a"></span>{primeiroNome(nome)} (você)</p>{/if}
 					{#each gente as o (o.id)}
-						<button type="button" class="dg-pessoa dg-pessoa-btn" class:ausente={o.situacao === 'ausente'} onclick={() => jogo?.selecionar({ tipo: 'pessoa', id: o.id })}>
-							<span style="--cor: {o.situacao === 'ausente' ? '#9aa6ba' : (o.cor ?? '#9aa6ba')}"></span>{o.nome} · {o.situacao === 'ausente' ? 'ausente' : o.cargo}
+						<button type="button" class="dg-pessoa dg-pessoa-btn" class:ausente={o.situacao !== 'online'} onclick={() => jogo?.selecionar({ tipo: 'pessoa', id: o.id })}>
+							<span style="--cor: {o.situacao !== 'online' ? '#9aa6ba' : (o.cor ?? '#9aa6ba')}"></span>{o.nome} · {o.situacao === 'inativo' ? 'ausente' : o.situacao === 'offline' ? 'offline' : o.cargo}
 						</button>
 					{/each}
 					{#if !aqui && !gente.length}<p class="dg-vazio">Ninguém por aqui</p>{/if}
@@ -373,11 +398,14 @@
 				<button type="button" class="dg-fechar" onclick={() => jogo?.selecionar({ tipo: 'avatar' })} aria-label="Fechar"><X size={16} /></button>
 			</header>
 			<p class="dg-status" class:andando={p.andando}>
-				{#if p.situacao === 'ausente'}{p.andando ? 'Indo para a recepção' : 'Sentado na recepção'}
-				{:else}{p.andando ? 'Andando' : p.sala ? `Em ${SALA_POR_ID.get(p.sala)?.nome ?? p.sala}` : 'Do lado de fora'}{/if}
+				{#if p.situacao === 'offline'}{p.andando ? 'Indo para a recepção' : 'Sentado na recepção'}
+				{:else if p.situacao === 'inativo'}{p.andando ? 'Indo sentar' : `Sentado em ${nomeDaSala(p.sala)}`}
+				{:else}{p.andando ? 'Andando' : p.sala ? `Em ${nomeDaSala(p.sala)}` : 'Do lado de fora'}{/if}
 			</p>
-			{#if p.situacao === 'ausente'}
-				<p class="dg-online ausente"><span></span>Ausente: fora do dspace agora</p>
+			{#if p.situacao === 'offline'}
+				<p class="dg-online ausente"><span></span>Offline: fora do dspace agora</p>
+			{:else if p.situacao === 'inativo'}
+				<p class="dg-online ausente"><span></span>Ausente: 15 min sem mexer no dspace</p>
 			{:else}
 				<p class="dg-online"><span></span>Online agora</p>
 			{/if}
@@ -408,9 +436,19 @@
 				</div>
 			{/if}
 			{#if ausentes.length}
-				<h4 class="dg-rotulo">Na recepção (ausentes)</h4>
+				<h4 class="dg-rotulo">Ausentes (15 min sem mexer)</h4>
 				<div class="dg-atalhos">
 					{#each ausentes as o (o.id)}
+						<button type="button" class="ausente" onclick={() => jogo?.selecionar({ tipo: 'pessoa', id: o.id })} title="{o.nome}: sentado em {nomeDaSala(o.sala)}">
+							<span style="--cor: #9aa6ba"></span>{primeiroNome(o.nome)}
+						</button>
+					{/each}
+				</div>
+			{/if}
+			{#if offline.length}
+				<h4 class="dg-rotulo">Offline (na recepção)</h4>
+				<div class="dg-atalhos">
+					{#each offline as o (o.id)}
 						<button type="button" class="ausente" onclick={() => jogo?.selecionar({ tipo: 'pessoa', id: o.id })} title="{o.nome} está fora do dspace agora">
 							<span style="--cor: #9aa6ba"></span>{primeiroNome(o.nome)}
 						</button>

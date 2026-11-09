@@ -20,22 +20,6 @@ export const PREDIO = { x0: 4, y0: 4, x1: 43, y1: 24 };
 /** Onde o avatar aparece na primeira visita: no meio da recepção. */
 export const INICIO = { x: 20.5, y: 22.2 };
 
-/**
- * Onde fica quem está ausente (saiu do dspace ou está sem sinal): sentado nos
- * sofás da recepção, pedido do Bruno em 09/11/2026. `x, y` é o chão em frente
- * ao assento (por onde chega e a ordem de desenho); `sx, sy` é onde o boneco
- * sentado é desenhado, na beira do sofá. Sofás cheios: em pé, perto da porta.
- */
-export type Assento = { x: number; y: number; sx: number; sy: number; dirX: number; dirY: number; sentado: boolean };
-export const ASSENTOS: Assento[] = [
-	{ x: 18.32, y: 20.55, sx: 18.0, sy: 20.55, dirX: 1, dirY: 0, sentado: true },
-	{ x: 22.68, y: 20.55, sx: 23.0, sy: 20.55, dirX: -1, dirY: 0, sentado: true },
-	{ x: 18.32, y: 21.45, sx: 18.0, sy: 21.45, dirX: 1, dirY: 0, sentado: true },
-	{ x: 22.68, y: 21.45, sx: 23.0, sy: 21.45, dirX: -1, dirY: 0, sentado: true },
-	{ x: 19.4, y: 23.4, sx: 19.4, sy: 23.4, dirX: 0.7, dirY: 0.7, sentado: false },
-	{ x: 21.6, y: 23.4, sx: 21.6, sy: 23.4, dirX: 0.7, dirY: 0.7, sentado: false },
-	{ x: 20.5, y: 23.75, sx: 20.5, sy: 23.75, dirX: 0.7, dirY: 0.7, sentado: false }
-];
 
 export type TipoPiso =
 	| 'grama'
@@ -624,7 +608,7 @@ function montarItens(): Item[] {
 	add({ tipo: 'pingPong', x: 37.3, y: 18.6, w: 2.4, d: 1.4, h: 0.76 });
 	add({ tipo: 'mesaCentro', x: 41.1, y: 18.6, w: 1, d: 1, h: 0.72, cor: '#f4f1eb', variante: 'redonda', nome: 'Mesa do café' });
 	add({ tipo: 'pufe', x: 40.05, y: 18.75, w: 0.7, d: 0.7, h: 0.45, cor: '#e0662a' });
-	add({ tipo: 'pufe', x: 42.35, y: 19.6, w: 0.7, d: 0.7, h: 0.45, cor: '#3b6ef6' });
+	add({ tipo: 'pufe', x: 42.35, y: 19.6, w: 0.7, d: 0.7, h: 0.45, cor: '#3b6ef6', frente: '-x' });
 	add({ tipo: 'sofa', x: 36.1, y: 21, w: 0.85, d: 2.4, h: 0.75, frente: 'x', cor: '#4f6b4f' });
 	add({ tipo: 'mesaCentro', x: 37.4, y: 21.6, w: 0.9, d: 1.2, h: 0.32, cor: '#6b4a33' });
 	planta(43, 24, true);

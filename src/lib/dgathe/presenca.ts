@@ -14,16 +14,23 @@
 //     estou indo logo no primeiro passo (os outros calculam o caminho e animam
 //     sozinhos, com alguns segundos de atraso, que o Bruno aceitou).
 //
-// Ausente = sem sinal há mais de AUSENTE_APOS segundos (dspace fechado, Mac
-// dormindo, sem internet) ou despedida há mais de SAIDA_CONFIRMA segundos
-// (recarregar a página não conta como sair). Os segundos são contados no
-// relógio do servidor.
+// Três situações:
+//   - online: mexendo no dspace
+//   - inativo: logado, mas OCIOSO_APOS (15 min) sem mexer em nenhuma aba do
+//     dspace. O próprio navegador escolhe onde sentar (assentos.ts: CEO na
+//     Diretoria; os outros na recepção, na copa ou numa sala sorteada) e grava
+//     o lugar; ao mexer de novo, levanta
+//   - offline: sem sinal há mais de AUSENTE_APOS segundos (dspace fechado, Mac
+//     dormindo, sem internet) ou despedida há mais de SAIDA_CONFIRMA segundos
+//     (recarregar a página não conta como sair); senta nos sofás da recepção
+// Os segundos são contados no relógio do servidor.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Ponto } from './iso';
 import { LARGURA, ALTURA } from './mapa';
 import { lerAparencia, type Aparencia } from './aparencia';
 import { relogio } from './relogio';
+import { assentoPorId, escolherAssento } from './assentos';
 import { funcaoSigla } from '$lib/equipe';
 
 /** "Estou aqui", de qualquer tela do dspace. */
@@ -36,8 +43,10 @@ export const LEITURA_ESCONDIDA = 20_000;
 export const AUSENTE_APOS = 75;
 /** Despedida só vale depois disto (s): recarregar a página não é sair. */
 export const SAIDA_CONFIRMA = 5;
+/** Sem mexer em nenhuma aba do dspace por este tempo, vai sentar em algum lugar. */
+export const OCIOSO_APOS = 15 * 60_000;
 
-export type Situacao = 'online' | 'ausente';
+export type Situacao = 'online' | 'inativo' | 'offline';
 
 export type Pessoa = {
 	id: string;
@@ -54,6 +63,8 @@ export type Pessoa = {
 	mov: number;
 	aparencia: Aparencia;
 	situacao: Situacao;
+	/** Onde sentou (catálogo de assentos.ts), quando está inativo. */
+	assento: string | null;
 };
 
 export type EstadoConexao = 'conectando' | 'online' | 'offline';
@@ -88,13 +99,15 @@ export function lerLinha(bruto: unknown): Pessoa | null {
 		dirY: numero(r.dir_y, -1, 1) ?? 1,
 		mov: numero(r.mov, 0) ?? 0,
 		aparencia: lerAparencia(r.aparencia, cor),
-		situacao: semSinal > AUSENTE_APOS || (saiuHa !== null && saiuHa >= SAIDA_CONFIRMA) ? 'ausente' : 'online'
+		situacao:
+			semSinal > AUSENTE_APOS || (saiuHa !== null && saiuHa >= SAIDA_CONFIRMA) ? 'offline' : r.inativo === true ? 'inativo' : 'online',
+		assento: typeof r.assento === 'string' && /^[a-z0-9:.-]{1,60}$/.test(r.assento) ? r.assento : null
 	};
 }
 
 const arredonda = (n: number) => Math.round(n * 1000) / 1000;
 
-type Posicao = { x: number; y: number; dirX: number; dirY: number; mov: number };
+type Posicao = { x: number; y: number; dirX: number; dirY: number; mov: number; assento: string | null };
 
 /** O DGathe aberto: lê quem está e grava para onde eu vou. */
 export class Presenca {
@@ -120,7 +133,7 @@ export class Presenca {
 	iniciar(onde: { x: number; y: number; dirX: number; dirY: number }) {
 		this.ouvintes.estado('conectando');
 		this.mov = Math.max(Date.now(), this.mov + 1);
-		this.pendente = { ...onde, mov: this.mov };
+		this.pendente = { ...onde, mov: this.mov, assento: null };
 		if (typeof document !== 'undefined') document.addEventListener('visibilitychange', this.voltou);
 		void this.ler();
 	}
@@ -166,16 +179,16 @@ export class Presenca {
 		}
 	}
 
-	/** Comecei a andar: o destino já vale para os outros (eles fazem o caminho). */
-	andar(destino: Ponto, dirX: number, dirY: number) {
+	/** Comecei a andar: o destino já vale para os outros (eles fazem o caminho). `assento` = vou sentar lá. */
+	andar(destino: Ponto, dirX: number, dirY: number, assento: string | null = null) {
 		this.mov = Math.max(Date.now(), this.mov + 1);
-		this.pendente = { x: destino.x, y: destino.y, dirX, dirY, mov: this.mov };
+		this.pendente = { x: destino.x, y: destino.y, dirX, dirY, mov: this.mov, assento };
 		void this.enviar();
 	}
 
 	/** Parei aqui (o mesmo movimento: só acerta o ponto e a direção). */
-	parou(x: number, y: number, dirX: number, dirY: number) {
-		this.pendente = { x, y, dirX, dirY, mov: this.mov };
+	parou(x: number, y: number, dirX: number, dirY: number, assento: string | null = null) {
+		this.pendente = { x, y, dirX, dirY, mov: this.mov, assento };
 		void this.enviar();
 	}
 
@@ -187,7 +200,8 @@ export class Presenca {
 			p_y: arredonda(p.y),
 			p_dir_x: arredonda(p.dirX),
 			p_dir_y: arredonda(p.dirY),
-			p_mov: p.mov
+			p_mov: p.mov,
+			p_assento: p.assento
 		});
 		if (!error && this.pendente === p) this.pendente = null;
 	}
@@ -218,28 +232,146 @@ export function marcarAba(aba: string, viva: boolean, agora = Date.now()): numbe
 	}
 }
 
+const CHAVE_MEXEU = 'dgathe:mexeu';
+const CHAVE_INATIVO = 'dgathe:inativo';
+type Decisao = { desde: number; assento: string | null };
+
+function lerDecisao(): Decisao | null {
+	try {
+		const d = JSON.parse(localStorage.getItem(CHAVE_INATIVO) || 'null') as Decisao | null;
+		return d && typeof d.desde === 'number' ? d : null;
+	} catch {
+		return null;
+	}
+}
+
+/** Número estável a partir de um texto (a semente do sorteio do lugar). */
+function hash(t: string) {
+	let h = 5381;
+	for (let i = 0; i < t.length; i++) h = (Math.imul(h, 33) + t.charCodeAt(i)) >>> 0;
+	return h;
+}
+
 /**
  * O sinal de vida do dspace inteiro (chamado no layout, para quem tem o
- * módulo DGathe). Devolve a função que para.
+ * módulo DGathe), e a vigia dos 15 min sem mexer. Devolve a função que para.
+ *
+ * Ficou inativo ou voltou: avisa a página com os eventos 'dgathe:inativo' e
+ * 'dgathe:ativo' (detail.assento). Se o DGathe estiver aberto nesta aba, ele
+ * chama preventDefault() e faz o próprio boneco andar (e gravar); senão, o
+ * lugar é gravado daqui.
  */
-export function manterSinal(supabase: SupabaseClient, conexao: { url: string; chave: string }): () => void {
+export function manterSinal(
+	supabase: SupabaseClient,
+	conexao: { url: string; chave: string },
+	quem: { id: string | null; ceo: boolean }
+): () => void {
 	const aba = Math.random().toString(36).slice(2, 10);
 	let token: string | null = null;
 	let parado = false;
+	let inativo = false;
+	let ultimoLocal = Date.now();
+	let gravadoEm = 0;
 
-	const pulsar = async () => {
+	const ultimoMexer = () => {
+		try {
+			return Math.max(ultimoLocal, Number(localStorage.getItem(CHAVE_MEXEU)) || 0);
+		} catch {
+			return ultimoLocal;
+		}
+	};
+
+	const pulsar = async (args?: Record<string, unknown>) => {
 		if (parado) return;
 		marcarAba(aba, true);
 		const { data } = await supabase.auth.getSession();
 		token = data.session?.access_token ?? null;
-		if (token && !parado) await supabase.rpc('dgathe_pulso');
+		if (token && !parado) await supabase.rpc('dgathe_pulso', args);
 	};
 
-	void pulsar();
+	/** 15 min sem mexer: escolhe onde sentar (a mesma escolha em todas as abas) e vai. */
+	const ficarInativo = async () => {
+		if (inativo || parado) return;
+		inativo = true;
+		const desde = ultimoMexer();
+		let decisao = lerDecisao();
+		if (!decisao || decisao.desde !== desde) {
+			// Lugar livre: não senta onde outra pessoa inativa já sentou
+			const { data } = await supabase.rpc('dgathe_quem');
+			const ocupados = new Set<string>();
+			if (Array.isArray(data)) {
+				for (const linha of data) {
+					const p = lerLinha(linha);
+					if (p && p.id !== quem.id && p.situacao === 'inativo' && p.assento) ocupados.add(p.assento);
+				}
+			}
+			const a = escolherAssento({ ceo: quem.ceo, ocupados, semente: hash(quem.id ?? aba) ^ desde });
+			decisao = { desde, assento: a?.id ?? null };
+			try {
+				localStorage.setItem(CHAVE_INATIVO, JSON.stringify(decisao));
+			} catch {
+				// sem armazenamento: cada aba decide por si
+			}
+		}
+		if (!inativo || parado) return;
+		const ev = new CustomEvent('dgathe:inativo', { detail: { assento: decisao.assento }, cancelable: true });
+		const oDGatheCuida = !window.dispatchEvent(ev);
+		const a = assentoPorId(decisao.assento);
+		if (oDGatheCuida || !a) await pulsar({ p_inativo: true });
+		else await pulsar({ p_x: a.x, p_y: a.y, p_dir_x: a.dirX, p_dir_y: a.dirY, p_mov: Date.now(), p_inativo: true, p_assento: a.id });
+	};
+
+	/** Mexeu de novo (aqui, ou noutra aba: `daqui` = false): levanta. */
+	const voltar = async (daqui: boolean) => {
+		if (!inativo || parado) return;
+		inativo = false;
+		const decisao = lerDecisao();
+		if (daqui) {
+			try {
+				localStorage.removeItem(CHAVE_INATIVO);
+			} catch {
+				// sem armazenamento
+			}
+		}
+		const ev = new CustomEvent('dgathe:ativo', { detail: { assento: decisao?.assento ?? null }, cancelable: true });
+		const oDGatheCuida = !window.dispatchEvent(ev);
+		if (!daqui) return; // quem mexeu foi outra aba, e ela já gravou
+		const a = assentoPorId(decisao?.assento);
+		if (oDGatheCuida || !a) await pulsar({ p_inativo: false });
+		// Levanta e fica de pé ao lado do lugar
+		else await pulsar({ p_x: a.x, p_y: a.y, p_dir_x: a.dirX, p_dir_y: a.dirY, p_mov: Date.now(), p_inativo: false });
+	};
+
+	const mexeu = () => {
+		const agora = Date.now();
+		ultimoLocal = agora;
+		if (agora - gravadoEm > 10_000) {
+			gravadoEm = agora;
+			try {
+				localStorage.setItem(CHAVE_MEXEU, String(agora));
+			} catch {
+				// sem armazenamento: vale só esta aba
+			}
+		}
+		if (inativo) void voltar(true);
+	};
+
+	const conferirOcio = () => {
+		const parada = Date.now() - ultimoMexer();
+		if (!inativo && parada > OCIOSO_APOS) void ficarInativo();
+		else if (inativo && parada < OCIOSO_APOS) void voltar(false);
+	};
+
+	// Abriu o dspace: está mexendo agora (e não está mais inativo, se estava)
+	mexeu();
+	void pulsar({ p_inativo: false });
 	// Um segundo sinal logo depois: se a despedida da página anterior (recarregar)
 	// chegou ao servidor depois do primeiro, este a desfaz
 	const extra = setTimeout(() => void pulsar(), 4_000);
-	const pararRelogio = relogio(PULSO, () => void pulsar());
+	const pararRelogio = relogio(PULSO, () => {
+		void pulsar();
+		conferirOcio();
+	});
 
 	const voltou = () => {
 		if (!document.hidden) void pulsar();
@@ -262,17 +394,30 @@ export function manterSinal(supabase: SupabaseClient, conexao: { url: string; ch
 	const voltouDoCache = (e: PageTransitionEvent) => {
 		if (e.persisted) void pulsar();
 	};
+	// Outra aba decidiu (ficou inativo) ou desfez (alguém mexeu lá)
+	const outraAba = (e: StorageEvent) => {
+		if (e.key !== CHAVE_INATIVO) return;
+		if (e.newValue && !inativo) void ficarInativo();
+		else if (!e.newValue && inativo) void voltar(false);
+	};
+	const EVENTOS = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart'] as const;
+	for (const ev of EVENTOS) window.addEventListener(ev, mexeu, { passive: true });
+	window.addEventListener('scroll', mexeu, { passive: true, capture: true });
 	document.addEventListener('visibilitychange', voltou);
 	window.addEventListener('pagehide', saiu);
 	window.addEventListener('pageshow', voltouDoCache);
+	window.addEventListener('storage', outraAba);
 
 	return () => {
 		parado = true;
 		clearTimeout(extra);
 		pararRelogio();
+		for (const ev of EVENTOS) window.removeEventListener(ev, mexeu);
+		window.removeEventListener('scroll', mexeu, { capture: true });
 		document.removeEventListener('visibilitychange', voltou);
 		window.removeEventListener('pagehide', saiu);
 		window.removeEventListener('pageshow', voltouDoCache);
+		window.removeEventListener('storage', outraAba);
 		marcarAba(aba, false);
 	};
 }

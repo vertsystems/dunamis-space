@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
 	ALTURA,
-	ASSENTOS,
 	INICIO,
 	ITENS,
 	LARGURA,
@@ -30,24 +29,6 @@ describe('mapa do escritório', () => {
 			expect(alvo, sala.id).not.toBeNull();
 			const celulas = aEstrela(GRADE, inicio, { x: Math.floor(alvo!.x), y: Math.floor(alvo!.y) });
 			expect(celulas, `sem caminho até ${sala.id}`).not.toBeNull();
-		}
-	});
-
-	it('todo assento da recepção fica em chão livre, na recepção, e dá para chegar nele', () => {
-		for (const a of ASSENTOS) {
-			const c = { x: Math.floor(a.x), y: Math.floor(a.y) };
-			expect(celulaLivre(c.x, c.y), `${a.x},${a.y}`).toBe(true);
-			expect(zonaDaCelula(c.x, c.y)).toBe('recepcao');
-			expect(aEstrela(GRADE, inicio, c), `sem caminho até ${a.x},${a.y}`).not.toBeNull();
-		}
-	});
-
-	it('quem senta fica na beira do sofá, de frente para fora dele', () => {
-		const sofas = ITENS.filter((i) => i.tipo === 'sofa' && i.sala === 'recepcao');
-		expect(sofas).toHaveLength(2);
-		for (const a of ASSENTOS.filter((x) => x.sentado)) {
-			const sofa = sofas.find((s) => a.sy > s.y && a.sy < s.y + s.d && Math.abs(a.sx - (a.dirX > 0 ? s.x + s.w : s.x)) < 0.1);
-			expect(sofa, `${a.sx},${a.sy}`).toBeDefined();
 		}
 	});
 

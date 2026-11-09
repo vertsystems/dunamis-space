@@ -157,10 +157,18 @@
 	// leva a pessoa para a recepção.
 	const usuarioId = $derived(session?.user?.id ?? null);
 	const temDGathe = $derived(podeVer(perms, 'dgathe'));
+	// 15 min sem mexer: CEO vai para a Diretoria; os outros, para a recepção, a
+	// copa ou uma sala sorteada (assentos.ts)
+	const colaboradorId = $derived((data.perfil as { id?: string } | null)?.id ?? null);
+	const ehCeo = $derived.by(() => {
+		const p = data.perfil as { funcao?: string; funcoes?: string[] } | null;
+		return p?.funcao === 'ceo' || !!p?.funcoes?.includes('ceo');
+	});
 	$effect(() => {
 		if (!usuarioId || !temDGathe) return;
+		const quem = { id: colaboradorId, ceo: ehCeo };
 		return untrack(() =>
-			manterSinal(supabase, { url: env.PUBLIC_SUPABASE_URL ?? '', chave: env.PUBLIC_SUPABASE_ANON_KEY ?? '' })
+			manterSinal(supabase, { url: env.PUBLIC_SUPABASE_URL ?? '', chave: env.PUBLIC_SUPABASE_ANON_KEY ?? '' }, quem)
 		);
 	});
 	const departamentosVisiveis = $derived(
