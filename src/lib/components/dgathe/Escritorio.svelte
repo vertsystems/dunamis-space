@@ -3,7 +3,9 @@
 	// de recursos, painel do que está selecionado, minimapa, ajuda e avisos).
 	// Quem desenha e controla o mapa é o motor em $lib/dgathe/jogo.ts.
 	import { onMount } from 'svelte';
-	import { Jogo, type Selecao } from '$lib/dgathe/jogo';
+	import type { SupabaseClient } from '@supabase/supabase-js';
+	import { Jogo, type Selecao, type OutroResumo } from '$lib/dgathe/jogo';
+	import { Online, type EstadoConexao } from '$lib/dgathe/online';
 	import { SALA_POR_ID, SETORES } from '$lib/dgathe/mapa';
 	import {
 		Crown,
@@ -40,8 +42,30 @@
 		nome,
 		cargo,
 		foto = null,
-		cor = null
-	}: { nome: string; cargo: string; foto?: string | null; cor?: string | null } = $props();
+		cor = null,
+		id = null,
+		supabase = null,
+		canalDeTeste = undefined
+	}: {
+		nome: string;
+		cargo: string;
+		foto?: string | null;
+		cor?: string | null;
+		/** Quem sou no tempo real (id do colaborador). Sem id ou sem supabase, o jogo fica só local. */
+		id?: string | null;
+		supabase?: SupabaseClient | null;
+		/** Canal público de teste (só na prévia local, sem login). Em produção fica vazio. */
+		canalDeTeste?: string;
+	} = $props();
+
+	const primeiroNome = (n: string) => n.split(/\s+/)[0] || n;
+	const iniciaisDe = (n: string) =>
+		n
+			.split(/\s+/)
+			.map((p) => p[0])
+			.join('')
+			.slice(0, 2)
+			.toUpperCase();
 
 	const ICONES = {
 		diretoria: Crown,
@@ -63,6 +87,7 @@
 	let tela: HTMLCanvasElement;
 	let mini: HTMLCanvasElement;
 	let jogo: Jogo | null = null;
+	let online: Online | null = null;
 
 	let selecao = $state<Selecao>({ tipo: 'avatar' });
 	let local = $state<string | null>(null);
@@ -75,17 +100,23 @@
 	let falhou = $state(false);
 	/** Painel recolhido: só o cabeçalho, para sobrar mapa (no celular, principalmente). */
 	let recolhido = $state(false);
+	/** Quem mais está no escritório agora. */
+	let outros = $state<OutroResumo[]>([]);
+	let conexao = $state<EstadoConexao | 'sozinho'>('sozinho');
 
 	const salaSelecionada = $derived(selecao.tipo === 'sala' ? (SALA_POR_ID.get(selecao.id) ?? null) : null);
+	const pessoaSelecionada = $derived.by(() => {
+		const s = selecao;
+		return s.tipo === 'pessoa' ? (outros.find((o) => o.id === s.id) ?? null) : null;
+	});
+	const tituloPessoas = $derived.by(() => {
+		const nomes = [`${nome} (você)`, ...outros.map((o) => o.nome)].join(', ');
+		if (conexao === 'conectando') return `Conectando… ${nomes}`;
+		if (conexao === 'offline') return 'Sem conexão em tempo real: só você aparece aqui agora';
+		return `No escritório: ${nomes}`;
+	});
 	const nomeLocal = $derived(local ? (SALA_POR_ID.get(local)?.nome ?? 'Lado de fora') : 'Lado de fora');
-	const iniciais = $derived(
-		nome
-			.split(/\s+/)
-			.map((p) => p[0])
-			.join('')
-			.slice(0, 2)
-			.toUpperCase()
-	);
+	const iniciais = $derived(iniciaisDe(nome));
 	const status = $derived.by(() => {
 		if (andando) return destino ? `Indo para ${SALA_POR_ID.get(destino)?.nome ?? 'o destino'}` : 'Andando';
 		return local ? `Em ${nomeLocal}` : 'Do lado de fora';
@@ -102,6 +133,7 @@
 
 	onMount(() => {
 		let primeiraSala = true;
+		let jaSincronizou = false;
 		try {
 			jogo = new Jogo(
 				tela,
@@ -123,13 +155,41 @@
 						andando = anda;
 						destino = para;
 					},
-					aviso: (t) => avisar(t)
+					aviso: (t) => avisar(t),
+					rota: (pontos) => online?.andar(pontos),
+					parou: (x, y, dx, dy) => online?.parou(x, y, dx, dy),
+					outros: (lista) => {
+						if (jaSincronizou) {
+							const antes = new Set(outros.map((o) => o.id));
+							const depois = new Set(lista.map((o) => o.id));
+							for (const o of lista) if (!antes.has(o.id)) avisar(`${primeiroNome(o.nome)} entrou no escritório`);
+							for (const o of outros) if (!depois.has(o.id)) avisar(`${primeiroNome(o.nome)} saiu do escritório`);
+						}
+						jaSincronizou = true;
+						outros = lista;
+					}
 				},
 				{ nome: nome.split(/\s+/)[0] || nome, cargo, visual: cor && /^#[0-9a-f]{6}$/i.test(cor) ? { roupa: cor } : undefined }
 			);
 		} catch {
 			falhou = true;
 		}
+		const conectar = () => {
+			if (!jogo || !supabase || !id || online) return;
+			const jg = jogo;
+			online = new Online(
+				supabase,
+				{ id, nome, cargo, foto, cor, ...jg.posicao() },
+				{
+					pessoas: (lista) => jg.definirPessoas(lista),
+					rota: (quem, pontos) => jg.rotaDe(quem, pontos),
+					estado: (e) => (conexao = e)
+				},
+				{ canalDeTeste }
+			);
+			void online.entrar();
+		};
+		conectar();
 		try {
 			if (!localStorage.getItem(CHAVE_AJUDA)) ajuda = true;
 		} catch {
@@ -137,10 +197,29 @@
 		}
 		const mudouTelaCheia = () => (cheia = document.fullscreenElement === raiz);
 		document.addEventListener('fullscreenchange', mudouTelaCheia);
+		// Fechar a aba não desmonta o componente: sem isto os outros só veriam a
+		// saída quando o servidor desistisse da conexão. Se o navegador só congelou
+		// a aba (voltar/avançar), ao restaurar ela entra de novo.
+		const fechouAba = () => {
+			online?.sair();
+			online = null;
+		};
+		const voltouAba = (e: PageTransitionEvent) => {
+			if (e.persisted) conectar();
+		};
+		// beforeunload chega antes, com a página inteira; pagehide cobre o celular,
+		// onde o beforeunload às vezes nem dispara.
+		window.addEventListener('beforeunload', fechouAba);
+		window.addEventListener('pagehide', fechouAba);
+		window.addEventListener('pageshow', voltouAba);
 		tela.focus({ preventScroll: true });
 		return () => {
 			document.removeEventListener('fullscreenchange', mudouTelaCheia);
+			window.removeEventListener('beforeunload', fechouAba);
+			window.removeEventListener('pagehide', fechouAba);
+			window.removeEventListener('pageshow', voltouAba);
 			clearTimeout(timerAviso);
+			online?.sair();
 			jogo?.destruir();
 		};
 	});
@@ -165,8 +244,13 @@
 		tela.focus({ preventScroll: true });
 	}
 
-	function irPara(id: string) {
-		jogo?.irPara(id);
+	function irPara(sala: string) {
+		jogo?.irPara(sala);
+		tela.focus({ preventScroll: true });
+	}
+
+	function irAte(pessoa: string) {
+		jogo?.irAte(pessoa);
 		tela.focus({ preventScroll: true });
 	}
 </script>
@@ -191,7 +275,10 @@
 		</div>
 		<div class="dg-recursos">
 			<span title="Setores do escritório"><MapPin size={14} /><b>{SETORES.length}</b><em>setores</em></span>
-			<span title="Pessoas circulando"><Users size={14} /><b>1</b><em>pessoa</em></span>
+			<span title={tituloPessoas}>
+				<Users size={14} /><b>{1 + outros.length}</b><em>{outros.length ? 'online' : 'pessoa'}</em>
+				{#if conexao !== 'sozinho'}<i class="dg-sinal {conexao}" aria-hidden="true"></i>{/if}
+			</span>
 			<span title="Agentes trabalhando (próxima fase)"><Bot size={14} /><b>0</b><em>agentes</em></span>
 			<span title="Tarefas em andamento (próxima fase)"><Hammer size={14} /><b>0</b><em>em andamento</em></span>
 		</div>
@@ -217,6 +304,7 @@
 		{#if salaSelecionada}
 			{@const Ico = iconeDa(salaSelecionada.id)}
 			{@const aqui = local === salaSelecionada.id}
+			{@const gente = outros.filter((o) => o.sala === salaSelecionada.id)}
 			<header class="dg-cab">
 				<span class="dg-ico" style="--cor: {salaSelecionada.cor}"><Ico size={20} /></span>
 				<span class="dg-tit">
@@ -236,7 +324,13 @@
 			<div class="dg-blocos">
 				<div>
 					<h4>Na sala agora</h4>
-					{#if aqui}<p class="dg-pessoa"><span style="--cor: #ffd58a"></span>{nome.split(/\s+/)[0]} (você)</p>{:else}<p class="dg-vazio">Ninguém por aqui</p>{/if}
+					{#if aqui}<p class="dg-pessoa"><span style="--cor: #ffd58a"></span>{primeiroNome(nome)} (você)</p>{/if}
+					{#each gente as o (o.id)}
+						<button type="button" class="dg-pessoa dg-pessoa-btn" onclick={() => jogo?.selecionar({ tipo: 'pessoa', id: o.id })}>
+							<span style="--cor: {o.cor ?? '#9aa6ba'}"></span>{o.nome} · {o.cargo}
+						</button>
+					{/each}
+					{#if !aqui && !gente.length}<p class="dg-vazio">Ninguém por aqui</p>{/if}
 				</div>
 				<div>
 					<h4>Em andamento</h4>
@@ -259,6 +353,23 @@
 				{aqui ? 'Você está aqui' : 'Ir até a sala'}
 			</button>
 			{/if}
+		{:else if pessoaSelecionada}
+			{@const p = pessoaSelecionada}
+			<header class="dg-cab">
+				<span class="dg-retrato" style="border-color: {p.cor ?? '#9aa6ba'}">
+					{#if p.foto}<img src={p.foto} alt="" />{:else}{iniciaisDe(p.nome)}{/if}
+				</span>
+				<span class="dg-tit">
+					<strong>{p.nome}</strong>
+					<small>{p.cargo}</small>
+				</span>
+				<button type="button" class="dg-fechar" onclick={() => jogo?.selecionar({ tipo: 'avatar' })} aria-label="Fechar"><X size={16} /></button>
+			</header>
+			<p class="dg-status" class:andando={p.andando}>
+				{p.andando ? 'Andando' : p.sala ? `Em ${SALA_POR_ID.get(p.sala)?.nome ?? p.sala}` : 'Do lado de fora'}
+			</p>
+			<p class="dg-online"><span></span>Online agora</p>
+			<button type="button" class="dg-ir" onclick={() => irAte(p.id)}>Ir até {primeiroNome(p.nome)}</button>
 		{:else}
 			<header class="dg-cab">
 				<span class="dg-retrato">
@@ -274,6 +385,16 @@
 			</header>
 			<p class="dg-status" class:andando>{status}</p>
 			{#if !recolhido}
+			{#if outros.length}
+				<h4 class="dg-rotulo">Online agora</h4>
+				<div class="dg-atalhos">
+					{#each outros as o (o.id)}
+						<button type="button" onclick={() => jogo?.selecionar({ tipo: 'pessoa', id: o.id })} title="Ver {o.nome}">
+							<span style="--cor: {o.cor ?? '#9aa6ba'}"></span>{primeiroNome(o.nome)}
+						</button>
+					{/each}
+				</div>
+			{/if}
 			<h4 class="dg-rotulo">Ir para</h4>
 			<div class="dg-atalhos">
 				{#each SETORES as s (s.id)}
@@ -295,10 +416,10 @@
 		<div class="dg-ajuda" role="dialog" aria-modal="true" aria-label="Controles do DGathe">
 			<div class="dg-ajuda-caixa">
 				<h3>Bem-vindo ao DGathe</h3>
-				<p>O escritório da Dunamis em forma de jogo. Por enquanto só você circula por aqui; os agentes chegam na próxima fase.</p>
+				<p>O escritório da Dunamis em forma de jogo. Quem estiver no DGathe aparece aqui junto com você, em tempo real; os agentes chegam na próxima fase.</p>
 				<ul>
 					<li><kbd>Botão direito</kbd><span>anda até o ponto</span></li>
-					<li><kbd>Botão esquerdo</kbd><span>seleciona sala, objeto ou você</span></li>
+					<li><kbd>Botão esquerdo</kbd><span>seleciona sala, objeto ou pessoa</span></li>
 					<li><kbd>Arrastar</kbd><span>move a câmera</span></li>
 					<li><kbd>Roda do mouse</kbd><span>aproxima e afasta</span></li>
 					<li><kbd>WASD</kbd><kbd>Setas</kbd><span>movem a câmera</span></li>
@@ -421,6 +542,25 @@
 	}
 	.dg-recursos em {
 		font-style: normal;
+	}
+	.dg-sinal {
+		width: 7px;
+		height: 7px;
+		border-radius: 50%;
+		background: #7f8aa0;
+	}
+	.dg-sinal.online {
+		background: #17b26a;
+		box-shadow: 0 0 0 3px rgba(23, 178, 106, 0.2);
+	}
+	.dg-sinal.conectando {
+		background: var(--dg-ouro);
+		animation: dg-pisca 1s ease-in-out infinite alternate;
+	}
+	@keyframes dg-pisca {
+		to {
+			opacity: 0.3;
+		}
 	}
 	.dg-acoes {
 		display: flex;
@@ -624,6 +764,31 @@
 		border-radius: 50%;
 		background: var(--cor);
 		flex-shrink: 0;
+	}
+	.dg-pessoa-btn {
+		width: 100%;
+		padding: 0.15rem 0.3rem;
+		margin-left: -0.3rem;
+		border-radius: 7px;
+		text-align: left;
+		color: var(--dg-texto);
+	}
+	.dg-pessoa-btn:hover {
+		background: rgba(255, 255, 255, 0.07);
+	}
+	.dg-online {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		margin: 0.35rem 0 0;
+		font-size: 12px;
+		color: #7fdcb0;
+	}
+	.dg-online span {
+		width: 7px;
+		height: 7px;
+		border-radius: 50%;
+		background: #17b26a;
 	}
 	.dg-esp {
 		margin-top: 0.7rem;

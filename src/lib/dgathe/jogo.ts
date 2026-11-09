@@ -27,7 +27,7 @@ import {
 	type Segmento
 } from './mapa';
 import { aEstrela, suavizar, type Grade } from './caminho';
-import { ordenar, posicaoDinamica, telaDaCaixa, type Desenhavel } from './profundidade';
+import { ordenar, posicaoDinamica, telaDaCaixa, chave, type Desenhavel } from './profundidade';
 import {
 	desenharLadrilho,
 	desenharTapete,
@@ -40,10 +40,22 @@ import {
 	poli
 } from './desenho';
 import { desenharAvatar, areaDoAvatar, VISUAL_PADRAO, type Visual } from './avatar';
+import type { Pessoa } from './online';
 
 export const GRADE: Grade = { largura: LARGURA, altura: ALTURA, livre: celulaLivre, parede: paredeEntre };
 
-export type Selecao = { tipo: 'avatar' } | { tipo: 'sala'; id: string; objeto?: string };
+export type Selecao = { tipo: 'avatar' } | { tipo: 'sala'; id: string; objeto?: string } | { tipo: 'pessoa'; id: string };
+
+/** Quem mais está no escritório, resumido para o painel. */
+export type OutroResumo = {
+	id: string;
+	nome: string;
+	cargo: string;
+	foto: string | null;
+	cor: string | null;
+	sala: string | null;
+	andando: boolean;
+};
 
 export type Avisos = {
 	/** O que está selecionado mudou (painel de baixo). */
@@ -54,6 +66,12 @@ export type Avisos = {
 	movimento(andando: boolean, destino: string | null): void;
 	/** Recado curto no topo da tela. */
 	aviso(texto: string): void;
+	/** Comecei a andar por este trajeto (para os outros verem). */
+	rota?(pontos: Ponto[]): void;
+	/** Parei aqui. */
+	parou?(x: number, y: number, dirX: number, dirY: number): void;
+	/** Quem mais está no escritório mudou: entrou, saiu, trocou de sala, andou ou parou. */
+	outros?(lista: OutroResumo[]): void;
 };
 
 export type OpcoesJogo = {
@@ -64,7 +82,38 @@ export type OpcoesJogo = {
 
 type Peca = Desenhavel & ({ tipo: 'item'; item: Item; contorno: Ponto[] } | { tipo: 'parede'; seg: Segmento });
 
-type Hover = { tipo: 'avatar' } | { tipo: 'item'; item: Item } | { tipo: 'sala'; id: string } | null;
+type Hover = { tipo: 'avatar' } | { tipo: 'pessoa'; id: string } | { tipo: 'item'; item: Item } | { tipo: 'sala'; id: string } | null;
+
+/** Um bonequinho que anda: o meu e o de cada pessoa online. */
+type Corpo = { x: number; y: number; dirX: number; dirY: number; andando: boolean; fase: number; caminho: Ponto[] };
+type Outro = Corpo & { pessoa: Pessoa; visual: Visual; sala: string | null; final: Ponto | null };
+type Desenho = { peca: Desenhavel; atras: boolean; desenhar: () => void };
+
+function visualDe(cor: string | null): Visual {
+	return cor && /^#[0-9a-f]{6}$/i.test(cor) ? { ...VISUAL_PADRAO, roupa: cor } : VISUAL_PADRAO;
+}
+
+const primeiroNome = (nome: string) => nome.split(/\s+/)[0] || nome;
+
+/** Tira `folga` do fim do trajeto (para parar ao lado de alguém, e não em cima). */
+function encurtar(rota: Ponto[], folga: number) {
+	let resta = folga;
+	while (rota.length >= 2 && resta > 0) {
+		const a = rota[rota.length - 2];
+		const b = rota[rota.length - 1];
+		const d = Math.hypot(b.x - a.x, b.y - a.y);
+		if (d > resta) {
+			rota[rota.length - 1] = { x: b.x - ((b.x - a.x) / d) * resta, y: b.y - ((b.y - a.y) / d) * resta };
+			return;
+		}
+		resta -= d;
+		if (rota.length === 2) {
+			rota[1] = { ...a };
+			return;
+		}
+		rota.pop();
+	}
+}
 
 const VELOCIDADE = 3.4; // células por segundo
 const ZOOM_MIN = 0.5;
@@ -107,7 +156,8 @@ export class Jogo {
 	private ultimo = 0;
 	private raf = 0;
 
-	private av = { x: INICIO.x, y: INICIO.y, dirX: 1, dirY: 1, andando: false, fase: 0, caminho: [] as Ponto[] };
+	private av: Corpo = { x: INICIO.x, y: INICIO.y, dirX: 1, dirY: 1, andando: false, fase: 0, caminho: [] };
+	private outros = new Map<string, Outro>();
 	private destino: { x: number; y: number; t0: number } | null = null;
 	private salaAtual: string | null = null;
 	private destinoSala: string | null = null;
@@ -259,6 +309,86 @@ export class Jogo {
 		this.andarAte(alvo, salaId);
 	}
 
+	/** Onde estou agora (para avisar os outros quando entro). */
+	posicao() {
+		return { x: this.av.x, y: this.av.y, dirX: this.av.dirX, dirY: this.av.dirY };
+	}
+
+	/** Quem está online agora (vem do presence): entra, sai e atualiza quem parou. */
+	definirPessoas(lista: Pessoa[]) {
+		const vistos = new Set<string>();
+		for (const p of lista) {
+			vistos.add(p.id);
+			const o = this.outros.get(p.id);
+			if (!o) {
+				this.outros.set(p.id, {
+					pessoa: p,
+					visual: visualDe(p.cor),
+					x: p.x,
+					y: p.y,
+					dirX: p.dirX,
+					dirY: p.dirY,
+					andando: false,
+					fase: 0,
+					caminho: [],
+					sala: zonaNoPonto(p.x, p.y),
+					final: null
+				});
+				continue;
+			}
+			o.pessoa = p;
+			o.visual = visualDe(p.cor);
+			// Andando aqui ainda: o ponto final vale quando a caminhada terminar.
+			if (o.caminho.length) o.final = { x: p.x, y: p.y };
+			else {
+				o.x = p.x;
+				o.y = p.y;
+				o.dirX = p.dirX;
+				o.dirY = p.dirY;
+			}
+		}
+		for (const id of [...this.outros.keys()]) if (!vistos.has(id)) this.outros.delete(id);
+		if (this.selecao.tipo === 'pessoa' && !this.outros.has(this.selecao.id)) this.selecionar({ tipo: 'avatar' });
+		this.ultimaInteracao = performance.now();
+		this.emitirOutros();
+	}
+
+	/** Alguém começou a andar: a caminhada é animada aqui, no mesmo ritmo. */
+	rotaDe(id: string, pontos: Ponto[]) {
+		const o = this.outros.get(id);
+		if (!o || pontos.length < 2) return;
+		const ini = pontos[0];
+		if (Math.hypot(o.x - ini.x, o.y - ini.y) > 1.5) {
+			o.x = ini.x;
+			o.y = ini.y;
+		}
+		o.caminho = pontos.slice(1);
+		o.final = null;
+		o.andando = true;
+		this.emitirOutros();
+	}
+
+	/** Vai até a pessoa e para ao lado dela. */
+	irAte(id: string) {
+		const o = this.outros.get(id);
+		if (!o) return;
+		this.andarAte({ x: o.x, y: o.y }, o.sala, 0.75);
+	}
+
+	private emitirOutros() {
+		this.avisos.outros?.(
+			[...this.outros.values()].map((o) => ({
+				id: o.pessoa.id,
+				nome: o.pessoa.nome,
+				cargo: o.pessoa.cargo,
+				foto: o.pessoa.foto,
+				cor: o.pessoa.cor,
+				sala: o.sala,
+				andando: o.caminho.length > 0
+			}))
+		);
+	}
+
 	destruir() {
 		cancelAnimationFrame(this.raf);
 		for (const f of this.limpezas) f();
@@ -266,7 +396,7 @@ export class Jogo {
 
 	// --------------------------------------------------------------- andar
 
-	private andarAte(p: Ponto, salaDestino: string | null = null): boolean {
+	private andarAte(p: Ponto, salaDestino: string | null = null, folga = 0): boolean {
 		const inicio = { x: Math.floor(this.av.x), y: Math.floor(this.av.y) };
 		const cx = Math.floor(p.x);
 		const cy = Math.floor(p.y);
@@ -298,7 +428,9 @@ export class Jogo {
 			}
 			if (pontos.length === 1) pontos.push(pontos[0]);
 			const rota = suavizar(GRADE, pontos);
+			if (folga > 0) encurtar(rota, folga);
 			this.av.caminho = rota.slice(1);
+			this.avisos.rota?.(rota);
 			const fim = rota[rota.length - 1];
 			this.destino = { x: fim.x, y: fim.y, t0: this.t };
 			this.destinoSala = salaDestino ?? zonaNoPonto(fim.x, fim.y);
@@ -321,44 +453,66 @@ export class Jogo {
 		if (k.has('arrowdown') || k.has('s')) this.cam.y += vel;
 		if (k.size) this.limitarCamera();
 
-		// Avatar
+		// Meu avatar
 		const av = this.av;
-		if (av.caminho.length) {
-			let resta = VELOCIDADE * dt;
-			while (resta > 0 && av.caminho.length) {
-				const alvo = av.caminho[0];
-				const dx = alvo.x - av.x;
-				const dy = alvo.y - av.y;
-				const dist = Math.hypot(dx, dy);
-				if (dist > 1e-4) {
-					av.dirX = dx / dist;
-					av.dirY = dy / dist;
+		if (av.caminho.length && this.mover(av, dt)) {
+			this.avisos.movimento(false, null);
+			this.avisos.parou?.(av.x, av.y, av.dirX, av.dirY);
+			gravar(CHAVE_POSICAO, { x: av.x, y: av.y });
+		}
+
+		// Os outros
+		let mudou = false;
+		for (const o of this.outros.values()) {
+			if (o.caminho.length && this.mover(o, dt)) {
+				if (o.final) {
+					o.x = o.final.x;
+					o.y = o.final.y;
+					o.final = null;
 				}
-				if (dist <= resta) {
-					av.x = alvo.x;
-					av.y = alvo.y;
-					av.caminho.shift();
-					resta -= dist;
-				} else {
-					av.x += (dx / dist) * resta;
-					av.y += (dy / dist) * resta;
-					resta = 0;
-				}
+				mudou = true;
 			}
-			av.andando = true;
-			av.fase += dt * 10.5;
-			if (!av.caminho.length) {
-				av.andando = false;
-				this.avisos.movimento(false, null);
-				gravar(CHAVE_POSICAO, { x: av.x, y: av.y });
+			const s = zonaNoPonto(o.x, o.y);
+			if (s !== o.sala) {
+				o.sala = s;
+				mudou = true;
 			}
 		}
+		if (mudou) this.emitirOutros();
 
 		const sala = zonaNoPonto(av.x, av.y);
 		if (sala !== this.salaAtual) {
 			this.salaAtual = sala;
 			this.avisos.local(sala);
 		}
+	}
+
+	/** Anda um pedaço do caminho; devolve true quando chega ao fim. */
+	private mover(c: Corpo, dt: number): boolean {
+		let resta = VELOCIDADE * dt;
+		while (resta > 0 && c.caminho.length) {
+			const alvo = c.caminho[0];
+			const dx = alvo.x - c.x;
+			const dy = alvo.y - c.y;
+			const dist = Math.hypot(dx, dy);
+			if (dist > 1e-4) {
+				c.dirX = dx / dist;
+				c.dirY = dy / dist;
+			}
+			if (dist <= resta) {
+				c.x = alvo.x;
+				c.y = alvo.y;
+				c.caminho.shift();
+				resta -= dist;
+			} else {
+				c.x += (dx / dist) * resta;
+				c.y += (dy / dist) * resta;
+				resta = 0;
+			}
+		}
+		c.fase += dt * 10.5;
+		c.andando = c.caminho.length > 0;
+		return !c.andando;
 	}
 
 	// ---------------------------------------------------------------- quadro
@@ -370,7 +524,9 @@ export class Jogo {
 		// Parado e sem ninguém mexendo no mouse, 15 quadros por segundo bastam para
 		// os LEDs e o núcleo de IA: poupa bateria com a aba aberta o dia inteiro.
 		const mexendo =
-			this.av.caminho.length > 0 || this.teclas.size > 0 || !!this.arrasto || this.miniArrasto || !!this.destino || agora - this.ultimaInteracao < 500;
+			this.av.caminho.length > 0 ||
+			[...this.outros.values()].some((o) => o.caminho.length > 0) ||
+			this.teclas.size > 0 || !!this.arrasto || this.miniArrasto || !!this.destino || agora - this.ultimaInteracao < 500;
 		if (mexendo || agora - this.ultimoDesenho >= 66) {
 			this.desenhar();
 			this.ultimoDesenho = agora;
@@ -441,17 +597,15 @@ export class Jogo {
 
 		this.desenharDestaquesDeSala();
 		this.desenharMarcadorDeDestino();
-		this.desenharAnelDoAvatar();
+		this.desenharAneis();
 
-		// Peças: atrás do prédio → paredes altas do fundo → resto.
-		const avCaixa = { x0: this.av.x - 0.22, y0: this.av.y - 0.22, z0: 0, x1: this.av.x + 0.22, y1: this.av.y + 0.22, z1: 1.4 };
-		const avPeca: Desenhavel = { caixa: avCaixa, tela: expandir(telaDaCaixa(avCaixa), 8) };
-		const avAtras = this.av.x < PREDIO.x0 || this.av.y < PREDIO.y0;
-
-		this.desenharLista(this.atras, vis, avAtras ? avPeca : null);
+		// Peças: atrás do prédio → paredes altas do fundo → resto. Cada bonequinho
+		// entra na lista do lado do prédio em que está.
+		const corpos = this.corposParaDesenhar();
+		this.desenharLista(this.atras, vis, corpos.filter((c) => c.atras));
 		for (const seg of this.altas) desenharSegmento(ctx, seg);
 		desenharDecoracoes(ctx, this.t);
-		this.desenharLista(this.frente, vis, avAtras ? null : avPeca);
+		this.desenharLista(this.frente, vis, corpos.filter((c) => !c.atras));
 
 		if (this.hover?.tipo === 'item') {
 			const h = this.hover.item;
@@ -461,25 +615,37 @@ export class Jogo {
 		this.desenharRotulos();
 	}
 
-	private desenharLista(lista: Peca[], vis: Retangulo, avatar: Desenhavel | null) {
+	private corposParaDesenhar(): Desenho[] {
+		const lista: Desenho[] = [];
+		const add = (c: Corpo, visual: Visual) => {
+			const caixa = { x0: c.x - 0.22, y0: c.y - 0.22, z0: 0, x1: c.x + 0.22, y1: c.y + 0.22, z1: 1.4 };
+			lista.push({
+				peca: { caixa, tela: expandir(telaDaCaixa(caixa), 8) },
+				atras: c.x < PREDIO.x0 || c.y < PREDIO.y0,
+				desenhar: () =>
+					desenharAvatar(this.ctx, { x: c.x, y: c.y, dirX: c.dirX, dirY: c.dirY, andando: c.andando, fase: c.fase, t: this.t }, visual)
+			});
+		};
+		for (const o of this.outros.values()) add(o, o.visual);
+		add(this.av, this.visual);
+		return lista;
+	}
+
+	/** Desenha as peças em ordem e encaixa cada bonequinho no lugar certo da fila. */
+	private desenharLista(lista: Peca[], vis: Retangulo, corpos: Desenho[]) {
 		const ctx = this.ctx;
-		const encaixe = avatar ? posicaoDinamica(lista, avatar) : -1;
+		const encaixes = corpos
+			.map((c) => ({ c, i: posicaoDinamica(lista, c.peca) }))
+			.sort((a, b) => a.i - b.i || chave(a.c.peca.caixa) - chave(b.c.peca.caixa));
+		let k = 0;
 		for (let i = 0; i < lista.length; i++) {
-			if (i === encaixe) this.desenharAvatar();
+			while (k < encaixes.length && encaixes[k].i === i) encaixes[k++].c.desenhar();
 			const p = lista[i];
 			if (!cruzam(p.tela, vis)) continue;
 			if (p.tipo === 'parede') desenharSegmento(ctx, p.seg);
 			else desenharItem(ctx, p.item, this.t);
 		}
-		if (avatar && encaixe >= lista.length) this.desenharAvatar();
-	}
-
-	private desenharAvatar() {
-		desenharAvatar(
-			this.ctx,
-			{ x: this.av.x, y: this.av.y, dirX: this.av.dirX, dirY: this.av.dirY, andando: this.av.andando, fase: this.av.fase, t: this.t },
-			this.visual
-		);
+		while (k < encaixes.length) encaixes[k++].c.desenhar();
 	}
 
 	private poligonoDaSala(id: string): Ponto[] | null {
@@ -528,15 +694,23 @@ export class Jogo {
 		ctx.fill();
 	}
 
-	private desenharAnelDoAvatar() {
+	private desenharAneis() {
 		const ctx = this.ctx;
-		const c = paraTela(this.av.x, this.av.y, 0);
-		const selecionado = this.selecao.tipo === 'avatar';
-		ctx.beginPath();
-		ctx.ellipse(c.x, c.y, 15, 7.5, 0, 0, Math.PI * 2);
-		ctx.strokeStyle = selecionado ? 'rgba(245, 165, 36, 0.95)' : 'rgba(255, 255, 255, 0.7)';
-		ctx.lineWidth = (selecionado ? 2.2 : 1.4) / this.zoom;
-		ctx.stroke();
+		const anel = (x: number, y: number, cor: string, largura: number) => {
+			const c = paraTela(x, y, 0);
+			ctx.beginPath();
+			ctx.ellipse(c.x, c.y, 15, 7.5, 0, 0, Math.PI * 2);
+			ctx.strokeStyle = cor;
+			ctx.lineWidth = largura / this.zoom;
+			ctx.stroke();
+		};
+		const ouro = 'rgba(245, 165, 36, 0.95)';
+		for (const o of this.outros.values()) {
+			const sel = this.selecao.tipo === 'pessoa' && this.selecao.id === o.pessoa.id;
+			anel(o.x, o.y, sel ? ouro : 'rgba(255, 255, 255, 0.45)', sel ? 2.2 : 1.2);
+		}
+		const eu = this.selecao.tipo === 'avatar';
+		anel(this.av.x, this.av.y, eu ? ouro : 'rgba(255, 255, 255, 0.7)', eu ? 2.2 : 1.4);
 	}
 
 	/** Nomes das salas, crachá do avatar e a dica do que está sob o mouse (em px de tela). */
@@ -573,17 +747,50 @@ export class Jogo {
 			}
 		}
 
-		const cabeca = this.daCena(paraTela(this.av.x, this.av.y, 0));
-		const yCracha = cabeca.y - 58 * this.zoom - 6;
-		pilula(`${this.opcoes.nome} · ${this.opcoes.cargo}`, cabeca.x, yCracha, {
-			fundo: 'rgba(11, 18, 32, 0.86)',
-			cor: '#ffd58a',
-			tamanho: 11
+		// Crachás: o meu fica no lugar; o de quem está colado sobe um degrau para
+		// não cobrir o outro. Desenha os dos outros primeiro e o meu por cima.
+		type Cracha = { texto: string; x: number; y: number; o: Parameters<typeof pilula>[3] };
+		const crachas: Cracha[] = [];
+		const pe = (x: number, y: number) => this.daCena(paraTela(x, y, 0));
+		const meu = pe(this.av.x, this.av.y);
+		crachas.push({
+			texto: `${this.opcoes.nome} · ${this.opcoes.cargo}`,
+			x: meu.x,
+			y: meu.y - 58 * this.zoom - 6,
+			o: { fundo: 'rgba(11, 18, 32, 0.86)', cor: '#ffd58a' }
 		});
+		for (const o of this.outros.values()) {
+			const c = pe(o.x, o.y);
+			crachas.push({
+				texto: `${primeiroNome(o.pessoa.nome)} · ${o.pessoa.cargo}`,
+				x: c.x,
+				y: c.y - 58 * this.zoom - 6,
+				o: { fundo: 'rgba(11, 18, 32, 0.8)', cor: '#ffffff', ponto: o.pessoa.cor ?? '#9aa6ba' }
+			});
+		}
+		ctx.font = '600 11px Inter, system-ui, sans-serif';
+		const ocupados: { x0: number; y0: number; x1: number; y1: number }[] = [];
+		for (const c of crachas) {
+			const w = ctx.measureText(c.texto).width + (c.o?.ponto ? 22 : 14);
+			const h = 20;
+			for (let tentativa = 0; tentativa < 6; tentativa++) {
+				const r = { x0: c.x - w / 2, y0: c.y - h / 2, x1: c.x + w / 2, y1: c.y + h / 2 };
+				if (!ocupados.some((q) => r.x0 < q.x1 && q.x0 < r.x1 && r.y0 < q.y1 && q.y0 < r.y1)) {
+					ocupados.push(r);
+					break;
+				}
+				c.y -= h + 3;
+			}
+		}
+		for (let i = crachas.length - 1; i >= 0; i--) pilula(crachas[i].texto, crachas[i].x, crachas[i].y, crachas[i].o);
 
 		if (this.mouse.dentro && this.hover && !this.arrasto?.moveu) {
 			let texto = '';
 			if (this.hover.tipo === 'avatar') texto = `${this.opcoes.nome} (você)`;
+			else if (this.hover.tipo === 'pessoa') {
+				const o = this.outros.get(this.hover.id);
+				texto = o ? `${o.pessoa.nome} · ${o.pessoa.cargo}` : '';
+			}
 			else if (this.hover.tipo === 'sala') texto = SALA_POR_ID.get(this.hover.id)?.nome ?? '';
 			else {
 				const sala = this.hover.item.sala ? SALA_POR_ID.get(this.hover.item.sala)?.nome : null;
@@ -604,6 +811,10 @@ export class Jogo {
 		const p = this.paraCena(sx, sy);
 		const a = areaDoAvatar(this.av.x, this.av.y);
 		if (p.x >= a.x0 && p.x <= a.x1 && p.y >= a.y0 && p.y <= a.y1) return { tipo: 'avatar' };
+		for (const o of this.outros.values()) {
+			const b = areaDoAvatar(o.x, o.y);
+			if (p.x >= b.x0 && p.x <= b.x1 && p.y >= b.y0 && p.y <= b.y1) return { tipo: 'pessoa', id: o.pessoa.id };
+		}
 		for (const lista of [this.frente, this.atras]) {
 			for (let i = lista.length - 1; i >= 0; i--) {
 				const peca = lista[i];
@@ -624,6 +835,7 @@ export class Jogo {
 			return;
 		}
 		if (alvo.tipo === 'avatar') this.selecionar({ tipo: 'avatar' });
+		else if (alvo.tipo === 'pessoa') this.selecionar({ tipo: 'pessoa', id: alvo.id });
 		else if (alvo.tipo === 'sala') this.selecionar({ tipo: 'sala', id: alvo.id });
 		else if (alvo.item.sala) this.selecionar({ tipo: 'sala', id: alvo.item.sala, objeto: alvo.item.nome });
 		else this.avisos.aviso(alvo.item.nome);
@@ -631,6 +843,10 @@ export class Jogo {
 
 	private comandarMovimento(sx: number, sy: number) {
 		const alvo = this.oQueEstaEm(sx, sy);
+		if (alvo?.tipo === 'pessoa') {
+			this.irAte(alvo.id);
+			return;
+		}
 		if (alvo?.tipo === 'item') {
 			const it = alvo.item;
 			this.andarAte({ x: it.x + it.w / 2, y: it.y + it.d / 2 });
@@ -867,6 +1083,16 @@ export class Jogo {
 			c.arc(d.x, d.y, 2.2, 0, Math.PI * 2);
 			c.fillStyle = '#f5a524';
 			c.fill();
+		}
+		for (const o of this.outros.values()) {
+			const q = m(paraTela(o.x, o.y));
+			c.beginPath();
+			c.arc(q.x, q.y, 3, 0, Math.PI * 2);
+			c.fillStyle = o.pessoa.cor ?? '#ffffff';
+			c.fill();
+			c.strokeStyle = '#ffffff';
+			c.lineWidth = 1.2;
+			c.stroke();
 		}
 		const v = m(paraTela(this.av.x, this.av.y));
 		c.beginPath();

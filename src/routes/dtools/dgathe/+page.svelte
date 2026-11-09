@@ -1,6 +1,7 @@
 <script lang="ts">
-	// DGathe: o escritório da Dunamis em forma de jogo. Protótipo com o avatar de
-	// quem está logado; os agentes e o resto da equipe entram nas próximas fases.
+	// DGathe: o escritório da Dunamis em forma de jogo. Cada pessoa logada é um
+	// avatar, e quem está no DGathe ao mesmo tempo se vê (Supabase Realtime).
+	// Os agentes entram na próxima fase.
 	import Escritorio from '$lib/components/dgathe/Escritorio.svelte';
 	import { funcaoSigla } from '$lib/equipe';
 	import type { PageData } from './$types';
@@ -8,7 +9,14 @@
 	let { data }: { data: PageData } = $props();
 
 	const perfil = $derived(
-		data.perfil as { nome?: string; avatar_url?: string; cor_tema?: string; funcao?: string; funcoes?: string[] } | null
+		data.perfil as {
+			id?: string;
+			nome?: string;
+			avatar_url?: string;
+			cor_tema?: string;
+			funcao?: string;
+			funcoes?: string[];
+		} | null
 	);
 	const nome = $derived(perfil?.nome?.trim() || data.session?.user?.email?.split('@')[0] || 'Você');
 	const cargo = $derived(funcaoSigla(perfil?.funcoes?.[0] ?? perfil?.funcao) ?? 'Equipe');
@@ -26,4 +34,11 @@
 	<span class="rounded-full bg-brand-cream px-2.5 py-1 text-xs font-semibold text-brand-brown">Protótipo</span>
 </div>
 
-<Escritorio {nome} {cargo} foto={perfil?.avatar_url ?? null} cor={perfil?.cor_tema ?? null} />
+<Escritorio
+	{nome}
+	{cargo}
+	foto={perfil?.avatar_url ?? null}
+	cor={perfil?.cor_tema ?? null}
+	id={perfil?.id ?? data.session?.user?.id ?? null}
+	supabase={data.supabase}
+/>
