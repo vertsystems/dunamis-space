@@ -183,6 +183,8 @@ export class Jogo {
 
 	private av: Corpo = { x: INICIO.x, y: INICIO.y, dirX: 1, dirY: 1, andando: false, fase: 0, caminho: [] };
 	private outros = new Map<string, Outro>();
+	/** Assentos ocupados por agentes (próxima fase): ninguém senta neles. */
+	private assentosDeAgentes = new Set<string>();
 	private destino: { x: number; y: number; t0: number } | null = null;
 	private salaAtual: string | null = null;
 	private destinoSala: string | null = null;
@@ -345,7 +347,7 @@ export class Jogo {
 	 * muda de alvo faz o caminho aqui, levantando antes se estava sentado.
 	 */
 	definirPessoas(lista: Pessoa[]) {
-		const metas = alvos(lista);
+		const metas = alvos(lista, { agentes: this.assentosDeAgentes });
 		const vistos = new Set<string>();
 		for (const p of lista) {
 			vistos.add(p.id);
@@ -387,6 +389,11 @@ export class Jogo {
 		if (this.selecao.tipo === 'pessoa' && !this.outros.has(this.selecao.id)) this.selecionar({ tipo: 'avatar' });
 		this.ultimaInteracao = performance.now();
 		this.emitirOutros();
+	}
+
+	/** Quando os agentes chegarem: as cadeiras deles ficam fora do rodízio de quem está parado. */
+	definirAssentosDeAgentes(ids: Iterable<string>) {
+		this.assentosDeAgentes = new Set(ids);
 	}
 
 	/** O caminho até um ponto, ou até um assento (o chão ao lado e, por fim, a beira dele). */

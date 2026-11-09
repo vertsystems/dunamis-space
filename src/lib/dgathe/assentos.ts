@@ -144,6 +144,32 @@ export function lugaresDeQuemSaiu(): Assento[] {
 /** Salas que entram no sorteio de quem não é CEO (além da recepção e da copa). */
 const SALAS_DO_SORTEIO = ['reuniao', 'financeiro', 'comercial', 'dev', 'conteudo', 'design', 'trafego', 'estudio'];
 
+/** Número estável a partir de um texto (semente de sorteio). */
+export function hashTexto(t: string) {
+	let h = 5381;
+	for (let i = 0; i < t.length; i++) h = (Math.imul(h, 33) + t.charCodeAt(i)) >>> 0;
+	return h;
+}
+
+/** Cópia embaralhada, sempre igual para a mesma semente (em qualquer tela). */
+export function embaralhar<T>(lista: T[], semente: number): T[] {
+	const r = sorteador(semente);
+	const copia = [...lista];
+	for (let i = copia.length - 1; i > 0; i--) {
+		const j = Math.floor(r() * (i + 1));
+		[copia[i], copia[j]] = [copia[j], copia[i]];
+	}
+	return copia;
+}
+
+/** Os lugares da Diretoria na ordem do CEO: a cadeira dele, o sofá, as cadeiras de visita. */
+export function lugaresDoCeo(): Assento[] {
+	const ordem = (a: Assento) => (a.nome === 'Cadeira do CEO' ? 0 : a.movel === 'sofa' ? 1 : 2);
+	return assentos()
+		.filter((a) => a.sala === 'diretoria' && a.sentado)
+		.sort((a, b) => ordem(a) - ordem(b));
+}
+
 /** Gerador simples a partir de uma semente (o mesmo sorteio em toda aba). */
 function sorteador(semente: number) {
 	// Mistura a semente (sementes vizinhas davam o mesmo primeiro sorteio)
@@ -166,8 +192,7 @@ function sorteador(semente: number) {
 export function escolherAssento(opcoes: { ceo: boolean; ocupados: Set<string>; semente: number }): Assento | null {
 	const livres = (sala: string) => assentos().filter((a) => a.sala === sala && a.sentado && !opcoes.ocupados.has(a.id));
 	if (opcoes.ceo) {
-		const ordem = (a: Assento) => (a.nome === 'Cadeira do CEO' ? 0 : a.movel === 'sofa' ? 1 : 2);
-		const diretoria = livres('diretoria').sort((a, b) => ordem(a) - ordem(b));
+		const diretoria = lugaresDoCeo().filter((a) => !opcoes.ocupados.has(a.id));
 		if (diretoria.length) return diretoria[0];
 	}
 	const r = sorteador(opcoes.semente);

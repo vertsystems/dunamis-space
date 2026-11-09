@@ -70,6 +70,15 @@ describe('a linha de quem está', () => {
 		expect(lerLinha({ ...LINHA, saiu_ha: SAIDA_CONFIRMA + 1 })?.situacao).toBe('offline');
 	});
 
+	it('desde quando está parado, no relógio do servidor (é o que faz trocar de ambiente a cada 3 h)', () => {
+		const agora = 1_794_260_000;
+		expect(lerLinha({ ...LINHA, agora, visto: agora - 3 })).toMatchObject({ paradoDesde: null, paradoHa: 0, ceo: false });
+		expect(lerLinha({ ...LINHA, agora, inativo: true, inativo_desde: agora - 600 })).toMatchObject({ paradoDesde: agora - 600, paradoHa: 600 });
+		expect(lerLinha({ ...LINHA, agora, saiu_ha: 20, saiu: agora - 20, visto: agora - 30 })).toMatchObject({ situacao: 'offline', paradoDesde: agora - 20, paradoHa: 20 });
+		expect(lerLinha({ ...LINHA, agora, sem_sinal: 4000, visto: agora - 4000 })).toMatchObject({ situacao: 'offline', paradoHa: 4000 });
+		expect(lerLinha({ ...LINHA, ceo: true })?.ceo).toBe(true);
+	});
+
 	it('15 min sem mexer: inativo, com o assento; offline vence inativo', () => {
 		expect(lerLinha({ ...LINHA, inativo: true, assento: 'copa:i120' })).toMatchObject({ situacao: 'inativo', assento: 'copa:i120' });
 		expect(lerLinha({ ...LINHA, inativo: true, sem_sinal: AUSENTE_APOS + 1 })?.situacao).toBe('offline');

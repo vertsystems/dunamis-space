@@ -30,7 +30,8 @@ import type { Ponto } from './iso';
 import { LARGURA, ALTURA } from './mapa';
 import { lerAparencia, type Aparencia } from './aparencia';
 import { relogio } from './relogio';
-import { assentoPorId, escolherAssento } from './assentos';
+import { assentoPorId, escolherAssento, hashTexto } from './assentos';
+import { alvos } from './movimento';
 import { funcaoSigla } from '$lib/equipe';
 
 /** "Estou aqui", de qualquer tela do dspace. */
@@ -65,6 +66,12 @@ export type Pessoa = {
 	situacao: Situacao;
 	/** Onde sentou (catálogo de assentos.ts), quando está inativo. */
 	assento: string | null;
+	/** CEO fica sempre na Diretoria quando não está mexendo. */
+	ceo: boolean;
+	/** Desde quando está offline ou inativo (s desde 1970, relógio do servidor; null = online). */
+	paradoDesde: number | null;
+	/** Há quantos segundos (relógio do servidor). */
+	paradoHa: number;
 };
 
 export type EstadoConexao = 'conectando' | 'online' | 'offline';
@@ -86,6 +93,16 @@ export function lerLinha(bruto: unknown): Pessoa | null {
 	const cor = typeof r.cor === 'string' && /^#[0-9a-f]{6}$/i.test(r.cor) ? r.cor : null;
 	const semSinal = numero(r.sem_sinal, 0) ?? Infinity;
 	const saiuHa = numero(r.saiu_ha, 0);
+	const situacao: Situacao =
+		semSinal > AUSENTE_APOS || (saiuHa !== null && saiuHa >= SAIDA_CONFIRMA) ? 'offline' : r.inativo === true ? 'inativo' : 'online';
+	// Desde quando está parado, nos segundos do servidor (iguais para todas as telas)
+	const agora = numero(r.agora, 0);
+	const paradoDesde =
+		situacao === 'offline'
+			? (numero(r.saiu, 0) ?? numero(r.visto, 0))
+			: situacao === 'inativo'
+				? (numero(r.inativo_desde, 0) ?? agora)
+				: null;
 	return {
 		id,
 		nome,
@@ -99,9 +116,11 @@ export function lerLinha(bruto: unknown): Pessoa | null {
 		dirY: numero(r.dir_y, -1, 1) ?? 1,
 		mov: numero(r.mov, 0) ?? 0,
 		aparencia: lerAparencia(r.aparencia, cor),
-		situacao:
-			semSinal > AUSENTE_APOS || (saiuHa !== null && saiuHa >= SAIDA_CONFIRMA) ? 'offline' : r.inativo === true ? 'inativo' : 'online',
-		assento: typeof r.assento === 'string' && /^[a-z0-9:.-]{1,60}$/.test(r.assento) ? r.assento : null
+		situacao,
+		assento: typeof r.assento === 'string' && /^[a-z0-9:.-]{1,60}$/.test(r.assento) ? r.assento : null,
+		ceo: r.ceo === true,
+		paradoDesde,
+		paradoHa: paradoDesde === null || agora === null ? 0 : Math.max(0, agora - paradoDesde)
 	};
 }
 
@@ -245,13 +264,6 @@ function lerDecisao(): Decisao | null {
 	}
 }
 
-/** Número estável a partir de um texto (a semente do sorteio do lugar). */
-function hash(t: string) {
-	let h = 5381;
-	for (let i = 0; i < t.length; i++) h = (Math.imul(h, 33) + t.charCodeAt(i)) >>> 0;
-	return h;
-}
-
 /**
  * O sinal de vida do dspace inteiro (chamado no layout, para quem tem o
  * módulo DGathe), e a vigia dos 15 min sem mexer. Devolve a função que para.
@@ -300,12 +312,14 @@ export function manterSinal(
 			const { data } = await supabase.rpc('dgathe_quem');
 			const ocupados = new Set<string>();
 			if (Array.isArray(data)) {
+				const outros: Pessoa[] = [];
 				for (const linha of data) {
 					const p = lerLinha(linha);
-					if (p && p.id !== quem.id && p.situacao === 'inativo' && p.assento) ocupados.add(p.assento);
+					if (p && p.id !== quem.id) outros.push(p);
 				}
+				for (const alvo of alvos(outros).values()) if (alvo.assento) ocupados.add(alvo.assento.id);
 			}
-			const a = escolherAssento({ ceo: quem.ceo, ocupados, semente: hash(quem.id ?? aba) ^ desde });
+			const a = escolherAssento({ ceo: quem.ceo, ocupados, semente: hashTexto(quem.id ?? aba) ^ desde });
 			decisao = { desde, assento: a?.id ?? null };
 			try {
 				localStorage.setItem(CHAVE_INATIVO, JSON.stringify(decisao));
