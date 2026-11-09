@@ -1,64 +1,114 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { CANAL, Online, PULSO, VALIDADE, lerPessoa, lerRota, type EstadoConexao, type Pessoa } from './online';
+import { CANAL, Online, PULSO, VALIDADE, VIGIA, lerPessoa, lerRota, type EstadoConexao, type Pessoa } from './online';
 import type { Ponto } from './iso';
 import { APARENCIA_PADRAO, lerAparencia } from './aparencia';
 
-/** Um Supabase de mentira, só com o pedaço do Realtime que o DGathe usa. */
-function supabaseFalso() {
-	const ouvintes: Record<string, (m: { payload?: unknown }) => void> = {};
-	let aoInscrever: ((status: string, erro?: Error) => void) | null = null;
+/**
+ * Um Supabase de mentira, só com o pedaço do Realtime que o DGathe usa. Imita
+ * duas manias do de verdade: channel() com um nome que ainda está aberto
+ * devolve o canal velho, e canal já inscrito não aceita ouvinte de presença.
+ */
+function supabaseFalso(respostaTrack: 'ok' | 'error' = 'ok', respostaSaida: 'ok' | 'timed out' = 'ok') {
+	type Canal = ReturnType<typeof novoCanal>;
 	let estado: Record<string, unknown[]> = {};
 	const enviados: { type: string; event: string; payload: unknown }[] = [];
 	const rastreados: unknown[] = [];
 	const abertos: { nome: string; opcoes: { config: { private: boolean; presence: { key: string } } } }[] = [];
-	const canal = {
-		on(tipo: string, filtro: { event: string }, f: (m: { payload?: unknown }) => void) {
-			ouvintes[`${tipo}:${filtro.event}`] = f;
-			return canal;
-		},
-		subscribe(f: (status: string, erro?: Error) => void) {
-			aoInscrever = f;
-			return canal;
-		},
-		track: async (p: unknown) => {
-			rastreados.push(JSON.parse(JSON.stringify(p)));
-			return 'ok';
-		},
-		untrack: async () => 'ok',
-		send: async (m: { type: string; event: string; payload: unknown }) => {
-			enviados.push(m);
-			return 'ok';
-		},
-		presenceState: () => estado
-	};
+	let vivos: Canal[] = [];
+	let atual: Canal | null = null;
+
+	function novoCanal(nome: string) {
+		const ouvintes: Record<string, (m: { payload?: unknown }) => void> = {};
+		let aoInscrever: ((status: string, erro?: Error) => void) | null = null;
+		const canal = {
+			topic: `realtime:${nome}`,
+			state: 'closed' as string,
+			ouvintes,
+			inscrever: (s: string, erro?: Error) => aoInscrever?.(s, erro),
+			on(tipo: string, filtro: { event: string }, f: (m: { payload?: unknown }) => void) {
+				if (aoInscrever && tipo === 'presence') throw new Error('cannot add `presence` callbacks after `subscribe()`.');
+				ouvintes[`${tipo}:${filtro.event}`] = f;
+				return canal;
+			},
+			subscribe(f: (status: string, erro?: Error) => void) {
+				if (canal.state === 'closed') {
+					aoInscrever = f;
+					canal.state = 'joining';
+				}
+				return canal;
+			},
+			track: async (p: unknown) => {
+				rastreados.push(JSON.parse(JSON.stringify(p)));
+				// O servidor aceitou: passa a me listar (como o Realtime faz no sync)
+				if (respostaTrack === 'ok') estado = { ...estado, [(p as { id: string }).id]: [p] };
+				return respostaTrack;
+			},
+			untrack: async () => 'ok',
+			send: async (m: { type: string; event: string; payload: unknown }) => {
+				enviados.push(m);
+				return 'ok';
+			},
+			presenceState: () => estado,
+			teardown: () => undefined
+		};
+		return canal;
+	}
+
 	const supabase = {
-		realtime: { setAuth: async () => {} },
+		realtime: {
+			setAuth: async () => {},
+			isConnected: () => true,
+			_remove: (c: Canal) => (vivos = vivos.filter((v) => v !== c))
+		},
+		getChannels: () => vivos,
 		channel: (nome: string, opcoes: (typeof abertos)[number]['opcoes']) => {
 			abertos.push({ nome, opcoes });
-			return canal;
+			const velho = vivos.find((c) => c.topic === `realtime:${nome}`);
+			if (velho) return velho;
+			atual = novoCanal(nome);
+			vivos.push(atual);
+			return atual;
 		},
-		removeChannel: async () => 'ok'
+		removeChannel: async (c: Canal) => {
+			c.state = 'leaving';
+			await new Promise((r) => setTimeout(r, 20)); // a resposta do servidor demora
+			if (respostaSaida === 'ok') {
+				c.state = 'closed';
+				vivos = vivos.filter((v) => v !== c);
+			}
+			return respostaSaida;
+		}
 	} as unknown as SupabaseClient;
 	return {
 		supabase,
 		abertos,
 		enviados,
 		rastreados,
-		status: (s: string, erro?: Error) => aoInscrever?.(s, erro),
+		vivos: () => vivos,
+		status: (s: string, erro?: Error) => {
+			if (!atual) return;
+			atual.state = s === 'SUBSCRIBED' ? 'joined' : 'errored';
+			atual.inscrever(s, erro);
+		},
+		cair: () => atual && (atual.state = 'errored'),
 		sincronizar: (e: Record<string, unknown[]>) => {
 			estado = e;
-			ouvintes['presence:sync']?.({});
+			atual?.ouvintes['presence:sync']?.({});
 		},
-		rota: (payload: unknown) => ouvintes['broadcast:rota']?.({ payload })
+		rota: (payload: unknown) => atual?.ouvintes['broadcast:rota']?.({ payload })
 	};
 }
 
 const EU: Pessoa = { id: 'bruno', nome: 'Bruno Santana', cargo: 'CEO', foto: null, cor: '#1c2534', x: 20.5, y: 22.2, dirX: 1, dirY: 1, aparencia: APARENCIA_PADRAO };
 const ALINE = { id: 'aline', nome: 'Aline Santana', cargo: 'CEO', foto: '/avatares/a.png', cor: '#e05a7a', x: 26.5, y: 20.5, dirX: 0, dirY: 1 };
 
-async function montar(opcoes: { canalDeTeste?: string; agora?: () => number } = {}) {
-	const f = supabaseFalso();
+async function montar(
+	opcoes: { canalDeTeste?: string; agora?: () => number } = {},
+	respostaTrack: 'ok' | 'error' = 'ok',
+	respostaSaida: 'ok' | 'timed out' = 'ok'
+) {
+	const f = supabaseFalso(respostaTrack, respostaSaida);
 	const recebido = { pessoas: [] as Pessoa[][], rotas: [] as { id: string; pontos: Ponto[] }[], estados: [] as EstadoConexao[] };
 	const online = new Online(
 		f.supabase,
@@ -74,7 +124,17 @@ async function montar(opcoes: { canalDeTeste?: string; agora?: () => number } = 
 	return { f, online, recebido };
 }
 
-afterEach(() => {
+/** Mais uma aba/visita da mesma pessoa no mesmo Supabase (o app tem um só cliente). */
+async function outraVisita(f: ReturnType<typeof supabaseFalso>) {
+	const estados: EstadoConexao[] = [];
+	const online = new Online(f.supabase, EU, { pessoas: () => {}, rota: () => {}, estado: (e) => estados.push(e) });
+	await online.entrar();
+	return { online, estados };
+}
+
+afterEach(async () => {
+	// Termina a saída do canal pendente, senão o teste seguinte espera por ela
+	if (vi.isFakeTimers()) await vi.advanceTimersByTimeAsync(5_000);
 	vi.useRealTimers();
 });
 
@@ -98,7 +158,7 @@ describe('Online', () => {
 		online.andar([{ x: 1, y: 1 }, { x: 2, y: 2 }]);
 		expect(f.enviados).toHaveLength(0);
 		f.status('SUBSCRIBED');
-		await Promise.resolve();
+		await new Promise((r) => setTimeout(r, 0));
 		expect(recebido.estados).toEqual(['conectando', 'online']);
 		expect(f.rastreados[0]).toMatchObject({ id: 'bruno', x: 20.5, y: 22.2 });
 		online.andar([{ x: 1.123456, y: 1 }, { x: 2, y: 2.98765 }]);
@@ -110,7 +170,7 @@ describe('Online', () => {
 	it('ao parar, atualiza a presença com a posição nova', async () => {
 		const { f, online } = await montar();
 		f.status('SUBSCRIBED');
-		await Promise.resolve();
+		await new Promise((r) => setTimeout(r, 0));
 		online.parou(30.25, 18.5, -1, 0);
 		expect(f.rastreados.at(-1)).toMatchObject({ x: 30.25, y: 18.5, dirX: -1, dirY: 0 });
 	});
@@ -156,14 +216,78 @@ describe('Online', () => {
 		vi.useFakeTimers();
 		const { f, online } = await montar();
 		f.status('SUBSCRIBED');
-		await Promise.resolve();
+		await vi.advanceTimersByTimeAsync(0);
 		const antes = f.rastreados.length;
-		vi.advanceTimersByTime(PULSO);
+		await vi.advanceTimersByTimeAsync(PULSO);
 		expect(f.rastreados.length).toBe(antes + 1);
 		expect(f.rastreados.at(-1)).toMatchObject({ id: 'bruno', pulso: 1 });
 		online.sair();
-		vi.advanceTimersByTime(PULSO * 3);
+		await vi.advanceTimersByTimeAsync(PULSO * 3);
 		expect(f.rastreados.length).toBe(antes + 1);
+	});
+
+	it('presença recusada pelo servidor deixa o ponto cinza (e não verde)', async () => {
+		const { f, recebido, online } = await montar({}, 'error');
+		f.status('SUBSCRIBED');
+		await new Promise((r) => setTimeout(r, 0));
+		expect(recebido.estados.at(-1)).toBe('offline');
+		online.sair();
+	});
+
+	it('a vigia anuncia de novo quando o servidor perde a minha presença', async () => {
+		vi.useFakeTimers();
+		const { f, online } = await montar();
+		f.status('SUBSCRIBED');
+		await vi.advanceTimersByTimeAsync(0);
+		const antes = f.rastreados.length;
+		f.sincronizar({ aline: [{ ...ALINE, presence_ref: 'x' }] }); // o servidor não me lista
+		await vi.advanceTimersByTimeAsync(VIGIA);
+		expect(f.rastreados.length).toBeGreaterThan(antes);
+		online.sair();
+	});
+
+	it('a vigia refaz a conexão quando o canal cai (duas conferências seguidas)', async () => {
+		vi.useFakeTimers();
+		const { f, online } = await montar();
+		f.status('SUBSCRIBED');
+		await vi.advanceTimersByTimeAsync(0);
+		f.cair();
+		await vi.advanceTimersByTimeAsync(VIGIA);
+		expect(f.abertos).toHaveLength(1);
+		await vi.advanceTimersByTimeAsync(VIGIA);
+		await vi.advanceTimersByTimeAsync(100); // a saída do canal velho
+		expect(f.abertos).toHaveLength(2);
+		expect(f.vivos()).toHaveLength(1);
+		online.sair();
+	});
+
+	it('sair e voltar logo em seguida abre um canal novo (e não herda o que está saindo)', async () => {
+		const { f, online } = await montar();
+		f.status('SUBSCRIBED');
+		await new Promise((r) => setTimeout(r, 0));
+		online.sair(); // foi para o Meu Perfil
+		const volta = await outraVisita(f); // e voltou para o DGathe na hora
+		expect(f.vivos()).toHaveLength(1);
+		f.status('SUBSCRIBED');
+		await new Promise((r) => setTimeout(r, 0));
+		expect(volta.estados.at(-1)).toBe('online');
+		volta.online.sair();
+	});
+
+	it('canal velho que não confirmou a saída é tirado à força antes do novo', async () => {
+		vi.useFakeTimers();
+		const { f, online } = await montar({}, 'ok', 'timed out');
+		f.status('SUBSCRIBED');
+		await vi.advanceTimersByTimeAsync(0);
+		online.sair();
+		const visita = outraVisita(f);
+		await vi.advanceTimersByTimeAsync(5_000);
+		const volta = await visita;
+		expect(f.vivos()).toHaveLength(1);
+		f.status('SUBSCRIBED');
+		await vi.advanceTimersByTimeAsync(0);
+		expect(volta.estados.at(-1)).toBe('online');
+		volta.online.sair();
 	});
 
 	it('se o canal falha, o estado vira offline', async () => {

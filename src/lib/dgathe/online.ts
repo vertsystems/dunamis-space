@@ -50,6 +50,8 @@ export type OuvintesOnline = {
 const MAX_PONTOS = 120;
 /** De quanto em quanto tempo cada um diz "ainda estou aqui". */
 export const PULSO = 30_000;
+/** De quanto em quanto tempo a vigia confere conexão, canal e a minha presença. */
+export const VIGIA = 15_000;
 /** Sem sinal por este tempo, a pessoa some (folga para o navegador atrasar o pulso de aba em segundo plano). */
 export const VALIDADE = 150_000;
 
@@ -101,6 +103,30 @@ export function lerRota(bruto: unknown): { id: string; pontos: Ponto[] } | null 
 
 const arredonda = (n: number) => Math.round(n * 1000) / 1000;
 
+/**
+ * A saída do canal em andamento (o app tem um cliente Supabase só). Quem entra
+ * espera por ela: o Supabase devolve o canal velho quando o nome ainda está
+ * aberto, e canal velho não se inscreve de novo (era o que deixava alguém
+ * invisível ao voltar do Meu Perfil para o DGathe).
+ */
+let saindo: Promise<unknown> = Promise.resolve();
+const ESPERA_SAIDA = 3_000;
+
+/** Tira o canal; se o servidor não confirmar a saída, tira à força deste navegador. */
+async function tirarCanal(supabase: SupabaseClient, canal: RealtimeChannel) {
+	const resposta = await supabase.removeChannel(canal).catch(() => 'error');
+	if (resposta !== 'ok') esquecerCanal(supabase, canal);
+}
+
+function esquecerCanal(supabase: SupabaseClient, canal: RealtimeChannel) {
+	try {
+		canal.teardown();
+	} catch {
+		// já estava desmontado
+	}
+	(supabase.realtime as unknown as { _remove?: (c: RealtimeChannel) => void })._remove?.(canal);
+}
+
 export class Online {
 	private canal: RealtimeChannel | null = null;
 	private conectado = false;
@@ -108,6 +134,9 @@ export class Online {
 	private readonly eu: Pessoa & { pulso: number };
 	private readonly sinais = new Map<string, { ref: string; quando: number }>();
 	private relogio: ReturnType<typeof setInterval> | null = null;
+	private retentativa: ReturnType<typeof setTimeout> | undefined;
+	private vigia: ReturnType<typeof setInterval> | null = null;
+	private falhas = 0;
 
 	private readonly topico: string;
 	private readonly privado: boolean;
@@ -137,24 +166,33 @@ export class Online {
 			}
 		}
 		if (this.fechado) return;
+		// Espera a saída anterior (até 3 s) e tira o que sobrou com este nome
+		await Promise.race([saindo, new Promise((r) => setTimeout(r, ESPERA_SAIDA))]);
+		if (this.fechado) return;
+		const nome = `realtime:${this.topico}`;
+		for (const velho of this.supabase.getChannels().filter((c) => c.topic === nome)) esquecerCanal(this.supabase, velho);
+
 		const canal = this.supabase.channel(this.topico, {
 			config: { private: this.privado, presence: { key: this.eu.id }, broadcast: { self: false } }
 		});
-		canal.on('presence', { event: 'sync' }, () => this.publicarPresenca());
+		this.canal = canal;
+		if (!this.vigia) this.vigia = setInterval(() => this.conferir(), VIGIA);
+		canal.on('presence', { event: 'sync' }, () => {
+			if (this.canal === canal) this.publicarPresenca();
+		});
 		canal.on('broadcast', { event: 'rota' }, ({ payload }) => {
 			const r = lerRota(payload);
 			if (r && r.id !== this.eu.id) this.ouvintes.rota(r.id, r.pontos);
 		});
 		canal.subscribe(async (status, erro) => {
-			if (this.fechado) return;
+			if (this.fechado || this.canal !== canal) return;
 			if (status === 'SUBSCRIBED') {
 				this.conectado = true;
-				this.ouvintes.estado('online');
-				await canal.track(this.eu);
+				await this.anunciar();
 				if (!this.relogio) {
 					this.relogio = setInterval(() => {
 						this.eu.pulso++;
-						if (this.conectado) void this.canal?.track(this.eu);
+						if (this.conectado) void this.anunciar();
 						this.publicarPresenca();
 					}, PULSO);
 				}
@@ -164,7 +202,64 @@ export class Online {
 				if (erro) console.warn('[DGathe] sem tempo real:', erro.message);
 			}
 		});
-		this.canal = canal;
+	}
+
+	/**
+	 * Diz "estou aqui". Só fica verde quando o servidor aceita; se recusar, o
+	 * ponto fica cinza (em vez de verde enganando) e tenta de novo em 5 s.
+	 */
+	private async anunciar() {
+		if (!this.canal) return;
+		const resposta = await this.canal.track(this.eu);
+		if (this.fechado) return;
+		clearTimeout(this.retentativa);
+		if (resposta === 'ok') {
+			this.ouvintes.estado('online');
+			return;
+		}
+		console.warn('[DGathe] presença não aceita:', resposta);
+		this.ouvintes.estado('offline');
+		this.retentativa = setTimeout(() => {
+			if (this.conectado) void this.anunciar();
+		}, 5000);
+	}
+
+	/**
+	 * A vigia: sem ninguém precisar recarregar a página, confere se a conexão e
+	 * o canal continuam de pé (duas falhas seguidas refazem tudo, com o login
+	 * renovado), se o servidor ainda me lista (senão anuncia de novo) e refaz a
+	 * lista de quem está online. `agora` refaz na primeira falha (a aba acabou
+	 * de voltar para a frente e a pessoa está olhando).
+	 */
+	conferir(agora = false) {
+		// Sem canal = ainda entrando ou já refazendo: nada a conferir
+		if (this.fechado || !this.canal) return;
+		const deLigado = this.supabase.realtime.isConnected() && this.canal.state === 'joined';
+		if (!deLigado) {
+			this.falhas++;
+			if (agora || this.falhas >= 2) void this.reconectar();
+			return;
+		}
+		this.falhas = 0;
+		if (!this.canal.presenceState()[this.eu.id]) void this.anunciar();
+		this.publicarPresenca();
+	}
+
+	private reconectando = false;
+
+	private async reconectar() {
+		if (this.reconectando) return;
+		this.reconectando = true;
+		this.falhas = 0;
+		this.conectado = false;
+		const velho = this.canal;
+		this.canal = null;
+		try {
+			if (velho) await tirarCanal(this.supabase, velho);
+			if (!this.fechado) await this.entrar();
+		} finally {
+			this.reconectando = false;
+		}
 	}
 
 	private publicarPresenca() {
@@ -198,7 +293,7 @@ export class Online {
 	parou(x: number, y: number, dirX: number, dirY: number) {
 		Object.assign(this.eu, { x: arredonda(x), y: arredonda(y), dirX: arredonda(dirX), dirY: arredonda(dirY) });
 		this.eu.pulso++;
-		if (this.conectado && this.canal) void this.canal.track(this.eu);
+		if (this.conectado) void this.anunciar();
 	}
 
 	/**
@@ -210,9 +305,12 @@ export class Online {
 		this.conectado = false;
 		if (this.relogio) clearInterval(this.relogio);
 		this.relogio = null;
+		clearTimeout(this.retentativa);
+		if (this.vigia) clearInterval(this.vigia);
+		this.vigia = null;
 		if (!this.canal) return;
 		const canal = this.canal;
 		this.canal = null;
-		void this.supabase.removeChannel(canal);
+		saindo = tirarCanal(this.supabase, canal);
 	}
 }

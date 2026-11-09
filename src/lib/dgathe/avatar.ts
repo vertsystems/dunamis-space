@@ -12,6 +12,13 @@
 // Camadas: pernas e sapatos → saia → cabelo de trás → braço de trás → tronco
 // e roupa → orelhas, cabeça e rosto → cabelo da frente (ou o de costas) →
 // óculos → braço da frente.
+//
+// A personagem feminina (pedido do Bruno, 09/11/2026: "está muito igual ao
+// masculino") tem corpo próprio (ombro estreito, cintura, quadril, pernas e
+// braços finos) e cada roupa do catálogo vira uma versão feminina: o terno é
+// tailleur com saia lápis, a camisa social é blusa com laço e saia, a polo vai
+// com saia jeans, a xadrez é aberta com nó, a jaqueta jeans vai sobre vestido.
+// Sapatos, cílios, batom e brinco também são dela.
 
 import { paraTela, tom } from './iso';
 import { APARENCIA_PADRAO, CORES_CABELO, PELES, corDe, type Aparencia } from './aparencia';
@@ -103,6 +110,11 @@ function traco(ctx: C, x0: number, y0: number, x1: number, y1: number, cor = CON
 	ctx.stroke();
 }
 
+/** Luminância de uma cor #rrggbb (0–255). */
+function luzDe(cor: string) {
+	return parseInt(cor.slice(1, 3), 16) * 0.3 + parseInt(cor.slice(3, 5), 16) * 0.59 + parseInt(cor.slice(5, 7), 16) * 0.11;
+}
+
 function ponto(ctx: C, x: number, y: number, r: number, cor: string) {
 	ctx.beginPath();
 	ctx.arc(x, y, r, 0, Math.PI * 2);
@@ -110,22 +122,361 @@ function ponto(ctx: C, x: number, y: number, r: number, cor: string) {
 	ctx.fill();
 }
 
-/** Contorno do tronco: reto no masculino; ombro mais estreito e cintura marcada no feminino. */
-function tronco(ctx: C, feminino: boolean) {
+/** Contorno do tronco masculino: reto, ombro largo. */
+function tronco(ctx: C) {
+	return () => ctx.roundRect(-7.2, -30.5, 14.4, 16.5, [4.6, 4.6, 2.4, 2.4]);
+}
+
+/**
+ * Tronco feminino: ombro estreito e cintura marcada, terminando na cintura
+ * (a saia ou a calça começa ali). O moletom é largo e desce até o quadril.
+ */
+function troncoFeminino(ctx: C, longo: boolean) {
 	return () => {
-		if (feminino) {
-			ctx.moveTo(-3.6, -30.5);
-			ctx.lineTo(3.6, -30.5);
-			ctx.quadraticCurveTo(6.6, -30.5, 6.6, -27.4);
-			ctx.lineTo(5.2, -21.6);
-			ctx.quadraticCurveTo(6.4, -17.6, 6.4, -14);
-			ctx.lineTo(-6.4, -14);
-			ctx.quadraticCurveTo(-6.4, -17.6, -5.2, -21.6);
-			ctx.lineTo(-6.6, -27.4);
-			ctx.quadraticCurveTo(-6.6, -30.5, -3.6, -30.5);
-			ctx.closePath();
-		} else ctx.roundRect(-7.2, -30.5, 14.4, 16.5, [4.6, 4.6, 2.4, 2.4]);
+		ctx.moveTo(-3.4, -30.5);
+		ctx.lineTo(3.4, -30.5);
+		ctx.quadraticCurveTo(5.9, -30.5, 5.9, -27.8);
+		if (longo) {
+			ctx.quadraticCurveTo(5.6, -21, 6.5, -14.4);
+			ctx.lineTo(-6.5, -14.4);
+			ctx.quadraticCurveTo(-5.6, -21, -5.9, -27.8);
+		} else {
+			ctx.quadraticCurveTo(5.9, -23.6, 4.4, -20.8);
+			ctx.lineTo(4.7, -18.2);
+			ctx.lineTo(-4.7, -18.2);
+			ctx.lineTo(-4.4, -20.8);
+			ctx.quadraticCurveTo(-5.9, -23.6, -5.9, -27.8);
+		}
+		ctx.quadraticCurveTo(-5.9, -30.5, -3.4, -30.5);
+		ctx.closePath();
 	};
+}
+
+// ------------------------------------------------------------ figurino feminino
+
+type Figurino = {
+	/** O que vai da cintura para baixo. */
+	baixo: 'lapis' | 'evase' | 'rodada' | 'calca';
+	corBaixo: string;
+	manga: 'longa' | 'curta' | 'bufante';
+	corManga: string;
+	/** Peça de cima que desce até o quadril (moletom). */
+	longo: boolean;
+};
+
+const SAIA_ESCURA = '#2b3240';
+const SAIA_CLARA = '#e6dccb';
+const PRETO_FOSCO = '#2a2d35';
+
+/** A versão feminina de cada roupa do catálogo. `luz` = luminância da cor escolhida (0–255). */
+function figurinoFeminino(roupa: string, cor: string, luz: number): Figurino {
+	const longa = { manga: 'longa' as const, corManga: cor, longo: false };
+	switch (roupa) {
+		case 'terno':
+			return { ...longa, baixo: 'lapis', corBaixo: tom(cor, 0.9) };
+		case 'blazer':
+			return { ...longa, baixo: 'calca', corBaixo: SAIA_ESCURA };
+		case 'social':
+			return { ...longa, baixo: 'evase', corBaixo: luz < 90 ? SAIA_CLARA : SAIA_ESCURA };
+		case 'vestido':
+			return { baixo: 'rodada', corBaixo: cor, manga: 'bufante', corManga: cor, longo: false };
+		case 'camiseta':
+			return { baixo: 'calca', corBaixo: JEANS, manga: 'curta', corManga: cor, longo: false };
+		case 'polo':
+			return { baixo: 'evase', corBaixo: JEANS, manga: 'curta', corManga: cor, longo: false };
+		case 'xadrez':
+			return { ...longa, baixo: 'calca', corBaixo: JEANS };
+		case 'jaqueta':
+			return { ...longa, baixo: 'calca', corBaixo: PRETO_FOSCO };
+		case 'jeans':
+			return { ...longa, baixo: 'rodada', corBaixo: cor, corManga: DENIM };
+		default:
+			return { ...longa, baixo: 'calca', corBaixo: PRETO_FOSCO, longo: true };
+	}
+}
+
+/** Pernas finas: de meia-calça cor da pele com saia, ou de calça justa. */
+function pernasFemininas(ctx: C, f: Figurino, sapato: string, pele: string, passo: number, sobe: number) {
+	const pernas: [number, number][] = [
+		[-2.2 + passo * 2.2, Math.max(0, passo) * 1.5],
+		[2.2 - passo * 2.2, Math.max(0, -passo) * 1.5]
+	];
+	for (const [px, ergue] of pernas) {
+		if (f.baixo === 'calca') {
+			const perna = capsula(ctx, px, -17 - sobe, -1.8 - ergue, 4.2);
+			forma(ctx, perna, f.corBaixo);
+			sombraDireita(ctx, perna, px + 0.7);
+			if (f.corBaixo === JEANS) traco(ctx, px - 1.7, -3.9 - ergue, px + 1.7, -3.9 - ergue, '#8aa6d2', 0.7);
+		} else forma(ctx, capsula(ctx, px, -12 - sobe, -1.8 - ergue, 3.4), pele);
+		sapatoFeminino(ctx, sapato, px, -ergue);
+	}
+}
+
+/** Saia (lápis, evasê ou rodada) ou o quadril da calça, já na altura do corpo. */
+function parteDeBaixo(ctx: C, f: Figurino) {
+	const cor = f.corBaixo;
+	const dobra = tom(cor, 0.76);
+	switch (f.baixo) {
+		case 'calca': {
+			const quadril = () => {
+				ctx.moveTo(-4.7, -19.4);
+				ctx.lineTo(4.7, -19.4);
+				ctx.quadraticCurveTo(6.2, -16.6, 4.4, -13);
+				ctx.lineTo(-4.4, -13);
+				ctx.quadraticCurveTo(-6.2, -16.6, -4.7, -19.4);
+				ctx.closePath();
+			};
+			forma(ctx, quadril, cor, 0);
+			sombraDireita(ctx, quadril, 2.2);
+			// Contorno só dos lados (embaixo as pernas continuam)
+			ctx.beginPath();
+			ctx.moveTo(4.7, -19.4);
+			ctx.quadraticCurveTo(6.2, -16.6, 4.4, -13);
+			ctx.moveTo(-4.7, -19.4);
+			ctx.quadraticCurveTo(-6.2, -16.6, -4.4, -13);
+			ctx.strokeStyle = CONTORNO;
+			ctx.lineWidth = LW;
+			ctx.stroke();
+			traco(ctx, 0, -15.8, 0, -13, dobra, 0.6);
+			return;
+		}
+		case 'lapis': {
+			const saia = () => {
+				ctx.moveTo(-4.7, -19.4);
+				ctx.lineTo(4.7, -19.4);
+				ctx.quadraticCurveTo(6.7, -16.4, 6.3, -13.4);
+				ctx.lineTo(5.3, -8.6);
+				ctx.lineTo(-5.3, -8.6);
+				ctx.lineTo(-6.3, -13.4);
+				ctx.quadraticCurveTo(-6.7, -16.4, -4.7, -19.4);
+				ctx.closePath();
+			};
+			forma(ctx, saia, cor);
+			sombraDireita(ctx, saia, 2.4);
+			traco(ctx, 2.8, -8.8, 2.6, -11, dobra, 0.7);
+			return;
+		}
+		case 'evase': {
+			const saia = () => {
+				ctx.moveTo(-4.7, -19.4);
+				ctx.lineTo(4.7, -19.4);
+				ctx.lineTo(8.6, -9.4);
+				ctx.quadraticCurveTo(0, -7.8, -8.6, -9.4);
+				ctx.closePath();
+			};
+			forma(ctx, saia, cor);
+			sombraDireita(ctx, saia, 2.6);
+			traco(ctx, -1.6, -16.6, -3.4, -9.2, dobra, 0.7);
+			traco(ctx, 2.2, -16.6, 4, -9.2, dobra, 0.7);
+			if (cor === JEANS) traco(ctx, -7.6, -10.2, 7.6, -10.2, '#8aa6d2', 0.6);
+			return;
+		}
+		case 'rodada': {
+			const saia = () => {
+				ctx.moveTo(-4.7, -19.4);
+				ctx.lineTo(4.7, -19.4);
+				ctx.quadraticCurveTo(7.4, -14.6, 9.8, -9.2);
+				ctx.quadraticCurveTo(7.4, -7.6, 4.9, -8.6);
+				ctx.quadraticCurveTo(2.4, -7.4, 0, -8.4);
+				ctx.quadraticCurveTo(-2.4, -7.4, -4.9, -8.6);
+				ctx.quadraticCurveTo(-7.4, -7.6, -9.8, -9.2);
+				ctx.quadraticCurveTo(-7.4, -14.6, -4.7, -19.4);
+				ctx.closePath();
+			};
+			forma(ctx, saia, cor);
+			sombraDireita(ctx, saia, 2.6);
+			traco(ctx, -2, -16, -4.9, -8.9, dobra, 0.7);
+			traco(ctx, 2.2, -16, 4.9, -8.9, dobra, 0.7);
+			return;
+		}
+	}
+}
+
+/** Braço fino; manga longa, curta ou bufante (vestido). */
+function bracoFeminino(ctx: C, f: Figurino, pele: string) {
+	return (lado: number, angulo: number) => {
+		ctx.save();
+		ctx.translate(lado * 5.4, -28.4);
+		ctx.rotate(angulo);
+		if (f.manga === 'longa') {
+			const b = capsula(ctx, 0, 0, 12, 3.8);
+			forma(ctx, b, f.corManga);
+			sombraDireita(ctx, b, 0.7);
+		} else {
+			forma(ctx, capsula(ctx, 0, 0, 12, 3.2), pele);
+			if (f.manga === 'curta') forma(ctx, capsula(ctx, 0, -0.2, 5, 4.2), f.corManga);
+			else forma(ctx, oval(ctx, 0, 1.4, 2.8, 2.5), f.corManga);
+		}
+		forma(ctx, oval(ctx, 0, 12.2, 2.1, 2.1), pele);
+		ctx.restore();
+	};
+}
+
+/** Correntinha dourada com pingente. */
+function colar(ctx: C, y = -28.2) {
+	ctx.beginPath();
+	ctx.arc(0.3, y - 3, 3, 0.18 * Math.PI, 0.82 * Math.PI);
+	ctx.strokeStyle = '#d9a73a';
+	ctx.lineWidth = 0.5;
+	ctx.stroke();
+	forma(ctx, oval(ctx, 0.3, y + 0.2, 0.75, 0.9), '#f0c050', 0.45);
+}
+
+/** Detalhes da peça de cima feminina (dentro do recorte do tronco). */
+function roupaFeminina(ctx: C, tipo: string, cor: string, clara: boolean, pele: string, deFrente: boolean) {
+	const escura = tom(cor, 0.76);
+	if (!deFrente) {
+		if (tipo === 'moletom') forma(ctx, oval(ctx, 0, -28.6, 5.4, 3.4), escura, 0.8);
+		else if (tipo === 'xadrez') xadrez(ctx, cor);
+		else if (tipo === 'jeans') traco(ctx, -6, -22, 6, -22, '#8aa6d2', 0.7);
+		traco(ctx, 0, -29, 0, -17, 'rgba(0,0,0,0.2)', 0.8);
+		return;
+	}
+	const decote = (rx: number, ry: number) => forma(ctx, oval(ctx, 0.3, -30.6, rx, ry), pele, 0.7);
+	const faixa = (corDentro: string) => forma(ctx, caixa(ctx, -1.7, -30.8, 4, 13, 0), corDentro, 0.6);
+	switch (tipo) {
+		case 'terno':
+			// Tailleur: blusa de seda no decote, lapelas, dois botões, colar
+			forma(ctx, poligono(ctx, [[-2.6, -30.6], [3.2, -30.6], [0.3, -23.6]]), '#fbf7f0', 0.7);
+			decote(1.8, 1.3);
+			colar(ctx, -28.4);
+			forma(ctx, poligono(ctx, [[-2.6, -30.6], [-0.5, -24.4], [-3.9, -25.6]]), escura, 0.6);
+			forma(ctx, poligono(ctx, [[3.2, -30.6], [1.1, -24.4], [4.5, -25.6]]), escura, 0.6);
+			for (const y of [-21.6, -19.6]) ponto(ctx, 0.3, y, 0.55, escura);
+			break;
+		case 'blazer':
+			forma(ctx, poligono(ctx, [[-3.2, -30.6], [3.8, -30.6], [2.4, -18], [-1.8, -18]]), '#f4f1eb', 0.6);
+			decote(2.4, 1.8);
+			colar(ctx);
+			forma(ctx, poligono(ctx, [[-3.2, -30.6], [-1.7, -22.4], [-4.7, -23.8]]), escura, 0.6);
+			forma(ctx, poligono(ctx, [[3.8, -30.6], [2.3, -22.4], [5.3, -23.8]]), escura, 0.6);
+			break;
+		case 'social': {
+			// Blusa com laço no pescoço
+			const laco = clara ? '#1c2534' : tom(cor, 1.4);
+			for (const y of [-25, -22.6, -20.2]) ponto(ctx, 0.3, y, 0.42, tom(cor, 0.6));
+			forma(ctx, poligono(ctx, [[0.1, -29.2], [-1.4, -25.4], [-0.2, -25.6]]), laco, 0.5);
+			forma(ctx, poligono(ctx, [[0.5, -29.2], [2, -25.4], [0.8, -25.6]]), laco, 0.5);
+			forma(ctx, oval(ctx, -1.5, -29.6, 1.7, 1.05, -0.25), laco, 0.55);
+			forma(ctx, oval(ctx, 2.1, -29.6, 1.7, 1.05, 0.25), laco, 0.55);
+			forma(ctx, oval(ctx, 0.3, -29.5, 0.8, 0.8), tom(laco, 0.85), 0.5);
+			break;
+		}
+		case 'vestido':
+			decote(3.6, 2.6);
+			forma(ctx, caixa(ctx, -5.6, -19.6, 11.8, 1.3, 0.5), tom(cor, 0.7), 0.5);
+			break;
+		case 'camiseta': {
+			decote(3.2, 2.1);
+			// Coraçãozinho estampado
+			const c = tom(cor, 1.4);
+			ctx.beginPath();
+			ctx.moveTo(-1.6, -21.9);
+			ctx.bezierCurveTo(-3.6, -23.3, -2.9, -25.1, -1.6, -24.2);
+			ctx.bezierCurveTo(-0.3, -25.1, 0.4, -23.3, -1.6, -21.9);
+			ctx.fillStyle = c;
+			ctx.fill();
+			break;
+		}
+		case 'polo':
+			decote(1.9, 1.4);
+			forma(ctx, oval(ctx, -1.4, -29.8, 2, 1.2, 0.45), tom(cor, 1.25), 0.6);
+			forma(ctx, oval(ctx, 2, -29.8, 2, 1.2, -0.45), tom(cor, 1.25), 0.6);
+			traco(ctx, 0.3, -28.6, 0.3, -25.6, escura, 0.7);
+			for (const y of [-27.6, -26.2]) ponto(ctx, 0.3, y, 0.4, '#ffffff');
+			break;
+		case 'xadrez':
+			xadrez(ctx, cor);
+			faixa('#f6f4ef');
+			decote(1.8, 1.4);
+			forma(ctx, poligono(ctx, [[-1.7, -30.6], [-0.4, -27.4], [-3.4, -27.8]]), tom(cor, 1.25), 0.6);
+			forma(ctx, poligono(ctx, [[2.3, -30.6], [1, -27.4], [4, -27.8]]), tom(cor, 1.25), 0.6);
+			break;
+		case 'jaqueta':
+			faixa('#ecebf0');
+			decote(1.8, 1.4);
+			forma(ctx, poligono(ctx, [[-1.7, -30.6], [-1.7, -25.2], [-5.2, -27]]), escura, 0.6);
+			forma(ctx, poligono(ctx, [[2.3, -30.6], [2.3, -25.2], [5.8, -27]]), escura, 0.6);
+			traco(ctx, -1.7, -25.2, -1.7, -18.4, tom(cor, 0.6), 0.5);
+			traco(ctx, 2.3, -25.2, 2.3, -18.4, tom(cor, 0.6), 0.5);
+			break;
+		case 'jeans':
+			faixa(cor);
+			decote(1.8, 1.4);
+			forma(ctx, caixa(ctx, -5, -27, 2.8, 2.6, 0.5), tom(DENIM, 0.86), 0.5);
+			forma(ctx, caixa(ctx, 2.8, -27, 2.8, 2.6, 0.5), tom(DENIM, 0.86), 0.5);
+			traco(ctx, -5, -20.4, -1.7, -20.4, '#8aa6d2', 0.6);
+			traco(ctx, 2.3, -20.4, 5.2, -20.4, '#8aa6d2', 0.6);
+			break;
+		case 'moletom':
+			forma(ctx, oval(ctx, 0.3, -30.2, 4.8, 2.4), escura, 0.7);
+			decote(2.3, 1.4);
+			traco(ctx, -1, -28.8, -1.2, -25, '#f4f4f2', 0.55);
+			traco(ctx, 1.6, -28.8, 1.8, -25, '#f4f4f2', 0.55);
+			forma(ctx, caixa(ctx, -3.8, -19.8, 8.2, 4.2, 1.6), tom(cor, 0.9), 0.6);
+			break;
+	}
+}
+
+/** O que fica por cima do tronco: o peplum do tailleur e o nó da camisa xadrez. */
+function acabamentoFeminino(ctx: C, tipo: string, cor: string, deFrente: boolean) {
+	if (tipo === 'terno') {
+		const peplum = () => {
+			ctx.moveTo(-4.7, -18.9);
+			ctx.lineTo(4.7, -18.9);
+			ctx.quadraticCurveTo(6.2, -16.8, 7.3, -15.2);
+			ctx.quadraticCurveTo(0.3, -14, -7.3, -15.2);
+			ctx.quadraticCurveTo(-6.2, -16.8, -4.7, -18.9);
+			ctx.closePath();
+		};
+		forma(ctx, peplum, cor);
+		sombraDireita(ctx, peplum, 2.9);
+	} else if (tipo === 'xadrez' && deFrente) {
+		forma(ctx, poligono(ctx, [[-0.6, -18.8], [-4.4, -15.4], [-1.6, -15.2]]), cor, 0.7);
+		forma(ctx, poligono(ctx, [[1.2, -18.8], [5, -15.6], [2.2, -15.2]]), cor, 0.7);
+		forma(ctx, oval(ctx, 0.3, -18.4, 1.9, 1.4), tom(cor, 0.85), 0.7);
+	}
+}
+
+/** Sapatos dela: menores, de bico fino; o social vira scarpin e a bota é de cano alto. */
+function sapatoFeminino(ctx: C, tipo: string, px: number, y: number) {
+	const scarpin = (cor: string) => {
+		forma(ctx, () => {
+			ctx.moveTo(px - 1.9, y - 3.1);
+			ctx.lineTo(px - 0.4, y - 2.9);
+			ctx.quadraticCurveTo(px + 2.2, y - 2.4, px + 3.9, y - 0.9);
+			ctx.lineTo(px + 3.7, y - 0.2);
+			ctx.lineTo(px - 0.6, y - 0.5);
+			ctx.lineTo(px - 0.9, y);
+			ctx.lineTo(px - 1.9, y);
+			ctx.closePath();
+		}, cor, 0.8);
+		ponto(ctx, px + 1.9, y - 1.7, 0.4, 'rgba(255,255,255,0.4)');
+	};
+	switch (tipo) {
+		case 'bota':
+			forma(ctx, caixa(ctx, px - 2.1, y - 9.6, 4.4, 9.2, [1.4, 1.4, 0.6, 0.6]), '#5a3d26', 0.8);
+			forma(ctx, caixa(ctx, px - 2.1, y - 3, 6, 3, [1.2, 2.2, 0.8, 0.8]), '#5a3d26', 0.8);
+			forma(ctx, caixa(ctx, px - 2.1, y - 1.3, 1.4, 1.3, 0.3), '#2e1f14', 0.5);
+			traco(ctx, px - 2, y - 8.4, px + 2.2, y - 8.4, '#7a5536', 0.7);
+			break;
+		case 'tenis':
+		case 'tenisPreto': {
+			const branco = tipo === 'tenis';
+			forma(ctx, caixa(ctx, px - 2.2, y - 3, 6, 3, [1.6, 2.2, 0.8, 0.8]), branco ? '#f5f5f2' : '#2a2d35', 0.8);
+			traco(ctx, px - 1.8, y - 0.5, px + 3.4, y - 0.5, branco ? '#c4cad3' : '#f2f2f2', 0.9);
+			if (branco) traco(ctx, px - 0.2, y - 2.2, px + 1.4, y - 2.2, '#e07a9a', 0.6);
+			break;
+		}
+		case 'salto':
+			scarpin('#b3263a');
+			break;
+		case 'marrom':
+			scarpin('#9a6440');
+			break;
+		default:
+			scarpin('#1c1f26');
+	}
 }
 
 // ------------------------------------------------------------------- boneco
@@ -145,9 +496,10 @@ export function desenharBoneco(
 	const pele = corDe(PELES, a.pele);
 	const cabelo = corDe(CORES_CABELO, a.corCabelo);
 	const roupa = a.corRoupa;
-	const clara = parseInt(roupa.slice(1, 3), 16) * 0.3 + parseInt(roupa.slice(3, 5), 16) * 0.59 + parseInt(roupa.slice(5, 7), 16) * 0.11 > 150;
+	const clara = luzDe(roupa) > 150;
 	const vestido = a.roupa === 'vestido';
 	const calca = vestido ? null : a.roupa === 'terno' ? tom(roupa, 0.88) : FORMAIS_COM_CINTO.has(a.roupa) ? '#2b3240' : JEANS;
+	const fig = feminino ? figurinoFeminino(a.roupa, roupa, luzDe(roupa)) : null;
 
 	const passo = p.andando ? Math.sin(p.fase) : 0;
 	const sobe = p.andando ? Math.abs(Math.sin(p.fase)) * 1.4 : Math.sin(p.t * 2) * 0.4;
@@ -162,23 +514,27 @@ export function desenharBoneco(
 	if (esquerda) ctx.scale(-1, 1);
 
 	// Pernas e sapatos
-	const pernas: [number, number][] = [
-		[-3 + passo * 2.4, Math.max(0, passo) * 1.5],
-		[3 - passo * 2.4, Math.max(0, -passo) * 1.5]
-	];
-	for (const [px, ergue] of pernas) {
-		if (calca) {
-			const perna = capsula(ctx, px, -16 - sobe, -2.4 - ergue, 5.2);
-			forma(ctx, perna, calca);
-			sombraDireita(ctx, perna, px + 0.9);
-		} else forma(ctx, capsula(ctx, px, -9 - sobe, -2.4 - ergue, 4.2), pele);
-		desenharSapato(ctx, a.sapato, px, -ergue);
+	if (fig) pernasFemininas(ctx, fig, a.sapato, pele, passo, sobe);
+	else {
+		const pernas: [number, number][] = [
+			[-3 + passo * 2.4, Math.max(0, passo) * 1.5],
+			[3 - passo * 2.4, Math.max(0, -passo) * 1.5]
+		];
+		for (const [px, ergue] of pernas) {
+			if (calca) {
+				const perna = capsula(ctx, px, -16 - sobe, -2.4 - ergue, 5.2);
+				forma(ctx, perna, calca);
+				sombraDireita(ctx, perna, px + 0.9);
+			} else forma(ctx, capsula(ctx, px, -9 - sobe, -2.4 - ergue, 4.2), pele);
+			desenharSapato(ctx, a.sapato, px, -ergue);
+		}
 	}
 
 	ctx.translate(0, -sobe);
 
-	// Saia do vestido, por cima do alto das pernas
-	if (vestido) {
+	// Saia (ou quadril da calça) por cima do alto das pernas
+	if (fig) parteDeBaixo(ctx, fig);
+	else if (vestido) {
 		const saia = poligono(ctx, [[-5.8, -15.6], [5.8, -15.6], [8.2, -7.4], [-8.2, -7.4]]);
 		forma(ctx, saia, roupa);
 		sombraDireita(ctx, saia, 2.6);
@@ -190,10 +546,9 @@ export function desenharBoneco(
 	// Braços
 	const balanco = passo * 0.5;
 	const manga = a.roupa === 'jeans' ? DENIM : roupa;
-	const ombro = feminino ? 6.4 : 7.2;
-	const braco = (lado: number, angulo: number) => {
+	const bracoMasculino = (lado: number, angulo: number) => {
 		ctx.save();
-		ctx.translate(lado * ombro, -28.6);
+		ctx.translate(lado * 7.2, -28.6);
 		ctx.rotate(angulo);
 		if (vestido) forma(ctx, capsula(ctx, 0, 0, 12.4, 3.9), pele);
 		else if (MANGA_CURTA.has(a.roupa)) {
@@ -207,10 +562,11 @@ export function desenharBoneco(
 		forma(ctx, oval(ctx, 0, 12.6, 2.5, 2.5), pele);
 		ctx.restore();
 	};
+	const braco = fig ? bracoFeminino(ctx, fig, pele) : bracoMasculino;
 	braco(-1, balanco);
 
 	// Tronco e roupa
-	const corpo = tronco(ctx, feminino);
+	const corpo = fig ? troncoFeminino(ctx, fig.longo) : tronco(ctx);
 	ctx.beginPath();
 	corpo();
 	ctx.fillStyle = a.roupa === 'jeans' ? DENIM : roupa;
@@ -219,20 +575,24 @@ export function desenharBoneco(
 	ctx.beginPath();
 	corpo();
 	ctx.clip();
-	desenharRoupa(ctx, a.roupa, roupa, clara, pele, deFrente);
+	if (fig) roupaFeminina(ctx, a.roupa, roupa, clara, pele, deFrente);
+	else desenharRoupa(ctx, a.roupa, roupa, clara, pele, deFrente);
 	ctx.fillStyle = SOMBRA;
-	ctx.fillRect(3.4, -32, 6, 20);
+	ctx.fillRect(fig ? 2.9 : 3.4, -32, 6, 20);
 	ctx.restore();
 	ctx.beginPath();
 	corpo();
 	ctx.strokeStyle = CONTORNO;
 	ctx.lineWidth = LW;
 	ctx.stroke();
+	if (fig) acabamentoFeminino(ctx, a.roupa, roupa, deFrente);
 
-	// Pescoço, orelhas e cabeça
-	forma(ctx, caixa(ctx, -2.1, -32.4, 4.2, 2.6, 1), tom(pele, 0.9), 0.8);
+	// Pescoço, orelhas (com brinco, nela) e cabeça
+	if (fig) forma(ctx, caixa(ctx, -1.6, -32.4, 3.4, 2.6, 1), tom(pele, 0.9), 0.8);
+	else forma(ctx, caixa(ctx, -2.1, -32.4, 4.2, 2.6, 1), tom(pele, 0.9), 0.8);
 	forma(ctx, oval(ctx, -R + 0.3, CY + 0.8, 2, 2.6), pele);
 	forma(ctx, oval(ctx, R - 0.3, CY + 0.8, 2, 2.6), pele);
+	if (fig) for (const x of [-R + 0.1, R - 0.1]) forma(ctx, oval(ctx, x, CY + 3.9, 0.95, 0.95), '#f0c050', 0.5);
 	const cabeca = oval(ctx, 0, CY, R, R);
 	forma(ctx, cabeca, pele);
 	sombraDireita(ctx, cabeca, 5.4, 'rgba(120, 60, 30, 0.12)');
@@ -254,33 +614,40 @@ export function desenharBoneco(
 
 function desenharRosto(ctx: C, feminino: boolean, pele: string, cabelo: string) {
 	const olhos = [-2.7, 3.7];
-	// Bochechas
+	// Bochechas (mais coradas nela)
 	for (const x of [-5.5, 6.4]) {
 		ctx.beginPath();
-		ctx.ellipse(x, -36.4, 1.9, 1.15, 0, 0, Math.PI * 2);
-		ctx.fillStyle = 'rgba(236, 104, 116, 0.42)';
+		ctx.ellipse(x, -36.4, feminino ? 2.1 : 1.9, feminino ? 1.3 : 1.15, 0, 0, Math.PI * 2);
+		ctx.fillStyle = feminino ? 'rgba(236, 96, 120, 0.55)' : 'rgba(236, 104, 116, 0.42)';
 		ctx.fill();
 	}
-	// Sobrancelhas
+	// Sobrancelhas: nela, finas e arqueadas
 	for (const x of olhos) {
 		ctx.beginPath();
-		ctx.moveTo(x - 1.6, -43.5);
-		ctx.quadraticCurveTo(x, -44.6, x + 1.5, -43.7);
+		if (feminino) {
+			ctx.moveTo(x - 1.7, -43.8);
+			ctx.quadraticCurveTo(x - 0.1, -45.7, x + 1.7, -44.2);
+		} else {
+			ctx.moveTo(x - 1.6, -43.5);
+			ctx.quadraticCurveTo(x, -44.6, x + 1.5, -43.7);
+		}
 		ctx.strokeStyle = tom(cabelo, 0.7);
-		ctx.lineWidth = 0.95;
+		ctx.lineWidth = feminino ? 0.7 : 0.95;
 		ctx.lineCap = 'round';
 		ctx.stroke();
 	}
-	// Olhos grandes com brilho
+	// Olhos grandes com brilho; nela, cílios para fora
 	for (const x of olhos) {
 		ctx.beginPath();
-		ctx.ellipse(x, -40.3, 1.45, 1.95, 0, 0, Math.PI * 2);
+		ctx.ellipse(x, -40.3, feminino ? 1.55 : 1.45, feminino ? 2.05 : 1.95, 0, 0, Math.PI * 2);
 		ctx.fillStyle = '#1f2230';
 		ctx.fill();
 		ponto(ctx, x + 0.45, -41.1, 0.6, '#ffffff');
 		if (feminino) {
-			traco(ctx, x - 1.2, -41.6, x - 2.3, -42.5, '#1f2230', 0.7);
-			traco(ctx, x - 0.4, -42.1, x - 0.9, -43.2, '#1f2230', 0.6);
+			const fora = x < 0.5 ? -1 : 1;
+			traco(ctx, x + fora * 1.2, -41.5, x + fora * 2.5, -42.1, '#1f2230', 0.7);
+			traco(ctx, x + fora * 0.7, -42.1, x + fora * 1.6, -43.2, '#1f2230', 0.65);
+			traco(ctx, x + fora * 1.45, -40.7, x + fora * 2.6, -40.8, '#1f2230', 0.6);
 		}
 	}
 	// Nariz
@@ -310,8 +677,9 @@ function desenharRosto(ctx: C, feminino: boolean, pele: string, cabelo: string) 
 	ctx.restore();
 	ctx.beginPath();
 	boca();
-	ctx.strokeStyle = CONTORNO;
-	ctx.lineWidth = 0.75;
+	// Nela, o contorno da boca é batom
+	ctx.strokeStyle = feminino ? '#c4405e' : CONTORNO;
+	ctx.lineWidth = feminino ? 1 : 0.75;
 	ctx.stroke();
 }
 

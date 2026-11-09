@@ -84,6 +84,22 @@
 		ctx.restore();
 	}
 
+	/**
+	 * Trocar de personagem já sugere o que combina (cabelo de mulher; de volta
+	 * ao masculino, cabelo, roupa e sapato de homem); depois muda à vontade.
+	 */
+	function escolherCorpo(id: string) {
+		if (a.corpo === id) return;
+		a.corpo = id;
+		if (id === 'feminino') {
+			if (['curto', 'social', 'raspado', 'careca'].includes(a.cabelo)) a.cabelo = 'longo';
+		} else {
+			if (['longo', 'rabo', 'coque', 'chanel'].includes(a.cabelo)) a.cabelo = 'curto';
+			if (a.roupa === 'vestido') a.roupa = 'terno';
+			if (a.sapato === 'salto') a.sapato = 'social';
+		}
+	}
+
 	async function salvar() {
 		if (!mudou || salvando) return;
 		salvando = true;
@@ -108,7 +124,7 @@
 					<button
 						type="button"
 						aria-pressed={a.corpo === c.id}
-						onclick={() => (a.corpo = c.id)}
+						onclick={() => escolherCorpo(c.id)}
 						class="rounded-md py-1 text-xs font-medium transition-colors {a.corpo === c.id
 							? 'bg-surface text-navy shadow-sm'
 							: 'text-grey hover:text-navy'}">{c.nome}</button

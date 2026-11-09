@@ -3,6 +3,7 @@
 	// de recursos, painel do que está selecionado, minimapa, ajuda e avisos).
 	// Quem desenha e controla o mapa é o motor em $lib/dgathe/jogo.ts.
 	import { onMount, untrack } from 'svelte';
+	import { fade } from 'svelte/transition';
 	import type { SupabaseClient } from '@supabase/supabase-js';
 	import { Jogo, type Selecao, type OutroResumo } from '$lib/dgathe/jogo';
 	import { Online, type EstadoConexao } from '$lib/dgathe/online';
@@ -108,6 +109,15 @@
 	let outros = $state<OutroResumo[]>([]);
 	let conexao = $state<EstadoConexao | 'sozinho'>('sozinho');
 
+	// Tela de boas-vindas: fica pelo menos MINIMO_BOAS_VINDAS e, se a conexão
+	// ainda estiver terminando, espera mais um pouco (até MAXIMO_BOAS_VINDAS),
+	// para o escritório já aparecer com quem está online.
+	const MINIMO_BOAS_VINDAS = 1400;
+	const MAXIMO_BOAS_VINDAS = 3000;
+	let minimoPassou = $state(false);
+	let esgotou = $state(false);
+	const boasVindas = $derived(!esgotou && !(minimoPassou && conexao !== 'conectando'));
+
 	const salaSelecionada = $derived(selecao.tipo === 'sala' ? (SALA_POR_ID.get(selecao.id) ?? null) : null);
 	const pessoaSelecionada = $derived.by(() => {
 		const s = selecao;
@@ -139,6 +149,8 @@
 	const minhaAparencia = untrack(() => aparencia ?? lerAparencia(null, cor));
 
 	onMount(() => {
+		const tempoMinimo = setTimeout(() => (minimoPassou = true), MINIMO_BOAS_VINDAS);
+		const tempoMaximo = setTimeout(() => (esgotou = true), MAXIMO_BOAS_VINDAS);
 		let primeiraSala = true;
 		let jaSincronizou = false;
 		try {
@@ -207,6 +219,13 @@
 		// Fechar a aba não desmonta o componente: sem isto os outros só veriam a
 		// saída quando o servidor desistisse da conexão. Se o navegador só congelou
 		// a aba (voltar/avançar), ao restaurar ela entra de novo.
+		// A aba voltou para a frente (o Mac dormiu, outra aba estava na frente):
+		// confere na hora se a conexão segue viva e se os outros me veem, sem
+		// esperar a próxima volta da vigia. Só refaz se estiver quebrada.
+		const mudouVisibilidade = () => {
+			if (!document.hidden) online?.conferir(true);
+		};
+		document.addEventListener('visibilitychange', mudouVisibilidade);
 		const fechouAba = () => {
 			online?.sair();
 			online = null;
@@ -225,7 +244,10 @@
 			window.removeEventListener('beforeunload', fechouAba);
 			window.removeEventListener('pagehide', fechouAba);
 			window.removeEventListener('pageshow', voltouAba);
+			document.removeEventListener('visibilitychange', mudouVisibilidade);
 			clearTimeout(timerAviso);
+			clearTimeout(tempoMinimo);
+			clearTimeout(tempoMaximo);
 			online?.sair();
 			jogo?.destruir();
 		};
@@ -435,6 +457,17 @@
 					<li><kbd>Toque</kbd><span>no celular: toque no chão para andar</span></li>
 				</ul>
 				<button type="button" onclick={fecharAjuda}>Entrar no escritório</button>
+			</div>
+		</div>
+	{/if}
+
+	{#if boasVindas}
+		<div class="dg-boasvindas" out:fade={{ duration: 450 }} role="status" aria-live="polite">
+			<div class="dg-bv-caixa">
+				<span class="dg-bv-selo">DG</span>
+				<p class="dg-bv-pre">Bem-vindo ao escritório da</p>
+				<h2 class="dg-bv-titulo">Dunamis Company</h2>
+				<span class="dg-bv-barra" aria-hidden="true"><span></span></span>
 			</div>
 		</div>
 	{/if}
@@ -969,6 +1002,96 @@
 		background: var(--dg-ouro);
 		color: #1c2534;
 		font-weight: 800;
+	}
+
+	/* Boas-vindas ao entrar */
+	.dg-boasvindas {
+		position: absolute;
+		inset: 0;
+		z-index: 30;
+		display: grid;
+		place-items: center;
+		background:
+			radial-gradient(circle at 50% 42%, rgba(255, 111, 0, 0.12), transparent 42%),
+			repeating-linear-gradient(26.565deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 34px),
+			repeating-linear-gradient(-26.565deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 34px),
+			linear-gradient(180deg, #1c2e23, #111a14);
+	}
+	.dg-bv-caixa {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		text-align: center;
+		animation: dg-bv-entra 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+	}
+	.dg-bv-selo {
+		display: grid;
+		place-items: center;
+		width: 56px;
+		height: 56px;
+		margin-bottom: 1rem;
+		border-radius: 16px;
+		background: linear-gradient(135deg, #ffb547, #ff6f00);
+		color: #1c2534;
+		font-weight: 900;
+		font-size: 22px;
+		letter-spacing: -0.03em;
+		box-shadow: 0 12px 30px -10px rgba(255, 111, 0, 0.6);
+	}
+	.dg-bv-pre {
+		margin: 0;
+		font-size: 13px;
+		font-weight: 600;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: #ffd58a;
+	}
+	.dg-bv-titulo {
+		margin: 0.2rem 0 1.1rem;
+		font-size: clamp(26px, 4vw, 36px);
+		font-weight: 800;
+		letter-spacing: -0.02em;
+		color: #ffffff;
+	}
+	.dg-bv-barra {
+		position: relative;
+		width: 160px;
+		height: 3px;
+		overflow: hidden;
+		border-radius: 999px;
+		background: rgba(255, 255, 255, 0.1);
+	}
+	.dg-bv-barra span {
+		position: absolute;
+		inset: 0 auto 0 0;
+		width: 40%;
+		border-radius: inherit;
+		background: linear-gradient(90deg, #ffb547, #ff6f00);
+		animation: dg-bv-corre 1.1s ease-in-out infinite;
+	}
+	@keyframes dg-bv-entra {
+		from {
+			opacity: 0;
+			transform: translateY(8px) scale(0.98);
+		}
+	}
+	@keyframes dg-bv-corre {
+		from {
+			transform: translateX(-100%);
+		}
+		to {
+			transform: translateX(250%);
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.dg-bv-caixa,
+		.dg-bv-barra span {
+			animation: none;
+		}
+		.dg-bv-barra span {
+			width: 100%;
+			opacity: 0.6;
+		}
 	}
 
 	@media (max-width: 900px) {
