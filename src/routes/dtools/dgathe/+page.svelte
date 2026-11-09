@@ -26,14 +26,6 @@
 	<title>DGathe | Dunamis Space</title>
 </svelte:head>
 
-<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-	<div>
-		<h1 class="text-base font-semibold text-navy">DGathe</h1>
-		<p class="text-sm text-grey">O escritório da Dunamis em forma de jogo. Clique com o botão direito para andar.</p>
-	</div>
-	<span class="rounded-full bg-brand-cream px-2.5 py-1 text-xs font-semibold text-brand-brown">Protótipo</span>
-</div>
-
 <Escritorio
 	{nome}
 	{cargo}
@@ -42,3 +34,9 @@
 	id={perfil?.id ?? data.session?.user?.id ?? null}
 	supabase={data.supabase}
 />
+
+<!-- Legenda discreta, embaixo à direita: a tela de cima fica toda para o jogo. -->
+<div class="mt-1.5 text-right text-3xs leading-4 text-grey">
+	<h1 class="inline text-2xs font-semibold text-navy">DGathe</h1>
+	· O escritório da Dunamis em forma de jogo. Clique com o botão direito para andar.
+</div>

@@ -169,6 +169,10 @@
 
 	const areas = $derived(departamentosVisiveis.find((d) => d.id === deptAtivo)?.areas ?? []);
 
+	// O DGathe é um jogo: precisa de tela. Ali a sidebar fica só com ícones e o
+	// conteúdo sobe até a linha do topo dela.
+	const telaDeJogo = $derived(page.url.pathname === '/dtools/dgathe' || page.url.pathname.startsWith('/dtools/dgathe/'));
+
 	const deptHref = (d: Departamento) => d.href ?? d.areas[0]?.href ?? '/';
 
 	// Badge de notificação por departamento (aprovações pendentes → Marketing).
@@ -299,7 +303,7 @@
 
 		<div class="app-body">
 			{#if areas.length}
-				<aside class="app-sidebar">
+				<aside class="app-sidebar" class:so-icones={telaDeJogo}>
 					<div class="sidebar-title">
 						{departamentosVisiveis.find((d) => d.id === deptAtivo)?.label}
 					</div>
@@ -339,7 +343,7 @@
 					</nav>
 				</aside>
 			{/if}
-			<main id="conteudo" tabindex="-1" class="app-content" class:is-full={!areas.length}>
+			<main id="conteudo" tabindex="-1" class="app-content" class:is-full={!areas.length} class:tela-de-jogo={telaDeJogo}>
 				{@render children()}
 			</main>
 		</div>

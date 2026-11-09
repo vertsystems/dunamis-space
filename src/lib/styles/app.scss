@@ -10,6 +10,56 @@
 // preflight do Tailwind passaria a vencer o shell.
 @layer theme, base, components, utilities;
 
+// Sidebar só com ícones: a do celular e a das telas que precisam de espaço
+// (o DGathe). Os nomes continuam no `title` de cada link, ao passar o mouse.
+@mixin sidebar-so-icones {
+	padding: 0.5rem 0.45rem;
+
+	.sidebar-title,
+	.area-label,
+	.sidebar-empty,
+	.soon-pill {
+		display: none;
+	}
+
+	a,
+	.area-soon {
+		justify-content: center;
+		padding: 0.62rem 0;
+
+		.ico {
+			font-size: 1.15rem;
+			opacity: 0.9;
+		}
+	}
+
+	// Submenus recolhidos: sem árvore/recuo, só o badge centralizado.
+	.area-subs {
+		margin-left: 0;
+		padding-left: 0;
+		border-left: none;
+		align-items: center;
+	}
+
+	.area-sub {
+		justify-content: center;
+		gap: 0;
+		padding: 0.4rem 0;
+	}
+
+	// Sidebar recolhida: badge vira um ponto no canto do ícone.
+	.area-badge {
+		position: absolute;
+		top: 3px;
+		right: 7px;
+		margin-left: 0;
+		min-width: 12px;
+		height: 12px;
+		padding: 0 2px;
+		font-size: 0.4rem;
+	}
+}
+
 @layer components {
 
 	:root {
@@ -483,6 +533,19 @@
 		padding: 0.9rem var(--ds-gutter-right) 3rem var(--ds-content-gap);
 	}
 
+	// Telas que precisam de espaço (o DGathe): sidebar só com ícones em qualquer
+	// largura, e o conteúdo começa na mesma linha do topo dela (o 0.75rem é a
+	// margem de cima da sidebar), sem a sobra de baixo que faria a página rolar.
+	.app-sidebar.so-icones {
+		width: 64px;
+		@include sidebar-so-icones;
+	}
+
+	.app-content.tela-de-jogo {
+		padding-top: 0.75rem;
+		padding-bottom: 1rem;
+	}
+
 	// Tablet (769-1024px): não havia breakpoint intermediário — o shell voltava ao
 	// desktop cheio (50 + 244 + 80 = 374px consumidos antes do conteúdo) bem na
 	// faixa em que os md:grid-cols-3 entram em vigor.
@@ -537,51 +600,7 @@
 		}
 
 		.app-sidebar {
-			padding: 0.5rem 0.45rem;
-
-			.sidebar-title,
-			.area-label,
-			.sidebar-empty,
-			.soon-pill {
-				display: none;
-			}
-
-			a,
-			.area-soon {
-				justify-content: center;
-				padding: 0.62rem 0;
-
-				.ico {
-					font-size: 1.15rem;
-					opacity: 0.9;
-				}
-			}
-
-			// Submenus recolhidos: sem árvore/recuo, só o badge centralizado.
-			.area-subs {
-				margin-left: 0;
-				padding-left: 0;
-				border-left: none;
-				align-items: center;
-			}
-
-			.area-sub {
-				justify-content: center;
-				gap: 0;
-				padding: 0.4rem 0;
-			}
-
-			// Sidebar recolhida: badge vira um ponto no canto do ícone.
-			.area-badge {
-				position: absolute;
-				top: 3px;
-				right: 7px;
-				margin-left: 0;
-				min-width: 12px;
-				height: 12px;
-				padding: 0 2px;
-				font-size: 0.4rem;
-			}
+			@include sidebar-so-icones;
 		}
 
 		.app-content {

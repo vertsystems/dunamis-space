@@ -441,7 +441,8 @@
 		--dg-suave: #9aa6ba;
 		--dg-ouro: #f5a524;
 		position: relative;
-		height: calc(100dvh - var(--ds-topbar-space, 72px) - 6.5rem);
+		/* Topo da sidebar (0.75rem) + legenda embaixo (~1.4rem) + respiro (1rem). */
+		height: calc(100dvh - var(--ds-topbar-space, 72px) - 3.25rem);
 		min-height: 520px;
 		border-radius: 20px;
 		overflow: hidden;
@@ -971,7 +972,6 @@
 	}
 	@media (max-width: 700px) {
 		.dg {
-			height: calc(100dvh - var(--ds-topbar-space, 72px) - 5rem);
 			min-height: 460px;
 		}
 		.dg-recursos,
