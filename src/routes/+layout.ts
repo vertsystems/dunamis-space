@@ -12,7 +12,11 @@ export const load: LayoutLoad = async ({ data, depends, fetch }) => {
 
 	const supabase: SupabaseClient<Database> = isBrowser()
 		? createBrowserClient<Database>(env.PUBLIC_SUPABASE_URL, env.PUBLIC_SUPABASE_ANON_KEY, {
-				global: { fetch }
+				global: { fetch },
+				// O "estou vivo" do Realtime sai de um Web Worker: com a aba em segundo
+				// plano o navegador atrasa os timers da página, a conexão caía e voltava,
+				// e no DGathe a pessoa sumia e reaparecia na tela dos outros.
+				realtime: { worker: true }
 			})
 		: createServerClient<Database>(env.PUBLIC_SUPABASE_URL, env.PUBLIC_SUPABASE_ANON_KEY, {
 				global: { fetch },

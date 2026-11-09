@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { CANAL, Online, PULSO, VALIDADE, VIGIA, lerPessoa, lerRota, type EstadoConexao, type Pessoa } from './online';
+import { CANAL, GRACA, Online, PULSO, VALIDADE, VIGIA, lerPessoa, lerRota, type EstadoConexao, type Pessoa } from './online';
 import type { Ponto } from './iso';
 import { APARENCIA_PADRAO, lerAparencia } from './aparencia';
 
@@ -96,11 +96,12 @@ function supabaseFalso(respostaTrack: 'ok' | 'error' = 'ok', respostaSaida: 'ok'
 			estado = e;
 			atual?.ouvintes['presence:sync']?.({});
 		},
-		rota: (payload: unknown) => atual?.ouvintes['broadcast:rota']?.({ payload })
+		rota: (payload: unknown) => atual?.ouvintes['broadcast:rota']?.({ payload }),
+		despedida: (payload: unknown) => atual?.ouvintes['broadcast:saiu']?.({ payload })
 	};
 }
 
-const EU: Pessoa = { id: 'bruno', nome: 'Bruno Santana', cargo: 'CEO', foto: null, cor: '#1c2534', x: 20.5, y: 22.2, dirX: 1, dirY: 1, aparencia: APARENCIA_PADRAO };
+const EU: Omit<Pessoa, 'mov'> = { id: 'bruno', nome: 'Bruno Santana', cargo: 'CEO', foto: null, cor: '#1c2534', x: 20.5, y: 22.2, dirX: 1, dirY: 1, aparencia: APARENCIA_PADRAO };
 const ALINE = { id: 'aline', nome: 'Aline Santana', cargo: 'CEO', foto: '/avatares/a.png', cor: '#e05a7a', x: 26.5, y: 20.5, dirX: 0, dirY: 1 };
 
 async function montar(
@@ -109,13 +110,13 @@ async function montar(
 	respostaSaida: 'ok' | 'timed out' = 'ok'
 ) {
 	const f = supabaseFalso(respostaTrack, respostaSaida);
-	const recebido = { pessoas: [] as Pessoa[][], rotas: [] as { id: string; pontos: Ponto[] }[], estados: [] as EstadoConexao[] };
+	const recebido = { pessoas: [] as Pessoa[][], rotas: [] as { id: string; pontos: Ponto[]; mov: number }[], estados: [] as EstadoConexao[] };
 	const online = new Online(
 		f.supabase,
 		EU,
 		{
 			pessoas: (l) => recebido.pessoas.push(l),
-			rota: (id, pontos) => recebido.rotas.push({ id, pontos }),
+			rota: (id, pontos, mov) => recebido.rotas.push({ id, pontos, mov }),
 			estado: (e) => recebido.estados.push(e)
 		},
 		opcoes
@@ -164,7 +165,8 @@ describe('Online', () => {
 		online.andar([{ x: 1.123456, y: 1 }, { x: 2, y: 2.98765 }]);
 		expect(f.enviados).toHaveLength(1);
 		expect(f.enviados[0]).toMatchObject({ type: 'broadcast', event: 'rota' });
-		expect(f.enviados[0].payload).toEqual({ id: 'bruno', pontos: [{ x: 1.123, y: 1 }, { x: 2, y: 2.988 }] });
+		expect(f.enviados[0].payload).toMatchObject({ id: 'bruno', pontos: [{ x: 1.123, y: 1 }, { x: 2, y: 2.988 }] });
+		expect((f.enviados[0].payload as { mov: number }).mov).toBeGreaterThan(0);
 	});
 
 	it('ao parar, atualiza a presença com a posição nova', async () => {
@@ -185,21 +187,21 @@ describe('Online', () => {
 			],
 			estranho: [{ id: 'estranho', nome: 'X', x: 999, y: 1, presence_ref: '4' }]
 		});
-		expect(recebido.pessoas.at(-1)).toEqual([{ ...ALINE, aparencia: lerAparencia(null, ALINE.cor) }]);
+		expect(recebido.pessoas.at(-1)).toEqual([{ ...ALINE, mov: 0, aparencia: lerAparencia(null, ALINE.cor) }]);
 	});
 
 	it('repassa o trajeto dos outros e ignora o meu e o malformado', async () => {
 		const { f, recebido } = await montar();
-		f.rota({ id: 'aline', pontos: [{ x: 26.5, y: 20.5 }, { x: 22, y: 14 }] });
+		f.rota({ id: 'aline', pontos: [{ x: 26.5, y: 20.5 }, { x: 22, y: 14 }], mov: 5 });
 		f.rota({ id: 'bruno', pontos: [{ x: 1, y: 1 }, { x: 2, y: 2 }] });
 		f.rota({ id: 'aline', pontos: [{ x: 1, y: 1 }] });
 		f.rota({ id: 'aline', pontos: 'nada' });
-		expect(recebido.rotas).toEqual([{ id: 'aline', pontos: [{ x: 26.5, y: 20.5 }, { x: 22, y: 14 }] }]);
+		expect(recebido.rotas).toEqual([{ id: 'aline', pontos: [{ x: 26.5, y: 20.5 }, { x: 22, y: 14 }], mov: 5 }]);
 	});
 
-	it('quem para de dar sinal some depois da validade, e volta quando dá sinal', async () => {
+	it('quem para de dar sinal some depois da validade (e da graça), e volta quando dá sinal', async () => {
 		let agora = 1_000;
-		const { f, recebido } = await montar({ agora: () => agora });
+		const { f, recebido, online } = await montar({ agora: () => agora });
 		f.sincronizar({ aline: [{ ...ALINE, presence_ref: 'r1' }] });
 		expect(recebido.pessoas.at(-1)).toHaveLength(1);
 		agora += VALIDADE - 1;
@@ -207,9 +209,82 @@ describe('Online', () => {
 		expect(recebido.pessoas.at(-1)).toHaveLength(1);
 		agora += 2;
 		f.sincronizar({ aline: [{ ...ALINE, presence_ref: 'r1' }] });
+		expect(recebido.pessoas.at(-1)).toHaveLength(1); // ainda na graça
+		agora += GRACA;
+		f.sincronizar({ aline: [{ ...ALINE, presence_ref: 'r1' }] });
 		expect(recebido.pessoas.at(-1)).toHaveLength(0);
 		f.sincronizar({ aline: [{ ...ALINE, presence_ref: 'r2' }] });
 		expect(recebido.pessoas.at(-1)).toHaveLength(1);
+		online.sair();
+	});
+
+	it('fantasma de conexão antiga não esconde quem está vivo (era o "some e aparece")', async () => {
+		let agora = 1_000;
+		const { f, recebido, online } = await montar({ agora: () => agora });
+		f.sincronizar({ aline: [{ ...ALINE, presence_ref: 'viva-1' }, { ...ALINE, x: 5, presence_ref: 'fantasma' }] });
+		// A entrada viva renova a cada pulso; o fantasma, não. O fantasma vem por último.
+		for (let i = 2; i <= 8; i++) {
+			agora += PULSO;
+			f.sincronizar({ aline: [{ ...ALINE, mov: 7, presence_ref: `viva-${i}` }, { ...ALINE, x: 5, presence_ref: 'fantasma' }] });
+			expect(recebido.pessoas.at(-1)).toHaveLength(1);
+		}
+		expect(recebido.pessoas.at(-1)?.[0]).toMatchObject({ x: ALINE.x, mov: 7 });
+		online.sair();
+	});
+
+	it('quem cai sem se despedir fica na tela pela graça e, se volta logo, nem pisca', async () => {
+		vi.useFakeTimers();
+		const { f, recebido, online } = await montar();
+		f.sincronizar({ aline: [{ ...ALINE, presence_ref: 'a1' }] });
+		f.sincronizar({}); // a conexão dela caiu
+		expect(recebido.pessoas.at(-1)).toHaveLength(1);
+		await vi.advanceTimersByTimeAsync(GRACA / 2);
+		f.sincronizar({ aline: [{ ...ALINE, presence_ref: 'a2' }] }); // e voltou
+		expect(recebido.pessoas.every((l) => l.length === 1)).toBe(true);
+		f.sincronizar({}); // caiu de novo e não voltou
+		await vi.advanceTimersByTimeAsync(GRACA + 100);
+		expect(recebido.pessoas.at(-1)).toHaveLength(0);
+		online.sair();
+	});
+
+	it('quem se despede sai da tela na hora, e volta na hora se reabrir', async () => {
+		let agora = 1_000;
+		const { f, recebido, online } = await montar({ agora: () => agora });
+		f.sincronizar({ aline: [{ ...ALINE, presence_ref: 'a1' }] });
+		agora += 100;
+		f.despedida({ id: 'aline' });
+		expect(recebido.pessoas.at(-1)).toHaveLength(0);
+		f.sincronizar({ aline: [{ ...ALINE, presence_ref: 'a1' }] }); // a presença velha ainda não saiu
+		expect(recebido.pessoas.at(-1)).toHaveLength(0);
+		agora += 100;
+		f.sincronizar({ aline: [{ ...ALINE, presence_ref: 'a1' }, { ...ALINE, presence_ref: 'a2' }] }); // reabriu
+		expect(recebido.pessoas.at(-1)).toHaveLength(1);
+		online.sair();
+	});
+
+	it('ao sair, me despeço antes de fechar o canal', async () => {
+		const { f, online } = await montar();
+		f.status('SUBSCRIBED');
+		await new Promise((r) => setTimeout(r, 0));
+		online.sair();
+		expect(f.enviados.at(-1)).toMatchObject({ type: 'broadcast', event: 'saiu', payload: { id: 'bruno' } });
+	});
+
+	it('pulso no meio da caminhada leva o carimbo antigo (com o lugar antigo); ao parar, o da rota', async () => {
+		vi.useFakeTimers();
+		const { f, online } = await montar();
+		f.status('SUBSCRIBED');
+		await vi.advanceTimersByTimeAsync(0);
+		const antes = (f.rastreados.at(-1) as { mov: number }).mov;
+		vi.setSystemTime(Date.now() + 5_000);
+		online.andar([{ x: 20.5, y: 22.2 }, { x: 30, y: 22.2 }]);
+		const movRota = (f.enviados.at(-1)!.payload as { mov: number }).mov;
+		expect(movRota).toBeGreaterThan(antes);
+		await vi.advanceTimersByTimeAsync(PULSO);
+		expect(f.rastreados.at(-1)).toMatchObject({ x: 20.5, mov: antes });
+		online.parou(30, 22.2, 1, 0);
+		expect(f.rastreados.at(-1)).toMatchObject({ x: 30, mov: movRota });
+		online.sair();
 	});
 
 	it('o pulso renova a minha presença a cada 30 segundos, e para ao sair', async () => {

@@ -202,7 +202,7 @@
 				{ id, nome, cargo, foto, cor, aparencia: minhaAparencia, ...jg.posicao() },
 				{
 					pessoas: (lista) => jg.definirPessoas(lista),
-					rota: (quem, pontos) => jg.rotaDe(quem, pontos),
+					rota: (quem, pontos, mov) => jg.rotaDe(quem, pontos, mov),
 					estado: (e) => (conexao = e)
 				},
 				{ canalDeTeste }

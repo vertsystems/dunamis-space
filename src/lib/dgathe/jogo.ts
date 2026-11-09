@@ -42,6 +42,7 @@ import {
 import { desenharAvatar, areaDoAvatar } from './avatar';
 import { APARENCIA_PADRAO, type Aparencia } from './aparencia';
 import type { Pessoa } from './online';
+import { aplicarPresenca, aplicarRota } from './movimento';
 
 export const GRADE: Grade = { largura: LARGURA, altura: ALTURA, livre: celulaLivre, parede: paredeEntre };
 
@@ -88,7 +89,7 @@ type Hover = { tipo: 'avatar' } | { tipo: 'pessoa'; id: string } | { tipo: 'item
 
 /** Um bonequinho que anda: o meu e o de cada pessoa online. */
 type Corpo = { x: number; y: number; dirX: number; dirY: number; andando: boolean; fase: number; caminho: Ponto[] };
-type Outro = Corpo & { pessoa: Pessoa; sala: string | null; final: Ponto | null };
+type Outro = Corpo & { pessoa: Pessoa; sala: string | null; final: Ponto | null; mov: number };
 type Desenho = { peca: Desenhavel; atras: boolean; desenhar: () => void };
 
 const primeiroNome = (nome: string) => nome.split(/\s+/)[0] || nome;
@@ -329,19 +330,14 @@ export class Jogo {
 					fase: 0,
 					caminho: [],
 					sala: zonaNoPonto(p.x, p.y),
-					final: null
+					final: null,
+					mov: p.mov
 				});
 				continue;
 			}
 			o.pessoa = p;
-			// Andando aqui ainda: o ponto final vale quando a caminhada terminar.
-			if (o.caminho.length) o.final = { x: p.x, y: p.y };
-			else {
-				o.x = p.x;
-				o.y = p.y;
-				o.dirX = p.dirX;
-				o.dirY = p.dirY;
-			}
+			// Presença mais velha que a caminhada em curso não faz voltar (movimento.ts)
+			aplicarPresenca(o, p);
 		}
 		for (const id of [...this.outros.keys()]) if (!vistos.has(id)) this.outros.delete(id);
 		if (this.selecao.tipo === 'pessoa' && !this.outros.has(this.selecao.id)) this.selecionar({ tipo: 'avatar' });
@@ -350,17 +346,9 @@ export class Jogo {
 	}
 
 	/** Alguém começou a andar: a caminhada é animada aqui, no mesmo ritmo. */
-	rotaDe(id: string, pontos: Ponto[]) {
+	rotaDe(id: string, pontos: Ponto[], mov: number) {
 		const o = this.outros.get(id);
-		if (!o || pontos.length < 2) return;
-		const ini = pontos[0];
-		if (Math.hypot(o.x - ini.x, o.y - ini.y) > 1.5) {
-			o.x = ini.x;
-			o.y = ini.y;
-		}
-		o.caminho = pontos.slice(1);
-		o.final = null;
-		o.andando = true;
+		if (!o || !aplicarRota(o, pontos, mov)) return;
 		this.emitirOutros();
 	}
 
