@@ -111,9 +111,10 @@
 
 	// Tela de boas-vindas: fica pelo menos MINIMO_BOAS_VINDAS e, se a conexão
 	// ainda estiver terminando, espera mais um pouco (até MAXIMO_BOAS_VINDAS),
-	// para o escritório já aparecer com quem está online.
-	const MINIMO_BOAS_VINDAS = 1400;
-	const MAXIMO_BOAS_VINDAS = 3000;
+	// para o escritório já aparecer com quem está online. O Bruno pediu uns 6 s
+	// (09/11/2026).
+	const MINIMO_BOAS_VINDAS = 6000;
+	const MAXIMO_BOAS_VINDAS = 8000;
 	let minimoPassou = $state(false);
 	let esgotou = $state(false);
 	const boasVindas = $derived(!esgotou && !(minimoPassou && conexao !== 'conectando'));
