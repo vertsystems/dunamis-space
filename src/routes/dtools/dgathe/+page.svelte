@@ -4,6 +4,7 @@
 	// Os agentes entram na próxima fase.
 	import Escritorio from '$lib/components/dgathe/Escritorio.svelte';
 	import { funcaoSigla } from '$lib/equipe';
+	import { lerAparencia } from '$lib/dgathe/aparencia';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -31,6 +32,7 @@
 	{cargo}
 	foto={perfil?.avatar_url ?? null}
 	cor={perfil?.cor_tema ?? null}
+	aparencia={lerAparencia(data.aparenciaSalva, perfil?.cor_tema)}
 	id={perfil?.id ?? data.session?.user?.id ?? null}
 	supabase={data.supabase}
 />

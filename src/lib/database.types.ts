@@ -410,6 +410,7 @@ export type Database = {
 					local: string | null
 					avatar_url: string | null
 					cor_tema: string | null
+					dgathe_avatar: Json | null
 					idioma: string
 					funcoes: string[]
 					super_admin: boolean
@@ -430,6 +431,7 @@ export type Database = {
 					local?: string | null
 					avatar_url?: string | null
 					cor_tema?: string | null
+					dgathe_avatar?: Json | null
 					idioma?: string
 					funcoes?: string[]
 					super_admin?: boolean
@@ -450,6 +452,7 @@ export type Database = {
 					local?: string | null
 					avatar_url?: string | null
 					cor_tema?: string | null
+					dgathe_avatar?: Json | null
 					idioma?: string
 					funcoes?: string[]
 					super_admin?: boolean

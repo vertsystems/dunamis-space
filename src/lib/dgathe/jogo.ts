@@ -39,7 +39,8 @@ import {
 	estilo,
 	poli
 } from './desenho';
-import { desenharAvatar, areaDoAvatar, VISUAL_PADRAO, type Visual } from './avatar';
+import { desenharAvatar, areaDoAvatar } from './avatar';
+import { APARENCIA_PADRAO, type Aparencia } from './aparencia';
 import type { Pessoa } from './online';
 
 export const GRADE: Grade = { largura: LARGURA, altura: ALTURA, livre: celulaLivre, parede: paredeEntre };
@@ -77,7 +78,8 @@ export type Avisos = {
 export type OpcoesJogo = {
 	nome: string;
 	cargo: string;
-	visual?: Partial<Visual>;
+	/** Como o meu bonequinho é montado (editor do Meu Perfil). */
+	aparencia?: Aparencia;
 };
 
 type Peca = Desenhavel & ({ tipo: 'item'; item: Item; contorno: Ponto[] } | { tipo: 'parede'; seg: Segmento });
@@ -86,12 +88,8 @@ type Hover = { tipo: 'avatar' } | { tipo: 'pessoa'; id: string } | { tipo: 'item
 
 /** Um bonequinho que anda: o meu e o de cada pessoa online. */
 type Corpo = { x: number; y: number; dirX: number; dirY: number; andando: boolean; fase: number; caminho: Ponto[] };
-type Outro = Corpo & { pessoa: Pessoa; visual: Visual; sala: string | null; final: Ponto | null };
+type Outro = Corpo & { pessoa: Pessoa; sala: string | null; final: Ponto | null };
 type Desenho = { peca: Desenhavel; atras: boolean; desenhar: () => void };
-
-function visualDe(cor: string | null): Visual {
-	return cor && /^#[0-9a-f]{6}$/i.test(cor) ? { ...VISUAL_PADRAO, roupa: cor } : VISUAL_PADRAO;
-}
 
 const primeiroNome = (nome: string) => nome.split(/\s+/)[0] || nome;
 
@@ -146,7 +144,7 @@ function gravar(chave: string, valor: unknown) {
 
 export class Jogo {
 	private readonly ctx: CanvasRenderingContext2D;
-	private readonly visual: Visual;
+	private readonly aparencia: Aparencia;
 	private dpr = 1;
 	private largura = 0;
 	private altura = 0;
@@ -195,7 +193,7 @@ export class Jogo {
 		const ctx = tela.getContext('2d');
 		if (!ctx) throw new Error('Canvas 2D indisponível');
 		this.ctx = ctx;
-		this.visual = { ...VISUAL_PADRAO, ...opcoes.visual };
+		this.aparencia = opcoes.aparencia ?? APARENCIA_PADRAO;
 
 		this.montarPecas();
 
@@ -323,7 +321,6 @@ export class Jogo {
 			if (!o) {
 				this.outros.set(p.id, {
 					pessoa: p,
-					visual: visualDe(p.cor),
 					x: p.x,
 					y: p.y,
 					dirX: p.dirX,
@@ -337,7 +334,6 @@ export class Jogo {
 				continue;
 			}
 			o.pessoa = p;
-			o.visual = visualDe(p.cor);
 			// Andando aqui ainda: o ponto final vale quando a caminhada terminar.
 			if (o.caminho.length) o.final = { x: p.x, y: p.y };
 			else {
@@ -617,17 +613,17 @@ export class Jogo {
 
 	private corposParaDesenhar(): Desenho[] {
 		const lista: Desenho[] = [];
-		const add = (c: Corpo, visual: Visual) => {
+		const add = (c: Corpo, aparencia: Aparencia) => {
 			const caixa = { x0: c.x - 0.22, y0: c.y - 0.22, z0: 0, x1: c.x + 0.22, y1: c.y + 0.22, z1: 1.4 };
 			lista.push({
 				peca: { caixa, tela: expandir(telaDaCaixa(caixa), 8) },
 				atras: c.x < PREDIO.x0 || c.y < PREDIO.y0,
 				desenhar: () =>
-					desenharAvatar(this.ctx, { x: c.x, y: c.y, dirX: c.dirX, dirY: c.dirY, andando: c.andando, fase: c.fase, t: this.t }, visual)
+					desenharAvatar(this.ctx, { x: c.x, y: c.y, dirX: c.dirX, dirY: c.dirY, andando: c.andando, fase: c.fase, t: this.t }, aparencia)
 			});
 		};
-		for (const o of this.outros.values()) add(o, o.visual);
-		add(this.av, this.visual);
+		for (const o of this.outros.values()) add(o, o.pessoa.aparencia);
+		add(this.av, this.aparencia);
 		return lista;
 	}
 

@@ -19,6 +19,7 @@
 import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 import type { Ponto } from './iso';
 import { LARGURA, ALTURA } from './mapa';
+import { lerAparencia, type Aparencia } from './aparencia';
 
 export const CANAL = 'dgathe:escritorio';
 
@@ -32,6 +33,8 @@ export type Pessoa = {
 	y: number;
 	dirX: number;
 	dirY: number;
+	/** Como o bonequinho é montado (vem do Meu Perfil). */
+	aparencia: Aparencia;
 };
 
 export type EstadoConexao = 'conectando' | 'online' | 'offline';
@@ -75,7 +78,8 @@ export function lerPessoa(bruto: unknown): Pessoa | null {
 		x,
 		y,
 		dirX: numero(p.dirX, -1, 1) ?? 1,
-		dirY: numero(p.dirY, -1, 1) ?? 1
+		dirY: numero(p.dirY, -1, 1) ?? 1,
+		aparencia: lerAparencia(p.aparencia, cor)
 	};
 }
 

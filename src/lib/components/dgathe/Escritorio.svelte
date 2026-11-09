@@ -2,10 +2,11 @@
 	// O escritório do DGathe: o canvas do jogo e o que fica por cima dele (barra
 	// de recursos, painel do que está selecionado, minimapa, ajuda e avisos).
 	// Quem desenha e controla o mapa é o motor em $lib/dgathe/jogo.ts.
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import type { SupabaseClient } from '@supabase/supabase-js';
 	import { Jogo, type Selecao, type OutroResumo } from '$lib/dgathe/jogo';
 	import { Online, type EstadoConexao } from '$lib/dgathe/online';
+	import { lerAparencia, type Aparencia } from '$lib/dgathe/aparencia';
 	import { SALA_POR_ID, SETORES } from '$lib/dgathe/mapa';
 	import {
 		Crown,
@@ -43,6 +44,7 @@
 		cargo,
 		foto = null,
 		cor = null,
+		aparencia = null,
 		id = null,
 		supabase = null,
 		canalDeTeste = undefined
@@ -51,6 +53,8 @@
 		cargo: string;
 		foto?: string | null;
 		cor?: string | null;
+		/** Meu bonequinho, como ficou salvo no Meu Perfil. Sem ele, o padrão na cor de tema. */
+		aparencia?: Aparencia | null;
 		/** Quem sou no tempo real (id do colaborador). Sem id ou sem supabase, o jogo fica só local. */
 		id?: string | null;
 		supabase?: SupabaseClient | null;
@@ -130,6 +134,9 @@
 	}
 
 	const CHAVE_AJUDA = 'dgathe:ajuda-vista';
+	// Lida uma vez, na montagem: trocar de aparência é no Meu Perfil, e o DGathe
+	// abre de novo com ela.
+	const minhaAparencia = untrack(() => aparencia ?? lerAparencia(null, cor));
 
 	onMount(() => {
 		let primeiraSala = true;
@@ -169,7 +176,7 @@
 						outros = lista;
 					}
 				},
-				{ nome: nome.split(/\s+/)[0] || nome, cargo, visual: cor && /^#[0-9a-f]{6}$/i.test(cor) ? { roupa: cor } : undefined }
+				{ nome: nome.split(/\s+/)[0] || nome, cargo, aparencia: minhaAparencia }
 			);
 		} catch {
 			falhou = true;
@@ -179,7 +186,7 @@
 			const jg = jogo;
 			online = new Online(
 				supabase,
-				{ id, nome, cargo, foto, cor, ...jg.posicao() },
+				{ id, nome, cargo, foto, cor, aparencia: minhaAparencia, ...jg.posicao() },
 				{
 					pessoas: (lista) => jg.definirPessoas(lista),
 					rota: (quem, pontos) => jg.rotaDe(quem, pontos),

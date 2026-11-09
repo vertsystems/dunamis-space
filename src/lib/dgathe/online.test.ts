@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { CANAL, Online, PULSO, VALIDADE, lerPessoa, lerRota, type EstadoConexao, type Pessoa } from './online';
 import type { Ponto } from './iso';
+import { APARENCIA_PADRAO, lerAparencia } from './aparencia';
 
 /** Um Supabase de mentira, só com o pedaço do Realtime que o DGathe usa. */
 function supabaseFalso() {
@@ -53,7 +54,7 @@ function supabaseFalso() {
 	};
 }
 
-const EU: Pessoa = { id: 'bruno', nome: 'Bruno Santana', cargo: 'CEO', foto: null, cor: '#1c2534', x: 20.5, y: 22.2, dirX: 1, dirY: 1 };
+const EU: Pessoa = { id: 'bruno', nome: 'Bruno Santana', cargo: 'CEO', foto: null, cor: '#1c2534', x: 20.5, y: 22.2, dirX: 1, dirY: 1, aparencia: APARENCIA_PADRAO };
 const ALINE = { id: 'aline', nome: 'Aline Santana', cargo: 'CEO', foto: '/avatares/a.png', cor: '#e05a7a', x: 26.5, y: 20.5, dirX: 0, dirY: 1 };
 
 async function montar(opcoes: { canalDeTeste?: string; agora?: () => number } = {}) {
@@ -124,7 +125,7 @@ describe('Online', () => {
 			],
 			estranho: [{ id: 'estranho', nome: 'X', x: 999, y: 1, presence_ref: '4' }]
 		});
-		expect(recebido.pessoas.at(-1)).toEqual([{ ...ALINE }]);
+		expect(recebido.pessoas.at(-1)).toEqual([{ ...ALINE, aparencia: lerAparencia(null, ALINE.cor) }]);
 	});
 
 	it('repassa o trajeto dos outros e ignora o meu e o malformado', async () => {
@@ -180,6 +181,11 @@ describe('o que vem de outro navegador', () => {
 		expect(lerPessoa({ ...ALINE, foto: '/avatares/a.png' })?.foto).toBe('/avatares/a.png');
 		expect(lerPessoa({ ...ALINE, foto: '//outro.site/a.png' })?.foto).toBeNull();
 		expect(lerPessoa({ ...ALINE, foto: 'javascript:alert(1)' })?.foto).toBeNull();
+	});
+	it('a aparência vem junto e é conferida', () => {
+		const montada = { ...APARENCIA_PADRAO, corpo: 'feminino', cabelo: 'coque', corCabelo: 'ruivo', roupa: 'vestido', corRoupa: '#7d2337' };
+		expect(lerPessoa({ ...ALINE, aparencia: montada })?.aparencia).toEqual(montada);
+		expect(lerPessoa({ ...ALINE, aparencia: { cabelo: '<script>' } })?.aparencia.cabelo).toBe('curto');
 	});
 	it('posição fora do mapa, sem id ou cor estranha', () => {
 		expect(lerPessoa({ ...ALINE, x: -1 })).toBeNull();

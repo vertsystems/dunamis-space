@@ -11,6 +11,8 @@
 	import CargoBadge from '$lib/components/CargoBadge.svelte';
 	import { CORES_TEMA, COR_PADRAO, normalizaHex, escurece } from '$lib/tema';
 	import { AVATARES } from '$lib/avatares';
+	import EditorAvatar from '$lib/components/dgathe/EditorAvatar.svelte';
+	import { lerAparencia, type Aparencia } from '$lib/dgathe/aparencia';
 
 	let { data } = $props();
 
@@ -84,6 +86,23 @@
 		salvandoCor = false;
 		if (error) toast.error('Não foi possível salvar a cor.');
 		else toast.success('Cor do tema atualizada.');
+	}
+
+	// --- Avatar do DGathe (o bonequinho do escritório) ---
+	const aparenciaInicial = untrack(() => lerAparencia(colab?.dgathe_avatar, colab?.cor_tema));
+
+	async function salvarAparencia(a: Aparencia): Promise<boolean> {
+		const { error } = await data.supabase
+			.from('colaboradores')
+			.update({ dgathe_avatar: a })
+			.eq('email', data.email);
+		if (error) {
+			toast.error('Não foi possível salvar o avatar do DGathe.');
+			return false;
+		}
+		toast.success('Avatar salvo. No DGathe você já aparece assim.');
+		await invalidateAll(); // o DGathe lê o perfil do layout
+		return true;
 	}
 
 	// --- Preferências: idioma ---
@@ -233,8 +252,17 @@
 			</form>
 		</Card>
 
-		<!-- Personalização + Preferências -->
+		<!-- Avatar do DGathe + Personalização + Preferências -->
 		<div class="flex flex-col gap-4">
+			<Card padding="lg">
+				<div class="mb-1 flex items-center gap-2">
+					<Icon name="dgathe" size={18} class="text-brand" />
+					<h2 class="text-sm font-semibold text-navy">Avatar no DGathe</h2>
+				</div>
+				<p class="mb-4 text-sm text-grey">Monte como você aparece no escritório. Vale depois de salvar.</p>
+				<EditorAvatar inicial={aparenciaInicial} onsalvar={salvarAparencia} />
+			</Card>
+
 			<Card padding="lg">
 				<div class="mb-1 flex items-center gap-2">
 					<Icon name="palette" size={18} class="text-brand" />
