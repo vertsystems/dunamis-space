@@ -30,6 +30,12 @@ export const DTOOLS_FERRAMENTAS: Ferramenta[] = [
 		descricao: 'Acessos dos sites da Dunamis e dos clientes: de onde vêm, o que veem e por onde chegam.'
 	},
 	{
+		href: '/dtools/dgathe',
+		label: 'DGathe',
+		icon: 'dgathe',
+		descricao: 'O escritório da Dunamis em forma de jogo: circule pelos setores e veja o que cada um está fazendo.'
+	},
+	{
 		href: '/dtools/organyze',
 		label: 'Organyze',
 		icon: 'organyze',

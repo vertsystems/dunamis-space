@@ -67,10 +67,10 @@
 		areas: Area[];
 	};
 
-	// Organyze, Pag's Up e DMetric também moram na sidebar da Home, logo abaixo de Meu Dia:
+	// Organyze, Pag's Up, DMetric e DGathe também moram na sidebar da Home, logo abaixo de Meu Dia:
 	// são ferramentas do dia a dia de qualquer pessoa, e não um departamento à
 	// parte. A fonte continua sendo DTOOLS_FERRAMENTAS — a ordem aqui é a do menu.
-	const FERRAMENTAS_NA_HOME = ['/dtools/organyze', '/dtools/pagsup', '/dtools/dmetric'];
+	const FERRAMENTAS_NA_HOME = ['/dtools/organyze', '/dtools/pagsup', '/dtools/dmetric', '/dtools/dgathe'];
 	const areasFerramentas: Area[] = FERRAMENTAS_NA_HOME.flatMap((href) => {
 		const f = DTOOLS_FERRAMENTAS.find((x) => x.href === href);
 		return f ? [{ href: f.href, label: f.label, icon: f.icon, subitens: f.subitens }] : [];
