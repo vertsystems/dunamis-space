@@ -534,6 +534,31 @@ function montarItens(): Item[] {
 		});
 	};
 
+	/**
+	 * Mesa de frente para a sala: a cadeira atrás (linha y) e a mesa na frente
+	 * (linha y+1), com o computador virado para quem senta. Ocupa 2 casas de
+	 * largura. Deixar livre uma casa ao lado ou acima da cadeira.
+	 */
+	const mesaDeFrente = (
+		x: number,
+		y: number,
+		o: { tela: string; mesa: string; cadeira: string; executiva?: boolean; cor?: string; corCadeira?: string }
+	) => {
+		add({ tipo: 'mesa', x: x + 0.1, y: y + 1.12, w: 1.8, d: 0.78, h: 0.54, cor: o.cor ?? '#7a5236', variante: o.executiva ? 'executiva' : undefined, nome: o.mesa });
+		add({ tipo: 'monitor', x: x + 0.6, y: y + 1.32, w: 0.8, d: 0.08, h: 0.46, z: 0.54, frente: '-y', variante: o.tela, bloqueia: false });
+		if (o.executiva)
+			add({ tipo: 'cadeira', x: x + 0.7, y: y + 0.3, w: 0.6, d: 0.6, h: 1.1, frente: 'y', cor: o.corCadeira ?? '#1c2534', variante: 'executiva', nome: o.cadeira });
+		else add({ tipo: 'cadeira', x: x + 0.76, y: y + 0.32, w: 0.48, d: 0.48, h: 0.92, frente: 'y', cor: o.corCadeira ?? '#2f3a4f', nome: o.cadeira });
+	};
+
+	/**
+	 * Mesa do gerente (pedido do Bruno, 09/11/2026): cada departamento vai ter
+	 * um agente gerente, e ele precisa de um lugar. Executiva, de madeira, de
+	 * frente para a equipe.
+	 */
+	const mesaGerente = (x: number, y: number, tela: string) =>
+		mesaDeFrente(x, y, { tela, mesa: 'Mesa do gerente', cadeira: 'Cadeira do gerente', executiva: true });
+
 	// Diretoria
 	add({ tipo: 'estante', x: 4.06, y: 5, w: 0.42, d: 3, h: 1.75, frente: 'x' });
 	add({ tipo: 'mesa', x: 6, y: 6.15, w: 3, d: 0.85, h: 0.54, cor: '#7a5236', variante: 'executiva' });
@@ -543,6 +568,8 @@ function montarItens(): Item[] {
 	add({ tipo: 'cadeira', x: 8.12, y: 7.35, w: 0.48, d: 0.48, h: 0.9, frente: '-y', cor: '#8a6a4a' });
 	add({ tipo: 'sofa', x: 4.1, y: 9.4, w: 0.85, d: 2.2, h: 0.75, frente: 'x', cor: '#3f4d63' });
 	add({ tipo: 'mesaCentro', x: 5.55, y: 9.95, w: 0.9, d: 1.1, h: 0.32, cor: '#5d3f2a' });
+	// O assessor, no canto ao lado da mesa do CEO
+	mesaDeFrente(10, 5, { tela: 'texto', mesa: 'Mesa do assessor', cadeira: 'Cadeira do assessor', cor: '#a07a55' });
 	planta(10, 4, true);
 	planta(11, 12);
 	planta(4, 12);
@@ -560,15 +587,18 @@ function montarItens(): Item[] {
 	planta(19, 4);
 	planta(19, 12);
 
-	// Financeiro
-	estacao(21, 6, 'planilha');
-	estacao(21, 9, 'grafico');
+	// Financeiro: o gerente no fundo, 3 mesas de 1 computador
+	mesaGerente(21, 4, 'planilha');
+	estacao(21, 7, 'planilha');
+	estacao(23, 7, 'grafico');
+	estacao(22, 10, 'texto');
 	add({ tipo: 'cofre', x: 24.4, y: 4.15, w: 0.75, d: 0.7, h: 0.85, frente: 'y' });
 	add({ tipo: 'arquivo', x: 20.1, y: 10, w: 0.55, d: 0.7, h: 1.05, frente: 'x' });
 	add({ tipo: 'arquivo', x: 20.1, y: 11, w: 0.55, d: 0.7, h: 1.05, frente: 'x' });
 	planta(25, 11);
 
 	// Comercial
+	mesaGerente(29, 4, 'grafico');
 	mesaDupla(27, 6, ['crm', 'grafico']);
 	mesaDupla(30, 6, ['grafico', 'texto']);
 	mesaDupla(27, 9, ['texto', 'crm']);
@@ -583,6 +613,7 @@ function montarItens(): Item[] {
 	// Duas baias de 6 lugares (os agentes de desenvolvimento e IA)
 	baia(35, 5, ['codigo', 'codigo', 'design'], { cor: '#3a465c', cadeira: '#11161f' });
 	baia(35, 9, ['codigo', 'grafico', 'codigo'], { cor: '#3a465c', cadeira: '#11161f' });
+	mesaGerente(39, 5, 'codigo');
 	add({ tipo: 'nucleo', x: 41.35, y: 8.35, w: 1.3, d: 1.3, h: 1.6 });
 	planta(43, 12);
 	planta(34, 4);
@@ -592,11 +623,15 @@ function montarItens(): Item[] {
 	planta(43, 13, true);
 
 	// Conteúdo & Social Media
+	// 4 mesas de 1 computador em 2 fileiras e o gerente no fundo
 	estacao(5, 17, 'social');
 	estacao(8, 17, 'social');
-	add({ tipo: 'luzAnel', x: 9.2, y: 20.2, w: 0.6, d: 0.6, h: 1.7 });
-	add({ tipo: 'pufe', x: 5.1, y: 21.3, w: 0.8, d: 0.8, h: 0.5, cor: '#f2b33d', bloqueia: true });
-	add({ tipo: 'pufe', x: 6.4, y: 22.6, w: 0.8, d: 0.8, h: 0.5, cor: '#4fb6a8', bloqueia: true });
+	estacao(5, 20, 'social');
+	estacao(8, 20, 'texto');
+	mesaGerente(6, 23, 'social');
+	add({ tipo: 'luzAnel', x: 10.2, y: 21.2, w: 0.6, d: 0.6, h: 1.7 });
+	add({ tipo: 'pufe', x: 4.1, y: 22.1, w: 0.8, d: 0.8, h: 0.5, cor: '#f2b33d', bloqueia: true });
+	add({ tipo: 'pufe', x: 9.1, y: 23.1, w: 0.8, d: 0.8, h: 0.5, cor: '#4fb6a8', bloqueia: true });
 	planta(10, 24, true);
 	planta(4, 24);
 
@@ -606,6 +641,7 @@ function montarItens(): Item[] {
 	add({ tipo: 'softbox', x: 13.2, y: 16.4, w: 0.6, d: 0.6, h: 1.8 });
 	add({ tipo: 'softbox', x: 13.2, y: 22.2, w: 0.6, d: 0.6, h: 1.8 });
 	add({ tipo: 'cadeira', x: 15.3, y: 22.4, w: 0.5, d: 0.5, h: 1.0, frente: '-x', cor: '#2b2b2b', variante: 'diretor', nome: 'Cadeira do diretor' });
+	mesaGerente(12, 23, 'texto');
 
 	// Recepção
 	add({ tipo: 'balcao', x: 19, y: 18.15, w: 3, d: 0.75, h: 0.98, frente: 'y' });
@@ -618,17 +654,24 @@ function montarItens(): Item[] {
 	planta(23, 24, true);
 
 	// Design & Criação
-	add({ tipo: 'quadro', x: 24.1, y: 18, w: 0.28, d: 1.8, h: 1.55, frente: 'x', variante: 'moodboard', nome: 'Moodboard' });
-	estacao(26, 18, 'design', { duplo: true });
-	estacao(26, 21, 'design');
-	add({ tipo: 'prancheta', x: 28.95, y: 20.2, w: 0.85, d: 1.1, h: 1.05, frente: '-x' });
-	planta(29, 24, true);
-	planta(24, 24);
+	// 3 mesas de 2 lugares à esquerda, corredor no meio; prancheta, moodboard e gerente à direita.
+	// O gerente fica embaixo: em cima, o painel alto do Tráfego (do outro lado da parede) o cobriria
+	mesaDupla(24, 16, ['design', 'design']);
+	mesaDupla(24, 19, ['design', 'social']);
+	mesaDupla(24, 22, ['design', 'design']);
+	add({ tipo: 'prancheta', x: 28.95, y: 16.2, w: 0.85, d: 1.1, h: 1.05, frente: '-x' });
+	add({ tipo: 'quadro', x: 28.1, y: 19.1, w: 0.28, d: 1.8, h: 1.55, frente: 'x', variante: 'moodboard', nome: 'Moodboard' });
+	mesaGerente(28, 22, 'design');
+	// A planta grande vai para o outro canto: na frente do gerente, ela o cobria
+	planta(29, 24);
+	planta(24, 24, true);
 
 	// Tráfego Pago
 	add({ tipo: 'tvPainel', x: 30.12, y: 17, w: 0.3, d: 2, h: 1.7, frente: 'x', variante: 'dashboard' });
-	estacao(32, 18, 'grafico', { duplo: true });
-	estacao(32, 21, 'grafico');
+	// 2 mesas de 2 lugares no meio e o gerente no fundo
+	mesaDupla(32, 17, ['grafico', 'grafico']);
+	mesaDupla(32, 20, ['grafico', 'crm']);
+	mesaGerente(32, 23, 'grafico');
 	planta(35, 24, true);
 	planta(30, 24);
 

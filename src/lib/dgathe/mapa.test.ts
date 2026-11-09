@@ -87,13 +87,14 @@ describe('mapa do escritório', () => {
 	it('a sala de Desenvolvimento tem 2 baias de 6 lugares (12 cadeiras, 12 computadores)', () => {
 		const dev = ITENS.filter((i) => i.sala === 'dev');
 		expect(dev.filter((i) => i.tipo === 'cadeira' && i.nome === 'Cadeira de agente')).toHaveLength(12);
-		expect(dev.filter((i) => i.tipo === 'monitor')).toHaveLength(12);
-		expect(dev.filter((i) => i.tipo === 'mesa')).toHaveLength(2);
+		// 12 nas baias e 1 na mesa do gerente
+		expect(dev.filter((i) => i.tipo === 'monitor')).toHaveLength(13);
+		expect(dev.filter((i) => i.tipo === 'mesa' && i.nome !== 'Mesa do gerente')).toHaveLength(2);
 	});
 
 	it('o Comercial tem 4 mesas maiores, cada uma com 2 cadeiras e 2 computadores', () => {
 		const comercial = ITENS.filter((i) => i.sala === 'comercial');
-		const mesas = comercial.filter((i) => i.tipo === 'mesa');
+		const mesas = comercial.filter((i) => i.tipo === 'mesa' && i.nome !== 'Mesa do gerente');
 		expect(mesas).toHaveLength(4);
 		for (const m of mesas) {
 			expect(m.w).toBeGreaterThan(2.5);
@@ -101,6 +102,34 @@ describe('mapa do escritório', () => {
 			expect(comercial.filter((i) => i.tipo === 'monitor' && naMesa(i) && i.y > m.y && i.y < m.y + m.d)).toHaveLength(2);
 			expect(comercial.filter((i) => i.tipo === 'cadeira' && naMesa(i) && i.y > m.y && i.y < m.y + 2)).toHaveLength(2);
 		}
+	});
+
+	it('cada departamento tem uma mesa de gerente; a Diretoria, a do assessor', () => {
+		for (const sala of ['financeiro', 'comercial', 'dev', 'conteudo', 'estudio', 'design', 'trafego']) {
+			const itens = ITENS.filter((i) => i.sala === sala);
+			expect(itens.filter((i) => i.nome === 'Mesa do gerente'), sala).toHaveLength(1);
+			expect(itens.filter((i) => i.nome === 'Cadeira do gerente'), sala).toHaveLength(1);
+		}
+		const diretoria = ITENS.filter((i) => i.sala === 'diretoria');
+		expect(diretoria.filter((i) => i.nome === 'Mesa do assessor')).toHaveLength(1);
+		expect(diretoria.filter((i) => i.nome === 'Cadeira do assessor')).toHaveLength(1);
+	});
+
+	it('mesas de cada sala: Tráfego 2 e Design 3 de 2 lugares; Conteúdo 4 e Financeiro 3 de 1 computador', () => {
+		const contar = (sala: string) => {
+			const itens = ITENS.filter((i) => i.sala === sala && i.nome !== 'Mesa do gerente' && i.nome !== 'Cadeira do gerente');
+			const gerente = ITENS.find((i) => i.sala === sala && i.nome === 'Mesa do gerente')!;
+			const doGerente = (i: (typeof ITENS)[number]) => i.tipo === 'monitor' && i.x >= gerente.x && i.x <= gerente.x + gerente.w && i.y >= gerente.y && i.y <= gerente.y + gerente.d;
+			return {
+				mesas: itens.filter((i) => i.tipo === 'mesa').length,
+				cadeiras: itens.filter((i) => i.tipo === 'cadeira').length,
+				computadores: itens.filter((i) => i.tipo === 'monitor' && !doGerente(i)).length
+			};
+		};
+		expect(contar('trafego')).toEqual({ mesas: 2, cadeiras: 4, computadores: 4 });
+		expect(contar('design')).toEqual({ mesas: 3, cadeiras: 6, computadores: 6 });
+		expect(contar('conteudo')).toEqual({ mesas: 4, cadeiras: 4, computadores: 4 });
+		expect(contar('financeiro')).toEqual({ mesas: 3, cadeiras: 3, computadores: 3 });
 	});
 
 	it('o contador de setores não inclui o corredor', () => {
