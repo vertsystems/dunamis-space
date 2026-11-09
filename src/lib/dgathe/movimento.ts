@@ -1,58 +1,31 @@
-// Como a tela de um junta as duas notícias que chegam de outra pessoa: o
-// trajeto (broadcast 'rota', na hora em que ela começa a andar) e o lugar onde
-// ela parou (presence, que também é reenviado a cada pulso e a cada conferência).
+// O que a tela de um faz quando chega a leitura de outra pessoa (presenca.ts).
 //
-// O problema que isto resolve (09/11/2026): durante a caminhada, a presença
-// ainda diz onde a pessoa estava ANTES de sair. Qualquer reenvio dela no meio do
-// caminho fazia o boneco andar, voltar para o começo e pular de novo para o fim.
-// Agora cada notícia traz `mov`, o carimbo do movimento no relógio de quem anda:
-// presença com carimbo mais velho que a rota em curso é ignorada.
+// Cada leitura traz onde a pessoa está, ou para onde está indo, com o carimbo
+// do movimento (`mov`), e se ela está online ou ausente. Quem anda grava só o
+// destino; a tela de cada um calcula o caminho e anima, com alguns segundos de
+// atraso (o Bruno aceitou: melhor atrasado e certo).
+//
+// Ausente vai andando até o assento na recepção e senta. Quando volta, levanta
+// e vai até o lugar onde estava. Notícia com carimbo velho não faz ninguém
+// voltar atrás (era o defeito de 09/11/2026: o boneco andava, voltava ao
+// começo e pulava para o fim).
 
-import type { Ponto } from './iso';
+import type { Situacao } from './presenca';
 
-export type Movel = {
-	x: number;
-	y: number;
-	dirX: number;
-	dirY: number;
-	andando: boolean;
-	caminho: Ponto[];
-	/** Onde parar quando a caminhada animada aqui terminar (veio da presença). */
-	final: Ponto | null;
-	/** Carimbo do movimento que está valendo. */
+export type Acao = 'nada' | 'ao-assento' | 'ao-lugar';
+
+export type EstadoOutro = {
 	mov: number;
+	situacao: Situacao;
+	sentado: boolean;
+	/** Para onde está andando agora (null = parado). */
+	indo: 'assento' | 'lugar' | null;
 };
 
-/** Chegou a presença (onde a pessoa está parada, e de qual movimento). */
-export function aplicarPresenca(o: Movel, p: { x: number; y: number; dirX: number; dirY: number; mov: number }) {
-	if (p.mov < o.mov) return; // notícia velha: a caminhada mais nova já vale
-	if (o.caminho.length && p.mov === o.mov) {
-		// Parou no fim desta mesma caminhada: termina de animar e fica lá
-		o.final = { x: p.x, y: p.y };
-		return;
-	}
-	// Movimento mais novo do que o que está aqui (o trajeto se perdeu) ou parado: vai direto
-	o.caminho = [];
-	o.andando = false;
-	o.final = null;
-	o.x = p.x;
-	o.y = p.y;
-	o.dirX = p.dirX;
-	o.dirY = p.dirY;
-	o.mov = p.mov;
-}
-
-/** Chegou um trajeto. Devolve false se ele é mais velho que o que já vale. */
-export function aplicarRota(o: Movel, pontos: Ponto[], mov: number): boolean {
-	if (pontos.length < 2 || mov < o.mov) return false;
-	const ini = pontos[0];
-	if (Math.hypot(o.x - ini.x, o.y - ini.y) > 1.5) {
-		o.x = ini.x;
-		o.y = ini.y;
-	}
-	o.caminho = pontos.slice(1);
-	o.final = null;
-	o.andando = true;
-	o.mov = mov;
-	return true;
+export function decidir(o: EstadoOutro, p: { situacao: Situacao; mov: number }): Acao {
+	if (p.situacao === 'ausente') return o.sentado || o.indo === 'assento' ? 'nada' : 'ao-assento';
+	// Voltou: levanta (ou desiste de ir sentar) e vai para onde estava
+	if (o.sentado || o.indo === 'assento' || o.situacao === 'ausente') return 'ao-lugar';
+	// Online e andando: só um movimento mais novo muda o destino
+	return p.mov > o.mov ? 'ao-lugar' : 'nada';
 }

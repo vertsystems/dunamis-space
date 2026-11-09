@@ -36,7 +36,17 @@ export type Pose = {
 	fase: number;
 	/** Relógio, para a respiração parado. */
 	t: number;
+	/** Sentado (no sofá da recepção, quando a pessoa está ausente). */
+	sentado?: boolean;
 };
+
+/**
+ * Sentado no sofá: o quadril fica na altura da almofada (~13 px, quase a do
+ * quadril em pé, porque a perna do boneco é curta), o corpo recua para dentro
+ * do sofá, as coxas vão para a frente até o joelho e a canela desce até o chão.
+ */
+export const ABAIXA_SENTADO = 1.5;
+const RECUO_SENTADO = 4.5;
 
 const CONTORNO = '#232a3a';
 const LW = 1.05;
@@ -108,6 +118,41 @@ function traco(ctx: C, x0: number, y0: number, x1: number, y1: number, cor = CON
 	ctx.lineWidth = lw;
 	ctx.lineCap = 'round';
 	ctx.stroke();
+}
+
+const pernasSentado = (feminino: boolean) => (feminino ? [-2.2, 2.2] : [-2.7, 2.7]);
+
+/** Sentado: as canelas descem do joelho (na beira do sofá) até o pé, no chão. */
+function canelas(ctx: C, cor: string, sapato: string, feminino: boolean) {
+	const largura = feminino ? 3.6 : 4.6;
+	for (const px of pernasSentado(feminino)) {
+		const c = capsula(ctx, px, -13.4, -1.8, largura);
+		forma(ctx, c, cor);
+		sombraDireita(ctx, c, px + 0.6);
+		if (feminino) sapatoFeminino(ctx, sapato, px, 0);
+		else desenharSapato(ctx, sapato, px, 0);
+	}
+}
+
+/**
+ * Sentado, de frente: as coxas saem do quadril (no fundo do sofá) e vêm para a
+ * frente até o joelho, em cima da canela. Coordenadas do corpo, que está
+ * recuado RECUO_SENTADO para dentro do sofá.
+ */
+function coxas(ctx: C, cor: string, feminino: boolean) {
+	const largura = feminino ? 4.4 : 5.4;
+	for (const px of pernasSentado(feminino)) {
+		const joelho = { x: px + RECUO_SENTADO + 0.6, y: -13.2 - ABAIXA_SENTADO };
+		const quadril = { x: px - 0.4, y: -16.4 };
+		forma(ctx, () => {
+			const ang = Math.atan2(joelho.y - quadril.y, joelho.x - quadril.x);
+			const r = largura / 2;
+			ctx.arc(quadril.x, quadril.y, r, ang + Math.PI / 2, ang - Math.PI / 2);
+			ctx.arc(joelho.x, joelho.y, r, ang - Math.PI / 2, ang + Math.PI / 2);
+			ctx.closePath();
+		}, cor);
+	}
+	traco(ctx, 0.2, -16, 1.4, -13.8, tom(cor, 0.7), 0.6);
 }
 
 /** Luminância de uma cor #rrggbb (0–255). */
@@ -484,9 +529,10 @@ function sapatoFeminino(ctx: C, tipo: string, px: number, y: number) {
 /** Corpo, roupa e acessórios com os pés na origem (sem translação de mundo). */
 export function desenharBoneco(
 	ctx: C,
-	p: { dirX: number; dirY: number; andando: boolean; fase: number; t: number },
+	p: { dirX: number; dirY: number; andando: boolean; fase: number; t: number; sentado?: boolean },
 	a: Aparencia = APARENCIA_PADRAO
 ) {
+	const sentado = !!p.sentado;
 	const telaX = p.dirX - p.dirY;
 	const telaY = p.dirX + p.dirY;
 	const esquerda = telaX < -0.05;
@@ -501,8 +547,11 @@ export function desenharBoneco(
 	const calca = vestido ? null : a.roupa === 'terno' ? tom(roupa, 0.88) : FORMAIS_COM_CINTO.has(a.roupa) ? '#2b3240' : JEANS;
 	const fig = feminino ? figurinoFeminino(a.roupa, roupa, luzDe(roupa)) : null;
 
-	const passo = p.andando ? Math.sin(p.fase) : 0;
-	const sobe = p.andando ? Math.abs(Math.sin(p.fase)) * 1.4 : Math.sin(p.t * 2) * 0.4;
+	const passo = p.andando && !sentado ? Math.sin(p.fase) : 0;
+	const sobe = sentado ? Math.sin(p.t * 1.6) * 0.3 : p.andando ? Math.abs(Math.sin(p.fase)) * 1.4 : Math.sin(p.t * 2) * 0.4;
+	// Sentado: canela (do joelho ao pé) e colo, na cor da calça ou da saia
+	const corColo = fig ? fig.corBaixo : (calca ?? roupa);
+	const corCanela = fig ? (fig.baixo === 'calca' ? fig.corBaixo : pele) : (calca ?? pele);
 
 	// Sombra no chão
 	ctx.beginPath();
@@ -514,7 +563,8 @@ export function desenharBoneco(
 	if (esquerda) ctx.scale(-1, 1);
 
 	// Pernas e sapatos
-	if (fig) pernasFemininas(ctx, fig, a.sapato, pele, passo, sobe);
+	if (sentado) canelas(ctx, corCanela, a.sapato, feminino);
+	else if (fig) pernasFemininas(ctx, fig, a.sapato, pele, passo, sobe);
 	else {
 		const pernas: [number, number][] = [
 			[-3 + passo * 2.4, Math.max(0, passo) * 1.5],
@@ -530,10 +580,13 @@ export function desenharBoneco(
 		}
 	}
 
-	ctx.translate(0, -sobe);
+	if (sentado) ctx.translate(-RECUO_SENTADO, ABAIXA_SENTADO - sobe);
+	else ctx.translate(0, -sobe);
 
-	// Saia (ou quadril da calça) por cima do alto das pernas
-	if (fig) parteDeBaixo(ctx, fig);
+	// Saia (ou quadril da calça) por cima do alto das pernas; sentado, vira colo
+	if (sentado) {
+		// nada: o colo é desenhado depois do tronco
+	} else if (fig) parteDeBaixo(ctx, fig);
 	else if (vestido) {
 		const saia = poligono(ctx, [[-5.8, -15.6], [5.8, -15.6], [8.2, -7.4], [-8.2, -7.4]]);
 		forma(ctx, saia, roupa);
@@ -586,6 +639,7 @@ export function desenharBoneco(
 	ctx.lineWidth = LW;
 	ctx.stroke();
 	if (fig) acabamentoFeminino(ctx, a.roupa, roupa, deFrente);
+	if (sentado && deFrente) coxas(ctx, corColo, feminino);
 
 	// Pescoço, orelhas (com brinco, nela) e cabeça
 	if (fig) forma(ctx, caixa(ctx, -1.6, -32.4, 3.4, 2.6, 1), tom(pele, 0.9), 0.8);
@@ -1033,7 +1087,7 @@ export function desenharAvatar(ctx: C, p: Pose, a: Aparencia = APARENCIA_PADRAO)
 }
 
 /** Retângulo do avatar na tela (zoom 1), para o clique. */
-export function areaDoAvatar(x: number, y: number) {
+export function areaDoAvatar(x: number, y: number, sentado = false) {
 	const b = paraTela(x, y, 0);
-	return { x0: b.x - 12, y0: b.y - 56, x1: b.x + 12, y1: b.y + 3 };
+	return { x0: b.x - 12, y0: b.y - 56 + (sentado ? ABAIXA_SENTADO : 0), x1: b.x + 12, y1: b.y + 3 };
 }

@@ -10,9 +10,11 @@
 	import logo from '$lib/assets/dspace-logo.svg';
 	import { goto, invalidate } from '$app/navigation';
 	import { page } from '$app/state';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
+	import { env } from '$env/dynamic/public';
 	import { DTOOLS_FERRAMENTAS } from '$lib/dtools';
-	import { podeAcessarRota, podeEditar, type Permissoes } from '$lib/permissoes';
+	import { podeAcessarRota, podeEditar, podeVer, type Permissoes } from '$lib/permissoes';
+	import { manterSinal } from '$lib/dgathe/presenca';
 	import { temaCss } from '$lib/tema';
 	import Icon from '$lib/components/Icon.svelte';
 	import CargoBadge from '$lib/components/CargoBadge.svelte';
@@ -149,6 +151,18 @@
 	// Menu filtrado por permissão: esconde áreas sem acesso (rotas pessoais sempre
 	// visíveis) e departamentos que ficaram sem nenhuma área.
 	const perms = $derived((data.permissoes ?? {}) as Permissoes);
+
+	// DGathe: logado no dspace = no escritório, em qualquer tela ou aba. O sinal
+	// de vida sai daqui (presenca.ts); fechar a última aba ou sair do sistema
+	// leva a pessoa para a recepção.
+	const usuarioId = $derived(session?.user?.id ?? null);
+	const temDGathe = $derived(podeVer(perms, 'dgathe'));
+	$effect(() => {
+		if (!usuarioId || !temDGathe) return;
+		return untrack(() =>
+			manterSinal(supabase, { url: env.PUBLIC_SUPABASE_URL ?? '', chave: env.PUBLIC_SUPABASE_ANON_KEY ?? '' })
+		);
+	});
 	const departamentosVisiveis = $derived(
 		departamentos
 			.map((d) => ({ ...d, areas: d.areas.filter((a) => !a.href || podeAcessarRota(perms, a.href)) }))
@@ -221,6 +235,8 @@
 	);
 
 	async function signOut() {
+		// Saiu do sistema: no DGathe, vai para a recepção na hora
+		if (temDGathe) await supabase.rpc('dgathe_saiu');
 		await supabase.auth.signOut();
 		// Navega para /login e re-roda todos os loads (limpa conteúdo protegido da tela).
 		await goto('/login', { invalidateAll: true });

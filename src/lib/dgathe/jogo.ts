@@ -17,6 +17,7 @@ import {
 	SALA_POR_ID,
 	INICIO,
 	PREDIO,
+	ASSENTOS,
 	celulaLivre,
 	paredeEntre,
 	zonaNoPonto,
@@ -24,7 +25,8 @@ import {
 	pisoDaCelula,
 	chegadaDaSala,
 	type Item,
-	type Segmento
+	type Segmento,
+	type Assento
 } from './mapa';
 import { aEstrela, suavizar, type Grade } from './caminho';
 import { ordenar, posicaoDinamica, telaDaCaixa, chave, type Desenhavel } from './profundidade';
@@ -39,10 +41,10 @@ import {
 	estilo,
 	poli
 } from './desenho';
-import { desenharAvatar, areaDoAvatar } from './avatar';
+import { desenharAvatar, areaDoAvatar, ABAIXA_SENTADO } from './avatar';
 import { APARENCIA_PADRAO, type Aparencia } from './aparencia';
-import type { Pessoa } from './online';
-import { aplicarPresenca, aplicarRota } from './movimento';
+import type { Pessoa, Situacao } from './presenca';
+import { decidir } from './movimento';
 
 export const GRADE: Grade = { largura: LARGURA, altura: ALTURA, livre: celulaLivre, parede: paredeEntre };
 
@@ -57,6 +59,8 @@ export type OutroResumo = {
 	cor: string | null;
 	sala: string | null;
 	andando: boolean;
+	/** Ausente = sentado na recepção (saiu do dspace ou está sem sinal). */
+	situacao: Situacao;
 };
 
 export type Avisos = {
@@ -81,6 +85,8 @@ export type OpcoesJogo = {
 	cargo: string;
 	/** Como o meu bonequinho é montado (editor do Meu Perfil). */
 	aparencia?: Aparencia;
+	/** Meu id: entra na conta de quem senta em qual assento (igual em todas as telas). */
+	id?: string | null;
 };
 
 type Peca = Desenhavel & ({ tipo: 'item'; item: Item; contorno: Ponto[] } | { tipo: 'parede'; seg: Segmento });
@@ -89,7 +95,17 @@ type Hover = { tipo: 'avatar' } | { tipo: 'pessoa'; id: string } | { tipo: 'item
 
 /** Um bonequinho que anda: o meu e o de cada pessoa online. */
 type Corpo = { x: number; y: number; dirX: number; dirY: number; andando: boolean; fase: number; caminho: Ponto[] };
-type Outro = Corpo & { pessoa: Pessoa; sala: string | null; final: Ponto | null; mov: number };
+type Outro = Corpo & {
+	pessoa: Pessoa;
+	/** Para onde olhar ao chegar (a direção de quem andou). */
+	fim: { dirX: number; dirY: number } | null;
+	sala: string | null;
+	mov: number;
+	situacao: Situacao;
+	sentado: boolean;
+	indo: 'assento' | 'lugar' | null;
+	assento: Assento;
+};
 type Desenho = { peca: Desenhavel; atras: boolean; desenhar: () => void };
 
 const primeiroNome = (nome: string) => nome.split(/\s+/)[0] || nome;
@@ -313,31 +329,57 @@ export class Jogo {
 		return { x: this.av.x, y: this.av.y, dirX: this.av.dirX, dirY: this.av.dirY };
 	}
 
-	/** Quem está online agora (vem do presence): entra, sai e atualiza quem parou. */
+	/**
+	 * Quem já entrou no escritório (vem do banco, presenca.ts), online ou
+	 * ausente. Ninguém pula: quem andou faz o caminho aqui, quem ficou ausente
+	 * vai andando sentar na recepção, quem voltou levanta e vai para o lugar.
+	 */
 	definirPessoas(lista: Pessoa[]) {
+		// O assento de cada um sai da ordem dos ids (com o meu): igual em todas as telas
+		const ids = [...lista.map((p) => p.id), ...(this.opcoes.id ? [this.opcoes.id] : [])].sort();
 		const vistos = new Set<string>();
 		for (const p of lista) {
 			vistos.add(p.id);
-			const o = this.outros.get(p.id);
+			const assento = ASSENTOS[ids.indexOf(p.id) % ASSENTOS.length];
+			let o = this.outros.get(p.id);
 			if (!o) {
-				this.outros.set(p.id, {
+				// Primeira vez: aparece direto no lugar (ou já sentado), sem andar
+				const fora = p.situacao === 'ausente';
+				o = {
 					pessoa: p,
-					x: p.x,
-					y: p.y,
-					dirX: p.dirX,
-					dirY: p.dirY,
+					x: fora ? assento.x : p.x,
+					y: fora ? assento.y : p.y,
+					dirX: fora ? assento.dirX : p.dirX,
+					dirY: fora ? assento.dirY : p.dirY,
 					andando: false,
 					fase: 0,
 					caminho: [],
-					sala: zonaNoPonto(p.x, p.y),
-					final: null,
-					mov: p.mov
-				});
+					sala: null,
+					mov: p.mov,
+					situacao: p.situacao,
+					sentado: fora && assento.sentado,
+					indo: null,
+					fim: null,
+					assento
+				};
+				o.sala = zonaNoPonto(o.x, o.y);
+				this.outros.set(p.id, o);
 				continue;
 			}
 			o.pessoa = p;
-			// Presença mais velha que a caminhada em curso não faz voltar (movimento.ts)
-			aplicarPresenca(o, p);
+			if (o.assento !== assento && (o.sentado || o.indo === 'assento')) {
+				// Mudou a lista de gente (alguém novo): troca de assento sem atravessar a sala
+				Object.assign(o, { x: assento.x, y: assento.y, dirX: assento.dirX, dirY: assento.dirY, caminho: [], indo: null, sentado: assento.sentado });
+			}
+			o.assento = assento;
+			const acao = decidir(o, p);
+			o.situacao = p.situacao;
+			if (acao === 'ao-assento') this.levarOutro(o, assento, 'assento');
+			else if (acao === 'ao-lugar') {
+				o.sentado = false;
+				o.mov = p.mov;
+				this.levarOutro(o, { x: p.x, y: p.y }, 'lugar', { dirX: p.dirX, dirY: p.dirY });
+			}
 		}
 		for (const id of [...this.outros.keys()]) if (!vistos.has(id)) this.outros.delete(id);
 		if (this.selecao.tipo === 'pessoa' && !this.outros.has(this.selecao.id)) this.selecionar({ tipo: 'avatar' });
@@ -345,11 +387,39 @@ export class Jogo {
 		this.emitirOutros();
 	}
 
-	/** Alguém começou a andar: a caminhada é animada aqui, no mesmo ritmo. */
-	rotaDe(id: string, pontos: Ponto[], mov: number) {
-		const o = this.outros.get(id);
-		if (!o || !aplicarRota(o, pontos, mov)) return;
-		this.emitirOutros();
+	/** Faz o caminho de outra pessoa até `alvo` (sem caminho: aparece lá). */
+	private levarOutro(o: Outro, alvo: Ponto, indo: 'assento' | 'lugar', dir?: { dirX: number; dirY: number }) {
+		const rota = Math.hypot(alvo.x - o.x, alvo.y - o.y) < 0.05 ? null : this.caminhoEntre(o, alvo);
+		if (rota && rota.length > 1) {
+			o.caminho = rota.slice(1);
+			o.andando = true;
+			o.indo = indo;
+			o.fim = dir ?? null;
+			return;
+		}
+		o.x = alvo.x;
+		o.y = alvo.y;
+		o.caminho = [];
+		o.andando = false;
+		o.indo = indo;
+		o.fim = dir ?? null;
+		this.chegou(o);
+	}
+
+	/** Terminou o caminho: senta, se foi para o assento; olha para onde a pessoa olhava. */
+	private chegou(o: Outro) {
+		if (o.indo === 'assento') {
+			o.x = o.assento.x;
+			o.y = o.assento.y;
+			o.dirX = o.assento.dirX;
+			o.dirY = o.assento.dirY;
+			o.sentado = o.assento.sentado;
+		} else if (o.fim) {
+			o.dirX = o.fim.dirX;
+			o.dirY = o.fim.dirY;
+		}
+		o.indo = null;
+		o.fim = null;
 	}
 
 	/** Vai até a pessoa e para ao lado dela. */
@@ -368,7 +438,8 @@ export class Jogo {
 				foto: o.pessoa.foto,
 				cor: o.pessoa.cor,
 				sala: o.sala,
-				andando: o.caminho.length > 0
+				andando: o.caminho.length > 0,
+				situacao: o.situacao
 			}))
 		);
 	}
@@ -381,7 +452,24 @@ export class Jogo {
 	// --------------------------------------------------------------- andar
 
 	private andarAte(p: Ponto, salaDestino: string | null = null, folga = 0): boolean {
-		const inicio = { x: Math.floor(this.av.x), y: Math.floor(this.av.y) };
+		const rota = this.caminhoEntre(this.av, p);
+		if (!rota) {
+			this.avisos.aviso('Sem passagem até esse ponto');
+			return false;
+		}
+		if (folga > 0) encurtar(rota, folga);
+		this.av.caminho = rota.slice(1);
+		this.avisos.rota?.(rota);
+		const fim = rota[rota.length - 1];
+		this.destino = { x: fim.x, y: fim.y, t0: this.t };
+		this.destinoSala = salaDestino ?? zonaNoPonto(fim.x, fim.y);
+		this.avisos.movimento(true, this.destinoSala);
+		return true;
+	}
+
+	/** O caminho de `de` até `p` (ou até o chão livre mais perto de `p`), já suavizado. */
+	private caminhoEntre(de: Ponto, p: Ponto): Ponto[] | null {
+		const inicio = { x: Math.floor(de.x), y: Math.floor(de.y) };
 		const cx = Math.floor(p.x);
 		const cy = Math.floor(p.y);
 
@@ -402,7 +490,7 @@ export class Jogo {
 			const celulas = aEstrela(GRADE, inicio, alvo);
 			if (!celulas) continue;
 			const pontos: Ponto[] = celulas.map((c) => ({ x: c.x + 0.5, y: c.y + 0.5 }));
-			pontos[0] = { x: this.av.x, y: this.av.y };
+			pontos[0] = { x: de.x, y: de.y };
 			if (alvo.d === 0) {
 				// No chão livre, vai até o ponto exato do clique (com folga da borda).
 				pontos[pontos.length - 1] = {
@@ -411,18 +499,9 @@ export class Jogo {
 				};
 			}
 			if (pontos.length === 1) pontos.push(pontos[0]);
-			const rota = suavizar(GRADE, pontos);
-			if (folga > 0) encurtar(rota, folga);
-			this.av.caminho = rota.slice(1);
-			this.avisos.rota?.(rota);
-			const fim = rota[rota.length - 1];
-			this.destino = { x: fim.x, y: fim.y, t0: this.t };
-			this.destinoSala = salaDestino ?? zonaNoPonto(fim.x, fim.y);
-			this.avisos.movimento(true, this.destinoSala);
-			return true;
+			return suavizar(GRADE, pontos);
 		}
-		this.avisos.aviso('Sem passagem até esse ponto');
-		return false;
+		return null;
 	}
 
 	private atualizar(dt: number) {
@@ -449,11 +528,7 @@ export class Jogo {
 		let mudou = false;
 		for (const o of this.outros.values()) {
 			if (o.caminho.length && this.mover(o, dt)) {
-				if (o.final) {
-					o.x = o.final.x;
-					o.y = o.final.y;
-					o.final = null;
-				}
+				this.chegou(o);
 				mudou = true;
 			}
 			const s = zonaNoPonto(o.x, o.y);
@@ -601,18 +676,50 @@ export class Jogo {
 
 	private corposParaDesenhar(): Desenho[] {
 		const lista: Desenho[] = [];
-		const add = (c: Corpo, aparencia: Aparencia) => {
+		const add = (c: Corpo, aparencia: Aparencia, o?: Outro) => {
+			// A ordem de desenho usa o chão em frente ao assento; o boneco sentado é
+			// desenhado na beira do sofá
 			const caixa = { x0: c.x - 0.22, y0: c.y - 0.22, z0: 0, x1: c.x + 0.22, y1: c.y + 0.22, z1: 1.4 };
+			const onde = this.ondeDesenhar(c, o);
 			lista.push({
-				peca: { caixa, tela: expandir(telaDaCaixa(caixa), 8) },
+				peca: { caixa, tela: expandir(telaDaCaixa(caixa), 14) },
 				atras: c.x < PREDIO.x0 || c.y < PREDIO.y0,
-				desenhar: () =>
-					desenharAvatar(this.ctx, { x: c.x, y: c.y, dirX: c.dirX, dirY: c.dirY, andando: c.andando, fase: c.fase, t: this.t }, aparencia)
+				desenhar: () => {
+					desenharAvatar(
+						this.ctx,
+						{ x: onde.x, y: onde.y, dirX: c.dirX, dirY: c.dirY, andando: c.andando, fase: c.fase, t: this.t, sentado: o?.sentado },
+						aparencia
+					);
+					if (o?.situacao === 'ausente' && !c.andando) this.desenharSono(onde, o.sentado);
+				}
 			});
 		};
-		for (const o of this.outros.values()) add(o, o.pessoa.aparencia);
+		for (const o of this.outros.values()) add(o, o.pessoa.aparencia, o);
 		add(this.av, this.aparencia);
 		return lista;
+	}
+
+	/** Onde o boneco aparece: sentado, na beira do sofá; senão, onde está. */
+	private ondeDesenhar(c: Corpo, o?: Outro): Ponto {
+		return o?.sentado ? { x: o.assento.sx, y: o.assento.sy } : { x: c.x, y: c.y };
+	}
+
+	/** "z z z" subindo da cabeça de quem está ausente. */
+	private desenharSono(onde: Ponto, sentado: boolean) {
+		const ctx = this.ctx;
+		const b = paraTela(onde.x, onde.y, 0);
+		const topo = b.y - 54 + (sentado ? ABAIXA_SENTADO : 0);
+		ctx.save();
+		ctx.textAlign = 'center';
+		ctx.textBaseline = 'middle';
+		for (let i = 0; i < 3; i++) {
+			const k = (this.t * 0.45 + i / 3) % 1;
+			ctx.globalAlpha = Math.sin(k * Math.PI) * 0.9;
+			ctx.font = `800 ${5 + k * 4}px Inter, system-ui, sans-serif`;
+			ctx.fillStyle = '#6b7a99';
+			ctx.fillText('z', b.x + 7 + k * 7, topo - k * 12);
+		}
+		ctx.restore();
 	}
 
 	/** Desenha as peças em ordem e encaixa cada bonequinho no lugar certo da fila. */
@@ -691,7 +798,10 @@ export class Jogo {
 		const ouro = 'rgba(245, 165, 36, 0.95)';
 		for (const o of this.outros.values()) {
 			const sel = this.selecao.tipo === 'pessoa' && this.selecao.id === o.pessoa.id;
-			anel(o.x, o.y, sel ? ouro : 'rgba(255, 255, 255, 0.45)', sel ? 2.2 : 1.2);
+			// Quem está sentado na recepção só ganha anel quando selecionado
+			if (o.sentado && !sel) continue;
+			const onde = this.ondeDesenhar(o, o);
+			anel(onde.x, onde.y, sel ? ouro : 'rgba(255, 255, 255, 0.45)', sel ? 2.2 : 1.2);
 		}
 		const eu = this.selecao.tipo === 'avatar';
 		anel(this.av.x, this.av.y, eu ? ouro : 'rgba(255, 255, 255, 0.7)', eu ? 2.2 : 1.4);
@@ -744,12 +854,16 @@ export class Jogo {
 			o: { fundo: 'rgba(11, 18, 32, 0.86)', cor: '#ffd58a' }
 		});
 		for (const o of this.outros.values()) {
-			const c = pe(o.x, o.y);
+			const onde = this.ondeDesenhar(o, o);
+			const c = pe(onde.x, onde.y);
+			const ausente = o.situacao === 'ausente';
 			crachas.push({
-				texto: `${primeiroNome(o.pessoa.nome)} · ${o.pessoa.cargo}`,
+				texto: ausente ? `${primeiroNome(o.pessoa.nome)} · ausente` : `${primeiroNome(o.pessoa.nome)} · ${o.pessoa.cargo}`,
 				x: c.x,
-				y: c.y - 62 * this.zoom - 6,
-				o: { fundo: 'rgba(11, 18, 32, 0.8)', cor: '#ffffff', ponto: o.pessoa.cor ?? '#9aa6ba' }
+				y: c.y - (62 - (o.sentado ? ABAIXA_SENTADO : 0)) * this.zoom - 6,
+				o: ausente
+					? { fundo: 'rgba(60, 68, 86, 0.72)', cor: '#d5dbe6', ponto: '#9aa6ba' }
+					: { fundo: 'rgba(11, 18, 32, 0.8)', cor: '#ffffff', ponto: o.pessoa.cor ?? '#9aa6ba' }
 			});
 		}
 		ctx.font = '600 11px Inter, system-ui, sans-serif';
@@ -773,7 +887,7 @@ export class Jogo {
 			if (this.hover.tipo === 'avatar') texto = `${this.opcoes.nome} (você)`;
 			else if (this.hover.tipo === 'pessoa') {
 				const o = this.outros.get(this.hover.id);
-				texto = o ? `${o.pessoa.nome} · ${o.pessoa.cargo}` : '';
+				texto = o ? `${o.pessoa.nome} · ${o.situacao === 'ausente' ? 'ausente, na recepção' : o.pessoa.cargo}` : '';
 			}
 			else if (this.hover.tipo === 'sala') texto = SALA_POR_ID.get(this.hover.id)?.nome ?? '';
 			else {
@@ -796,7 +910,8 @@ export class Jogo {
 		const a = areaDoAvatar(this.av.x, this.av.y);
 		if (p.x >= a.x0 && p.x <= a.x1 && p.y >= a.y0 && p.y <= a.y1) return { tipo: 'avatar' };
 		for (const o of this.outros.values()) {
-			const b = areaDoAvatar(o.x, o.y);
+			const onde = this.ondeDesenhar(o, o);
+			const b = areaDoAvatar(onde.x, onde.y, o.sentado);
 			if (p.x >= b.x0 && p.x <= b.x1 && p.y >= b.y0 && p.y <= b.y1) return { tipo: 'pessoa', id: o.pessoa.id };
 		}
 		for (const lista of [this.frente, this.atras]) {
@@ -1072,7 +1187,7 @@ export class Jogo {
 			const q = m(paraTela(o.x, o.y));
 			c.beginPath();
 			c.arc(q.x, q.y, 3, 0, Math.PI * 2);
-			c.fillStyle = o.pessoa.cor ?? '#ffffff';
+			c.fillStyle = o.situacao === 'ausente' ? '#9aa6ba' : (o.pessoa.cor ?? '#ffffff');
 			c.fill();
 			c.strokeStyle = '#ffffff';
 			c.lineWidth = 1.2;

@@ -20,6 +20,23 @@ export const PREDIO = { x0: 4, y0: 4, x1: 43, y1: 24 };
 /** Onde o avatar aparece na primeira visita: no meio da recepção. */
 export const INICIO = { x: 20.5, y: 22.2 };
 
+/**
+ * Onde fica quem está ausente (saiu do dspace ou está sem sinal): sentado nos
+ * sofás da recepção, pedido do Bruno em 09/11/2026. `x, y` é o chão em frente
+ * ao assento (por onde chega e a ordem de desenho); `sx, sy` é onde o boneco
+ * sentado é desenhado, na beira do sofá. Sofás cheios: em pé, perto da porta.
+ */
+export type Assento = { x: number; y: number; sx: number; sy: number; dirX: number; dirY: number; sentado: boolean };
+export const ASSENTOS: Assento[] = [
+	{ x: 18.32, y: 20.55, sx: 18.0, sy: 20.55, dirX: 1, dirY: 0, sentado: true },
+	{ x: 22.68, y: 20.55, sx: 23.0, sy: 20.55, dirX: -1, dirY: 0, sentado: true },
+	{ x: 18.32, y: 21.45, sx: 18.0, sy: 21.45, dirX: 1, dirY: 0, sentado: true },
+	{ x: 22.68, y: 21.45, sx: 23.0, sy: 21.45, dirX: -1, dirY: 0, sentado: true },
+	{ x: 19.4, y: 23.4, sx: 19.4, sy: 23.4, dirX: 0.7, dirY: 0.7, sentado: false },
+	{ x: 21.6, y: 23.4, sx: 21.6, sy: 23.4, dirX: 0.7, dirY: 0.7, sentado: false },
+	{ x: 20.5, y: 23.75, sx: 20.5, sy: 23.75, dirX: 0.7, dirY: 0.7, sentado: false }
+];
+
 export type TipoPiso =
 	| 'grama'
 	| 'calcada'

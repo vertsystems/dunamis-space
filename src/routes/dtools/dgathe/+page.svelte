@@ -1,7 +1,7 @@
 <script lang="ts">
-	// DGathe: o escritório da Dunamis em forma de jogo. Cada pessoa logada é um
-	// avatar, e quem está no DGathe ao mesmo tempo se vê (Supabase Realtime).
-	// Os agentes entram na próxima fase.
+	// DGathe: o escritório da Dunamis em forma de jogo. Cada pessoa logada no
+	// dspace é um avatar (presença pelo banco, $lib/dgathe/presenca.ts); quem
+	// saiu fica sentado na recepção. Os agentes entram na próxima fase.
 	import Escritorio from '$lib/components/dgathe/Escritorio.svelte';
 	import { funcaoSigla } from '$lib/equipe';
 	import { lerAparencia } from '$lib/dgathe/aparencia';
