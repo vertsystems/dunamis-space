@@ -752,7 +752,7 @@ export class Jogo {
 		crachas.push({
 			texto: `${this.opcoes.nome} · ${this.opcoes.cargo}`,
 			x: meu.x,
-			y: meu.y - 58 * this.zoom - 6,
+			y: meu.y - 62 * this.zoom - 6,
 			o: { fundo: 'rgba(11, 18, 32, 0.86)', cor: '#ffd58a' }
 		});
 		for (const o of this.outros.values()) {
@@ -760,7 +760,7 @@ export class Jogo {
 			crachas.push({
 				texto: `${primeiroNome(o.pessoa.nome)} · ${o.pessoa.cargo}`,
 				x: c.x,
-				y: c.y - 58 * this.zoom - 6,
+				y: c.y - 62 * this.zoom - 6,
 				o: { fundo: 'rgba(11, 18, 32, 0.8)', cor: '#ffffff', ponto: o.pessoa.cor ?? '#9aa6ba' }
 			});
 		}
