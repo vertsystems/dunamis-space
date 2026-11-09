@@ -521,6 +521,19 @@ function montarItens(): Item[] {
 		}
 	};
 
+	/**
+	 * Mesa comprida de 2 lugares lado a lado (pedido do Bruno, 09/11/2026, para
+	 * o Comercial): ocupa 3 casas de largura, com 2 computadores e 2 cadeiras na
+	 * frente (lado +y), como a estação, só que maior.
+	 */
+	const mesaDupla = (x: number, y: number, telas: [string, string], opcoes: { cor?: string; cadeira?: string } = {}) => {
+		add({ tipo: 'mesa', x: x + 0.15, y: y + 0.1, w: 2.7, d: 0.8, h: 0.52, cor: opcoes.cor ?? '#f3f0ea' });
+		[x + 0.85, x + 2.15].forEach((cx, i) => {
+			add({ tipo: 'monitor', x: cx - 0.4, y: y + 0.36, w: 0.8, d: 0.08, h: 0.46, z: 0.52, frente: 'y', variante: telas[i], bloqueia: false });
+			add({ tipo: 'cadeira', x: cx - 0.24, y: y + 1.22, w: 0.48, d: 0.48, h: 0.92, frente: '-y', cor: opcoes.cadeira });
+		});
+	};
+
 	// Diretoria
 	add({ tipo: 'estante', x: 4.06, y: 5, w: 0.42, d: 3, h: 1.75, frente: 'x' });
 	add({ tipo: 'mesa', x: 6, y: 6.15, w: 3, d: 0.85, h: 0.54, cor: '#7a5236', variante: 'executiva' });
@@ -556,10 +569,10 @@ function montarItens(): Item[] {
 	planta(25, 11);
 
 	// Comercial
-	estacao(27, 6, 'crm');
-	estacao(30, 6, 'grafico');
-	estacao(27, 9, 'texto');
-	estacao(30, 9, 'crm');
+	mesaDupla(27, 6, ['crm', 'grafico']);
+	mesaDupla(30, 6, ['grafico', 'texto']);
+	mesaDupla(27, 9, ['texto', 'crm']);
+	mesaDupla(30, 9, ['crm', 'grafico']);
 	add({ tipo: 'bebedouro', x: 33.2, y: 8.2, w: 0.55, d: 0.55, h: 1.25 });
 	planta(33, 4, true);
 	planta(26, 12);

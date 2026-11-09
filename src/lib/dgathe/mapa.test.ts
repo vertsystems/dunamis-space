@@ -91,6 +91,18 @@ describe('mapa do escritório', () => {
 		expect(dev.filter((i) => i.tipo === 'mesa')).toHaveLength(2);
 	});
 
+	it('o Comercial tem 4 mesas maiores, cada uma com 2 cadeiras e 2 computadores', () => {
+		const comercial = ITENS.filter((i) => i.sala === 'comercial');
+		const mesas = comercial.filter((i) => i.tipo === 'mesa');
+		expect(mesas).toHaveLength(4);
+		for (const m of mesas) {
+			expect(m.w).toBeGreaterThan(2.5);
+			const naMesa = (i: (typeof ITENS)[number]) => i.x >= m.x - 0.1 && i.x + i.w <= m.x + m.w + 0.1;
+			expect(comercial.filter((i) => i.tipo === 'monitor' && naMesa(i) && i.y > m.y && i.y < m.y + m.d)).toHaveLength(2);
+			expect(comercial.filter((i) => i.tipo === 'cadeira' && naMesa(i) && i.y > m.y && i.y < m.y + 2)).toHaveLength(2);
+		}
+	});
+
 	it('o contador de setores não inclui o corredor', () => {
 		expect(SETORES.some((s) => s.id === 'corredor')).toBe(false);
 		expect(SETORES.length).toBe(SALAS.length - 1);
