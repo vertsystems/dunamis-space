@@ -9,9 +9,27 @@
 // costas quando sobe, espelhado quando vai para a esquerda. A mesma função
 // desenha no jogo e na prévia do editor (Meu Perfil), só que maior.
 //
-// Camadas: pernas e sapatos → saia → cabelo de trás → braço de trás → tronco
-// e roupa → orelhas, cabeça e rosto → cabelo da frente (ou o de costas) →
-// óculos → braço da frente.
+// Camadas (com os ganchos das peças novas entre colchetes):
+//   sombra no chão → [corpo.atras: aura, asas, capa] → pernas e sapatos
+//   [corpo.pernas, corpo.sapato] → saia [corpo.parteDeBaixo] → cabelo de trás
+//   [cabeca.cabecaAtras] → braço de trás [corpo.braco] → tronco [corpo.tronco]
+//   e roupa [corpo.roupa] → [corpo.acabamento] → colo sentado [corpo.colo] →
+//   pescoço, orelhas [cabeca.orelhas] e cabeça [cabeca.formaDaCabeca] → rosto
+//   [cabeca.rosto, cabeca.sobreORosto] → cabelo da frente [cabeca.cabeloFrente]
+//   → óculos [cabeca.oculos] → [cabeca.chapeu] (ou, de costas, o cabelo visto
+//   por trás e [cabeca.costas]) → [corpo.naMao 'atras'] → braço da frente →
+//   [corpo.naMao 'frente'].
+//
+// Pedido do Bruno (10/11/2026): personagens prontos. As peças novas são
+// desenhadas em avatar-cabeca.ts e avatar-corpo.ts (um pintor em cada); aqui
+// ficam as peças originais e os ganchos. Gancho que não desenha nada deixa o
+// boneco igual ao de antes. Convenções em docs/dgathe/personagens.md.
+//
+// Segunda rodada (10/11/2026): os bichos de roupa. Com `bicho`, a "pele" do
+// boneco vira a cor do pelo (pescoço, mão, perna à mostra), o cabelo original
+// não sai e a cabeça, as orelhas e o rosto de bicho entram pelos ganchos de
+// sempre (cabeca.formaDaCabeca, cabeca.orelhas, cabeca.rosto); o Quadro leva
+// as cores do bicho (q.bicho). Sem bicho, nada muda.
 //
 // A personagem feminina (pedido do Bruno, 09/11/2026: "está muito igual ao
 // masculino") tem corpo próprio (ombro estreito, cintura, quadril, pernas e
@@ -20,10 +38,47 @@
 // com saia jeans, a xadrez é aberta com nó, a jaqueta jeans vai sobre vestido.
 // Sapatos, cílios, batom e brinco também são dela.
 
-import { paraTela, tom } from './iso';
-import { APARENCIA_PADRAO, CORES_CABELO, PELES, corDe, type Aparencia } from './aparencia';
+import { paraTela } from './iso';
+import { APARENCIA_PADRAO, CORES_CABELO, PELES, bichoDe, corDe, type Aparencia } from './aparencia';
+import {
+	ABAIXA_SENTADO,
+	CONTORNO,
+	CY,
+	DENIM,
+	DOURADO,
+	JEANS,
+	GRAVATA,
+	LW,
+	MEDIDAS_FEMININO,
+	MEDIDAS_MASCULINO,
+	PRETO_FOSCO,
+	R,
+	RECUO_SENTADO,
+	SAIA_CLARA,
+	SAIA_ESCURA,
+	SOMBRA,
+	SOMBRA_PELE,
+	brilho,
+	caixa,
+	capsula,
+	forma,
+	luzDe,
+	oval,
+	poligono,
+	ponto,
+	sombraDireita,
+	tom,
+	traco,
+	type C,
+	type Passada,
+	type Quadro
+} from './avatar-base';
+import * as cabeca from './avatar-cabeca';
+import * as corpo from './avatar-corpo';
 
-type C = CanvasRenderingContext2D;
+// jogo.ts lê daqui
+export { ABAIXA_SENTADO };
+export type { Passada, Quadro };
 
 export type Pose = {
 	x: number;
@@ -40,97 +95,67 @@ export type Pose = {
 	sentado?: boolean;
 };
 
-/**
- * Sentado no sofá: o quadril fica na altura da almofada (~13 px, quase a do
- * quadril em pé, porque a perna do boneco é curta), o corpo recua para dentro
- * do sofá, as coxas vão para a frente até o joelho e a canela desce até o chão.
- */
-export const ABAIXA_SENTADO = 1.5;
-const RECUO_SENTADO = 4.5;
-
-const CONTORNO = '#232a3a';
-const LW = 1.05;
-const SOMBRA = 'rgba(16, 20, 32, 0.16)';
 const FORMAIS_COM_CINTO = new Set(['terno', 'blazer', 'social']);
 const MANGA_CURTA = new Set(['camiseta', 'polo']);
-const GRAVATA = '#ff6f00';
-const DENIM = '#4a6fa5';
-const JEANS = '#3d5a80';
 
-// Cabeça
-const CY = -40.5;
-const R = 9.6;
+// ---------------------------------------------------------------- jeito de andar
 
-// ------------------------------------------------------------------ primitivas
-
-/** Preenche o caminho desenhado por `f` e passa o contorno escuro. */
-function forma(ctx: C, f: () => void, cor: string | CanvasGradient, lw = LW) {
-	ctx.beginPath();
-	f();
-	ctx.fillStyle = cor;
-	ctx.fill();
-	if (lw > 0) {
-		ctx.strokeStyle = CONTORNO;
-		ctx.lineWidth = lw;
-		ctx.lineJoin = 'round';
-		ctx.lineCap = 'round';
-		ctx.stroke();
+/**
+ * O jeito de andar num instante: quanto a perna avança e o pé sobe, quanto o
+ * corpo pula, o balanço dos braços, a inclinação e (flutuante) a altura do
+ * chão. 'normal' é o andar de sempre (09/11/2026). A rapidez da passada e a
+ * velocidade no mapa de cada jeito ficam em ANDARES (aparencia.ts), para o
+ * jogo.ts.
+ */
+export function passada(andar: string, p: { andando: boolean; fase: number; t: number; sentado?: boolean }): Passada {
+	const parado: Passada = { passo: 0, pe: 0, sobe: Math.sin(p.t * 2) * 0.4, balanco: 0, inclina: 0, flutua: 0 };
+	if (p.sentado) return { ...parado, sobe: Math.sin(p.t * 1.6) * 0.3 };
+	// Flutua sempre, parado ou andando: as pernas ficam soltas no ar
+	if (andar === 'flutuante')
+		return { ...parado, sobe: 0, flutua: 4 + Math.sin(p.t * 2.2) * 1.2, balanco: Math.sin(p.t * 1.8) * 0.12, inclina: p.andando ? 0.06 : 0 };
+	if (!p.andando) return andar === 'robotico' ? { ...parado, sobe: 0 } : parado;
+	const s = Math.sin(p.fase);
+	const a = Math.abs(s);
+	switch (andar) {
+		case 'apressado':
+			return { passo: s * 1.15, pe: 1.8, sobe: a * 1.6, balanco: s * 0.75, inclina: 0.06, flutua: 0 };
+		case 'gingado':
+			return { passo: s, pe: 1.3, sobe: a, balanco: s * 0.6, inclina: s * 0.08, flutua: 0 };
+		case 'saltitante':
+			return { passo: s * 0.85, pe: 2.2, sobe: a * 3, balanco: s * 0.55, inclina: 0, flutua: 0 };
+		case 'pesado':
+			return { passo: s * 0.8, pe: 1, sobe: a * 0.7, balanco: s * 0.3, inclina: s * 0.045, flutua: 0 };
+		case 'deslizante':
+			// Os pés não saem do chão e o corpo vai meio para trás
+			return { passo: s * 0.7, pe: 0, sobe: 0.2, balanco: s * 0.25, inclina: -0.05, flutua: 0 };
+		case 'elegante':
+			return { passo: s * 0.9, pe: 1.2, sobe: a * 0.9, balanco: s * 0.32, inclina: s * 0.03, flutua: 0 };
+		case 'robotico': {
+			// Em degraus: a perna para em três posições
+			const r = Math.round(s * 2) / 2;
+			return { passo: r * 0.9, pe: 1.2, sobe: Math.abs(r) * 0.5, balanco: r * 0.45, inclina: 0, flutua: 0 };
+		}
+		case 'furtivo':
+			return { passo: s * 0.85, pe: 1, sobe: -1.2 + a * 0.5, balanco: s * 0.25, inclina: 0.07, flutua: 0 };
+		case 'tranquilo':
+			return { passo: s * 0.65, pe: 0.9, sobe: a * 0.6, balanco: s * 0.25, inclina: 0, flutua: 0 };
+		default:
+			return { passo: s, pe: 1.5, sobe: a * 1.4, balanco: s * 0.5, inclina: 0, flutua: 0 };
 	}
 }
 
-/** Sombra chapada no lado direito de um caminho (a luz vem da esquerda). */
-function sombraDireita(ctx: C, f: () => void, xDe: number, cor = SOMBRA) {
-	ctx.save();
-	ctx.beginPath();
-	f();
-	ctx.clip();
-	ctx.fillStyle = cor;
-	ctx.fillRect(xDe, -70, 40, 80);
-	ctx.restore();
-}
-
-const capsula = (ctx: C, x: number, y0: number, y1: number, largura: number) => () => {
-	const r = largura / 2;
-	ctx.moveTo(x - r, y0 + r);
-	ctx.arc(x, y0 + r, r, Math.PI, 0);
-	ctx.lineTo(x + r, y1 - r);
-	ctx.arc(x, y1 - r, r, 0, Math.PI);
-	ctx.closePath();
-};
-
-const oval = (ctx: C, x: number, y: number, rx: number, ry: number, rot = 0) => () => ctx.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2);
-
-const caixa = (ctx: C, x: number, y: number, w: number, h: number, r: number | number[]) => () => ctx.roundRect(x, y, w, h, r);
-
-function poligono(ctx: C, pts: [number, number][]) {
-	return () => {
-		ctx.moveTo(pts[0][0], pts[0][1]);
-		for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
-		ctx.closePath();
-	};
-}
-
-function traco(ctx: C, x0: number, y0: number, x1: number, y1: number, cor = CONTORNO, lw = 0.8) {
-	ctx.beginPath();
-	ctx.moveTo(x0, y0);
-	ctx.lineTo(x1, y1);
-	ctx.strokeStyle = cor;
-	ctx.lineWidth = lw;
-	ctx.lineCap = 'round';
-	ctx.stroke();
-}
+// ------------------------------------------------------------------ primitivas
 
 const pernasSentado = (feminino: boolean) => (feminino ? [-2.2, 2.2] : [-2.7, 2.7]);
 
 /** Sentado: as canelas descem do joelho (na beira do sofá) até o pé, no chão. */
-function canelas(ctx: C, cor: string, sapato: string, feminino: boolean) {
+function canelas(ctx: C, cor: string, feminino: boolean, sapato: (px: number, y: number) => void) {
 	const largura = feminino ? 3.6 : 4.6;
 	for (const px of pernasSentado(feminino)) {
 		const c = capsula(ctx, px, -13.4, -1.8, largura);
 		forma(ctx, c, cor);
 		sombraDireita(ctx, c, px + 0.6);
-		if (feminino) sapatoFeminino(ctx, sapato, px, 0);
-		else desenharSapato(ctx, sapato, px, 0);
+		sapato(px, 0);
 	}
 }
 
@@ -153,18 +178,6 @@ function coxas(ctx: C, cor: string, feminino: boolean) {
 		}, cor);
 	}
 	traco(ctx, 0.2, -16, 1.4, -13.8, tom(cor, 0.7), 0.6);
-}
-
-/** Luminância de uma cor #rrggbb (0–255). */
-function luzDe(cor: string) {
-	return parseInt(cor.slice(1, 3), 16) * 0.3 + parseInt(cor.slice(3, 5), 16) * 0.59 + parseInt(cor.slice(5, 7), 16) * 0.11;
-}
-
-function ponto(ctx: C, x: number, y: number, r: number, cor: string) {
-	ctx.beginPath();
-	ctx.arc(x, y, r, 0, Math.PI * 2);
-	ctx.fillStyle = cor;
-	ctx.fill();
 }
 
 /** Contorno do tronco masculino: reto, ombro largo. */
@@ -209,10 +222,6 @@ type Figurino = {
 	longo: boolean;
 };
 
-const SAIA_ESCURA = '#2b3240';
-const SAIA_CLARA = '#e6dccb';
-const PRETO_FOSCO = '#2a2d35';
-
 /** A versão feminina de cada roupa do catálogo. `luz` = luminância da cor escolhida (0–255). */
 function figurinoFeminino(roupa: string, cor: string, luz: number): Figurino {
 	const longa = { manga: 'longa' as const, corManga: cor, longo: false };
@@ -240,11 +249,33 @@ function figurinoFeminino(roupa: string, cor: string, luz: number): Figurino {
 	}
 }
 
+/**
+ * A parte de baixo escolhida (campo `baixo`, 10/11/2026) no corpo padrão dela:
+ * as saias e a calça que já existem aqui. As novas (pantalona, midi...) saem
+ * com a forma mais parecida até o pintor do corpo desenhar a delas.
+ */
+const BAIXO_FEMININO: Record<string, Figurino['baixo']> = {
+	calcaSocial: 'calca',
+	jeans: 'calca',
+	pantalona: 'calca',
+	cargo: 'calca',
+	legging: 'calca',
+	bufante: 'calca',
+	bermuda: 'calca',
+	bermudaRasgada: 'calca',
+	saiaLapis: 'lapis',
+	saiaEvase: 'evase',
+	saiaRodada: 'rodada',
+	saiaMidi: 'rodada',
+	saiaLonga: 'rodada'
+};
+
 /** Pernas finas: de meia-calça cor da pele com saia, ou de calça justa. */
-function pernasFemininas(ctx: C, f: Figurino, sapato: string, pele: string, passo: number, sobe: number) {
+function pernasFemininas(ctx: C, f: Figurino, sapato: (px: number, y: number) => void, pele: string, ps: Passada) {
+	const { passo, sobe } = ps;
 	const pernas: [number, number][] = [
-		[-2.2 + passo * 2.2, Math.max(0, passo) * 1.5],
-		[2.2 - passo * 2.2, Math.max(0, -passo) * 1.5]
+		[-2.2 + passo * 2.2, Math.max(0, passo) * ps.pe],
+		[2.2 - passo * 2.2, Math.max(0, -passo) * ps.pe]
 	];
 	for (const [px, ergue] of pernas) {
 		if (f.baixo === 'calca') {
@@ -253,7 +284,7 @@ function pernasFemininas(ctx: C, f: Figurino, sapato: string, pele: string, pass
 			sombraDireita(ctx, perna, px + 0.7);
 			if (f.corBaixo === JEANS) traco(ctx, px - 1.7, -3.9 - ergue, px + 1.7, -3.9 - ergue, '#8aa6d2', 0.7);
 		} else forma(ctx, capsula(ctx, px, -12 - sobe, -1.8 - ergue, 3.4), pele);
-		sapatoFeminino(ctx, sapato, px, -ergue);
+		sapato(px, -ergue);
 	}
 }
 
@@ -337,24 +368,33 @@ function parteDeBaixo(ctx: C, f: Figurino) {
 	}
 }
 
-/** Braço fino; manga longa, curta ou bufante (vestido). */
+/** Braço fino; manga longa, curta ou bufante (vestido). Contexto já no ombro e girado. */
 function bracoFeminino(ctx: C, f: Figurino, pele: string) {
-	return (lado: number, angulo: number) => {
-		ctx.save();
-		ctx.translate(lado * 5.4, -28.4);
-		ctx.rotate(angulo);
-		if (f.manga === 'longa') {
-			const b = capsula(ctx, 0, 0, 12, 3.8);
-			forma(ctx, b, f.corManga);
-			sombraDireita(ctx, b, 0.7);
-		} else {
-			forma(ctx, capsula(ctx, 0, 0, 12, 3.2), pele);
-			if (f.manga === 'curta') forma(ctx, capsula(ctx, 0, -0.2, 5, 4.2), f.corManga);
-			else forma(ctx, oval(ctx, 0, 1.4, 2.8, 2.5), f.corManga);
-		}
-		forma(ctx, oval(ctx, 0, 12.2, 2.1, 2.1), pele);
-		ctx.restore();
-	};
+	if (f.manga === 'longa') {
+		const b = capsula(ctx, 0, 0, 12, 3.8);
+		forma(ctx, b, f.corManga);
+		sombraDireita(ctx, b, 0.7);
+	} else {
+		forma(ctx, capsula(ctx, 0, 0, 12, 3.2), pele);
+		if (f.manga === 'curta') forma(ctx, capsula(ctx, 0, -0.2, 5, 4.2), f.corManga);
+		else forma(ctx, oval(ctx, 0, 1.4, 2.8, 2.5), f.corManga);
+	}
+	forma(ctx, oval(ctx, 0, 12.2, 2.1, 2.1), pele);
+}
+
+/** Braço dele; contexto já no ombro e girado. */
+function bracoMasculino(ctx: C, a: Aparencia, cor: string, pele: string) {
+	const manga = a.roupa === 'jeans' ? DENIM : cor;
+	if (a.roupa === 'vestido') forma(ctx, capsula(ctx, 0, 0, 12.4, 3.9), pele);
+	else if (MANGA_CURTA.has(a.roupa)) {
+		forma(ctx, capsula(ctx, 0, 0, 12.4, 3.9), pele);
+		forma(ctx, capsula(ctx, 0, -0.2, 5.6, 4.6), manga);
+	} else {
+		const b = capsula(ctx, 0, 0, 12.4, 4.4);
+		forma(ctx, b, manga);
+		sombraDireita(ctx, b, 0.8);
+	}
+	forma(ctx, oval(ctx, 0, 12.6, 2.5, 2.5), pele);
 }
 
 /** Correntinha dourada com pingente. */
@@ -364,7 +404,7 @@ function colar(ctx: C, y = -28.2) {
 	ctx.strokeStyle = '#d9a73a';
 	ctx.lineWidth = 0.5;
 	ctx.stroke();
-	forma(ctx, oval(ctx, 0.3, y + 0.2, 0.75, 0.9), '#f0c050', 0.45);
+	forma(ctx, oval(ctx, 0.3, y + 0.2, 0.75, 0.9), DOURADO, 0.45);
 }
 
 /** Detalhes da peça de cima feminina (dentro do recorte do tronco). */
@@ -539,130 +579,226 @@ export function desenharBoneco(
 	const deFrente = telaY >= -0.05;
 	const feminino = a.corpo === 'feminino';
 
-	const pele = corDe(PELES, a.pele);
+	// Bicho de roupa: a pele é o pelo e o cabelo original não sai (o topete do
+	// macaco, por exemplo, é da cabeça de bicho)
+	const bicho = bichoDe(a.bicho);
+	const pele = bicho ? bicho.pelo : corDe(PELES, a.pele);
+	const estiloCabelo = bicho ? '' : a.cabelo;
 	const cabelo = corDe(CORES_CABELO, a.corCabelo);
 	const roupa = a.corRoupa;
 	const clara = luzDe(roupa) > 150;
 	const vestido = a.roupa === 'vestido';
-	const calca = vestido ? null : a.roupa === 'terno' ? tom(roupa, 0.88) : FORMAIS_COM_CINTO.has(a.roupa) ? '#2b3240' : JEANS;
-	const fig = feminino ? figurinoFeminino(a.roupa, roupa, luzDe(roupa)) : null;
 
-	const passo = p.andando && !sentado ? Math.sin(p.fase) : 0;
-	const sobe = sentado ? Math.sin(p.t * 1.6) * 0.3 : p.andando ? Math.abs(Math.sin(p.fase)) * 1.4 : Math.sin(p.t * 2) * 0.4;
+	// Parte de baixo: a de sempre (sai da roupa) ou a escolhida no campo `baixo`
+	let calca: string | null;
+	if (feminino || (vestido && a.baixo === 'auto')) calca = null;
+	else if (a.corBaixo) calca = a.corBaixo;
+	else if (a.baixo === 'jeans') calca = JEANS;
+	else if (a.baixo === 'calcaSocial') calca = SAIA_ESCURA;
+	else calca = a.roupa === 'terno' ? tom(roupa, 0.88) : FORMAIS_COM_CINTO.has(a.roupa) ? '#2b3240' : JEANS;
+	const fig = feminino ? figurinoFeminino(a.roupa, roupa, luzDe(roupa)) : null;
+	if (fig) {
+		const formaDeBaixo = BAIXO_FEMININO[a.baixo];
+		if (formaDeBaixo) {
+			fig.baixo = formaDeBaixo;
+			if (a.baixo === 'jeans') fig.corBaixo = JEANS;
+			else if (a.baixo === 'calcaSocial') fig.corBaixo = SAIA_ESCURA;
+		}
+		if (a.corBaixo) fig.corBaixo = a.corBaixo;
+	}
+
+	const ps = passada(a.andar, p);
+	const { passo, sobe } = ps;
 	// Sentado: canela (do joelho ao pé) e colo, na cor da calça ou da saia
 	const corColo = fig ? fig.corBaixo : (calca ?? roupa);
 	const corCanela = fig ? (fig.baixo === 'calca' ? fig.corBaixo : pele) : (calca ?? pele);
 
-	// Sombra no chão
+	const q: Quadro = {
+		a,
+		feminino,
+		deFrente,
+		sentado,
+		andando: p.andando,
+		fase: p.fase,
+		t: p.t,
+		passada: ps,
+		m: { ...(feminino ? MEDIDAS_FEMININO : MEDIDAS_MASCULINO) },
+		bicho,
+		pele,
+		cabelo,
+		roupa,
+		clara,
+		corBaixo: corColo,
+		extra: a.corExtra,
+		sapato: (px, y) => {
+			if (corpo.sapato(ctx, q, px, y)) return;
+			if (feminino) sapatoFeminino(ctx, a.sapato, px, y);
+			else desenharSapato(ctx, a.sapato, px, y);
+		}
+	};
+	const m = (q.m = corpo.medidas(q, q.m));
+
+	// Sombra no chão (menor quando flutua)
+	const longe = 1 - Math.min(0.4, ps.flutua / 15);
 	ctx.beginPath();
-	ctx.ellipse(0, -0.4, 10.5, 4.4, 0, 0, Math.PI * 2);
-	ctx.fillStyle = 'rgba(16, 24, 40, 0.24)';
+	ctx.ellipse(0, -0.4, 10.5 * longe, 4.4 * longe, 0, 0, Math.PI * 2);
+	ctx.fillStyle = `rgba(16, 24, 40, ${0.24 * longe})`;
 	ctx.fill();
 
 	ctx.save();
 	if (esquerda) ctx.scale(-1, 1);
+	if (ps.flutua) ctx.translate(0, -ps.flutua);
+
+	/** Leva o contexto do chão para o quadril (sobe, recuo de sentado, inclinação). */
+	const noQuadril = () => {
+		if (sentado) ctx.translate(-RECUO_SENTADO, ABAIXA_SENTADO - sobe);
+		else ctx.translate(0, -sobe);
+		if (ps.inclina) {
+			ctx.translate(0, -14);
+			ctx.rotate(ps.inclina);
+			ctx.translate(0, 14);
+		}
+	};
+
+	// O que fica atrás de tudo (aura, asas, capa de frente)
+	ctx.save();
+	noQuadril();
+	corpo.atras(ctx, q);
+	ctx.restore();
 
 	// Pernas e sapatos
-	if (sentado) canelas(ctx, corCanela, a.sapato, feminino);
-	else if (fig) pernasFemininas(ctx, fig, a.sapato, pele, passo, sobe);
-	else {
-		const pernas: [number, number][] = [
-			[-3 + passo * 2.4, Math.max(0, passo) * 1.5],
-			[3 - passo * 2.4, Math.max(0, -passo) * 1.5]
-		];
-		for (const [px, ergue] of pernas) {
-			if (calca) {
-				const perna = capsula(ctx, px, -16 - sobe, -2.4 - ergue, 5.2);
-				forma(ctx, perna, calca);
-				sombraDireita(ctx, perna, px + 0.9);
-			} else forma(ctx, capsula(ctx, px, -9 - sobe, -2.4 - ergue, 4.2), pele);
-			desenharSapato(ctx, a.sapato, px, -ergue);
+	if (!corpo.pernas(ctx, q)) {
+		if (sentado) canelas(ctx, corCanela, feminino, q.sapato);
+		else if (fig) pernasFemininas(ctx, fig, q.sapato, pele, ps);
+		else {
+			const pernas: [number, number][] = [
+				[-3 + passo * 2.4, Math.max(0, passo) * ps.pe],
+				[3 - passo * 2.4, Math.max(0, -passo) * ps.pe]
+			];
+			for (const [px, ergue] of pernas) {
+				if (calca) {
+					const perna = capsula(ctx, px, -16 - sobe, -2.4 - ergue, 5.2);
+					forma(ctx, perna, calca);
+					sombraDireita(ctx, perna, px + 0.9);
+				} else forma(ctx, capsula(ctx, px, -9 - sobe, -2.4 - ergue, 4.2), pele);
+				q.sapato(px, -ergue);
+			}
 		}
 	}
 
-	if (sentado) ctx.translate(-RECUO_SENTADO, ABAIXA_SENTADO - sobe);
-	else ctx.translate(0, -sobe);
+	noQuadril();
 
 	// Saia (ou quadril da calça) por cima do alto das pernas; sentado, vira colo
-	if (sentado) {
-		// nada: o colo é desenhado depois do tronco
-	} else if (fig) parteDeBaixo(ctx, fig);
-	else if (vestido) {
-		const saia = poligono(ctx, [[-5.8, -15.6], [5.8, -15.6], [8.2, -7.4], [-8.2, -7.4]]);
-		forma(ctx, saia, roupa);
-		sombraDireita(ctx, saia, 2.6);
-		traco(ctx, -7.6, -8.6, 7.6, -8.6, tom(roupa, 0.72), 0.9);
+	if (!sentado && !corpo.parteDeBaixo(ctx, q)) {
+		if (fig) parteDeBaixo(ctx, fig);
+		else if (vestido) {
+			const saia = poligono(ctx, [[-5.8, -15.6], [5.8, -15.6], [8.2, -7.4], [-8.2, -7.4]]);
+			forma(ctx, saia, roupa);
+			sombraDireita(ctx, saia, 2.6);
+			traco(ctx, -7.6, -8.6, 7.6, -8.6, tom(roupa, 0.72), 0.9);
+		}
 	}
 
-	if (deFrente) cabeloAtras(ctx, a.cabelo, cabelo);
-
-	// Braços
-	const balanco = passo * 0.5;
-	const manga = a.roupa === 'jeans' ? DENIM : roupa;
-	const bracoMasculino = (lado: number, angulo: number) => {
+	/** A cabeça (com pescoço, cabelo e chapéu) sobe ou desce com o porte. */
+	const naAlturaDaCabeca = (f: () => void) => {
 		ctx.save();
-		ctx.translate(lado * 7.2, -28.6);
-		ctx.rotate(angulo);
-		if (vestido) forma(ctx, capsula(ctx, 0, 0, 12.4, 3.9), pele);
-		else if (MANGA_CURTA.has(a.roupa)) {
-			forma(ctx, capsula(ctx, 0, 0, 12.4, 3.9), pele);
-			forma(ctx, capsula(ctx, 0, -0.2, 5.6, 4.6), manga);
-		} else {
-			const b = capsula(ctx, 0, 0, 12.4, 4.4);
-			forma(ctx, b, manga);
-			sombraDireita(ctx, b, 0.8);
-		}
-		forma(ctx, oval(ctx, 0, 12.6, 2.5, 2.5), pele);
+		if (m.ergue) ctx.translate(0, -m.ergue);
+		f();
 		ctx.restore();
 	};
-	const braco = fig ? bracoFeminino(ctx, fig, pele) : bracoMasculino;
+
+	if (deFrente)
+		naAlturaDaCabeca(() => {
+			cabeloAtras(ctx, estiloCabelo, cabelo);
+			cabeca.cabecaAtras(ctx, q);
+		});
+
+	// Braços (o contexto do gancho já vem no ombro e girado)
+	const balanco = ps.balanco;
+	const braco = (lado: -1 | 1, angulo: number) => {
+		ctx.save();
+		ctx.translate(lado * m.ombroX, m.ombroY);
+		ctx.rotate(angulo);
+		if (!corpo.braco(ctx, q, lado)) {
+			if (fig) bracoFeminino(ctx, fig, pele);
+			else bracoMasculino(ctx, a, roupa, pele);
+		}
+		ctx.restore();
+	};
 	braco(-1, balanco);
 
 	// Tronco e roupa
-	const corpo = fig ? troncoFeminino(ctx, fig.longo) : tronco(ctx);
+	const contorno = corpo.tronco(ctx, q) ?? (fig ? troncoFeminino(ctx, fig.longo) : tronco(ctx));
 	ctx.beginPath();
-	corpo();
+	contorno();
 	ctx.fillStyle = a.roupa === 'jeans' ? DENIM : roupa;
 	ctx.fill();
 	ctx.save();
 	ctx.beginPath();
-	corpo();
+	contorno();
 	ctx.clip();
-	if (fig) roupaFeminina(ctx, a.roupa, roupa, clara, pele, deFrente);
-	else desenharRoupa(ctx, a.roupa, roupa, clara, pele, deFrente);
+	if (!corpo.roupa(ctx, q)) {
+		if (fig) roupaFeminina(ctx, a.roupa, roupa, clara, pele, deFrente);
+		else desenharRoupa(ctx, a.roupa, roupa, clara, pele, deFrente);
+	}
 	ctx.fillStyle = SOMBRA;
-	ctx.fillRect(fig ? 2.9 : 3.4, -32, 6, 20);
+	ctx.fillRect(m.sombraX, -40, 20, 32);
 	ctx.restore();
 	ctx.beginPath();
-	corpo();
+	contorno();
 	ctx.strokeStyle = CONTORNO;
 	ctx.lineWidth = LW;
 	ctx.stroke();
 	if (fig) acabamentoFeminino(ctx, a.roupa, roupa, deFrente);
-	if (sentado && deFrente) coxas(ctx, corColo, feminino);
+	corpo.acabamento(ctx, q);
+	if (sentado && deFrente && !corpo.colo(ctx, q)) coxas(ctx, corColo, feminino);
 
-	// Pescoço, orelhas (com brinco, nela) e cabeça
-	if (fig) forma(ctx, caixa(ctx, -1.6, -32.4, 3.4, 2.6, 1), tom(pele, 0.9), 0.8);
-	else forma(ctx, caixa(ctx, -2.1, -32.4, 4.2, 2.6, 1), tom(pele, 0.9), 0.8);
-	forma(ctx, oval(ctx, -R + 0.3, CY + 0.8, 2, 2.6), pele);
-	forma(ctx, oval(ctx, R - 0.3, CY + 0.8, 2, 2.6), pele);
-	if (fig) for (const x of [-R + 0.1, R - 0.1]) forma(ctx, oval(ctx, x, CY + 3.9, 0.95, 0.95), '#f0c050', 0.5);
-	const cabeca = oval(ctx, 0, CY, R, R);
-	forma(ctx, cabeca, pele);
-	sombraDireita(ctx, cabeca, 5.4, 'rgba(120, 60, 30, 0.12)');
-	ctx.beginPath();
-	cabeca();
-	ctx.strokeStyle = CONTORNO;
-	ctx.lineWidth = LW;
-	ctx.stroke();
+	naAlturaDaCabeca(() => {
+		// Pescoço, orelhas (com brinco, nela) e cabeça
+		if (fig) forma(ctx, caixa(ctx, -1.6, -32.4, 3.4, 2.6, 1), tom(pele, 0.9), 0.8);
+		else forma(ctx, caixa(ctx, -2.1, -32.4, 4.2, 2.6, 1), tom(pele, 0.9), 0.8);
+		if (!cabeca.orelhas(ctx, q)) {
+			forma(ctx, oval(ctx, -R + 0.3, CY + 0.8, 2, 2.6), pele);
+			forma(ctx, oval(ctx, R - 0.3, CY + 0.8, 2, 2.6), pele);
+			if (fig) for (const x of [-R + 0.1, R - 0.1]) forma(ctx, oval(ctx, x, CY + 3.9, 0.95, 0.95), DOURADO, 0.5);
+		}
+		if (!cabeca.formaDaCabeca(ctx, q)) {
+			const cabecaRedonda = oval(ctx, 0, CY, R, R);
+			forma(ctx, cabecaRedonda, pele);
+			sombraDireita(ctx, cabecaRedonda, 5.4, SOMBRA_PELE);
+			ctx.beginPath();
+			cabecaRedonda();
+			ctx.strokeStyle = CONTORNO;
+			ctx.lineWidth = LW;
+			ctx.stroke();
+		}
 
-	if (deFrente) {
-		desenharRosto(ctx, feminino, pele, cabelo);
-		cabeloFrente(ctx, a.cabelo, cabelo);
-		desenharOculos(ctx, a.oculos);
-	} else cabeloCostas(ctx, a.cabelo, cabelo);
+		if (deFrente) {
+			if (!cabeca.rosto(ctx, q)) desenharRosto(ctx, feminino, pele, cabelo);
+			cabeca.sobreORosto(ctx, q);
+			cabeloFrente(ctx, estiloCabelo, cabelo);
+			cabeca.cabeloFrente(ctx, q);
+			desenharOculos(ctx, a.oculos);
+			cabeca.oculos(ctx, q);
+			cabeca.chapeu(ctx, q);
+		} else {
+			cabeloCostas(ctx, estiloCabelo, cabelo);
+			cabeca.costas(ctx, q);
+		}
+	});
 
-	braco(1, -balanco);
+	// Braço da frente, com o item na mão (no centro da mão, sem o giro do braço)
+	const anguloFrente = -balanco + m.anguloMao;
+	const comItem = a.naMao !== 'nada';
+	const naMao = (camada: 'atras' | 'frente') => {
+		ctx.save();
+		ctx.translate(m.ombroX - Math.sin(anguloFrente) * m.braco, m.ombroY + Math.cos(anguloFrente) * m.braco);
+		corpo.naMao(ctx, q, camada);
+		ctx.restore();
+	};
+	if (comItem) naMao('atras');
+	braco(1, anguloFrente);
+	if (comItem) naMao('frente');
 	ctx.restore();
 }
 
@@ -865,16 +1001,6 @@ function xadrez(ctx: C, cor: string) {
 
 // ------------------------------------------------------------------ cabelo
 
-/** Brilho do cabelo: um arco claro no alto, do lado da luz. */
-function brilho(ctx: C, cor: string, y = -48.6, cx = -1.5, raio = 7.2) {
-	ctx.beginPath();
-	ctx.arc(cx, y + raio, raio, Math.PI * 1.18, Math.PI * 1.42);
-	ctx.strokeStyle = tom(cor, 1.45);
-	ctx.lineWidth = 1.1;
-	ctx.lineCap = 'round';
-	ctx.stroke();
-}
-
 /** Cabelo que fica atrás do corpo e da cabeça, quando o boneco está de frente. */
 function cabeloAtras(ctx: C, estilo: string, cor: string) {
 	switch (estilo) {
@@ -1066,6 +1192,7 @@ function desenharOculos(ctx: C, tipo: string) {
 		for (const x of olhos) traco(ctx, x - 1.6, -41.8, x - 0.8, -40.8, 'rgba(255,255,255,0.55)', 0.6);
 		return;
 	}
+	if (tipo !== 'grau' && tipo !== 'grosso') return; // os novos saem em avatar-cabeca.ts
 	ctx.strokeStyle = tipo === 'grosso' ? '#15171d' : '#3a404b';
 	ctx.lineWidth = tipo === 'grosso' ? 1.35 : 0.8;
 	for (const x of olhos) {
@@ -1077,6 +1204,135 @@ function desenharOculos(ctx: C, tipo: string) {
 	traco(ctx, -0.1, -41, 1.1, -41, ctx.strokeStyle as string, ctx.lineWidth);
 }
 
+// ------------------------------------------------------- altura e cabecinha
+
+/**
+ * Até onde sobe cada cabelo, chapéu e enfeite (px acima do chão, no porte
+ * padrão e parado, com a respiração). Medido pixel a pixel em 10/11/2026 (a
+ * prévia do integrador desenhou cada cabelo com cada chapéu); o que não está
+ * aqui fica abaixo de ALTO_PADRAO. Peça nova que sobe mais: entra aqui.
+ */
+const ALTO_PADRAO = 54;
+const ALTO_CABELO: Record<string, number> = {
+	raboCacheado: 60,
+	moicano: 59.75,
+	cachosVolumosos: 58.75,
+	topete: 58.5,
+	coque: 58.5,
+	black: 57.5,
+	chanelCacheado: 57,
+	arrepiado: 57,
+	cacheado: 56.5,
+	penteadoTras: 56.25,
+	espetado: 55.75,
+	ondulado: 54.5,
+	// Segunda rodada: medido pelo pintor da cabeça depois de desenhar (o mesmo
+	// método dá 62 na cartola)
+	coqueSolto: 58.5,
+	flattop: 57.25,
+	onduladoCurto: 55.75,
+	repicado: 55.5,
+	permanente: 55.5,
+	chanelOndulado: 54.75,
+	ombro: 54.5
+};
+const ALTO_CHAPEU: Record<string, number> = {
+	cartola: 62,
+	chapeuMago: 61.75,
+	aureola: 61.75,
+	fedora: 58.5,
+	laco: 58,
+	gorro: 57.5,
+	boina: 57.5,
+	fone: 57,
+	bone: 56.25,
+	capuz: 56,
+	// Segunda rodada (medido). O chapéu de palha sobe até cobrir o coque do samurai
+	chapeuPalha: 59.25,
+	abaLarga: 59,
+	chapeuFlor: 58,
+	lencoCabeca: 55
+};
+const ALTO_DETALHE: Record<string, number> = { antenas: 60.5, chifres: 57.75 };
+/**
+ * Orelhas de bicho (segunda rodada, medido): a da coelha encosta no teto. O
+ * cachorro e a dálmata (orelha caída, 51,25) ficam abaixo do padrão.
+ */
+const ALTO_BICHO: Record<string, number> = {
+	coelho: 61.5,
+	lobo: 57.5,
+	macaco: 55.5,
+	gato: 55,
+	guaxinim: 55,
+	tigre: 54.5,
+	urso: 54.25,
+	panda: 54.25
+};
+
+/** Quanto a cabeça sobe (ou desce) pelo porte: gigante +2,6, baixinho -2,4. */
+export function ergueDaCabeca(a: Aparencia): number {
+	const feminino = a.corpo === 'feminino';
+	// corpo.medidas só lê a aparência, o sexo e se está sentado
+	const q = { a, feminino, sentado: false } as Quadro;
+	return corpo.medidas(q, { ...(feminino ? MEDIDAS_FEMININO : MEDIDAS_MASCULINO) }).ergue;
+}
+
+const altos = new WeakMap<Aparencia, [number, number]>();
+
+/**
+ * Até onde o boneco sobe acima do chão (px do zoom 1): o cabelo ou chapéu
+ * mais alto e o porte; em pé, também o pulo do jeito de andar e o flutuar
+ * (sentado não pula nem flutua). O jogo usa para pôr o crachá, o "z z z" e o
+ * balão do agente acima da cabeça. Guardado por aparência (o jogo pergunta a
+ * cada quadro).
+ */
+export function altoDoBoneco(a: Aparencia, sentado = false): number {
+	let par = altos.get(a);
+	if (!par) {
+		// Bicho não tem cabelo: vale a orelha
+		const bicho = bichoDe(a.bicho);
+		const topo = bicho ? (ALTO_BICHO[bicho.id] ?? ALTO_PADRAO) : (ALTO_CABELO[a.cabelo] ?? ALTO_PADRAO);
+		let alto = Math.max(topo, ALTO_CHAPEU[a.chapeu] ?? 0);
+		for (const d of a.detalhes) alto = Math.max(alto, ALTO_DETALHE[d] ?? 0);
+		alto += ergueDaCabeca(a);
+		// Andando, o pulo troca a respiração (0,4, que já está na medida)
+		const pulo = passada(a.andar, { andando: true, fase: Math.PI / 2, t: 0 }).sobe;
+		const flutua = a.andar === 'flutuante' ? 5.2 : 0;
+		par = [alto + Math.max(0, pulo - 0.4) + flutua, alto];
+		altos.set(a, par);
+	}
+	return par[sentado ? 1 : 0];
+}
+
+/**
+ * Até onde o crachá, o "z z z" e o balão precisam subir além do lugar de
+ * sempre (que cabe o boneco até 56 px de altura).
+ */
+export const sobraNoAlto = (a: Aparencia, sentado = false) => Math.max(0, altoDoBoneco(a, sentado) - 56);
+
+/**
+ * A "cabecinha" da tela de escolha: o boneco inteiro, de frente e parado,
+ * com a cabeça no centro de um círculo de `raio` px (recortado nele). O
+ * desenho é o do jogo; só a escala muda.
+ */
+export function desenharCabecinha(ctx: C, a: Aparencia, cx: number, cy: number, raio: number, t = 0.6) {
+	// O círculo pega da ponta do chapéu alto ao colarinho: ~16 px do boneco
+	const k = raio / 16;
+	// Orelha de bicho que passa do círculo (a da coelha vai a 61,5; ele acaba
+	// em ~59,7): o boneco desce o que passa, para a ponta não sair cortada
+	const bicho = bichoDe(a.bicho);
+	const desce = bicho ? Math.min(2.4, Math.max(0, (ALTO_BICHO[bicho.id] ?? 0) - 59.5)) : 0;
+	ctx.save();
+	ctx.beginPath();
+	ctx.arc(cx, cy, raio, 0, Math.PI * 2);
+	ctx.clip();
+	ctx.translate(cx, cy);
+	ctx.scale(k, k);
+	ctx.translate(0, -(CY - 3.2 - ergueDaCabeca(a)) + desce);
+	desenharBoneco(ctx, { dirX: 1, dirY: 1, andando: false, fase: 0, t }, a);
+	ctx.restore();
+}
+
 /** Boneco num ponto do mundo (o jogo). */
 export function desenharAvatar(ctx: C, p: Pose, a: Aparencia = APARENCIA_PADRAO) {
 	const base = paraTela(p.x, p.y, 0);
@@ -1086,8 +1342,11 @@ export function desenharAvatar(ctx: C, p: Pose, a: Aparencia = APARENCIA_PADRAO)
 	ctx.restore();
 }
 
-/** Retângulo do avatar na tela (zoom 1), para o clique. */
-export function areaDoAvatar(x: number, y: number, sentado = false) {
+/**
+ * Retângulo do avatar na tela (zoom 1), para o clique. `sobra`: o tanto que o
+ * chapéu alto, o gigante ou quem flutua passam do boneco de sempre (sobraNoAlto).
+ */
+export function areaDoAvatar(x: number, y: number, sentado = false, sobra = 0) {
 	const b = paraTela(x, y, 0);
-	return { x0: b.x - 12, y0: b.y - 56 + (sentado ? ABAIXA_SENTADO : 0), x1: b.x + 12, y1: b.y + 3 };
+	return { x0: b.x - 12, y0: b.y - 56 - sobra + (sentado ? ABAIXA_SENTADO : 0), x1: b.x + 12, y1: b.y + 3 };
 }

@@ -39,14 +39,21 @@ import {
 	estilo,
 	poli
 } from './desenho';
-import { desenharAvatar, areaDoAvatar, ABAIXA_SENTADO } from './avatar';
-import { APARENCIA_PADRAO, type Aparencia } from './aparencia';
+import { desenharAvatar, areaDoAvatar, sobraNoAlto, ABAIXA_SENTADO } from './avatar';
+import { APARENCIA_PADRAO, andarDe, type Aparencia } from './aparencia';
 import type { Pessoa, Situacao } from './presenca';
 import { alvos, deveMover } from './movimento';
 import { SENTADO_MEIA, type Assento } from './assentos';
-import { COR_AGENTE, NOME_DO_ESTADO, PREFIXO_AGENTE, type Agente } from './agentes';
+import { COR_AGENTE, COR_DO_ESTADO, NOME_DO_ESTADO, PREFIXO_AGENTE, textoAguardando, type Agente, type EstadoAgente } from './agentes';
+import { NOME_DA_ATIVIDADE, type Destino } from './rotina';
 
 export const GRADE: Grade = { largura: LARGURA, altura: ALTURA, livre: celulaLivre, parede: paredeEntre };
+
+/**
+ * O que o agente faz agora pela rotina (rotina.ts): no posto, na pausa (com a
+ * atividade) ou em reunião. O Escritorio.svelte calcula e passa em definirAgentes.
+ */
+export type MomentoDoAgente = Pick<Destino, 'motivo' | 'atividade'>;
 
 export type Selecao = { tipo: 'avatar' } | { tipo: 'sala'; id: string; objeto?: string } | { tipo: 'pessoa'; id: string };
 
@@ -118,12 +125,54 @@ type Outro = Corpo & {
 	situacao: Situacao;
 	/** O alvo que está valendo (movimento.ts). */
 	chave: string;
-	/** É um agente (agentes.ts): anda entre a copa e a cadeira dele. */
+	/** É um agente (agentes.ts): anda entre o posto, a pausa e a reunião. */
 	agente?: Agente | null;
+	/** O momento da rotina do agente (crachá e texto do mouse). */
+	momento?: MomentoDoAgente | null;
 };
 type Desenho = { peca: Desenhavel; atras: boolean; desenhar: () => void };
 
 const primeiroNome = (nome: string) => nome.split(/\s+/)[0] || nome;
+
+/**
+ * O que o crachá do agente diz: o estado da tarefa e, sem tarefa, o momento da
+ * rotina (no posto, a atividade da pausa, em reunião). "Precisa de você" vale
+ * mais que tudo; em reunião, o crachá diz a reunião e o ponto, o estado.
+ */
+export function estadoNoCracha(a: Agente, m: MomentoDoAgente | null | undefined): string {
+	if (a.estado === 'esperando') return NOME_DO_ESTADO.esperando;
+	if (m?.motivo === 'reuniao') return 'em reunião';
+	if (a.estado !== 'livre') return NOME_DO_ESTADO[a.estado];
+	if (m?.motivo === 'pausa' && m.atividade) return NOME_DA_ATIVIDADE[m.atividade];
+	if (m?.motivo === 'posto') return 'no posto';
+	return NOME_DO_ESTADO.livre;
+}
+
+/** O texto do mouse em cima do agente: cargo, onde está e o que faz. */
+export function agenteNoMouse(a: Agente, m: MomentoDoAgente | null | undefined): string {
+	const partes = [a.nome, a.cargo];
+	if (m?.motivo === 'reuniao') partes.push('em reunião de alinhamento');
+	if (a.estado === 'aguardando') partes.push(textoAguardando(a.tarefa?.subtarefasAbertas ?? null));
+	else if (a.estado !== 'livre') partes.push(a.tarefa?.atividade ?? NOME_DO_ESTADO[a.estado]);
+	else if (m?.motivo === 'pausa' && m.atividade) partes.push(NOME_DA_ATIVIDADE[m.atividade]);
+	else if (m?.motivo === 'posto') partes.push('no posto, esperando a próxima tarefa');
+	else if (!m) partes.push(NOME_DO_ESTADO.livre);
+	return partes.join(' · ');
+}
+
+/** Jogando pingue-pongue: o agente parado na ponta da mesa, de raquete na mão. */
+const jogaPingue = (o: Outro) => !o.andando && !o.sentado && o.momento?.motivo === 'pausa' && o.momento.atividade === 'pinguePongue';
+
+/** A mesma aparência com a raquete na mão (guardada: o jogo pede a cada quadro). */
+const comRaquete = new WeakMap<Aparencia, Aparencia>();
+function raqueteNaMao(a: Aparencia): Aparencia {
+	let r = comRaquete.get(a);
+	if (!r) {
+		r = { ...a, naMao: 'raquete' };
+		comRaquete.set(a, r);
+	}
+	return r;
+}
 
 /** Tira `folga` do fim do trajeto (para parar ao lado de alguém, e não em cima). */
 function encurtar(rota: Ponto[], folga: number) {
@@ -146,6 +195,10 @@ function encurtar(rota: Ponto[], folga: number) {
 }
 
 const VELOCIDADE = 3.4; // células por segundo
+/** Tamanho do balão do agente na tela (o do zoom padrão, 1,25). */
+const BALAO_ESCALA = 1.25;
+/** Espaço que o balão ocupa acima do crachá (px de tela). */
+const BALAO_ALTO = 21;
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 2.4;
 const CHAVE_POSICAO = 'dgathe:posicao';
@@ -402,14 +455,15 @@ export class Jogo {
 	}
 
 	/**
-	 * Os agentes (agentes.ts) e onde cada um deve estar: a cadeira dele quando
-	 * trabalha, a copa quando está livre. Mudou o lugar, ele anda até lá.
-	 * `reservados` são os assentos que as pessoas não usam.
+	 * Os agentes (agentes.ts) e onde cada um deve estar (o posto, a pausa ou a
+	 * reunião, pela rotina). Mudou o lugar, ele anda até lá. `momento` é o que
+	 * ele faz lá (o crachá e o texto do mouse dizem). `reservados` são os
+	 * assentos que as pessoas não usam.
 	 */
-	definirAgentes(lista: { agente: Agente; lugar: Assento }[], reservados: Iterable<string>) {
+	definirAgentes(lista: { agente: Agente; lugar: Assento; momento?: MomentoDoAgente | null }[], reservados: Iterable<string>) {
 		this.assentosDeAgentes = new Set(reservados);
 		const vistos = new Set<string>();
-		for (const { agente: a, lugar } of lista) {
+		for (const { agente: a, lugar, momento = null } of lista) {
 			const id = PREFIXO_AGENTE + a.id;
 			vistos.add(id);
 			const pessoa: Pessoa = {
@@ -449,7 +503,8 @@ export class Jogo {
 					situacao: 'online',
 					chave,
 					fim: null,
-					agente: a
+					agente: a,
+					momento
 				};
 				novo.sala = zonaNoPonto(novo.x, novo.y);
 				this.outros.set(id, novo);
@@ -457,6 +512,7 @@ export class Jogo {
 			}
 			o.pessoa = pessoa;
 			o.agente = a;
+			o.momento = momento;
 			if (o.chave !== chave) {
 				o.chave = chave;
 				this.levarOutro(o, lugar, null);
@@ -639,7 +695,7 @@ export class Jogo {
 
 		// Meu avatar
 		const av = this.av;
-		if (av.caminho.length && this.mover(av, dt)) {
+		if (av.caminho.length && this.mover(av, dt, this.aparencia)) {
 			this.avisos.movimento(false, null);
 			const a = av.vaiSentar;
 			av.vaiSentar = null;
@@ -659,7 +715,7 @@ export class Jogo {
 		// Os outros
 		let mudou = false;
 		for (const o of this.outros.values()) {
-			if (o.caminho.length && this.mover(o, dt)) {
+			if (o.caminho.length && this.mover(o, dt, o.pessoa.aparencia)) {
 				this.chegou(o);
 				mudou = true;
 			}
@@ -678,9 +734,15 @@ export class Jogo {
 		}
 	}
 
-	/** Anda um pedaço do caminho; devolve true quando chega ao fim. */
-	private mover(c: Corpo, dt: number): boolean {
-		let resta = VELOCIDADE * dt;
+	/**
+	 * Anda um pedaço do caminho; devolve true quando chega ao fim. Cada um anda
+	 * do seu jeito (o andar do personagem, ANDARES em aparencia.ts): o
+	 * apressado vai mais rápido e com passada mais curta e ligeira, o pesado
+	 * devagar. Todas as telas fazem a mesma conta, então ninguém se adianta.
+	 */
+	private mover(c: Corpo, dt: number, aparencia: Aparencia): boolean {
+		const jeito = andarDe(aparencia.andar);
+		let resta = VELOCIDADE * jeito.velocidade * dt;
 		while (resta > 0 && c.caminho.length) {
 			const alvo = c.caminho[0];
 			const dx = alvo.x - c.x;
@@ -701,7 +763,7 @@ export class Jogo {
 				resta = 0;
 			}
 		}
-		c.fase += dt * 10.5;
+		c.fase += dt * 10.5 * jeito.cadencia;
 		c.andando = c.caminho.length > 0;
 		return !c.andando;
 	}
@@ -825,21 +887,24 @@ export class Jogo {
 						{ x: c.x, y: c.y, dirX: c.dirX, dirY: c.dirY, andando: c.andando, fase: c.fase, t: this.t, sentado: !!s },
 						aparencia
 					);
-					if (o && o.situacao !== 'online' && !c.andando) this.desenharSono(c, !!s);
-					if (o?.agente && !c.andando) this.desenharBalaoDoAgente(c, !!s, o.agente);
+					if (o && o.situacao !== 'online' && !c.andando) this.desenharSono(c, !!s, sobraNoAlto(aparencia, !!s));
+					// O balão do agente sai com o crachá (desenharRotulos), em cima dele
 				}
 			});
 		};
-		for (const o of this.outros.values()) add(o, o.pessoa.aparencia, o);
+		for (const o of this.outros.values()) add(o, o.agente && jogaPingue(o) ? raqueteNaMao(o.pessoa.aparencia) : o.pessoa.aparencia, o);
 		add(this.av, this.aparencia);
 		return lista;
 	}
 
-	/** "z z z" subindo da cabeça de quem está ausente ou offline. */
-	private desenharSono(onde: Ponto, sentado: boolean) {
+	/**
+	 * "z z z" subindo da cabeça de quem está ausente ou offline. `sobra`: o
+	 * quanto o chapéu alto, o gigante ou quem flutua passam da altura de sempre.
+	 */
+	private desenharSono(onde: Ponto, sentado: boolean, sobra: number) {
 		const ctx = this.ctx;
 		const b = paraTela(onde.x, onde.y, 0);
-		const topo = b.y - 54 + (sentado ? ABAIXA_SENTADO : 0);
+		const topo = b.y - 54 - sobra + (sentado ? ABAIXA_SENTADO : 0);
 		ctx.save();
 		ctx.textAlign = 'center';
 		ctx.textBaseline = 'middle';
@@ -854,25 +919,26 @@ export class Jogo {
 	}
 
 	/**
-	 * Em cima do agente: três pontinhos digitando quando trabalha; a mão
-	 * levantada (um "!" laranja que pula) quando espera uma resposta.
+	 * O balão do agente, logo acima do crachá (na tela, do tamanho do zoom
+	 * padrão): três pontinhos digitando quando trabalha; a mão levantada (um "!"
+	 * laranja que pula) quando espera uma resposta; a ampulheta quando o líder
+	 * espera a equipe terminar. Fica em cima do crachá, e não da cabeça, porque o
+	 * crachá (desenhado por último) cobria o balão no zoom de sempre.
 	 */
-	private desenharBalaoDoAgente(onde: Ponto, sentado: boolean, a: Agente) {
-		if (a.estado !== 'trabalhando' && a.estado !== 'esperando') return;
+	private desenharBalaoDoAgente(estado: EstadoAgente, x: number, y: number) {
 		const ctx = this.ctx;
-		const b = paraTela(onde.x, onde.y, 0);
-		const topo = b.y - 58 + (sentado ? ABAIXA_SENTADO : 0);
 		ctx.save();
-		if (a.estado === 'esperando') {
+		ctx.translate(x, y);
+		ctx.scale(BALAO_ESCALA, BALAO_ESCALA);
+		if (estado === 'esperando') {
 			const pulo = Math.abs(Math.sin(this.t * 4)) * 3;
-			const cx = b.x + 11;
-			const cy = topo - 4 - pulo;
+			const cy = -pulo;
 			ctx.beginPath();
-			ctx.arc(cx, cy, 6.4 + Math.sin(this.t * 6) * 0.6 + 2.2, 0, Math.PI * 2);
+			ctx.arc(0, cy, 6.4 + Math.sin(this.t * 6) * 0.6 + 2.2, 0, Math.PI * 2);
 			ctx.fillStyle = 'rgba(245, 165, 36, 0.28)';
 			ctx.fill();
 			ctx.beginPath();
-			ctx.arc(cx, cy, 6.4, 0, Math.PI * 2);
+			ctx.arc(0, cy, 6.4, 0, Math.PI * 2);
 			ctx.fillStyle = '#f5a524';
 			ctx.fill();
 			ctx.lineWidth = 1.1;
@@ -882,12 +948,12 @@ export class Jogo {
 			ctx.font = '900 9px Inter, system-ui, sans-serif';
 			ctx.textAlign = 'center';
 			ctx.textBaseline = 'middle';
-			ctx.fillText('!', cx, cy + 0.5);
+			ctx.fillText('!', 0, cy + 0.5);
+		} else if (estado === 'aguardando') {
+			this.desenharAmpulheta(0, 0);
 		} else {
-			const cx = b.x + 12;
-			const cy = topo - 3;
 			ctx.beginPath();
-			ctx.roundRect(cx - 9, cy - 5.5, 18, 11, 5.5);
+			ctx.roundRect(-9, -5.5, 18, 11, 5.5);
 			ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
 			ctx.fill();
 			ctx.lineWidth = 0.9;
@@ -897,11 +963,85 @@ export class Jogo {
 				const fase = (this.t * 2.2 - i * 0.22) % 1;
 				const sobe = fase < 0.5 ? Math.sin(fase * 2 * Math.PI) * 1.6 : 0;
 				ctx.beginPath();
-				ctx.arc(cx - 4.6 + i * 4.6, cy - sobe, 1.35, 0, Math.PI * 2);
+				ctx.arc(-4.6 + i * 4.6, -sobe, 1.35, 0, Math.PI * 2);
 				ctx.fillStyle = COR_AGENTE;
 				ctx.fill();
 			}
 		}
+		ctx.restore();
+	}
+
+	/**
+	 * O balão do líder esperando a equipe: uma ampulheta no balão branco, com a
+	 * areia descendo; a cada 2,4 s ela vira (o mesmo traço dos outros balões).
+	 */
+	private desenharAmpulheta(cx: number, cy: number) {
+		const ctx = this.ctx;
+		ctx.beginPath();
+		ctx.arc(cx, cy, 6.6, 0, Math.PI * 2);
+		ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+		ctx.fill();
+		ctx.lineWidth = 0.9;
+		ctx.strokeStyle = '#232a3a';
+		ctx.stroke();
+		const k = (this.t % 2.4) / 2.4;
+		// No fim do ciclo, gira meia volta (a areia toda embaixo vira a de cima)
+		const vira = k > 0.84 ? (k - 0.84) / 0.16 : 0;
+		const desceu = Math.min(1, k / 0.84);
+		const w = 2.7;
+		const h = 3.7;
+		ctx.save();
+		ctx.translate(cx, cy);
+		ctx.rotate(vira * vira * (3 - 2 * vira) * Math.PI);
+		const vidro = () => {
+			ctx.beginPath();
+			ctx.moveTo(-w, -h);
+			ctx.lineTo(w, -h);
+			ctx.lineTo(0.45, 0);
+			ctx.lineTo(w, h);
+			ctx.lineTo(-w, h);
+			ctx.lineTo(-0.45, 0);
+			ctx.closePath();
+		};
+		vidro();
+		ctx.fillStyle = '#e4f5fd';
+		ctx.fill();
+		const areia = COR_DO_ESTADO.aguardando;
+		ctx.fillStyle = areia;
+		// Em cima: um triângulo que encolhe (a área cai com o quadrado do lado)
+		const f = Math.sqrt(1 - desceu);
+		if (f > 0.05) {
+			ctx.beginPath();
+			ctx.moveTo(0, -0.2);
+			ctx.lineTo(-w * f * 0.92, -h * f * 0.92);
+			ctx.lineTo(w * f * 0.92, -h * f * 0.92);
+			ctx.closePath();
+			ctx.fill();
+		}
+		// Embaixo: o montinho cresce; no meio, o fio de areia caindo
+		if (desceu > 0.05) {
+			ctx.beginPath();
+			ctx.moveTo(-w * 0.92, h);
+			ctx.lineTo(w * 0.92, h);
+			ctx.lineTo(0, h - h * 0.85 * Math.sqrt(desceu));
+			ctx.closePath();
+			ctx.fill();
+		}
+		if (!vira && desceu < 1) {
+			ctx.fillRect(-0.3, 0, 0.6, h * 0.9);
+		}
+		vidro();
+		ctx.lineWidth = 0.6;
+		ctx.strokeStyle = '#232a3a';
+		ctx.stroke();
+		ctx.lineCap = 'round';
+		ctx.lineWidth = 1.2;
+		ctx.beginPath();
+		ctx.moveTo(-w - 0.7, -h);
+		ctx.lineTo(w + 0.7, -h);
+		ctx.moveTo(-w - 0.7, h);
+		ctx.lineTo(w + 0.7, h);
+		ctx.stroke();
 		ctx.restore();
 	}
 
@@ -1025,33 +1165,37 @@ export class Jogo {
 
 		// Crachás: o meu fica no lugar; o de quem está colado sobe um degrau para
 		// não cobrir o outro. Desenha os dos outros primeiro e o meu por cima.
-		type Cracha = { texto: string; x: number; y: number; o: Parameters<typeof pilula>[3] };
+		type Cracha = { texto: string; x: number; y: number; o: Parameters<typeof pilula>[3]; balao?: EstadoAgente | null };
 		const crachas: Cracha[] = [];
 		const pe = (x: number, y: number) => this.daCena(paraTela(x, y, 0));
 		const meu = pe(this.av.x, this.av.y);
 		crachas.push({
 			texto: `${this.opcoes.nome} · ${this.opcoes.cargo}`,
 			x: meu.x,
-			y: meu.y - (62 - (this.av.sentado ? ABAIXA_SENTADO : 0)) * this.zoom - 6,
+			y: meu.y - (62 + sobraNoAlto(this.aparencia, !!this.av.sentado) - (this.av.sentado ? ABAIXA_SENTADO : 0)) * this.zoom - 6,
 			o: { fundo: 'rgba(11, 18, 32, 0.86)', cor: '#ffd58a' }
 		});
 		for (const o of this.outros.values()) {
 			const c = pe(o.x, o.y);
-			const y = c.y - (62 - (o.sentado ? ABAIXA_SENTADO : 0)) * this.zoom - 6;
+			// Chapéu alto, gigante e quem flutua: o crachá sobe junto
+			const y = c.y - (62 + sobraNoAlto(o.pessoa.aparencia, !!o.sentado) - (o.sentado ? ABAIXA_SENTADO : 0)) * this.zoom - 6;
 			if (o.agente) {
 				const a = o.agente;
 				const espera = a.estado === 'esperando';
 				const pisca = espera && Math.sin(this.t * 5) > 0;
+				const comBalao = !o.andando && (a.estado === 'trabalhando' || a.estado === 'esperando' || a.estado === 'aguardando');
 				crachas.push({
-					texto: `${a.nome} · ${NOME_DO_ESTADO[a.estado]}`,
+					texto: `${a.nome} · ${estadoNoCracha(a, o.momento)}`,
 					x: c.x,
 					y,
+					balao: comBalao ? a.estado : null,
 					o: espera
 						? { fundo: pisca ? 'rgba(245, 165, 36, 0.98)' : 'rgba(224, 140, 20, 0.94)', cor: '#1c2534', ponto: '#1c2534' }
 						: {
 								fundo: 'rgba(52, 33, 102, 0.88)',
 								cor: '#efe9ff',
-								ponto: a.estado === 'trabalhando' ? '#34d399' : a.estado === 'fila' ? '#c4b5fd' : '#9aa6ba'
+								// O ponto do estado (o mesmo das listas); sem tarefa, cinza
+								ponto: a.estado === 'livre' ? '#9aa6ba' : COR_DO_ESTADO[a.estado]
 							}
 				});
 				continue;
@@ -1060,7 +1204,7 @@ export class Jogo {
 			crachas.push({
 				texto: `${primeiroNome(o.pessoa.nome)} · ${o.situacao === 'inativo' ? 'ausente' : o.situacao === 'offline' ? 'offline' : o.pessoa.cargo}`,
 				x: c.x,
-				y: c.y - (62 - (o.sentado ? ABAIXA_SENTADO : 0)) * this.zoom - 6,
+				y,
 				o: ausente
 					? { fundo: 'rgba(60, 68, 86, 0.72)', cor: '#d5dbe6', ponto: '#9aa6ba' }
 					: { fundo: 'rgba(11, 18, 32, 0.8)', cor: '#ffffff', ponto: o.pessoa.cor ?? '#9aa6ba' }
@@ -1072,7 +1216,8 @@ export class Jogo {
 			const w = ctx.measureText(c.texto).width + (c.o?.ponto ? 22 : 14);
 			const h = 20;
 			for (let tentativa = 0; tentativa < 6; tentativa++) {
-				const r = { x0: c.x - w / 2, y0: c.y - h / 2, x1: c.x + w / 2, y1: c.y + h / 2 };
+				// O balão do agente fica em cima do crachá: entra na conta do espaço
+				const r = { x0: c.x - w / 2, y0: c.y - h / 2 - (c.balao ? BALAO_ALTO : 0), x1: c.x + w / 2, y1: c.y + h / 2 };
 				if (!ocupados.some((q) => r.x0 < q.x1 && q.x0 < r.x1 && r.y0 < q.y1 && q.y0 < r.y1)) {
 					ocupados.push(r);
 					break;
@@ -1081,6 +1226,7 @@ export class Jogo {
 			}
 		}
 		for (let i = crachas.length - 1; i >= 0; i--) pilula(crachas[i].texto, crachas[i].x, crachas[i].y, crachas[i].o);
+		for (const c of crachas) if (c.balao) this.desenharBalaoDoAgente(c.balao, c.x + 10, c.y - 10 - BALAO_ALTO / 2);
 
 		if (this.mouse.dentro && this.hover && !this.arrasto?.moveu) {
 			let texto = '';
@@ -1089,7 +1235,7 @@ export class Jogo {
 				const o = this.outros.get(this.hover.id);
 				const a = o?.agente;
 				texto = a
-					? `${a.nome} · ${a.cargo}${a.tarefa?.atividade && a.estado !== 'livre' ? ` · ${a.tarefa.atividade}` : a.estado === 'livre' ? ' · livre, na copa' : ''}`
+					? agenteNoMouse(a, o?.momento)
 					: o
 						? `${o.pessoa.nome} · ${o.situacao === 'inativo' ? 'ausente (15 min sem mexer)' : o.situacao === 'offline' ? 'offline, na recepção' : o.pessoa.cargo}`
 						: '';
@@ -1112,10 +1258,10 @@ export class Jogo {
 
 	private oQueEstaEm(sx: number, sy: number): Hover {
 		const p = this.paraCena(sx, sy);
-		const a = areaDoAvatar(this.av.x, this.av.y, !!this.av.sentado);
+		const a = areaDoAvatar(this.av.x, this.av.y, !!this.av.sentado, sobraNoAlto(this.aparencia, !!this.av.sentado));
 		if (p.x >= a.x0 && p.x <= a.x1 && p.y >= a.y0 && p.y <= a.y1) return { tipo: 'avatar' };
 		for (const o of this.outros.values()) {
-			const b = areaDoAvatar(o.x, o.y, !!o.sentado);
+			const b = areaDoAvatar(o.x, o.y, !!o.sentado, sobraNoAlto(o.pessoa.aparencia, !!o.sentado));
 			if (p.x >= b.x0 && p.x <= b.x1 && p.y >= b.y0 && p.y <= b.y1) return { tipo: 'pessoa', id: o.pessoa.id };
 		}
 		for (const lista of [this.frente, this.atras]) {

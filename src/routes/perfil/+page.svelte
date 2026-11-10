@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { fade, scale } from 'svelte/transition';
@@ -12,7 +12,9 @@
 	import { CORES_TEMA, COR_PADRAO, normalizaHex, escurece } from '$lib/tema';
 	import { AVATARES } from '$lib/avatares';
 	import EditorAvatar from '$lib/components/dgathe/EditorAvatar.svelte';
-	import { lerAparencia, type Aparencia } from '$lib/dgathe/aparencia';
+	import { lerAparencia, paraGuardar, type Aparencia } from '$lib/dgathe/aparencia';
+	import type { Json } from '$lib/database.types';
+	import type { SupabaseClient } from '@supabase/supabase-js';
 
 	let { data } = $props();
 
@@ -91,10 +93,30 @@
 	// --- Avatar do DGathe (o bonequinho do escritório) ---
 	const aparenciaInicial = untrack(() => lerAparencia(colab?.dgathe_avatar, colab?.cor_tema));
 
+	// Os personagens que já são de algum agente: a grade marca, para a pessoa
+	// não escolher sem querer o mesmo boneco de um agente. Quem não vê o DGathe
+	// recebe null e a grade sai sem marca.
+	let personagensDeAgentes = $state<Map<string, string[]>>(new Map());
+	onMount(async () => {
+		// A função não está nos tipos gerados do banco (o jogo também chama sem tipo)
+		const { data: agora } = await (data.supabase as unknown as SupabaseClient).rpc('dgathe_agentes_agora');
+		const lista = (agora as { agentes?: { nome?: unknown; aparencia?: unknown }[] } | null)?.agentes;
+		if (!Array.isArray(lista)) return;
+		const mapa = new Map<string, string[]>();
+		for (const ag of lista) {
+			const id = (ag.aparencia as { personagem?: unknown } | null)?.personagem;
+			if (typeof id !== 'string' || typeof ag.nome !== 'string') continue;
+			mapa.set(id, [...(mapa.get(id) ?? []), ag.nome]);
+		}
+		personagensDeAgentes = mapa;
+	});
+
 	async function salvarAparencia(a: Aparencia): Promise<boolean> {
+		// Personagem sem mudança grava só {"personagem": id}: quando o desenho
+		// dele melhorar, a pessoa já aparece com o novo
 		const { error } = await data.supabase
 			.from('colaboradores')
-			.update({ dgathe_avatar: a })
+			.update({ dgathe_avatar: paraGuardar(a) as Json })
 			.eq('email', data.email);
 		if (error) {
 			toast.error('Não foi possível salvar o avatar do DGathe.');
@@ -178,91 +200,97 @@
 	</div>
 
 	<div class="grid gap-4 lg:grid-cols-3">
-		<!-- Informações Pessoais -->
-		<Card class="lg:col-span-2" padding="lg">
-			<div class="mb-4 flex items-center gap-2">
-				<Icon name="contact" size={18} class="text-brand" />
-				<h2 class="text-sm font-semibold text-navy">Informações Pessoais</h2>
-			</div>
+		<div class="flex min-w-0 flex-col gap-4 lg:col-span-2">
+			<!-- Informações Pessoais -->
+			<Card padding="lg">
+				<div class="mb-4 flex items-center gap-2">
+					<Icon name="contact" size={18} class="text-brand" />
+					<h2 class="text-sm font-semibold text-navy">Informações Pessoais</h2>
+				</div>
 
-			<form
-				method="POST"
-				action="?/salvar"
-				use:enhance={() => {
-					salvando = true;
-					return async ({ result, update }) => {
-						salvando = false;
-						await update({ reset: false });
-						if (result.type === 'success') {
-							toast.success('Perfil atualizado.');
-							await invalidateAll();
-						} else if (result.type === 'failure') {
-							toast.error((result.data as any)?.error ?? 'Não foi possível salvar.');
-						}
-					};
-				}}
-			>
-				<div class="grid gap-4 sm:grid-cols-2">
-					<Input
-						label="Nome Completo"
-						name="nome"
-						bind:value={nome}
-						required
-						wrapperClass="sm:col-span-2"
-					/>
-
-					<div class="sm:col-span-2">
-						<label for="email-ro" class="mb-1.5 block text-sm font-medium text-navy">Email</label>
-						<input
-							id="email-ro"
-							value={data.email}
-							disabled
-							class="h-10 w-full cursor-not-allowed rounded-[var(--radius)] border border-grey-200 bg-bg px-3.5 text-sm text-slate shadow-xs"
+				<form
+					method="POST"
+					action="?/salvar"
+					use:enhance={() => {
+						salvando = true;
+						return async ({ result, update }) => {
+							salvando = false;
+							await update({ reset: false });
+							if (result.type === 'success') {
+								toast.success('Perfil atualizado.');
+								await invalidateAll();
+							} else if (result.type === 'failure') {
+								toast.error((result.data as any)?.error ?? 'Não foi possível salvar.');
+							}
+						};
+					}}
+				>
+					<div class="grid gap-4 sm:grid-cols-2">
+						<Input
+							label="Nome Completo"
+							name="nome"
+							bind:value={nome}
+							required
+							wrapperClass="sm:col-span-2"
 						/>
-						<p class="mt-1 text-xs text-grey">O email é o seu login e não pode ser alterado.</p>
-					</div>
 
-					<Input label="Telefone" name="telefone" bind:value={telefone} placeholder="(11) 99999-9999" />
-					<Input label="Localização" name="local" bind:value={local} placeholder="Cidade, UF" />
-
-					<!-- Cargo é só leitura: define permissão, então quem altera é o admin
-					     de Equipe. Editável aqui, virava escalada de privilégio (0039). -->
-					<div class="sm:col-span-2">
-						<span class="mb-1.5 block text-sm font-medium text-navy">Cargos</span>
-						<div class="flex flex-wrap gap-1.5">
-							{#each funcoesDe(colab) as f (f)}
-								<span
-									class="inline-flex rounded-full bg-bg px-3.5 py-1.5 text-sm font-medium text-slate"
-									>{funcaoLabel(f)}</span
-								>
-							{:else}
-								<span class="text-sm text-slate">—</span>
-							{/each}
+						<div class="sm:col-span-2">
+							<label for="email-ro" class="mb-1.5 block text-sm font-medium text-navy">Email</label>
+							<input
+								id="email-ro"
+								value={data.email}
+								disabled
+								class="h-10 w-full cursor-not-allowed rounded-[var(--radius)] border border-grey-200 bg-bg px-3.5 text-sm text-slate shadow-xs"
+							/>
+							<p class="mt-1 text-xs text-grey">O email é o seu login e não pode ser alterado.</p>
 						</div>
-						<p class="mt-1.5 text-xs text-grey">
-							O cargo define seus acessos no sistema. Para alterar, fale com quem administra a
-							Equipe.
-						</p>
+
+						<Input label="Telefone" name="telefone" bind:value={telefone} placeholder="(11) 99999-9999" />
+						<Input label="Localização" name="local" bind:value={local} placeholder="Cidade, UF" />
+
+						<!-- Cargo é só leitura: define permissão, então quem altera é o admin
+						     de Equipe. Editável aqui, virava escalada de privilégio (0039). -->
+						<div class="sm:col-span-2">
+							<span class="mb-1.5 block text-sm font-medium text-navy">Cargos</span>
+							<div class="flex flex-wrap gap-1.5">
+								{#each funcoesDe(colab) as f (f)}
+									<span
+										class="inline-flex rounded-full bg-bg px-3.5 py-1.5 text-sm font-medium text-slate"
+										>{funcaoLabel(f)}</span
+									>
+								{:else}
+									<span class="text-sm text-slate">—</span>
+								{/each}
+							</div>
+							<p class="mt-1.5 text-xs text-grey">
+								O cargo define seus acessos no sistema. Para alterar, fale com quem administra a
+								Equipe.
+							</p>
+						</div>
 					</div>
-				</div>
 
-				<div class="mt-5 flex justify-end">
-					<Button type="submit" loading={salvando}>Salvar alterações</Button>
-				</div>
-			</form>
-		</Card>
+					<div class="mt-5 flex justify-end">
+						<Button type="submit" loading={salvando}>Salvar alterações</Button>
+					</div>
+				</form>
+			</Card>
 
-		<!-- Avatar do DGathe + Personalização + Preferências -->
-		<div class="flex flex-col gap-4">
+			<!-- Avatar do DGathe: escolher um personagem pronto (largo, para a grade de cabecinhas) -->
 			<Card padding="lg">
 				<div class="mb-1 flex items-center gap-2">
 					<Icon name="dgathe" size={18} class="text-brand" />
 					<h2 class="text-sm font-semibold text-navy">Avatar no DGathe</h2>
 				</div>
-				<p class="mb-4 text-sm text-grey">Monte como você aparece no escritório. Vale depois de salvar.</p>
-				<EditorAvatar inicial={aparenciaInicial} onsalvar={salvarAparencia} />
+				<p class="mb-4 text-sm text-grey">
+					Escolha o personagem que representa você no escritório: cada um tem roupa, jeito de andar e
+					personalidade próprios. Vale depois de salvar.
+				</p>
+				<EditorAvatar inicial={aparenciaInicial} onsalvar={salvarAparencia} agentes={personagensDeAgentes} />
 			</Card>
+		</div>
 
+		<!-- Personalização + Preferências -->
+		<div class="flex flex-col gap-4">
 			<Card padding="lg">
 				<div class="mb-1 flex items-center gap-2">
 					<Icon name="palette" size={18} class="text-brand" />

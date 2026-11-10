@@ -332,7 +332,8 @@
 					jg.definirAgentes(
 						l.agentes.flatMap((a) => {
 							const onde = lugar.get(a.id);
-							return onde ? [{ agente: a, lugar: onde }] : [];
+							// O momento (posto, pausa, reunião) vai para o crachá e o texto do mouse
+							return onde ? [{ agente: a, lugar: onde, momento: momento.get(a.id) ?? null }] : [];
 						}),
 						reservados
 					);
