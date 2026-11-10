@@ -78,7 +78,7 @@ import {
 } from '../src/lib/dgathe/equipe.ts';
 import { lerUsoDoClaude } from './uso.mjs';
 
-const VERSAO = '1.2';
+const VERSAO = '1.3';
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const ARQUIVO_ENV = join(homedir(), '.config/dunamisspace/ponte.env');
 
@@ -163,13 +163,16 @@ function ambiente(extra = {}) {
 
 // ------------------------------------------------------------------ banco
 
-const db = new pg.Pool({
+const CONEXAO = {
 	host: cfg.DGATHE_PG_HOST || 'db.rboenllphxqecjroolzo.supabase.co',
 	port: 5432,
 	user: 'dgathe_ponte',
 	password: cfg.DGATHE_PG_SENHA,
 	database: 'postgres',
-	ssl: { rejectUnauthorized: false },
+	ssl: { rejectUnauthorized: false }
+};
+const db = new pg.Pool({
+	...CONEXAO,
 	// 6 (era 4): entram as transações do fim da rodada, do retorno da equipe e do fechamento
 	max: 6,
 	idleTimeoutMillis: 30_000,
@@ -883,15 +886,16 @@ async function ciclo() {
 		while (!desligando && sessoes.size < MAX) {
 			const achou = await pegarTarefa();
 			if (!achou) break;
-			const s = new Sessao(achou.tarefa, achou.agente, (fim) => sessoes.delete(fim.id));
+			const s = new Sessao(achou.tarefa, achou.agente, (fim) => {
+				sessoes.delete(fim.id);
+				// Acabou uma sessão: o retorno da equipe e a próxima da fila, já
+				agendarCiclo(500);
+			});
 			sessoes.set(s.id, s);
 			s.iniciar().catch((e) => s.falharAoIniciar(e));
 		}
 	} catch (e) {
 		log('ciclo:', e.message);
-	} finally {
-		// Com a folga de 15 s, olhar a fila a cada 5 s não atrasa ninguém
-		if (!desligando) setTimeout(ciclo, sessoes.size ? 2000 : 5000);
 	}
 }
 
@@ -948,6 +952,95 @@ async function abrirReunioes() {
 		having count(distinct s.agente_id) >= 2
 		on conflict (tarefa_id, rodada) where tarefa_id is not null do nothing`
 	);
+}
+
+// ------------------------------------------------- avisos do banco (LISTEN)
+//
+// A migration 0104 avisa a ponte pelo canal 'dgathe_ponte' quando é com ela:
+// tarefa nova ou de volta à fila, pedido de parar, mensagem para entregar,
+// resposta a um pedido. A ponte age na hora (respeitando a folga de 15 s para
+// tarefa e mensagem nova) e a leitura periódica vira reserva, bem mais
+// espaçada: banco mais leve. Sem conseguir ouvir, volta aos 2/5 s de antes.
+
+let ouvindo = false;
+let ouvinte = null;
+let cicloTimer = null;
+let proximoCiclo = Infinity;
+let cicloRodando = false;
+let cicloDeNovo = false;
+
+/** Marca o próximo ciclo; se já houver um marcado para antes, fica o de antes. */
+function agendarCiclo(ms) {
+	if (desligando) return;
+	const quando = Date.now() + Math.max(0, ms);
+	if (cicloTimer && quando >= proximoCiclo) return;
+	clearTimeout(cicloTimer);
+	proximoCiclo = quando;
+	cicloTimer = setTimeout(() => {
+		cicloTimer = null;
+		proximoCiclo = Infinity;
+		void rodarCiclo();
+	}, quando - Date.now());
+}
+
+/** Um ciclo por vez; pedido no meio de outro roda logo depois dele. */
+async function rodarCiclo() {
+	if (cicloRodando) {
+		cicloDeNovo = true;
+		return;
+	}
+	cicloRodando = true;
+	try {
+		await ciclo();
+	} finally {
+		cicloRodando = false;
+		if (cicloDeNovo) {
+			cicloDeNovo = false;
+			agendarCiclo(0);
+		} else {
+			// Ouvindo o banco, a leitura é só reserva
+			agendarCiclo(ouvindo ? (sessoes.size ? 10_000 : 30_000) : sessoes.size ? 2000 : 5000);
+		}
+	}
+}
+
+async function ouvirBanco(espera = 5000) {
+	if (desligando) return;
+	const c = new pg.Client(CONEXAO);
+	let caiu = false;
+	const cair = (motivo) => {
+		if (caiu || desligando) return;
+		caiu = true;
+		ouvindo = false;
+		ouvinte = null;
+		log(`avisos do banco: ${motivo}; volto a ouvir em ${Math.round(espera / 1000)} s (até lá, leitura a cada 2-5 s)`);
+		c.end().catch(() => {});
+		agendarCiclo(0);
+		setTimeout(() => void ouvirBanco(Math.min(espera * 2, 60_000)), espera);
+	};
+	c.on('error', (e) => cair(e.message));
+	c.on('end', () => cair('conexão encerrada'));
+	c.on('notification', (n) => {
+		let d = {};
+		try {
+			d = JSON.parse(n.payload ?? '{}');
+		} catch {}
+		// Tarefa nova e mensagem nova só valem depois da folga; parar e resposta, na hora
+		const comFolga = d.t === 'dgathe_tarefas' || d.t === 'dgathe_mensagens';
+		agendarCiclo(comFolga ? ESPERA * 1000 + 500 : 0);
+		// Parar e resposta podem chegar juntos com a folga de outra coisa: este ciclo vai já
+		if (!comFolga) agendarCiclo(0);
+	});
+	try {
+		await c.connect();
+		await c.query('LISTEN dgathe_ponte');
+		ouvinte = c;
+		ouvindo = true;
+		if (espera > 5000) log('avisos do banco: ouvindo de novo');
+		agendarCiclo(0);
+	} catch (e) {
+		cair(e.message);
+	}
 }
 
 async function pulso() {
@@ -1019,6 +1112,8 @@ async function temEquipesNoBanco() {
 async function desligar(sinal) {
 	if (desligando) return;
 	desligando = true;
+	clearTimeout(cicloTimer);
+	ouvinte?.end().catch(() => {});
 	log(`desligando (${sinal})…`);
 	for (const s of sessoes.values()) s.desligar();
 	const limite = Date.now() + 15_000;
@@ -1161,9 +1256,10 @@ async function principal() {
 	setInterval(pulso, PULSO_MS);
 	void atualizarUso();
 	setInterval(() => void atualizarUso(), USO_MS);
+	void ouvirBanco();
 	process.on('SIGTERM', () => desligar('SIGTERM'));
 	process.on('SIGINT', () => desligar('SIGINT'));
-	ciclo();
+	void rodarCiclo();
 }
 
 // Para testar as transações sem ligar o laço (um script importa este arquivo

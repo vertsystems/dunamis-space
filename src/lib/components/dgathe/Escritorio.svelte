@@ -102,6 +102,9 @@
 	let leitura = $state<LeituraAgentes | null>(null);
 	/** O que cada agente está fazendo agora pela rotina (posto, pausa, reunião). */
 	let momentos = $state<Map<string, Destino>>(new Map());
+	/** Avisos do banco (migration 0104): conta cada um, para o painel do agente reler na hora. */
+	let sinal = $state(0);
+	let aoVivo = $state(false);
 	function textoDoMomento(id: string): string | null {
 		const m = momentos.get(id);
 		if (!m) return null;
@@ -346,7 +349,9 @@
 					}
 					estados = new Map(l.agentes.map((a) => [a.id, a.estado]));
 					leitura = l;
-				}
+				},
+				mudou: () => sinal++,
+				aoVivo: (v) => (aoVivo = v)
 			});
 			agentes.iniciar();
 		}
@@ -494,6 +499,8 @@
 				tarefaInicial={tarefaPedida?.agente === agenteSelecionado.id ? tarefaPedida.tarefa : null}
 				agentes={listaDeAgentes}
 				momento={textoDoMomento(agenteSelecionado.id)}
+				{sinal}
+				{aoVivo}
 			/>
 		{:else if salaSelecionada}
 			{@const Ico = iconeDa(salaSelecionada.id)}

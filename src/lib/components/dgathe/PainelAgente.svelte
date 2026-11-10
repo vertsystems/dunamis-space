@@ -77,7 +77,9 @@
 		aoVerAgente,
 		tarefaInicial = null,
 		agentes = [],
-		momento = null
+		momento = null,
+		sinal = 0,
+		aoVivo = false
 	}: {
 		agente: Agente;
 		ponte: EstadoPonte;
@@ -96,6 +98,10 @@
 		agentes?: Agente[];
 		/** O que a rotina diz que ele faz agora (posto, pausa, reunião), vindo do escritório. */
 		momento?: string | null;
+		/** Muda a cada aviso do banco (migration 0104): relê a conversa na hora. */
+		sinal?: number;
+		/** Os avisos estão chegando: a leitura periódica vira reserva. */
+		aoVivo?: boolean;
 	} = $props();
 
 	type ResumoTarefa = {
@@ -307,7 +313,10 @@
 			} finally {
 				if (!parado) {
 					clearTimeout(timer);
-					timer = setTimeout(laco, ativa(untrack(() => tarefa?.status)) ? 1500 : 5000);
+					// Com os avisos chegando, a leitura periódica é só reserva
+					const trabalhando = ativa(untrack(() => tarefa?.status));
+					const vivo = untrack(() => aoVivo);
+					timer = setTimeout(laco, trabalhando ? (vivo ? 6000 : 1500) : vivo ? 15_000 : 5000);
 				}
 			}
 		};
@@ -317,6 +326,12 @@
 			parado = true;
 			clearTimeout(timer);
 		};
+	});
+
+	// Aviso do banco: relê a conversa na hora
+	$effect(() => {
+		if (!sinal) return;
+		untrack(() => lerJa());
 	});
 
 	// Histórico: ao abrir, a cada 10 s e quando o agente muda de tarefa ou de estado

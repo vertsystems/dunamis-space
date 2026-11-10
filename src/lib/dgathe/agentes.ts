@@ -18,7 +18,7 @@
 // e, enquanto a equipe trabalha, a tarefa dele fica "aguardando". Ele espera
 // sentado na mesa dele, não na copa.
 
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 import { assentos, type Assento } from './assentos';
 import { lerAparencia, type Aparencia } from './aparencia';
 import { destinosDosAgentes, type Destino } from './rotina';
@@ -440,14 +440,30 @@ type Ouvintes = {
 	leitura(l: LeituraAgentes): void;
 	/** Duas leituras seguidas falharam (rede, banco). */
 	falha?(e: unknown): void;
+	/** O banco avisou que algo mudou (migration 0104): `tarefa` é a tarefa que mudou, se houver. */
+	mudou?(tarefa: string | null): void;
+	/** Os avisos na hora estão chegando (true) ou caíram e vale só a leitura periódica (false). */
+	aoVivo?(sim: boolean): void;
 };
 
-/** Lê os agentes a cada 3 s (10 s com a aba escondida). */
+/** O canal privado dos avisos (migration 0104). */
+export const CANAL_DOS_AVISOS = 'dgathe:agentes';
+
+/**
+ * Lê os agentes e fica ouvindo os avisos do banco (Supabase Realtime, canal
+ * privado): mudou algo, relê na hora. Com os avisos chegando, a leitura
+ * periódica vira reserva (a cada 12 s); sem eles, a cada 3 s como antes.
+ */
 export class Agentes {
 	private timer: ReturnType<typeof setTimeout> | undefined;
 	private parado = false;
 	private lendo = false;
+	private deNovo = false;
 	private falhas = 0;
+	private canal: RealtimeChannel | null = null;
+	private vivo = false;
+	private juntar: ReturnType<typeof setTimeout> | undefined;
+	private religar: ReturnType<typeof setTimeout> | undefined;
 
 	constructor(
 		private readonly supabase: SupabaseClient,
@@ -457,10 +473,15 @@ export class Agentes {
 	iniciar() {
 		this.parado = false;
 		void this.ler();
+		void this.ouvir();
 	}
 
-	/** Leia já (depois de passar uma tarefa, por exemplo). */
+	/** Leia já (depois de passar uma tarefa, ou porque o banco avisou). */
 	agora() {
+		if (this.lendo) {
+			this.deNovo = true;
+			return;
+		}
 		clearTimeout(this.timer);
 		void this.ler();
 	}
@@ -468,6 +489,52 @@ export class Agentes {
 	parar() {
 		this.parado = true;
 		clearTimeout(this.timer);
+		clearTimeout(this.juntar);
+		clearTimeout(this.religar);
+		const c = this.canal;
+		this.canal = null;
+		if (c) void this.supabase.removeChannel(c);
+	}
+
+	/**
+	 * Entra no canal dos avisos. Antes, tira um canal de mesmo nome que tenha
+	 * sobrado: o supabase-js devolve o canal antigo (ainda saindo) e ele não se
+	 * inscreve de novo (o defeito da presença em 09/11/2026).
+	 */
+	private async ouvir() {
+		if (this.parado) return;
+		for (const c of this.supabase.getChannels()) {
+			if (c.topic === `realtime:${CANAL_DOS_AVISOS}`) await this.supabase.removeChannel(c);
+		}
+		if (this.parado) return;
+		const canal = this.supabase.channel(CANAL_DOS_AVISOS, { config: { private: true } });
+		this.canal = canal;
+		canal
+			.on('broadcast', { event: 'mudou' }, (msg) => {
+				const tarefa = typeof msg?.payload?.tarefa === 'string' ? msg.payload.tarefa : null;
+				this.ouvintes.mudou?.(tarefa);
+				// Vários avisos juntos (o agente andando rápido) viram uma leitura só
+				clearTimeout(this.juntar);
+				this.juntar = setTimeout(() => this.agora(), 250);
+			})
+			.subscribe((estado) => {
+				if (this.parado || this.canal !== canal) return;
+				const vivo = estado === 'SUBSCRIBED';
+				if (vivo !== this.vivo) {
+					this.vivo = vivo;
+					this.ouvintes.aoVivo?.(vivo);
+				}
+				if (estado === 'CHANNEL_ERROR' || estado === 'TIMED_OUT' || estado === 'CLOSED') {
+					// Tenta de novo daqui a pouco; até lá, a leitura periódica cobre
+					clearTimeout(this.religar);
+					this.religar = setTimeout(() => {
+						if (this.canal === canal) {
+							this.canal = null;
+							void this.supabase.removeChannel(canal).then(() => this.ouvir());
+						}
+					}, 30_000);
+				}
+			});
 	}
 
 	private async ler() {
@@ -490,8 +557,13 @@ export class Agentes {
 		} finally {
 			this.lendo = false;
 			if (!this.parado) {
-				const escondida = typeof document !== 'undefined' && document.hidden;
-				this.timer = setTimeout(() => void this.ler(), escondida ? 10_000 : 3000);
+				if (this.deNovo) {
+					this.deNovo = false;
+					this.timer = setTimeout(() => void this.ler(), 0);
+				} else {
+					const escondida = typeof document !== 'undefined' && document.hidden;
+					this.timer = setTimeout(() => void this.ler(), escondida ? 15_000 : this.vivo ? 12_000 : 3000);
+				}
 			}
 		}
 	}
