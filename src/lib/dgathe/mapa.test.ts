@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
+	ALINE,
 	ALTURA,
+	BRUNO,
 	INICIO,
 	ITENS,
 	LARGURA,
 	SALAS,
 	SETORES,
 	SEGMENTOS,
+	SALA_POR_ID,
 	celulaLivre,
 	chegadaDaSala,
 	paredeEntre,
@@ -80,7 +83,7 @@ describe('mapa do escritório', () => {
 
 	it('as paredes do fundo são altas e as outras cortadas', () => {
 		const altas = SEGMENTOS.filter((s) => s.alta);
-		expect(altas.length).toBe(40 + 21);
+		expect(altas.length).toBe(56 + 21);
 		expect(altas.every((s) => (s.orient === 'x' && s.y === 4) || (s.orient === 'y' && s.x === 4))).toBe(true);
 	});
 
@@ -130,6 +133,39 @@ describe('mapa do escritório', () => {
 		expect(contar('design')).toEqual({ mesas: 3, cadeiras: 6, computadores: 6 });
 		expect(contar('conteudo')).toEqual({ mesas: 4, cadeiras: 4, computadores: 4 });
 		expect(contar('financeiro')).toEqual({ mesas: 3, cadeiras: 3, computadores: 3 });
+	});
+
+	it('o prédio cresceu para a esquerda: sala do Bruno, sala da Aline e 3 vazias (10/11/2026)', () => {
+		const bruno = SALA_POR_ID.get('sala-bruno')!;
+		const aline = SALA_POR_ID.get('sala-aline')!;
+		expect(bruno.dono).toEqual({ id: BRUNO, cadeira: 'Cadeira do Bruno' });
+		expect(aline.dono).toEqual({ id: ALINE, cadeira: 'Cadeira da Aline' });
+		for (const [sala, cadeira] of [['sala-bruno', 'Cadeira do Bruno'], ['sala-aline', 'Cadeira da Aline']]) {
+			expect(ITENS.filter((i) => i.sala === sala && i.nome === cadeira), sala).toHaveLength(1);
+		}
+		// As novas ficam do lado de lá da Diretoria e do Conteúdo, que andaram 16 casas
+		expect(bruno.x1).toBeLessThan(SALA_POR_ID.get('diretoria')!.x0);
+		expect(aline.x1).toBeLessThan(SALA_POR_ID.get('diretoria')!.x0);
+		for (const id of ['sala-1', 'sala-2', 'sala-3']) {
+			const s = SALA_POR_ID.get(id)!;
+			expect(s.x1, id).toBeLessThan(SALA_POR_ID.get('conteudo')!.x0);
+			expect(ITENS.filter((i) => i.sala === id), `${id} vazia`).toHaveLength(0);
+		}
+		// O corredor vai de parede a parede, e cada sala nova abre para ele
+		const corredor = SALA_POR_ID.get('corredor')!;
+		expect(corredor.x0).toBe(4);
+		for (const id of ['sala-bruno', 'sala-aline', 'sala-1', 'sala-2', 'sala-3']) {
+			for (const p of SALA_POR_ID.get(id)!.portas) expect(p.y === corredor.y0 || p.y === corredor.y1 + 1, id).toBe(true);
+		}
+	});
+
+	it('salas não se sobrepõem', () => {
+		for (let y = 0; y < ALTURA; y++) {
+			for (let x = 0; x < LARGURA; x++) {
+				const donas = SALAS.filter((s) => x >= s.x0 && x <= s.x1 && y >= s.y0 && y <= s.y1);
+				expect(donas.length, `${x},${y}: ${donas.map((s) => s.id)}`).toBeLessThanOrEqual(1);
+			}
+		}
 	});
 
 	it('o contador de setores não inclui o corredor', () => {

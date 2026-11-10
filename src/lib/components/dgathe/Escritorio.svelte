@@ -44,7 +44,9 @@
 		ChevronUp,
 		Navigation,
 		MousePointerClick,
-		Hand
+		Hand,
+		Briefcase,
+		SquareDashed
 	} from '@lucide/svelte';
 
 	let {
@@ -77,6 +79,11 @@
 			.toUpperCase();
 
 	const ICONES = {
+		'sala-bruno': Briefcase,
+		'sala-aline': Briefcase,
+		'sala-1': SquareDashed,
+		'sala-2': SquareDashed,
+		'sala-3': SquareDashed,
 		diretoria: Crown,
 		reuniao: Presentation,
 		financeiro: Wallet,

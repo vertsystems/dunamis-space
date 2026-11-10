@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { assentos, assentoPorId, escolherAssento, lugaresDeQuemSaiu, SENTADO_MEIA } from './assentos';
-import { ITENS, celulaLivre, zonaDaCelula } from './mapa';
+import { assentos, assentoPorId, escolherAssento, lugaresDeQuemSaiu, lugaresDoCeo, salaDoCeo, SENTADO_MEIA } from './assentos';
+import { ALINE, BRUNO, ITENS, celulaLivre, zonaDaCelula } from './mapa';
 
 const caixaDoAssento = (a: { ox: number; oy: number }) => ({ x0: a.ox - SENTADO_MEIA, y0: a.oy - SENTADO_MEIA, x1: a.ox + SENTADO_MEIA, y1: a.oy + SENTADO_MEIA });
 const cruza = (a: { x0: number; y0: number; x1: number; y1: number }, b: { x: number; y: number; w: number; d: number }) =>
@@ -42,6 +42,28 @@ describe('assentos do escritório', () => {
 		const b = escolherAssento({ ceo: true, ocupados: new Set([a!.id]), semente: 7 });
 		expect(b?.sala).toBe('diretoria');
 		expect(b?.id).not.toBe(a?.id);
+	});
+
+	it('Bruno e Aline vão para a sala de cada um, primeiro a cadeira deles (10/11/2026)', () => {
+		expect(salaDoCeo(BRUNO)).toBe('sala-bruno');
+		expect(salaDoCeo(ALINE)).toBe('sala-aline');
+		expect(salaDoCeo('outra-pessoa')).toBe('diretoria');
+		const bruno = escolherAssento({ ceo: true, id: BRUNO, ocupados: new Set(), semente: 7 });
+		expect(bruno).toMatchObject({ sala: 'sala-bruno', nome: 'Cadeira do Bruno' });
+		const aline = escolherAssento({ ceo: true, id: ALINE, ocupados: new Set(), semente: 7 });
+		expect(aline).toMatchObject({ sala: 'sala-aline', nome: 'Cadeira da Aline' });
+		// Cadeira ocupada: outro lugar na mesma sala
+		const outro = escolherAssento({ ceo: true, id: BRUNO, ocupados: new Set([bruno!.id]), semente: 7 });
+		expect(outro?.sala).toBe('sala-bruno');
+		expect(outro?.id).not.toBe(bruno?.id);
+		expect(lugaresDoCeo(ALINE).every((a) => a.sala === 'sala-aline')).toBe(true);
+	});
+
+	it('ninguém mais é sorteado para sentar nas salas do Bruno e da Aline', () => {
+		for (let semente = 1; semente < 400; semente++) {
+			const a = escolherAssento({ ceo: false, ocupados: new Set(), semente })!;
+			expect(a.sala, String(semente)).not.toMatch(/^sala-(bruno|aline)$/);
+		}
 	});
 
 	it('os outros vão para a recepção, a copa ou uma sala sorteada, nunca a Diretoria nem lugar ocupado', () => {

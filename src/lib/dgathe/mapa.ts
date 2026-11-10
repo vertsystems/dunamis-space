@@ -8,17 +8,22 @@
 // Para mudar o escritório: mexa em SALAS (retângulo, porta, piso), nos móveis
 // em `montarItens` e nas decorações das paredes do fundo em DECORACOES. O teste
 // em mapa.test.ts confere que toda sala continua alcançável a partir da entrada.
+//
+// Em 10/11/2026 o prédio cresceu 16 casas para a esquerda (pedido do Bruno):
+// o corredor continua até a parede oeste, com a sala do Bruno e a da Aline do
+// lado de cima e 3 salas vazias do lado de baixo, esperando ele decidir o que
+// vão ser. Tudo o que já existia andou junto (x + 16).
 
 import { sorteio } from './iso';
 
-export const LARGURA = 48;
+export const LARGURA = 64;
 export const ALTURA = 31;
 
 /** Células internas do prédio (inclusive). As paredes do fundo são as da linha y = 4 e da coluna x = 4. */
-export const PREDIO = { x0: 4, y0: 4, x1: 43, y1: 24 };
+export const PREDIO = { x0: 4, y0: 4, x1: 59, y1: 24 };
 
 /** Onde o avatar aparece na primeira visita: no meio da recepção. */
-export const INICIO = { x: 20.5, y: 22.2 };
+export const INICIO = { x: 36.5, y: 22.2 };
 
 
 export type TipoPiso =
@@ -56,25 +61,83 @@ export type Sala = {
 	portas: Aresta[];
 	/** O que os agentes desta sala vão saber fazer (próxima fase). */
 	especialidades: string[];
+	/**
+	 * Sala de uma pessoa (o id em `colaboradores`): quando ela fica parada, senta
+	 * aqui, primeiro na `cadeira`; e ninguém mais é sorteado para sentar nela.
+	 */
+	dono?: { id: string; cadeira: string };
 };
 
 const portaNorte = (x: number) => [x, x + 1].map((c): Aresta => ({ linha: 'h', x: c, y: 13 }));
 const portaSul = (x: number) => [x, x + 1].map((c): Aresta => ({ linha: 'h', x: c, y: 15 }));
 
+/** Bruno Santana e Aline Santana, em `colaboradores` (as duas salas da diretoria). */
+export const BRUNO = '52875a8f-fa14-49e6-905a-7baf08335da6';
+export const ALINE = '8bed9013-ff26-4410-8a35-c18396503870';
+
+/** Sala vazia (pedido do Bruno, 10/11/2026): fica assim até ele decidir o que ela vai ser. */
+const salaVazia = (n: number, x0: number, x1: number, porta: number): Sala => ({
+	id: `sala-${n}`,
+	nome: `Sala ${n}`,
+	setor: 'A definir',
+	descricao: 'Sala nova, ainda vazia: a diretoria vai decidir o que ela vai ser.',
+	cor: '#8a94a6',
+	piso: 'piso',
+	corPiso: '#e4e1da',
+	x0,
+	y0: 15,
+	x1,
+	y1: 24,
+	portas: portaSul(porta),
+	especialidades: []
+});
+
 export const SALAS: Sala[] = [
 	{
-		id: 'diretoria',
-		nome: 'Diretoria',
-		setor: 'Direção',
-		descricao: 'A sala do CEO. Estratégia, decisões e o rumo da agência.',
-		cor: '#d08a2e',
+		id: 'sala-bruno',
+		nome: 'Sala do Bruno',
+		setor: 'Diretoria',
+		descricao: 'Bruno Santana, CEO e diretor executivo: estratégia, vendas e o rumo da agência.',
+		cor: '#3b6ef6',
 		piso: 'madeira',
-		corPiso: '#c9a27a',
+		corPiso: '#b89470',
 		x0: 4,
 		y0: 4,
 		x1: 11,
 		y1: 12,
-		portas: portaNorte(8),
+		portas: portaNorte(7),
+		especialidades: ['Estratégia', 'Vendas', 'Liderança'],
+		dono: { id: BRUNO, cadeira: 'Cadeira do Bruno' }
+	},
+	{
+		id: 'sala-aline',
+		nome: 'Sala da Aline',
+		setor: 'Diretoria',
+		descricao: 'Aline Santana, CEO e diretora financeira: as finanças, os clientes e a operação.',
+		cor: '#593212',
+		piso: 'madeira',
+		corPiso: '#d2b48f',
+		x0: 12,
+		y0: 4,
+		x1: 19,
+		y1: 12,
+		portas: portaNorte(15),
+		especialidades: ['Gestão financeira', 'Gestão de clientes', 'Operação'],
+		dono: { id: ALINE, cadeira: 'Cadeira da Aline' }
+	},
+	{
+		id: 'diretoria',
+		nome: 'Diretoria',
+		setor: 'Direção',
+		descricao: 'A diretoria da casa: o assessor, as decisões e o fechamento da semana.',
+		cor: '#d08a2e',
+		piso: 'madeira',
+		corPiso: '#c9a27a',
+		x0: 20,
+		y0: 4,
+		x1: 27,
+		y1: 12,
+		portas: portaNorte(24),
 		especialidades: ['Estratégia', 'Decisões', 'Fechamento da semana']
 	},
 	{
@@ -85,11 +148,11 @@ export const SALAS: Sala[] = [
 		cor: '#5b7bb5',
 		piso: 'carpete',
 		corPiso: '#a7b6c9',
-		x0: 12,
+		x0: 28,
 		y0: 4,
-		x1: 19,
+		x1: 35,
 		y1: 12,
-		portas: portaNorte(15),
+		portas: portaNorte(31),
 		especialidades: ['Pauta e ata', 'Apresentações', 'Propostas em reunião']
 	},
 	{
@@ -100,11 +163,11 @@ export const SALAS: Sala[] = [
 		cor: '#3f9a6a',
 		piso: 'piso',
 		corPiso: '#d3e2cd',
-		x0: 20,
+		x0: 36,
 		y0: 4,
-		x1: 25,
+		x1: 41,
 		y1: 12,
-		portas: portaNorte(22),
+		portas: portaNorte(38),
 		especialidades: ['Projeção de caixa', 'Obrigações fiscais', 'Conciliação bancária']
 	},
 	{
@@ -115,11 +178,11 @@ export const SALAS: Sala[] = [
 		cor: '#e0662a',
 		piso: 'carpete',
 		corPiso: '#e8d2ae',
-		x0: 26,
+		x0: 42,
 		y0: 4,
-		x1: 33,
+		x1: 49,
 		y1: 12,
-		portas: portaNorte(29),
+		portas: portaNorte(45),
 		especialidades: ['Propostas', 'Prospecção', 'Conversas de venda']
 	},
 	{
@@ -130,11 +193,11 @@ export const SALAS: Sala[] = [
 		cor: '#22b8cf',
 		piso: 'tech',
 		corPiso: '#2b3548',
-		x0: 34,
+		x0: 50,
 		y0: 4,
-		x1: 43,
+		x1: 59,
 		y1: 12,
-		portas: portaNorte(38),
+		portas: portaNorte(54),
 		especialidades: ['Sistemas e apps', 'Revisão de código', 'Automação com IA']
 	},
 	{
@@ -147,7 +210,7 @@ export const SALAS: Sala[] = [
 		corPiso: '#e6dfd2',
 		x0: 4,
 		y0: 13,
-		x1: 43,
+		x1: 59,
 		y1: 14,
 		portas: [],
 		especialidades: []
@@ -160,11 +223,11 @@ export const SALAS: Sala[] = [
 		cor: '#e05a7a',
 		piso: 'piso',
 		corPiso: '#f1d0c8',
-		x0: 4,
+		x0: 20,
 		y0: 15,
-		x1: 10,
+		x1: 26,
 		y1: 24,
-		portas: portaSul(7),
+		portas: portaSul(23),
 		especialidades: ['Ideias de pauta', 'Calendário editorial', 'Carrosséis e legendas']
 	},
 	{
@@ -175,11 +238,11 @@ export const SALAS: Sala[] = [
 		cor: '#9b6bd6',
 		piso: 'estudio',
 		corPiso: '#3a3a42',
-		x0: 11,
+		x0: 27,
 		y0: 15,
-		x1: 16,
+		x1: 32,
 		y1: 24,
-		portas: portaSul(13),
+		portas: portaSul(29),
 		especialidades: ['Roteiros de vídeo', 'Spots de rádio', 'Fotos de produto']
 	},
 	{
@@ -190,14 +253,14 @@ export const SALAS: Sala[] = [
 		cor: '#ff6f00',
 		piso: 'marmore',
 		corPiso: '#eee8de',
-		x0: 17,
+		x0: 33,
 		y0: 15,
-		x1: 23,
+		x1: 39,
 		y1: 24,
 		// Aberta para o corredor (sem parede) e com a porta de vidro para a rua.
 		portas: [
-			...[17, 18, 19, 20, 21, 22, 23].map((x): Aresta => ({ linha: 'h', x, y: 15 })),
-			...[19, 20, 21].map((x): Aresta => ({ linha: 'h', x, y: 25 }))
+			...[33, 34, 35, 36, 37, 38, 39].map((x): Aresta => ({ linha: 'h', x, y: 15 })),
+			...[35, 36, 37].map((x): Aresta => ({ linha: 'h', x, y: 25 }))
 		],
 		especialidades: ['Atendimento', 'Onboarding de cliente', 'Contratos']
 	},
@@ -209,11 +272,11 @@ export const SALAS: Sala[] = [
 		cor: '#7c5cd6',
 		piso: 'piso',
 		corPiso: '#e3daf1',
-		x0: 24,
+		x0: 40,
 		y0: 15,
-		x1: 29,
+		x1: 45,
 		y1: 24,
-		portas: portaSul(26),
+		portas: portaSul(42),
 		especialidades: ['Identidade visual', 'Artes e campanhas', 'Revisão de design']
 	},
 	{
@@ -224,11 +287,11 @@ export const SALAS: Sala[] = [
 		cor: '#2f7fd8',
 		piso: 'piso',
 		corPiso: '#cde2ee',
-		x0: 30,
+		x0: 46,
 		y0: 15,
-		x1: 35,
+		x1: 51,
 		y1: 24,
-		portas: portaSul(32),
+		portas: portaSul(48),
 		especialidades: ['Anúncios Google', 'Anúncios Meta', 'Relatórios de resultado']
 	},
 	{
@@ -239,13 +302,17 @@ export const SALAS: Sala[] = [
 		cor: '#b07a3c',
 		piso: 'cozinha',
 		corPiso: '#efe2c8',
-		x0: 36,
+		x0: 52,
 		y0: 15,
-		x1: 43,
+		x1: 59,
 		y1: 24,
-		portas: portaSul(39),
+		portas: portaSul(55),
 		especialidades: ['Pausa', 'Agentes livres']
-	}
+	},
+	// As 3 vazias, do lado de baixo do corredor, entre a parede oeste e o Conteúdo
+	salaVazia(1, 4, 8, 5),
+	salaVazia(2, 9, 13, 10),
+	salaVazia(3, 14, 19, 16)
 ];
 
 export const SALA_POR_ID = new Map(SALAS.map((s) => [s.id, s]));
@@ -275,13 +342,13 @@ export function zonaNoPonto(x: number, y: number): string | null {
 	return zonaDaCelula(Math.floor(x), Math.floor(y));
 }
 
-export const ESTACIONAMENTO = { x0: 30, y0: 27, x1: 43, y1: 30 };
+export const ESTACIONAMENTO = { x0: 46, y0: 27, x1: 59, y1: 30 };
 
 export function pisoDaCelula(x: number, y: number): TipoPiso {
 	const z = zonaDaCelula(x, y);
 	if (z) return SALA_POR_ID.get(z)!.piso;
-	if (y === 25 && x >= 2 && x <= 45) return 'calcada';
-	if (x >= 19 && x <= 21 && y >= 26) return 'calcada';
+	if (y === 25 && x >= 2 && x <= 61) return 'calcada';
+	if (x >= 35 && x <= 37 && y >= 26) return 'calcada';
 	const e = ESTACIONAMENTO;
 	if (x >= e.x0 && x <= e.x1 && y >= e.y0 && y <= e.y1) return 'asfalto';
 	return 'grama';
@@ -329,30 +396,38 @@ const naParedeOeste = (y: number, tipo: TipoDeco, largura = 1): Decoracao => ({ 
 
 export const DECORACOES: Decoracao[] = [
 	// Diretoria
-	naParedeNorte(5, 'janela'),
-	naParedeNorte(6, 'janela'),
-	naParedeNorte(8, 'mapa', 2),
-	naParedeNorte(10, 'janela'),
-	// Reunião
-	naParedeNorte(13, 'janela'),
-	naParedeNorte(15, 'tv', 2),
-	naParedeNorte(18, 'janela'),
-	// Financeiro
 	naParedeNorte(21, 'janela'),
-	naParedeNorte(23, 'quadro'),
-	naParedeNorte(24, 'janela'),
+	naParedeNorte(22, 'janela'),
+	naParedeNorte(24, 'mapa', 2),
+	naParedeNorte(26, 'janela'),
+	// Reunião
+	naParedeNorte(29, 'janela'),
+	naParedeNorte(31, 'tv', 2),
+	naParedeNorte(34, 'janela'),
+	// Financeiro
+	naParedeNorte(37, 'janela'),
+	naParedeNorte(39, 'quadro'),
+	naParedeNorte(40, 'janela'),
 	// Comercial
-	naParedeNorte(27, 'janela'),
-	naParedeNorte(29, 'metas', 2),
-	naParedeNorte(32, 'janela'),
+	naParedeNorte(43, 'janela'),
+	naParedeNorte(45, 'metas', 2),
+	naParedeNorte(48, 'janela'),
 	// Desenvolvimento & IA
-	naParedeNorte(35, 'janela'),
-	naParedeNorte(37, 'neon', 2),
-	// Conteúdo (parede oeste)
-	naParedeOeste(16, 'janela'),
-	naParedeOeste(18, 'calendario', 2),
-	naParedeOeste(21, 'janela'),
-	naParedeOeste(23, 'janela')
+	naParedeNorte(51, 'janela'),
+	naParedeNorte(53, 'neon', 2),
+	// Sala do Bruno (parede norte e oeste)
+	naParedeNorte(5, 'janela'),
+	naParedeNorte(8, 'metas', 2),
+	naParedeOeste(10, 'janela'),
+	naParedeOeste(11, 'janela'),
+	// Sala da Aline
+	naParedeNorte(15, 'quadro'),
+	naParedeNorte(17, 'janela'),
+	// Sala 1, a única das vazias com parede do fundo (a oeste)
+	naParedeOeste(17, 'janela'),
+	naParedeOeste(21, 'janela')
+	// O Conteúdo perdeu o calendário e as janelas: a parede oeste dele virou
+	// parede de dentro (baixa), entre ele e a Sala 3
 ];
 
 export type Segmento = {
@@ -560,155 +635,194 @@ function montarItens(): Item[] {
 		mesaDeFrente(x, y, { tela, mesa: 'Mesa do gerente', cadeira: 'Cadeira do gerente', executiva: true });
 
 	// Diretoria
-	add({ tipo: 'estante', x: 4.06, y: 5, w: 0.42, d: 3, h: 1.75, frente: 'x' });
-	add({ tipo: 'mesa', x: 6, y: 6.15, w: 3, d: 0.85, h: 0.54, cor: '#7a5236', variante: 'executiva' });
-	add({ tipo: 'monitor', x: 7.05, y: 6.35, w: 0.9, d: 0.08, h: 0.48, z: 0.54, frente: '-y', variante: 'texto', bloqueia: false });
-	add({ tipo: 'cadeira', x: 7.2, y: 5.2, w: 0.6, d: 0.6, h: 1.15, frente: 'y', cor: '#1c2534', variante: 'executiva', nome: 'Cadeira do CEO' });
-	add({ tipo: 'cadeira', x: 6.4, y: 7.35, w: 0.48, d: 0.48, h: 0.9, frente: '-y', cor: '#8a6a4a' });
-	add({ tipo: 'cadeira', x: 8.12, y: 7.35, w: 0.48, d: 0.48, h: 0.9, frente: '-y', cor: '#8a6a4a' });
-	add({ tipo: 'sofa', x: 4.1, y: 9.4, w: 0.85, d: 2.2, h: 0.75, frente: 'x', cor: '#3f4d63' });
-	add({ tipo: 'mesaCentro', x: 5.55, y: 9.95, w: 0.9, d: 1.1, h: 0.32, cor: '#5d3f2a' });
+	add({ tipo: 'estante', x: 20.06, y: 5, w: 0.42, d: 3, h: 1.75, frente: 'x' });
+	add({ tipo: 'mesa', x: 22, y: 6.15, w: 3, d: 0.85, h: 0.54, cor: '#7a5236', variante: 'executiva' });
+	add({ tipo: 'monitor', x: 23.05, y: 6.35, w: 0.9, d: 0.08, h: 0.48, z: 0.54, frente: '-y', variante: 'texto', bloqueia: false });
+	add({ tipo: 'cadeira', x: 23.2, y: 5.2, w: 0.6, d: 0.6, h: 1.15, frente: 'y', cor: '#1c2534', variante: 'executiva', nome: 'Cadeira do CEO' });
+	add({ tipo: 'cadeira', x: 22.4, y: 7.35, w: 0.48, d: 0.48, h: 0.9, frente: '-y', cor: '#8a6a4a' });
+	add({ tipo: 'cadeira', x: 24.12, y: 7.35, w: 0.48, d: 0.48, h: 0.9, frente: '-y', cor: '#8a6a4a' });
+	add({ tipo: 'sofa', x: 20.1, y: 9.4, w: 0.85, d: 2.2, h: 0.75, frente: 'x', cor: '#3f4d63' });
+	add({ tipo: 'mesaCentro', x: 21.55, y: 9.95, w: 0.9, d: 1.1, h: 0.32, cor: '#5d3f2a' });
 	// O assessor, no canto ao lado da mesa do CEO
-	mesaDeFrente(10, 5, { tela: 'texto', mesa: 'Mesa do assessor', cadeira: 'Cadeira do assessor', cor: '#a07a55' });
-	planta(10, 4, true);
-	planta(11, 12);
-	planta(4, 12);
+	mesaDeFrente(26, 5, { tela: 'texto', mesa: 'Mesa do assessor', cadeira: 'Cadeira do assessor', cor: '#a07a55' });
+	planta(26, 4, true);
+	planta(27, 12);
+	planta(20, 12);
 
 	// Sala de Reunião
-	add({ tipo: 'mesaReuniao', x: 14, y: 7, w: 4, d: 2, h: 0.54, cor: '#f4f1eb' });
-	for (const x of [14, 15, 16, 17]) {
+	add({ tipo: 'mesaReuniao', x: 30, y: 7, w: 4, d: 2, h: 0.54, cor: '#f4f1eb' });
+	for (const x of [30, 31, 32, 33]) {
 		add({ tipo: 'cadeira', x: x + 0.26, y: 6.2, w: 0.48, d: 0.48, h: 0.9, frente: 'y', cor: '#2f3a4f' });
 		add({ tipo: 'cadeira', x: x + 0.26, y: 9.32, w: 0.48, d: 0.48, h: 0.9, frente: '-y', cor: '#2f3a4f' });
 	}
-	add({ tipo: 'cadeira', x: 13.3, y: 7.76, w: 0.48, d: 0.48, h: 0.9, frente: 'x', cor: '#2f3a4f' });
-	add({ tipo: 'cadeira', x: 18.22, y: 7.76, w: 0.48, d: 0.48, h: 0.9, frente: '-x', cor: '#2f3a4f' });
-	add({ tipo: 'quadro', x: 12.1, y: 10, w: 0.28, d: 1.7, h: 1.5, frente: 'x', variante: 'pauta', nome: 'Quadro da pauta' });
-	planta(12, 4);
-	planta(19, 4);
-	planta(19, 12);
+	add({ tipo: 'cadeira', x: 29.3, y: 7.76, w: 0.48, d: 0.48, h: 0.9, frente: 'x', cor: '#2f3a4f' });
+	add({ tipo: 'cadeira', x: 34.22, y: 7.76, w: 0.48, d: 0.48, h: 0.9, frente: '-x', cor: '#2f3a4f' });
+	add({ tipo: 'quadro', x: 28.1, y: 10, w: 0.28, d: 1.7, h: 1.5, frente: 'x', variante: 'pauta', nome: 'Quadro da pauta' });
+	planta(28, 4);
+	planta(35, 4);
+	planta(35, 12);
 
 	// Financeiro: o gerente no fundo, 3 mesas de 1 computador
-	mesaGerente(21, 4, 'planilha');
-	estacao(21, 7, 'planilha');
-	estacao(23, 7, 'grafico');
-	estacao(22, 10, 'texto');
-	add({ tipo: 'cofre', x: 24.4, y: 4.15, w: 0.75, d: 0.7, h: 0.85, frente: 'y' });
-	add({ tipo: 'arquivo', x: 20.1, y: 10, w: 0.55, d: 0.7, h: 1.05, frente: 'x' });
-	add({ tipo: 'arquivo', x: 20.1, y: 11, w: 0.55, d: 0.7, h: 1.05, frente: 'x' });
-	planta(25, 11);
+	mesaGerente(37, 4, 'planilha');
+	estacao(37, 7, 'planilha');
+	estacao(39, 7, 'grafico');
+	estacao(38, 10, 'texto');
+	add({ tipo: 'cofre', x: 40.4, y: 4.15, w: 0.75, d: 0.7, h: 0.85, frente: 'y' });
+	add({ tipo: 'arquivo', x: 36.1, y: 10, w: 0.55, d: 0.7, h: 1.05, frente: 'x' });
+	add({ tipo: 'arquivo', x: 36.1, y: 11, w: 0.55, d: 0.7, h: 1.05, frente: 'x' });
+	planta(41, 11);
 
 	// Comercial
-	mesaGerente(29, 4, 'grafico');
-	mesaDupla(27, 6, ['crm', 'grafico']);
-	mesaDupla(30, 6, ['grafico', 'texto']);
-	mesaDupla(27, 9, ['texto', 'crm']);
-	mesaDupla(30, 9, ['crm', 'grafico']);
-	add({ tipo: 'bebedouro', x: 33.2, y: 8.2, w: 0.55, d: 0.55, h: 1.25 });
-	planta(33, 4, true);
-	planta(26, 12);
-	planta(33, 12);
+	mesaGerente(45, 4, 'grafico');
+	mesaDupla(43, 6, ['crm', 'grafico']);
+	mesaDupla(46, 6, ['grafico', 'texto']);
+	mesaDupla(43, 9, ['texto', 'crm']);
+	mesaDupla(46, 9, ['crm', 'grafico']);
+	add({ tipo: 'bebedouro', x: 49.2, y: 8.2, w: 0.55, d: 0.55, h: 1.25 });
+	planta(49, 4, true);
+	planta(42, 12);
+	planta(49, 12);
 
 	// Desenvolvimento & IA
-	for (const x of [41, 42, 43]) add({ tipo: 'rack', x: x + 0.12, y: 4.12, w: 0.76, d: 0.72, h: 1.95, frente: 'y' });
+	for (const x of [57, 58, 59]) add({ tipo: 'rack', x: x + 0.12, y: 4.12, w: 0.76, d: 0.72, h: 1.95, frente: 'y' });
 	// Duas baias de 6 lugares (os agentes de desenvolvimento e IA)
-	baia(35, 5, ['codigo', 'codigo', 'design'], { cor: '#3a465c', cadeira: '#11161f' });
-	baia(35, 9, ['codigo', 'grafico', 'codigo'], { cor: '#3a465c', cadeira: '#11161f' });
-	mesaGerente(39, 5, 'codigo');
-	add({ tipo: 'nucleo', x: 41.35, y: 8.35, w: 1.3, d: 1.3, h: 1.6 });
-	planta(43, 12);
-	planta(34, 4);
+	baia(51, 5, ['codigo', 'codigo', 'design'], { cor: '#3a465c', cadeira: '#11161f' });
+	baia(51, 9, ['codigo', 'grafico', 'codigo'], { cor: '#3a465c', cadeira: '#11161f' });
+	mesaGerente(55, 5, 'codigo');
+	add({ tipo: 'nucleo', x: 57.35, y: 8.35, w: 1.3, d: 1.3, h: 1.6 });
+	planta(59, 12);
+	planta(50, 4);
 
-	// Corredor
+	// Corredor: uma planta em cada ponta
 	planta(4, 13, true);
-	planta(43, 13, true);
+	planta(59, 13, true);
 
 	// Conteúdo & Social Media
 	// 4 mesas de 1 computador em 2 fileiras e o gerente no fundo
-	estacao(5, 17, 'social');
-	estacao(8, 17, 'social');
-	estacao(5, 20, 'social');
-	estacao(8, 20, 'texto');
-	mesaGerente(6, 23, 'social');
-	add({ tipo: 'luzAnel', x: 10.2, y: 21.2, w: 0.6, d: 0.6, h: 1.7 });
-	add({ tipo: 'pufe', x: 4.1, y: 22.1, w: 0.8, d: 0.8, h: 0.5, cor: '#f2b33d', bloqueia: true });
-	add({ tipo: 'pufe', x: 9.1, y: 23.1, w: 0.8, d: 0.8, h: 0.5, cor: '#4fb6a8', bloqueia: true });
-	planta(10, 24, true);
-	planta(4, 24);
+	estacao(21, 17, 'social');
+	estacao(24, 17, 'social');
+	estacao(21, 20, 'social');
+	estacao(24, 20, 'texto');
+	mesaGerente(22, 23, 'social');
+	add({ tipo: 'luzAnel', x: 26.2, y: 21.2, w: 0.6, d: 0.6, h: 1.7 });
+	add({ tipo: 'pufe', x: 20.1, y: 22.1, w: 0.8, d: 0.8, h: 0.5, cor: '#f2b33d', bloqueia: true });
+	add({ tipo: 'pufe', x: 25.1, y: 23.1, w: 0.8, d: 0.8, h: 0.5, cor: '#4fb6a8', bloqueia: true });
+	planta(26, 24, true);
+	planta(20, 24);
 
 	// Estúdio
-	add({ tipo: 'fundo', x: 11.06, y: 17.6, w: 0.24, d: 3.2, h: 2.2, frente: 'x', nome: 'Fundo infinito' });
-	add({ tipo: 'camera', x: 14.9, y: 18.9, w: 0.5, d: 0.5, h: 1.35, frente: '-x' });
-	add({ tipo: 'softbox', x: 13.2, y: 16.4, w: 0.6, d: 0.6, h: 1.8 });
-	add({ tipo: 'softbox', x: 13.2, y: 22.2, w: 0.6, d: 0.6, h: 1.8 });
-	add({ tipo: 'cadeira', x: 15.3, y: 22.4, w: 0.5, d: 0.5, h: 1.0, frente: '-x', cor: '#2b2b2b', variante: 'diretor', nome: 'Cadeira do diretor' });
-	mesaGerente(12, 23, 'texto');
+	add({ tipo: 'fundo', x: 27.06, y: 17.6, w: 0.24, d: 3.2, h: 2.2, frente: 'x', nome: 'Fundo infinito' });
+	add({ tipo: 'camera', x: 30.9, y: 18.9, w: 0.5, d: 0.5, h: 1.35, frente: '-x' });
+	add({ tipo: 'softbox', x: 29.2, y: 16.4, w: 0.6, d: 0.6, h: 1.8 });
+	add({ tipo: 'softbox', x: 29.2, y: 22.2, w: 0.6, d: 0.6, h: 1.8 });
+	add({ tipo: 'cadeira', x: 31.3, y: 22.4, w: 0.5, d: 0.5, h: 1.0, frente: '-x', cor: '#2b2b2b', variante: 'diretor', nome: 'Cadeira do diretor' });
+	mesaGerente(28, 23, 'texto');
 
 	// Recepção
-	add({ tipo: 'balcao', x: 19, y: 18.15, w: 3, d: 0.75, h: 0.98, frente: 'y' });
-	add({ tipo: 'cadeira', x: 20.26, y: 17.25, w: 0.48, d: 0.48, h: 0.9, frente: 'y', cor: '#2f3a4f' });
-	add({ tipo: 'sofa', x: 17.1, y: 20, w: 0.85, d: 2, h: 0.75, frente: 'x', cor: '#d9cdb8' });
-	add({ tipo: 'sofa', x: 23.05, y: 20, w: 0.85, d: 2, h: 0.75, frente: '-x', cor: '#d9cdb8' });
-	add({ tipo: 'bebedouro', x: 23.2, y: 16.2, w: 0.55, d: 0.55, h: 1.25 });
-	planta(17, 16, true);
-	planta(17, 24, true);
-	planta(23, 24, true);
+	add({ tipo: 'balcao', x: 35, y: 18.15, w: 3, d: 0.75, h: 0.98, frente: 'y' });
+	add({ tipo: 'cadeira', x: 36.26, y: 17.25, w: 0.48, d: 0.48, h: 0.9, frente: 'y', cor: '#2f3a4f' });
+	add({ tipo: 'sofa', x: 33.1, y: 20, w: 0.85, d: 2, h: 0.75, frente: 'x', cor: '#d9cdb8' });
+	add({ tipo: 'sofa', x: 39.05, y: 20, w: 0.85, d: 2, h: 0.75, frente: '-x', cor: '#d9cdb8' });
+	add({ tipo: 'bebedouro', x: 39.2, y: 16.2, w: 0.55, d: 0.55, h: 1.25 });
+	planta(33, 16, true);
+	planta(33, 24, true);
+	planta(39, 24, true);
 
 	// Design & Criação
 	// 3 mesas de 2 lugares à esquerda, corredor no meio; prancheta, moodboard e gerente à direita.
 	// O gerente fica embaixo: em cima, o painel alto do Tráfego (do outro lado da parede) o cobriria
-	mesaDupla(24, 16, ['design', 'design']);
-	mesaDupla(24, 19, ['design', 'social']);
-	mesaDupla(24, 22, ['design', 'design']);
-	add({ tipo: 'prancheta', x: 28.95, y: 16.2, w: 0.85, d: 1.1, h: 1.05, frente: '-x' });
-	add({ tipo: 'quadro', x: 28.1, y: 19.1, w: 0.28, d: 1.8, h: 1.55, frente: 'x', variante: 'moodboard', nome: 'Moodboard' });
-	mesaGerente(28, 22, 'design');
+	mesaDupla(40, 16, ['design', 'design']);
+	mesaDupla(40, 19, ['design', 'social']);
+	mesaDupla(40, 22, ['design', 'design']);
+	add({ tipo: 'prancheta', x: 44.95, y: 16.2, w: 0.85, d: 1.1, h: 1.05, frente: '-x' });
+	add({ tipo: 'quadro', x: 44.1, y: 19.1, w: 0.28, d: 1.8, h: 1.55, frente: 'x', variante: 'moodboard', nome: 'Moodboard' });
+	mesaGerente(44, 22, 'design');
 	// A planta grande vai para o outro canto: na frente do gerente, ela o cobria
-	planta(29, 24);
-	planta(24, 24, true);
+	planta(45, 24);
+	planta(40, 24, true);
 
 	// Tráfego Pago
-	add({ tipo: 'tvPainel', x: 30.12, y: 17, w: 0.3, d: 2, h: 1.7, frente: 'x', variante: 'dashboard' });
+	add({ tipo: 'tvPainel', x: 46.12, y: 17, w: 0.3, d: 2, h: 1.7, frente: 'x', variante: 'dashboard' });
 	// 2 mesas de 2 lugares no meio e o gerente no fundo
-	mesaDupla(32, 17, ['grafico', 'grafico']);
-	mesaDupla(32, 20, ['grafico', 'crm']);
-	mesaGerente(32, 23, 'grafico');
-	planta(35, 24, true);
-	planta(30, 24);
+	mesaDupla(48, 17, ['grafico', 'grafico']);
+	mesaDupla(48, 20, ['grafico', 'crm']);
+	mesaGerente(48, 23, 'grafico');
+	planta(51, 24, true);
+	planta(46, 24);
 
 	// Copa & Lounge
-	add({ tipo: 'geladeira', x: 36.1, y: 15.12, w: 0.8, d: 0.75, h: 1.85, frente: 'y' });
-	add({ tipo: 'bancada', x: 41, y: 15.1, w: 3, d: 0.8, h: 0.92, frente: 'y' });
-	add({ tipo: 'cafeteira', x: 41.3, y: 15.3, w: 0.42, d: 0.38, h: 0.42, z: 0.92, bloqueia: false });
-	add({ tipo: 'pingPong', x: 37.3, y: 18.6, w: 2.4, d: 1.4, h: 0.76 });
-	add({ tipo: 'mesaCentro', x: 41.1, y: 18.6, w: 1, d: 1, h: 0.72, cor: '#f4f1eb', variante: 'redonda', nome: 'Mesa do café' });
-	add({ tipo: 'pufe', x: 40.05, y: 18.75, w: 0.7, d: 0.7, h: 0.45, cor: '#e0662a' });
-	add({ tipo: 'pufe', x: 42.35, y: 19.6, w: 0.7, d: 0.7, h: 0.45, cor: '#3b6ef6', frente: '-x' });
-	add({ tipo: 'sofa', x: 36.1, y: 21, w: 0.85, d: 2.4, h: 0.75, frente: 'x', cor: '#4f6b4f' });
-	add({ tipo: 'mesaCentro', x: 37.4, y: 21.6, w: 0.9, d: 1.2, h: 0.32, cor: '#6b4a33' });
-	planta(43, 24, true);
-	planta(43, 21);
+	add({ tipo: 'geladeira', x: 52.1, y: 15.12, w: 0.8, d: 0.75, h: 1.85, frente: 'y' });
+	add({ tipo: 'bancada', x: 57, y: 15.1, w: 3, d: 0.8, h: 0.92, frente: 'y' });
+	add({ tipo: 'cafeteira', x: 57.3, y: 15.3, w: 0.42, d: 0.38, h: 0.42, z: 0.92, bloqueia: false });
+	add({ tipo: 'pingPong', x: 53.3, y: 18.6, w: 2.4, d: 1.4, h: 0.76 });
+	add({ tipo: 'mesaCentro', x: 57.1, y: 18.6, w: 1, d: 1, h: 0.72, cor: '#f4f1eb', variante: 'redonda', nome: 'Mesa do café' });
+	add({ tipo: 'pufe', x: 56.05, y: 18.75, w: 0.7, d: 0.7, h: 0.45, cor: '#e0662a' });
+	add({ tipo: 'pufe', x: 58.35, y: 19.6, w: 0.7, d: 0.7, h: 0.45, cor: '#3b6ef6', frente: '-x' });
+	add({ tipo: 'sofa', x: 52.1, y: 21, w: 0.85, d: 2.4, h: 0.75, frente: 'x', cor: '#4f6b4f' });
+	add({ tipo: 'mesaCentro', x: 53.4, y: 21.6, w: 0.9, d: 1.2, h: 0.32, cor: '#6b4a33' });
+	planta(59, 24, true);
+	planta(59, 21);
+
+	// As salas de 10/11/2026 entram depois de todas as outras: o id de cada móvel
+	// é a ordem em que ele nasce (i1, i2…), e o lugar de quem está sentado é
+	// guardado por esse id. Assim nenhum assento antigo muda de nome.
+
+	// Sala do Bruno: mesa executiva, sofá e um canto de conversa
+	add({ tipo: 'estante', x: 4.06, y: 5, w: 0.42, d: 3, h: 1.75, frente: 'x' });
+	add({ tipo: 'mesa', x: 6, y: 6.15, w: 3, d: 0.85, h: 0.54, cor: '#5d3f2a', variante: 'executiva', nome: 'Mesa do Bruno' });
+	add({ tipo: 'monitor', x: 7.05, y: 6.35, w: 0.9, d: 0.08, h: 0.48, z: 0.54, frente: '-y', variante: 'grafico', bloqueia: false });
+	add({ tipo: 'cadeira', x: 7.2, y: 5.2, w: 0.6, d: 0.6, h: 1.15, frente: 'y', cor: '#1c2534', variante: 'executiva', nome: 'Cadeira do Bruno' });
+	add({ tipo: 'cadeira', x: 6.4, y: 7.35, w: 0.48, d: 0.48, h: 0.9, frente: '-y', cor: '#2f4a8a' });
+	add({ tipo: 'cadeira', x: 8.12, y: 7.35, w: 0.48, d: 0.48, h: 0.9, frente: '-y', cor: '#2f4a8a' });
+	add({ tipo: 'sofa', x: 4.1, y: 9.4, w: 0.85, d: 2.2, h: 0.75, frente: 'x', cor: '#34405a' });
+	add({ tipo: 'mesaCentro', x: 5.55, y: 9.95, w: 0.9, d: 1.1, h: 0.32, cor: '#5d3f2a' });
+	add({ tipo: 'mesaCentro', x: 9.8, y: 9.55, w: 1, d: 1, h: 0.72, cor: '#f4f1eb', variante: 'redonda', nome: 'Mesa de conversa' });
+	add({ tipo: 'cadeira', x: 8.95, y: 9.81, w: 0.48, d: 0.48, h: 0.9, frente: 'x', cor: '#2f4a8a' });
+	add({ tipo: 'cadeira', x: 10.06, y: 8.75, w: 0.48, d: 0.48, h: 0.9, frente: 'y', cor: '#2f4a8a' });
+	planta(10, 4, true);
+	planta(11, 12);
+	planta(4, 12);
+
+	// Sala da Aline: mesa executiva, estante e cofre no fundo, sofá baixo na
+	// parede que dá para a sala do Bruno (móvel alto ali taparia a sala dele).
+	// O canto da direita fica livre: a estante da Diretoria, do outro lado da
+	// parede, cobre o que estiver ali
+	add({ tipo: 'estante', x: 12.3, y: 4.06, w: 1.9, d: 0.42, h: 1.75, frente: 'y' });
+	add({ tipo: 'cofre', x: 14.35, y: 4.15, w: 0.75, d: 0.7, h: 0.85, frente: 'y' });
+	add({ tipo: 'mesa', x: 14.5, y: 6.15, w: 3, d: 0.85, h: 0.54, cor: '#6b4a33', variante: 'executiva', nome: 'Mesa da Aline' });
+	add({ tipo: 'monitor', x: 15.55, y: 6.35, w: 0.9, d: 0.08, h: 0.48, z: 0.54, frente: '-y', variante: 'planilha', bloqueia: false });
+	add({ tipo: 'cadeira', x: 15.7, y: 5.2, w: 0.6, d: 0.6, h: 1.15, frente: 'y', cor: '#3a2a20', variante: 'executiva', nome: 'Cadeira da Aline' });
+	add({ tipo: 'cadeira', x: 14.9, y: 7.35, w: 0.48, d: 0.48, h: 0.9, frente: '-y', cor: '#a8754f' });
+	add({ tipo: 'cadeira', x: 16.62, y: 7.35, w: 0.48, d: 0.48, h: 0.9, frente: '-y', cor: '#a8754f' });
+	add({ tipo: 'sofa', x: 12.1, y: 9.4, w: 0.85, d: 2.2, h: 0.75, frente: 'x', cor: '#8a5a44' });
+	add({ tipo: 'mesaCentro', x: 13.55, y: 9.95, w: 0.9, d: 1.1, h: 0.32, cor: '#593212' });
+	planta(19, 10, true);
+	planta(19, 12);
+	planta(12, 12);
+
+	// Salas 1, 2 e 3: vazias, como o Bruno pediu
 
 	// ------------------------------------------------------------- lado de fora
 	const arvores: [number, number][] = [
-		[2, 1], [6, 2], [11, 1], [16, 2], [21, 1], [26, 2], [31, 1], [36, 2], [41, 1], [45, 2],
-		[1, 6], [2, 11], [1, 16], [2, 21], [46, 6], [45, 11], [46, 16], [45, 21],
-		[3, 28], [8, 29], [12, 28], [26, 29], [46, 28], [1, 26]
+		[2, 1], [6, 2], [11, 1], [16, 2], [21, 1], [26, 2], [31, 1], [36, 2], [41, 1], [46, 2], [51, 1], [56, 2], [61, 1],
+		[1, 6], [2, 11], [1, 16], [2, 21], [62, 6], [61, 11], [62, 16], [61, 21],
+		[1, 26], [3, 28], [8, 29], [13, 28], [19, 28], [24, 29], [28, 28], [42, 29], [62, 28]
 	];
 	for (const [x, y] of arvores) {
 		const pinheiro = sorteio(x, y, 7) < 0.4;
 		const t = pinheiro ? 0.6 : 0.7;
 		add({ tipo: pinheiro ? 'pinheiro' : 'arvore', x: x + 0.5 - t / 2, y: y + 0.5 - t / 2, w: t, d: t, h: pinheiro ? 2.6 : 2.3 });
 	}
-	for (const x of [4, 6, 8, 10, 12, 14, 16, 24, 26, 28]) {
+	for (const x of [4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 40, 42, 44]) {
 		add({ tipo: 'arbusto', x: x + 0.15, y: 26.2, w: 0.7, d: 0.6, h: 0.55 });
 	}
-	add({ tipo: 'placa', x: 14.6, y: 27.4, w: 2.8, d: 0.5, h: 1.15, frente: 'y' });
-	add({ tipo: 'banco', x: 23.3, y: 27.35, w: 1.4, d: 0.45, h: 0.45, frente: 'y' });
-	add({ tipo: 'poste', x: 18.35, y: 27.35, w: 0.3, d: 0.3, h: 2.4 });
-	add({ tipo: 'poste', x: 22.35, y: 27.35, w: 0.3, d: 0.3, h: 2.4 });
-	add({ tipo: 'carro', x: 30.55, y: 27.55, w: 0.9, d: 1.9, h: 0.75, cor: '#ff6f00', frente: 'y' });
-	add({ tipo: 'carro', x: 34.55, y: 27.55, w: 0.9, d: 1.9, h: 0.75, cor: '#3b6ef6', frente: 'y' });
-	add({ tipo: 'carro', x: 40.55, y: 27.55, w: 0.9, d: 1.9, h: 0.75, cor: '#e9edf2', frente: 'y' });
+	add({ tipo: 'placa', x: 30.6, y: 27.4, w: 2.8, d: 0.5, h: 1.15, frente: 'y' });
+	add({ tipo: 'banco', x: 39.3, y: 27.35, w: 1.4, d: 0.45, h: 0.45, frente: 'y' });
+	add({ tipo: 'poste', x: 34.35, y: 27.35, w: 0.3, d: 0.3, h: 2.4 });
+	add({ tipo: 'poste', x: 38.35, y: 27.35, w: 0.3, d: 0.3, h: 2.4 });
+	add({ tipo: 'carro', x: 46.55, y: 27.55, w: 0.9, d: 1.9, h: 0.75, cor: '#ff6f00', frente: 'y' });
+	add({ tipo: 'carro', x: 50.55, y: 27.55, w: 0.9, d: 1.9, h: 0.75, cor: '#3b6ef6', frente: 'y' });
+	add({ tipo: 'carro', x: 56.55, y: 27.55, w: 0.9, d: 1.9, h: 0.75, cor: '#e9edf2', frente: 'y' });
 	return itens;
 }
 
@@ -718,13 +832,15 @@ export const ITENS: Item[] = montarItens();
 export type Tapete = { x0: number; y0: number; x1: number; y1: number; cor: string; variante?: 'listras' | 'logo' | 'redondo' | 'capacho' | 'faixa' };
 
 export const TAPETES: Tapete[] = [
-	{ x0: 4.7, y0: 9.3, x1: 7.3, y1: 11.9, cor: '#b5523b', variante: 'listras' },
-	{ x0: 13.4, y0: 6.4, x1: 18.6, y1: 9.6, cor: '#8597ad' },
-	{ x0: 19, y0: 20, x1: 22, y1: 23, cor: '#ff6f00', variante: 'logo' },
-	{ x0: 4.8, y0: 20.9, x1: 7.6, y1: 23.7, cor: '#f6a6b6', variante: 'redondo' },
-	{ x0: 37, y0: 21.2, x1: 38.8, y1: 23.2, cor: '#c9b48a' },
-	{ x0: 19.15, y0: 25.12, x1: 21.85, y1: 25.8, cor: '#5b4a3a', variante: 'capacho' },
-	...[30, 32, 34, 36, 38, 40, 42, 44].map(
+	{ x0: 4.7, y0: 9.3, x1: 7.3, y1: 11.9, cor: '#3b6ef6', variante: 'listras' },
+	{ x0: 12.8, y0: 9.3, x1: 15.4, y1: 11.9, cor: '#e3a98f', variante: 'redondo' },
+	{ x0: 20.7, y0: 9.3, x1: 23.3, y1: 11.9, cor: '#b5523b', variante: 'listras' },
+	{ x0: 29.4, y0: 6.4, x1: 34.6, y1: 9.6, cor: '#8597ad' },
+	{ x0: 35, y0: 20, x1: 38, y1: 23, cor: '#ff6f00', variante: 'logo' },
+	{ x0: 20.8, y0: 20.9, x1: 23.6, y1: 23.7, cor: '#f6a6b6', variante: 'redondo' },
+	{ x0: 53, y0: 21.2, x1: 54.8, y1: 23.2, cor: '#c9b48a' },
+	{ x0: 35.15, y0: 25.12, x1: 37.85, y1: 25.8, cor: '#5b4a3a', variante: 'capacho' },
+	...[46, 48, 50, 52, 54, 56, 58, 60].map(
 		(x): Tapete => ({ x0: x - 0.04, y0: 27.25, x1: x + 0.04, y1: 29.75, cor: '#f2f2ee', variante: 'faixa' })
 	)
 ];

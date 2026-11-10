@@ -10,6 +10,7 @@
 //   - offline (saiu): nos sofás da recepção
 //   - e, a cada TROCA_DE_AMBIENTE (3 h) parado, muda para um lugar sorteado
 //     em qualquer sala, "para dar um ar de vida". CEO fica sempre na Diretoria
+//     (desde 10/11/2026, Bruno e Aline na sala de cada um, que fica fora do sorteio)
 //   - ninguém senta onde outra pessoa (ou, na próxima fase, um agente) já está
 // Todas as telas recebem a mesma lista e fazem a mesma conta: o sorteio usa o
 // id da pessoa, desde quando ela está parada e a rodada, nos segundos do
@@ -20,7 +21,7 @@
 // alvo de novo, ou um lugar com carimbo mais velho, não mexe em nada: era o
 // defeito de 09/11/2026 (o boneco andava, voltava ao começo e pulava de novo).
 
-import { assentos, assentoPorId, embaralhar, hashTexto, lugaresDeQuemSaiu, lugaresDoCeo, type Assento } from './assentos';
+import { assentos, assentoPorId, embaralhar, hashTexto, lugaresDeQuemSaiu, lugaresDoCeo, salaComDono, salaDoCeo, type Assento } from './assentos';
 import type { Pessoa } from './presenca';
 
 /** De quanto em quanto tempo (s) quem está parado muda de ambiente. */
@@ -50,16 +51,16 @@ export function alvos(lista: Pessoa[], opcoes: { agentes?: Iterable<string> } = 
 		return true;
 	};
 
-	// 1) Ausente na primeira rodada: o lugar que escolheu (CEO: o da Diretoria, sempre)
+	// 1) Ausente na primeira rodada: o lugar que escolheu (CEO: o da sala dele, sempre)
 	for (const p of parados) {
 		if (p.situacao !== 'inativo' || (rodada(p) > 0 && !p.ceo)) continue;
 		const a = assentoPorId(p.assento);
-		if (a && (!p.ceo || a.sala === 'diretoria')) pegar(p, [a]);
+		if (a && (!p.ceo || a.sala === salaDoCeo(p.id))) pegar(p, [a]);
 	}
-	// 2) CEO parado (ausente, ou offline depois da primeira rodada): Diretoria
+	// 2) CEO parado (ausente, ou offline depois da primeira rodada): a sala dele, ou a Diretoria
 	for (const p of parados) {
 		if (lugar.has(p.id) || !p.ceo || (p.situacao === 'offline' && rodada(p) === 0)) continue;
-		pegar(p, lugaresDoCeo());
+		pegar(p, lugaresDoCeo(p.id));
 	}
 	// 3) Offline na primeira rodada: sofás da recepção (e em pé, se lotar)
 	const recepcao = lugaresDeQuemSaiu();
@@ -69,8 +70,8 @@ export function alvos(lista: Pessoa[], opcoes: { agentes?: Iterable<string> } = 
 		if (lugar.has(p.id) || p.situacao !== 'offline' || rodada(p) > 0) continue;
 		pegar(p, [...embaralhar(sofas, semente(p, 0)), ...emPe]);
 	}
-	// 4) Os outros: um lugar sorteado em qualquer sala, que muda a cada rodada
-	const todos = assentos().filter((a) => a.sentado);
+	// 4) Os outros: um lugar sorteado em qualquer sala (menos as que são de alguém), que muda a cada rodada
+	const todos = assentos().filter((a) => a.sentado && !salaComDono(a.sala));
 	for (const p of parados) {
 		if (lugar.has(p.id)) continue;
 		pegar(p, embaralhar(todos, semente(p, rodada(p))));

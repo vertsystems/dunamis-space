@@ -4,6 +4,8 @@
 //   - saiu do dspace (ou sem sinal): sentado nos sofás da recepção
 //   - 15 min sem mexer: vai sentar na recepção, na copa ou numa sala sorteada;
 //     quem é CEO vai sempre para a Diretoria (primeiro a cadeira do CEO)
+//   - desde 10/11/2026, quem tem sala própria (Bruno e Aline) vai para a dela,
+//     primeiro a cadeira dela; ninguém mais é sorteado para sentar ali
 //
 // Os assentos saem dos próprios móveis do mapa: cada cadeira (virada para
 // onde está a `frente` dela), dois lugares por sofá e os pufes. Para cada um:
@@ -13,7 +15,7 @@
 //     encosto); de costas, fica do lado de dentro (o encosto cobre as costas)
 //   - x, y: o chão livre ao lado, por onde a pessoa chega antes de sentar
 
-import { ITENS, INICIO, SALA_POR_ID, LARGURA, ALTURA, celulaLivre, paredeEntre, zonaDaCelula, type Item } from './mapa';
+import { ITENS, INICIO, SALAS, SALA_POR_ID, LARGURA, ALTURA, celulaLivre, paredeEntre, zonaDaCelula, type Item } from './mapa';
 import { aEstrela, type Grade } from './caminho';
 
 export type Assento = {
@@ -94,7 +96,8 @@ function gerar(): Base[] {
 		}
 	}
 	// Em pé, perto da porta da recepção, para quando os sofás lotarem
-	for (const [x, y] of [[19.4, 23.4], [21.6, 23.4], [20.5, 23.75]]) {
+	const r = SALA_POR_ID.get('recepcao')!;
+	for (const [x, y] of [[r.x0 + 2.4, 23.4], [r.x0 + 4.6, 23.4], [r.x0 + 3.5, 23.75]]) {
 		lista.push({ id: `recepcao:em-pe:${x}`, sala: 'recepcao', movel: 'em-pe', nome: 'Em pé', sx: x, sy: y, ox: x, oy: y, dirX: 0.7, dirY: 0.7, sentado: false });
 	}
 	return lista;
@@ -162,11 +165,30 @@ export function embaralhar<T>(lista: T[], semente: number): T[] {
 	return copia;
 }
 
-/** Os lugares da Diretoria na ordem do CEO: a cadeira dele, o sofá, as cadeiras de visita. */
-export function lugaresDoCeo(): Assento[] {
-	const ordem = (a: Assento) => (a.nome === 'Cadeira do CEO' ? 0 : a.movel === 'sofa' ? 1 : 2);
+/** A sala própria da pessoa (o id em `colaboradores`), ou null. */
+export function salaDoDono(id: string | null | undefined): string | null {
+	return id ? (SALAS.find((s) => s.dono?.id === id)?.id ?? null) : null;
+}
+
+/** Onde o CEO fica quando está parado: a sala dele, se tiver; senão, a Diretoria. */
+export function salaDoCeo(id: string | null | undefined): string {
+	return salaDoDono(id) ?? 'diretoria';
+}
+
+/** Sala que é de alguém: fica fora do sorteio de quem está parado. */
+export const salaComDono = (sala: string) => !!SALA_POR_ID.get(sala)?.dono;
+
+/**
+ * Os lugares do CEO na ordem dele: a cadeira principal, o sofá, as outras
+ * cadeiras. Na sala própria (Bruno, Aline), a principal é a dele; na
+ * Diretoria, a cadeira do CEO.
+ */
+export function lugaresDoCeo(id?: string | null): Assento[] {
+	const sala = salaDoCeo(id);
+	const principal = SALA_POR_ID.get(sala)?.dono?.cadeira ?? 'Cadeira do CEO';
+	const ordem = (a: Assento) => (a.nome === principal ? 0 : a.movel === 'sofa' ? 1 : 2);
 	return assentos()
-		.filter((a) => a.sala === 'diretoria' && a.sentado)
+		.filter((a) => a.sala === sala && a.sentado)
 		.sort((a, b) => ordem(a) - ordem(b));
 }
 
@@ -185,15 +207,16 @@ function sorteador(semente: number) {
 }
 
 /**
- * Para onde vai quem ficou 15 min sem mexer. CEO: Diretoria (primeiro a
- * cadeira do CEO, depois o sofá, depois as cadeiras de visita). Os outros:
+ * Para onde vai quem ficou 15 min sem mexer. Quem tem sala própria: a dela
+ * (primeiro a cadeira dela). CEO sem sala: Diretoria (primeiro a cadeira do
+ * CEO, depois o sofá, depois as cadeiras de visita). Os outros:
  * recepção, copa ou uma sala sorteada, num lugar livre.
  */
-export function escolherAssento(opcoes: { ceo: boolean; ocupados: Set<string>; semente: number }): Assento | null {
+export function escolherAssento(opcoes: { ceo: boolean; id?: string | null; ocupados: Set<string>; semente: number }): Assento | null {
 	const livres = (sala: string) => assentos().filter((a) => a.sala === sala && a.sentado && !opcoes.ocupados.has(a.id));
-	if (opcoes.ceo) {
-		const diretoria = lugaresDoCeo().filter((a) => !opcoes.ocupados.has(a.id));
-		if (diretoria.length) return diretoria[0];
+	if (opcoes.ceo || salaDoDono(opcoes.id)) {
+		const daSala = lugaresDoCeo(opcoes.id).filter((a) => !opcoes.ocupados.has(a.id));
+		if (daSala.length) return daSala[0];
 	}
 	const r = sorteador(opcoes.semente);
 	const salas = SALAS_DO_SORTEIO.filter((s) => SALA_POR_ID.has(s));

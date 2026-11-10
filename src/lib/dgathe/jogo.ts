@@ -201,7 +201,13 @@ const BALAO_ESCALA = 1.25;
 const BALAO_ALTO = 21;
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 2.4;
-const CHAVE_POSICAO = 'dgathe:posicao';
+const CHAVE_POSICAO = 'dgathe:posicao:2';
+/**
+ * A posição guardada antes de 10/11/2026, quando o prédio cresceu 16 casas
+ * para a esquerda: ela anda junto, para cada um voltar ao mesmo lugar.
+ */
+const CHAVE_ANTIGA = 'dgathe:posicao';
+const AMPLIACAO_X = 16;
 
 /** Folga do desenho além da caixa (copa da árvore, luz do poste…), em px. */
 const FOLGA: Partial<Record<Item['tipo'], number>> = { arvore: 42, pinheiro: 32, planta: 16, poste: 24, nucleo: 24, luzAnel: 14, softbox: 12 };
@@ -284,7 +290,8 @@ export class Jogo {
 
 		this.montarPecas();
 
-		const salva = ler<{ x: number; y: number }>(CHAVE_POSICAO);
+		const antiga = ler<{ x: number; y: number }>(CHAVE_ANTIGA);
+		const salva = ler<{ x: number; y: number }>(CHAVE_POSICAO) ?? (antiga ? { x: antiga.x + AMPLIACAO_X, y: antiga.y } : null);
 		if (salva && Number.isFinite(salva.x) && Number.isFinite(salva.y) && celulaLivre(Math.floor(salva.x), Math.floor(salva.y))) {
 			this.av.x = salva.x;
 			this.av.y = salva.y;

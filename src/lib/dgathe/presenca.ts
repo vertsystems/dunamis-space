@@ -319,7 +319,7 @@ export function manterSinal(
 				}
 				for (const alvo of alvos(outros).values()) if (alvo.assento) ocupados.add(alvo.assento.id);
 			}
-			const a = escolherAssento({ ceo: quem.ceo, ocupados, semente: hashTexto(quem.id ?? aba) ^ desde });
+			const a = escolherAssento({ ceo: quem.ceo, id: quem.id, ocupados, semente: hashTexto(quem.id ?? aba) ^ desde });
 			decisao = { desde, assento: a?.id ?? null };
 			try {
 				localStorage.setItem(CHAVE_INATIVO, JSON.stringify(decisao));

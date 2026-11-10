@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { TROCA_DE_AMBIENTE, alvos, deveMover } from './movimento';
 import { assentos, lugaresDeQuemSaiu, lugaresDoCeo } from './assentos';
+import { ALINE, BRUNO } from './mapa';
 import { APARENCIA_PADRAO } from './aparencia';
 import type { Pessoa, Situacao } from './presenca';
 
@@ -84,6 +85,24 @@ describe('o alvo de cada pessoa', () => {
 		}
 		expect(alvos([pessoa('bruno', 'offline', { ceo: true, paradoHa: 60 })]).get('bruno')!.assento?.sala).toBe('recepcao');
 		expect(alvos([pessoa('bruno', 'offline', { ceo: true, paradoHa: horas(3.5) })]).get('bruno')!.assento?.sala).toBe('diretoria');
+	});
+
+	it('Bruno e Aline ficam na sala de cada um, e ninguém mais é sorteado para lá (10/11/2026)', () => {
+		const dele = lugaresDoCeo(BRUNO)[0];
+		expect(dele.nome).toBe('Cadeira do Bruno');
+		for (const h of [0, 4, 7, 20]) {
+			const a = alvos([pessoa(BRUNO, 'inativo', { ceo: true, assento: dele.id, paradoHa: horas(h) })]).get(BRUNO)!;
+			expect(a.assento?.sala, `${h} h`).toBe('sala-bruno');
+		}
+		// Ausente com um lugar velho da Diretoria guardado: vai para a sala dela mesmo assim
+		const velho = lugaresDoCeo()[0];
+		expect(alvos([pessoa(ALINE, 'inativo', { ceo: true, assento: velho.id })]).get(ALINE)!.assento?.sala).toBe('sala-aline');
+		expect(alvos([pessoa(ALINE, 'offline', { ceo: true, paradoHa: horas(3.5) })]).get(ALINE)!.assento?.sala).toBe('sala-aline');
+		// Quem não é dono, parado há horas, nunca cai nelas
+		for (let n = 0; n < 60; n++) {
+			const a = alvos([pessoa(`p${n}`, 'offline', { paradoHa: horas(3 + 3 * (n % 7)) })]).get(`p${n}`)!;
+			expect(a.assento?.sala ?? '', `p${n}`).not.toMatch(/^sala-(bruno|aline)$/);
+		}
 	});
 
 	it('ninguém divide lugar, e cadeira de agente fica de fora', () => {
