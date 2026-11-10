@@ -26,7 +26,15 @@ export default defineConfig({
 			// O troco é ~60 ms a mais entre o usuário e a função (uma vez por
 			// requisição) contra 100+ ms economizados em CADA consulta — e uma tela
 			// como a Visão Geral faz mais de dez.
-			adapter: adapter({ regions: ['pdx1'] })
+			adapter: adapter({ regions: ['pdx1'] }),
+
+			// Versão nova no ar: a aba aberta descobre sozinha em até 30 s
+			// (lê /_app/version.json, que é pequeno e vem do CDN). Sem isso, quem
+			// estava com o dspace aberto continuava no código velho até apertar F5:
+			// o Bruno reclamou em 10/11/2026, com o DGathe aberto o dia inteiro.
+			// O que acontece depois está no +layout.svelte (próxima navegação
+			// recarrega) e no Escritorio.svelte (o DGathe recarrega sozinho).
+			version: { pollInterval: 30_000 }
 		})
 	],
 	server: {

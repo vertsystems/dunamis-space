@@ -3,6 +3,7 @@
 	// de recursos, painel do que está selecionado, minimapa, ajuda e avisos).
 	// Quem desenha e controla o mapa é o motor em $lib/dgathe/jogo.ts.
 	import { onMount, untrack } from 'svelte';
+	import { updated } from '$app/state';
 	import { fade } from 'svelte/transition';
 	import type { SupabaseClient } from '@supabase/supabase-js';
 	import { Jogo, type Selecao, type OutroResumo } from '$lib/dgathe/jogo';
@@ -136,8 +137,10 @@
 	// (09/11/2026).
 	const MINIMO_BOAS_VINDAS = 6000;
 	const MAXIMO_BOAS_VINDAS = 8000;
+	const CHAVE_RECARGA = 'dgathe:recarregou';
 	let minimoPassou = $state(false);
-	let esgotou = $state(false);
+	// Voltou de uma atualização automática (versão nova): sem boas-vindas de novo
+	let esgotou = $state(jaRecarregou());
 	const boasVindas = $derived(!esgotou && !(minimoPassou && conexao !== 'conectando'));
 
 	const salaSelecionada = $derived(selecao.tipo === 'sala' ? (SALA_POR_ID.get(selecao.id) ?? null) : null);
@@ -164,6 +167,44 @@
 	const status = $derived.by(() => {
 		if (andando) return destino ? `Indo para ${SALA_POR_ID.get(destino)?.nome ?? 'o destino'}` : 'Andando';
 		return local ? `Em ${nomeLocal}` : 'Do lado de fora';
+	});
+
+	/** Lê e apaga a marca deixada pela atualização automática. */
+	function jaRecarregou() {
+		try {
+			const v = sessionStorage.getItem(CHAVE_RECARGA);
+			sessionStorage.removeItem(CHAVE_RECARGA);
+			return v === '1';
+		} catch {
+			return false;
+		}
+	}
+
+	// Versão nova do dspace no ar (o SvelteKit confere a cada 30 s): o DGathe fica
+	// aberto o dia inteiro, então ele mesmo recarrega, mas só quando ninguém está
+	// escrevendo (tarefa, mensagem, motivo de negar). Escrevendo, espera e tenta de
+	// novo. Quem está no escritório nem vê a pessoa sair: a despedida só conta
+	// depois de 5 s, e a recarga leva 1 a 2 s.
+	$effect(() => {
+		if (!updated.current) return;
+		let timer: ReturnType<typeof setTimeout>;
+		const tentar = () => {
+			const campos = [...document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('.dg textarea, .dg input')];
+			const escrevendo = campos.some((c) => c.value.trim() !== '') || campos.some((c) => c === document.activeElement);
+			if (escrevendo) {
+				timer = setTimeout(tentar, 5000);
+				return;
+			}
+			avisar('Versão nova do DGathe: atualizando…', 3000);
+			try {
+				sessionStorage.setItem(CHAVE_RECARGA, '1');
+			} catch {
+				// Sem armazenamento: só mostra as boas-vindas de novo.
+			}
+			timer = setTimeout(() => location.reload(), 1200);
+		};
+		tentar();
+		return () => clearTimeout(timer);
 	});
 
 	let timerAviso: ReturnType<typeof setTimeout> | undefined;

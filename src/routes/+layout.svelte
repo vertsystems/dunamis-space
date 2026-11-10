@@ -8,8 +8,8 @@
 	import '$lib/styles/design-system.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import logo from '$lib/assets/dspace-logo.svg';
-	import { goto, invalidate } from '$app/navigation';
-	import { page } from '$app/state';
+	import { beforeNavigate, goto, invalidate } from '$app/navigation';
+	import { page, updated } from '$app/state';
 	import { onMount, untrack } from 'svelte';
 	import { env } from '$env/dynamic/public';
 	import { DTOOLS_FERRAMENTAS } from '$lib/dtools';
@@ -43,6 +43,13 @@
 
 	// Chamados SOS em aberto → badge no item "Central SOS" da sidebar.
 	const sosAbertos = $derived((data.sosAbertos as number) ?? 0);
+
+	// Versão nova publicada (version.pollInterval no vite.config.ts): a próxima
+	// troca de tela vira um carregamento completo e já abre o código novo. Nada
+	// some no meio do que a pessoa está fazendo; só na hora em que ela navega.
+	beforeNavigate(({ willUnload, to }) => {
+		if (updated.current && !willUnload && to?.url) location.href = to.url.href;
+	});
 
 	onMount(() => {
 		const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
