@@ -17,7 +17,7 @@
 // mesma coisa sem combinar nada (uns segundos de diferença de relógio entre as
 // telas só adiantam ou atrasam a saída para a pausa).
 
-import { assentos, hashTexto, type Assento } from './assentos';
+import { assentos, hashTexto, salaComDono, type Assento } from './assentos';
 import { aEstrela, type Grade } from './caminho';
 import { ALTURA, INICIO, ITENS, LARGURA, SALA_POR_ID, celulaLivre, paredeEntre, zonaDaCelula } from './mapa';
 
@@ -208,7 +208,8 @@ export function destinosDosAgentes(
 		r.set(x.a.id, { lugar: pontas[i], motivo: 'pausa', atividade: 'pinguePongue' });
 	});
 
-	const sofas = assentos().filter((s) => s.movel === 'sofa' || s.movel === 'pufe');
+	// Sofás e pufes de qualquer sala, menos as que são de alguém (Bruno, Aline)
+	const sofas = assentos().filter((s) => (s.movel === 'sofa' || s.movel === 'pufe') && !salaComDono(s.sala));
 	const naCopa = assentos().filter((s) => s.sala === 'copa' && s.sentado);
 	for (const { a, p } of emPausa) {
 		if (r.has(a.id)) continue;

@@ -8,7 +8,7 @@
 	import type { SupabaseClient } from '@supabase/supabase-js';
 	import { Jogo, type Selecao, type OutroResumo } from '$lib/dgathe/jogo';
 	import { Presenca, type EstadoConexao } from '$lib/dgathe/presenca';
-	import { assentoPorId } from '$lib/dgathe/assentos';
+	import { assentoPorId, salaDoDono } from '$lib/dgathe/assentos';
 	import { lerAparencia, type Aparencia } from '$lib/dgathe/aparencia';
 	import { SALA_POR_ID, SETORES } from '$lib/dgathe/mapa';
 	import { Agentes, COR_DO_ESTADO, lugaresDosAgentes, NOME_DO_ESTADO, PREFIXO_AGENTE, type Agente, type LeituraAgentes } from '$lib/dgathe/agentes';
@@ -84,7 +84,7 @@
 		'sala-1': SquareDashed,
 		'sala-2': SquareDashed,
 		'sala-3': SquareDashed,
-		diretoria: Crown,
+		'sala-4': SquareDashed,
 		reuniao: Presentation,
 		financeiro: Wallet,
 		comercial: Handshake,
@@ -333,16 +333,21 @@
 			let estados: Map<string, string> | null = null;
 			agentes = new Agentes(supabase, {
 				leitura: (l) => {
-					// Com a hora do servidor, vale a rotina: posto, 20% de pausas e reunião
-					const { lugar, reservados, momento } = lugaresDosAgentes(l.agentes, l.agora);
+					// Com a hora do servidor, vale a rotina: posto, 20% de pausas e reunião.
+					// Onde tem gente sentada, a pausa dos agentes desvia
+					const { lugar, reservados, momento, postos } = lugaresDosAgentes(l.agentes, l.agora, jg.assentosDePessoas());
 					momentos = momento;
+					const nomes = new Map(l.agentes.map((a) => [a.id, a.nome]));
 					jg.definirAgentes(
 						l.agentes.flatMap((a) => {
 							const onde = lugar.get(a.id);
-							// O momento (posto, pausa, reunião) vai para o crachá e o texto do mouse
-							return onde ? [{ agente: a, lugar: onde, momento: momento.get(a.id) ?? null }] : [];
+							// O momento (posto, pausa, reunião) vai para o crachá e o texto do mouse.
+							// Esperando aprovação: vai até quem passou a tarefa e levanta a mão
+							const chamar = a.estado === 'esperando' ? (a.tarefa?.aprovador ?? null) : null;
+							return onde ? [{ agente: a, lugar: onde, momento: momento.get(a.id) ?? null, chamar }] : [];
 						}),
-						reservados
+						reservados,
+						new Map([...postos].map(([agente, assento]) => [assento.id, nomes.get(agente) ?? agente]))
 					);
 					if (estados) {
 						for (const a of l.agentes) {
@@ -366,12 +371,21 @@
 		// 15 min sem mexer (a vigia é do layout, presenca.ts): com o DGathe aberto
 		// nesta aba, é o meu boneco que anda até o lugar e grava, e levanta ao voltar
 		const aoFicarInativo = (e: Event) => {
+			// Sentou por escolha (clicou no lugar): fica onde está. Quem tem sala
+			// própria (Bruno, Aline) só fica se o lugar for na sala dele
+			const meu = jogo?.sentadoPorEscolha();
+			const sala = salaDoDono(id);
+			if (meu && (!sala || meu.sala === sala)) {
+				e.preventDefault();
+				return;
+			}
 			const a = assentoPorId((e as CustomEvent<{ assento: string | null }>).detail?.assento);
 			if (jogo && a && jogo.sentarEm(a)) e.preventDefault();
 		};
 		const aoVoltar = (e: Event) => {
 			if (!jogo) return;
-			jogo.levantar();
+			// Voltou a mexer: quem sentou por escolha continua sentado
+			if (!jogo.sentadoPorEscolha()) jogo.levantar();
 			e.preventDefault();
 		};
 		window.addEventListener('dgathe:inativo', aoFicarInativo);
@@ -440,7 +454,7 @@
 		bind:this={tela}
 		class="dg-tela"
 		tabindex="0"
-		aria-label="Mapa do escritório da Dunamis. Botão direito anda, botão esquerdo seleciona."
+		aria-label="Mapa do escritório da Dunamis. Botão direito anda, botão esquerdo seleciona, clique numa cadeira para sentar."
 	></canvas>
 
 	{#if falhou}
@@ -560,7 +574,7 @@
 					{#if !daSala.length}<p class="dg-vazio">{salaSelecionada.id === 'copa' ? 'É aqui que os agentes passam as pausas' : 'Nenhum agente neste setor ainda'}</p>{/if}
 				</div>
 			</div>
-			{#if reunioesAqui.length || (leitura?.pode === 'editar' && (salaSelecionada.id === 'reuniao' || salaSelecionada.id === 'diretoria'))}
+			{#if reunioesAqui.length || (leitura?.pode === 'editar' && (salaSelecionada.id === 'reuniao' || !!salaSelecionada.dono))}
 				<div class="dg-reuniao">
 					<h4>Reunião de alinhamento</h4>
 					{#each reunioesAqui as r (r.id)}
@@ -698,6 +712,7 @@
 				<ul>
 					<li><kbd>Botão direito</kbd><span>anda até o ponto</span></li>
 					<li><kbd>Botão esquerdo</kbd><span>seleciona sala, objeto ou pessoa</span></li>
+					<li><kbd>Clique na cadeira</kbd><span>senta (no sofá e no pufe também); clique de novo para levantar</span></li>
 					<li><kbd>Arrastar</kbd><span>move a câmera</span></li>
 					<li><kbd>Roda do mouse</kbd><span>aproxima e afasta</span></li>
 					<li><kbd>WASD</kbd><kbd>Setas</kbd><span>movem a câmera</span></li>

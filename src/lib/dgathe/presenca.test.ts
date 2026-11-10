@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { AUSENTE_APOS, LEITURA, OCIOSO_APOS, PULSO, Presenca, SAIDA_CONFIRMA, lerLinha, manterSinal, marcarAba, type EstadoConexao, type Pessoa } from './presenca';
 import { assentoPorId } from './assentos';
+import { BRUNO } from './mapa';
 
 const LINHA = {
 	id: 'davi',
@@ -211,17 +212,17 @@ describe('a vigia dos 15 minutos sem mexer (layout)', () => {
 
 	afterEach(() => vi.unstubAllGlobals());
 
-	it('sem o DGathe aberto: o layout grava o lugar (CEO na cadeira do CEO) e, ao mexer, levanta', async () => {
+	it('sem o DGathe aberto: o layout grava o lugar (o Bruno na cadeira dele) e, ao mexer, levanta', async () => {
 		vi.useFakeTimers();
 		const { janela, chamadas, supabase } = ambiente();
-		const parar = manterSinal(supabase, { url: 'https://x', chave: 'k' }, { id: 'bruno', ceo: true });
+		const parar = manterSinal(supabase, { url: 'https://x', chave: 'k' }, { id: BRUNO, ceo: true });
 		await vi.advanceTimersByTimeAsync(0);
 		expect(chamadas[0]).toMatchObject({ nome: 'dgathe_pulso', args: { p_inativo: false } });
 		await vi.advanceTimersByTimeAsync(OCIOSO_APOS + PULSO);
 		const sentou = chamadas.find((c) => c.args?.p_inativo === true)!;
 		const a = assentoPorId(sentou.args!.p_assento as string)!;
-		expect(a.sala).toBe('diretoria');
-		expect(a.nome).toBe('Cadeira do CEO');
+		expect(a.sala).toBe('sala-bruno');
+		expect(a.nome).toBe('Cadeira do Bruno');
 		expect(sentou.args).toMatchObject({ p_x: a.x, p_y: a.y });
 		const antes = chamadas.length;
 		janela.dispatchEvent(new Event('pointerdown'));
@@ -244,7 +245,7 @@ describe('a vigia dos 15 minutos sem mexer (layout)', () => {
 		await vi.advanceTimersByTimeAsync(OCIOSO_APOS + PULSO);
 		expect(recebidos).toHaveLength(1);
 		const a = assentoPorId(recebidos[0])!;
-		expect(a.sala).not.toBe('diretoria');
+		expect(a.sala).not.toMatch(/^sala-(bruno|aline)$/);
 		const marcou = chamadas.find((c) => c.args?.p_inativo === true)!;
 		expect(marcou.args).toEqual({ p_inativo: true });
 		parar();

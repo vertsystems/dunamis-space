@@ -77,14 +77,27 @@ describe('o alvo de cada pessoa', () => {
 		expect(depois.chave).not.toBe(antes.chave);
 	});
 
-	it('CEO fica sempre na Diretoria: ausente em qualquer rodada; offline, depois das primeiras 3 h', () => {
-		const ceo = lugaresDoCeo()[0];
+	it('quem tem sala fica sempre nela: ausente em qualquer rodada; offline, depois das primeiras 3 h', () => {
+		const dele = lugaresDoCeo(BRUNO)[0];
 		for (const h of [0, 4, 7, 20]) {
-			const a = alvos([pessoa('bruno', 'inativo', { ceo: true, assento: ceo.id, paradoHa: horas(h) })]).get('bruno')!;
-			expect(a.assento?.sala, `${h} h`).toBe('diretoria');
+			const a = alvos([pessoa(BRUNO, 'inativo', { ceo: true, assento: dele.id, paradoHa: horas(h) })]).get(BRUNO)!;
+			expect(a.assento?.sala, `${h} h`).toBe('sala-bruno');
 		}
-		expect(alvos([pessoa('bruno', 'offline', { ceo: true, paradoHa: 60 })]).get('bruno')!.assento?.sala).toBe('recepcao');
-		expect(alvos([pessoa('bruno', 'offline', { ceo: true, paradoHa: horas(3.5) })]).get('bruno')!.assento?.sala).toBe('diretoria');
+		expect(alvos([pessoa(BRUNO, 'offline', { ceo: true, paradoHa: 60 })]).get(BRUNO)!.assento?.sala).toBe('recepcao');
+		expect(alvos([pessoa(BRUNO, 'offline', { ceo: true, paradoHa: horas(3.5) })]).get(BRUNO)!.assento?.sala).toBe('sala-bruno');
+	});
+
+	it('online e sentado (clicou na cadeira): os outros também o veem sentado; em cadeira de agente, não (10/11/2026)', () => {
+		const sofa = assentos().find((x) => x.sala === 'copa' && x.movel === 'sofa')!;
+		const a = alvos([pessoa('davi', 'online', { assento: sofa.id, x: sofa.x, y: sofa.y, mov: 300 })]).get('davi')!;
+		expect(a).toMatchObject({ chave: `a:${sofa.id}` });
+		expect(a.assento?.sentado).toBe(true);
+		// O lugar é de um agente: fica em pé no chão
+		const b = alvos([pessoa('davi', 'online', { assento: sofa.id, x: 30, y: 10, mov: 300 })], { agentes: [sofa.id] }).get('davi')!;
+		expect(b).toMatchObject({ chave: 'l:300', assento: null });
+		// Dois online no mesmo lugar: só o primeiro senta
+		const dois = alvos([pessoa('davi', 'online', { assento: sofa.id, mov: 1 }), pessoa('julia', 'online', { assento: sofa.id, mov: 2 })]);
+		expect([dois.get('davi')!.assento, dois.get('julia')!.assento].filter(Boolean)).toHaveLength(1);
 	});
 
 	it('Bruno e Aline ficam na sala de cada um, e ninguém mais é sorteado para lá (10/11/2026)', () => {
@@ -95,7 +108,7 @@ describe('o alvo de cada pessoa', () => {
 			expect(a.assento?.sala, `${h} h`).toBe('sala-bruno');
 		}
 		// Ausente com um lugar velho da Diretoria guardado: vai para a sala dela mesmo assim
-		const velho = lugaresDoCeo()[0];
+		const velho = assentos().find((x) => x.sala === 'copa' && x.sentado)!;
 		expect(alvos([pessoa(ALINE, 'inativo', { ceo: true, assento: velho.id })]).get(ALINE)!.assento?.sala).toBe('sala-aline');
 		expect(alvos([pessoa(ALINE, 'offline', { ceo: true, paradoHa: horas(3.5) })]).get(ALINE)!.assento?.sala).toBe('sala-aline');
 		// Quem não é dono, parado há horas, nunca cai nelas

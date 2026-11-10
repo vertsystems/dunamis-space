@@ -9,8 +9,9 @@
 //   - ausente (15 min sem mexer): no lugar que o próprio navegador escolheu
 //   - offline (saiu): nos sofás da recepção
 //   - e, a cada TROCA_DE_AMBIENTE (3 h) parado, muda para um lugar sorteado
-//     em qualquer sala, "para dar um ar de vida". CEO fica sempre na Diretoria
-//     (desde 10/11/2026, Bruno e Aline na sala de cada um, que fica fora do sorteio)
+//     em qualquer sala, "para dar um ar de vida". Quem tem sala própria (Bruno
+//     e Aline, desde 10/11/2026) fica sempre nela, e ela fica fora do sorteio
+//   - online sentado (clicou numa cadeira): os outros também o veem sentado
 //   - ninguém senta onde outra pessoa (ou, na próxima fase, um agente) já está
 // Todas as telas recebem a mesma lista e fazem a mesma conta: o sorteio usa o
 // id da pessoa, desde quando ela está parada e a rodada, nos segundos do
@@ -21,7 +22,7 @@
 // alvo de novo, ou um lugar com carimbo mais velho, não mexe em nada: era o
 // defeito de 09/11/2026 (o boneco andava, voltava ao começo e pulava de novo).
 
-import { assentos, assentoPorId, embaralhar, hashTexto, lugaresDeQuemSaiu, lugaresDoCeo, salaComDono, salaDoCeo, type Assento } from './assentos';
+import { assentos, assentoPorId, embaralhar, hashTexto, lugaresDeQuemSaiu, lugaresDoCeo, salaComDono, salaDoDono, type Assento } from './assentos';
 import type { Pessoa } from './presenca';
 
 /** De quanto em quanto tempo (s) quem está parado muda de ambiente. */
@@ -51,15 +52,22 @@ export function alvos(lista: Pessoa[], opcoes: { agentes?: Iterable<string> } = 
 		return true;
 	};
 
-	// 1) Ausente na primeira rodada: o lugar que escolheu (CEO: o da sala dele, sempre)
-	for (const p of parados) {
-		if (p.situacao !== 'inativo' || (rodada(p) > 0 && !p.ceo)) continue;
+	// 0) Online e sentado (clicou numa cadeira): os outros também o veem sentado
+	for (const p of lista) {
+		if (p.situacao !== 'online' || !p.assento) continue;
 		const a = assentoPorId(p.assento);
-		if (a && (!p.ceo || a.sala === salaDoCeo(p.id))) pegar(p, [a]);
+		if (a?.sentado) pegar(p, [a]);
 	}
-	// 2) CEO parado (ausente, ou offline depois da primeira rodada): a sala dele, ou a Diretoria
+	// 1) Ausente na primeira rodada: o lugar que escolheu (quem tem sala: o dela, sempre)
 	for (const p of parados) {
-		if (lugar.has(p.id) || !p.ceo || (p.situacao === 'offline' && rodada(p) === 0)) continue;
+		const sala = salaDoDono(p.id);
+		if (p.situacao !== 'inativo' || (rodada(p) > 0 && !sala)) continue;
+		const a = assentoPorId(p.assento);
+		if (a && (!sala || a.sala === sala)) pegar(p, [a]);
+	}
+	// 2) Quem tem sala, parado (ausente, ou offline depois da primeira rodada): a sala dele
+	for (const p of parados) {
+		if (lugar.has(p.id) || !salaDoDono(p.id) || (p.situacao === 'offline' && rodada(p) === 0)) continue;
 		pegar(p, lugaresDoCeo(p.id));
 	}
 	// 3) Offline na primeira rodada: sofás da recepção (e em pé, se lotar)

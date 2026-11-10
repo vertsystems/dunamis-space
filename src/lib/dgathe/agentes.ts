@@ -39,6 +39,11 @@ export type TarefaAtual = {
 	paiId: string | null;
 	/** Subtarefas ainda rodando (null sem o detalhe ou com o banco de antes da 0102). */
 	subtarefasAbertas: number | null;
+	/**
+	 * Quem aprova os pedidos (id em `colaboradores`, migration 0106): quem passou
+	 * a tarefa, ou a de cima, numa subtarefa. O agente esperando vai até essa pessoa.
+	 */
+	aprovador: string | null;
 };
 
 export type Agente = {
@@ -135,7 +140,8 @@ function lerTarefa(bruto: unknown): TarefaAtual | null {
 		atividade: typeof t.atividade === 'string' ? t.atividade : null,
 		desde: num(t.desde),
 		paiId: typeof t.pai_id === 'string' ? t.pai_id : null,
-		subtarefasAbertas: typeof t.subtarefas_abertas === 'number' || (typeof t.subtarefas_abertas === 'string' && t.subtarefas_abertas !== '') ? num(t.subtarefas_abertas) : null
+		subtarefasAbertas: typeof t.subtarefas_abertas === 'number' || (typeof t.subtarefas_abertas === 'string' && t.subtarefas_abertas !== '') ? num(t.subtarefas_abertas) : null,
+		aprovador: typeof t.aprovador === 'string' && t.aprovador ? t.aprovador : null
 	};
 }
 
@@ -380,15 +386,19 @@ function emPeNaCopa(ocupadas: Set<string>): Assento[] {
  */
 export function lugaresDosAgentes(
 	lista: Agente[],
-	agoraS?: number | null
-): { lugar: Map<string, Assento>; reservados: Set<string>; momento: Map<string, Destino> } {
+	agoraS?: number | null,
+	/** Onde tem gente sentada (clicou numa cadeira, ou está parada): a pausa desvia desses lugares. */
+	ocupadosPorPessoas: Iterable<string> = []
+): { lugar: Map<string, Assento>; reservados: Set<string>; momento: Map<string, Destino>; postos: Map<string, Assento> } {
 	const todos = assentos();
 	const reservados = new Set<string>();
+	const pessoas = new Set(ocupadosPorPessoas);
 	const mesa = new Map<string, Assento>();
 	const ordenados = [...lista].sort((a, b) => a.ordem - b.ordem || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 
 	// A cadeira de trabalho: a do nome pedido na sala; se não houver (ou já for de
-	// outro agente), a primeira livre da sala
+	// outro agente), a primeira livre da sala. A cadeira de trabalho é do agente
+	// mesmo que alguém tenha sentado nela (o jogo não deixa sentar em cadeira de agente)
 	for (const a of ordenados) {
 		const daSala = todos.filter((s) => s.sala === a.sala && s.sentado && !reservados.has(s.id));
 		const c = daSala.find((s) => s.nome === a.cadeira) ?? daSala.find((s) => s.movel === 'cadeira') ?? daSala[0];
@@ -404,14 +414,14 @@ export function lugaresDosAgentes(
 			ordenados.map((a) => ({ id: a.id, sala: a.sala, ordem: a.ordem, ocupado: a.estado !== 'livre', reuniao: a.reuniao?.sala ?? null })),
 			agoraS,
 			mesa,
-			reservados
+			new Set([...reservados, ...pessoas])
 		);
 		for (const [id, d] of destinos) {
 			lugar.set(id, d.lugar);
 			reservados.add(d.lugar.id);
 			momento.set(id, d);
 		}
-		return { lugar, reservados, momento };
+		return { lugar, reservados, momento, postos: mesa };
 	}
 	const naCopa = todos.filter((s) => s.sala === 'copa' && s.sentado);
 	const chao = new Set(naCopa.map((s) => `${Math.floor(s.x)},${Math.floor(s.y)}`));
@@ -423,7 +433,7 @@ export function lugaresDosAgentes(
 			lugar.set(a.id, m);
 			continue;
 		}
-		let s = naCopa.find((x) => !reservados.has(x.id));
+		let s = naCopa.find((x) => !reservados.has(x.id) && !pessoas.has(x.id));
 		if (!s) {
 			emPe ??= emPeNaCopa(chao);
 			s = emPe.find((x) => !reservados.has(x.id));
@@ -433,7 +443,7 @@ export function lugaresDosAgentes(
 		lugar.set(a.id, fim);
 		reservados.add(fim.id);
 	}
-	return { lugar, reservados, momento };
+	return { lugar, reservados, momento, postos: mesa };
 }
 
 type Ouvintes = {

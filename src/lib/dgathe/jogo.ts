@@ -5,6 +5,11 @@
 // interage (seleciona sala, objeto ou o próprio avatar). Arrastar com o
 // esquerdo move a câmera; a roda dá zoom. No toque, um toque no chão anda e um
 // toque em algo seleciona.
+//
+// Desde 10/11/2026: clicar (com qualquer botão, ou tocar) numa cadeira, sofá ou
+// pufe faz o boneco ir sentar lá; clicar de novo no mesmo lugar levanta. E o
+// agente que precisa de aprovação vai até quem passou a tarefa, onde ela
+// estiver no escritório, e levanta a mão.
 
 import { paraTela, paraMundo, cruzam, dentroDoPoligono, contornoCaixa, LADRILHO_L, type Ponto, type Retangulo } from './iso';
 import {
@@ -43,7 +48,7 @@ import { desenharAvatar, areaDoAvatar, sobraNoAlto, ABAIXA_SENTADO } from './ava
 import { APARENCIA_PADRAO, andarDe, type Aparencia } from './aparencia';
 import type { Pessoa, Situacao } from './presenca';
 import { alvos, deveMover } from './movimento';
-import { SENTADO_MEIA, type Assento } from './assentos';
+import { SENTADO_MEIA, lugarDoMovelPerto, lugaresDoMovel, type Assento } from './assentos';
 import { COR_AGENTE, COR_DO_ESTADO, NOME_DO_ESTADO, PREFIXO_AGENTE, textoAguardando, type Agente, type EstadoAgente } from './agentes';
 import { NOME_DA_ATIVIDADE, type Destino } from './rotina';
 
@@ -131,6 +136,20 @@ type Outro = Corpo & {
 	momento?: MomentoDoAgente | null;
 };
 type Desenho = { peca: Desenhavel; atras: boolean; desenhar: () => void };
+
+/** Um agente que precisa de aprovação e vai até quem aprova. */
+type Chamado = {
+	/** Quem aprova (id em `colaboradores`): quem passou a tarefa. */
+	aprovador: string;
+	/** Há quanto tempo a tarefa está assim (quem espera há mais tempo fica na frente). */
+	desde: number;
+	ordem: number;
+	/** O lugar de sempre, para quando quem aprova não está no escritório. */
+	posto: Assento;
+};
+
+/** Prefixo do id do lugar em pé ao lado de quem aprova. */
+const CHAMADO = 'chamado:';
 
 const primeiroNome = (nome: string) => nome.split(/\s+/)[0] || nome;
 
@@ -249,6 +268,15 @@ export class Jogo {
 	private outros = new Map<string, Outro>();
 	/** Assentos ocupados por agentes (próxima fase): ninguém senta neles. */
 	private assentosDeAgentes = new Set<string>();
+	/** O posto (cadeira de trabalho) de cada agente: id do assento → nome do agente. */
+	private postosDosAgentes = new Map<string, string>();
+	/** Sentei porque cliquei no lugar (não pelos 15 min parado): fico até mandar andar. */
+	private sentouPorEscolha = false;
+	/** Agentes indo até quem aprova o pedido deles (id do agente no jogo → o chamado). */
+	private chamados = new Map<string, Chamado>();
+	/** Os lugares em volta de cada pessoa que aprova, calculados para a casa em que ela está. */
+	private emVolta = new Map<string, { casa: string; lugares: Assento[] }>();
+	private proximaConferencia = 0;
 	private destino: { x: number; y: number; t0: number } | null = null;
 	private salaAtual: string | null = null;
 	private destinoSala: string | null = null;
@@ -412,7 +440,8 @@ export class Jogo {
 	 * muda de alvo faz o caminho aqui, levantando antes se estava sentado.
 	 */
 	definirPessoas(lista: Pessoa[]) {
-		const metas = alvos(lista, { agentes: this.assentosDeAgentes });
+		const meu = this.av.sentado ?? this.av.vaiSentar;
+		const metas = alvos(lista, { agentes: meu ? [...this.assentosDeAgentes, meu.id] : this.assentosDeAgentes });
 		const vistos = new Set<string>();
 		for (const p of lista) {
 			vistos.add(p.id);
@@ -467,12 +496,20 @@ export class Jogo {
 	 * ele faz lá (o crachá e o texto do mouse dizem). `reservados` são os
 	 * assentos que as pessoas não usam.
 	 */
-	definirAgentes(lista: { agente: Agente; lugar: Assento; momento?: MomentoDoAgente | null }[], reservados: Iterable<string>) {
+	definirAgentes(
+		lista: { agente: Agente; lugar: Assento; momento?: MomentoDoAgente | null; chamar?: string | null }[],
+		reservados: Iterable<string>,
+		postos: Map<string, string> = new Map()
+	) {
 		this.assentosDeAgentes = new Set(reservados);
+		this.postosDosAgentes = postos;
 		const vistos = new Set<string>();
-		for (const { agente: a, lugar, momento = null } of lista) {
+		for (const { agente: a, lugar, momento = null, chamar = null } of lista) {
 			const id = PREFIXO_AGENTE + a.id;
 			vistos.add(id);
+			// Precisa de aprovação: vai até quem passou a tarefa (conferirChamados)
+			if (chamar) this.chamados.set(id, { aprovador: chamar, desde: a.tarefa?.desde ?? 0, ordem: a.ordem, posto: lugar });
+			else this.chamados.delete(id);
 			const pessoa: Pessoa = {
 				id,
 				nome: a.nome,
@@ -520,12 +557,15 @@ export class Jogo {
 			o.pessoa = pessoa;
 			o.agente = a;
 			o.momento = momento;
+			if (chamar) continue;
 			if (o.chave !== chave) {
 				o.chave = chave;
 				this.levarOutro(o, lugar, null);
 			}
 		}
 		for (const [id, o] of [...this.outros]) if (o.agente && !vistos.has(id)) this.outros.delete(id);
+		for (const id of [...this.chamados.keys()]) if (!vistos.has(id)) this.chamados.delete(id);
+		this.conferirChamados();
 		if (this.selecao.tipo === 'pessoa' && !this.outros.has(this.selecao.id)) this.selecionar({ tipo: 'avatar' });
 		this.ultimaInteracao = performance.now();
 		this.emitirOutros();
@@ -574,10 +614,11 @@ export class Jogo {
 		o.fim = null;
 	}
 
-	/** O meu boneco vai sentar (15 min sem mexer, com o DGathe aberto). */
+	/** O meu boneco vai sentar (15 min sem mexer, com o DGathe aberto; ou clicou no lugar). */
 	sentarEm(a: Assento): boolean {
 		const rota = this.planejar(this.av, a, null);
 		if (!rota) return false;
+		this.sentouPorEscolha = false;
 		this.av.sentado = null;
 		this.av.vaiSentar = a;
 		this.av.caminho = rota.slice(1);
@@ -591,6 +632,7 @@ export class Jogo {
 	/** Mexeu de novo: o meu boneco levanta e fica de pé ao lado do lugar. */
 	levantar() {
 		const a = this.av.sentado ?? this.av.vaiSentar;
+		this.sentouPorEscolha = false;
 		this.av.vaiSentar = null;
 		if (!a) return;
 		this.av.sentado = null;
@@ -598,6 +640,182 @@ export class Jogo {
 		this.av.caminho = rota.slice(1);
 		this.avisos.rota?.(rota, null);
 		this.avisos.movimento(true, a.sala);
+	}
+
+	/** Onde sentei por escolha (clicando no lugar), ou null. O Escritorio usa nos 15 min parado. */
+	sentadoPorEscolha(): Assento | null {
+		return this.sentouPorEscolha ? (this.av.sentado ?? this.av.vaiSentar ?? null) : null;
+	}
+
+	/** Onde tem gente (eu e as outras pessoas, sem os agentes) sentada ou indo sentar. */
+	assentosDePessoas(): Set<string> {
+		const r = new Set<string>();
+		const meu = this.av.sentado ?? this.av.vaiSentar;
+		if (meu) r.add(meu.id);
+		for (const o of this.outros.values()) {
+			if (o.agente) continue;
+			const a = o.sentado ?? o.vaiSentar;
+			if (a) r.add(a.id);
+		}
+		return r;
+	}
+
+	/** Quem ocupa o lugar agora (sentado ou indo sentar), ou de qual agente ele é o posto. */
+	private donoDoLugar(id: string): { nome: string; posto: boolean } | null {
+		for (const o of this.outros.values()) {
+			if (o.sentado?.id === id || o.vaiSentar?.id === id) return { nome: o.pessoa.nome, posto: false };
+		}
+		const agente = this.postosDosAgentes.get(id);
+		if (agente) return { nome: agente, posto: true };
+		if (this.assentosDeAgentes.has(id)) return { nome: 'um agente', posto: false };
+		return null;
+	}
+
+	/**
+	 * Clicou numa cadeira, num sofá ou num pufe: vai sentar no lugar livre mais
+	 * perto do clique (no meu lugar de agora: levanta). Devolve false se o móvel
+	 * não é de sentar.
+	 */
+	private sentarNoMovel(it: Item, clique: Ponto): boolean {
+		if (!lugaresDoMovel(it).length) return false;
+		const meu = this.av.sentado ?? this.av.vaiSentar;
+		const tomados = new Set<string>();
+		for (const o of this.outros.values()) {
+			const a = o.sentado ?? o.vaiSentar;
+			if (a) tomados.add(a.id);
+		}
+		for (const id of this.assentosDeAgentes) tomados.add(id);
+		for (const id of this.postosDosAgentes.keys()) tomados.add(id);
+		const a = meu && lugaresDoMovel(it).some((l) => l.id === meu.id) ? meu : lugarDoMovelPerto(it, clique.x, clique.y, tomados);
+		if (!a) return false;
+		if (meu && a.id === meu.id) {
+			this.levantar();
+			return true;
+		}
+		const dono = this.donoDoLugar(a.id);
+		if (dono) {
+			this.avisos.aviso(dono.posto ? `Lugar reservado: é o posto de ${dono.nome}` : `Lugar ocupado por ${dono.nome}`);
+			return true;
+		}
+		if (!this.sentarEm(a)) {
+			this.avisos.aviso('Sem passagem até esse lugar');
+			return true;
+		}
+		this.sentouPorEscolha = true;
+		return true;
+	}
+
+	/** O texto do mouse em cima de um lugar de sentar: livre, ocupado, posto de agente ou o meu. */
+	private textoDoLugar(it: Item): string | null {
+		const lugares = lugaresDoMovel(it);
+		if (!lugares.length) return null;
+		const meu = this.av.sentado ?? this.av.vaiSentar;
+		if (meu && lugares.some((l) => l.id === meu.id)) return 'clique para levantar';
+		const donos = lugares.map((l) => this.donoDoLugar(l.id));
+		if (donos.some((d) => !d)) return 'clique para sentar';
+		const d = donos[0]!;
+		return d.posto ? `posto de ${d.nome}` : `ocupado por ${d.nome}`;
+	}
+
+	/** Onde está a pessoa (quem aprova): eu, ou alguém no escritório (offline não conta). */
+	private ondeEsta(id: string): Ponto | null {
+		const fimDe = (c: Corpo): Ponto => {
+			const a = c.sentado ?? c.vaiSentar;
+			if (a) return { x: a.x, y: a.y };
+			const fim = c.caminho[c.caminho.length - 1];
+			return fim ? { x: fim.x, y: fim.y } : { x: c.x, y: c.y };
+		};
+		if (id === this.opcoes.id) return fimDe(this.av);
+		const o = this.outros.get(id);
+		if (!o || o.agente || o.situacao === 'offline') return null;
+		return fimDe(o);
+	}
+
+	/**
+	 * Lugares em pé em volta de quem aprova, para `n` agentes: chão livre que dá
+	 * para alcançar, primeiro na mesma sala e mais perto, cada um virado para ela.
+	 */
+	private lugaresEmVolta(onde: Ponto, n: number): Assento[] {
+		const cx = Math.floor(onde.x);
+		const cy = Math.floor(onde.y);
+		const sala = zonaDaCelula(cx, cy);
+		const candidatas: { x: number; y: number; d: number; outra: number }[] = [];
+		for (let y = cy - 4; y <= cy + 4; y++) {
+			for (let x = cx - 4; x <= cx + 4; x++) {
+				if ((x === cx && y === cy) || !celulaLivre(x, y)) continue;
+				const d = Math.hypot(x + 0.5 - onde.x, y + 0.5 - onde.y);
+				if (d > 4.2) continue;
+				candidatas.push({ x, y, d, outra: zonaDaCelula(x, y) === sala ? 0 : 1 });
+			}
+		}
+		candidatas.sort((a, b) => a.outra - b.outra || a.d - b.d || a.y - b.y || a.x - b.x);
+		const inicio = { x: Math.floor(INICIO.x), y: Math.floor(INICIO.y) };
+		const r: Assento[] = [];
+		for (const c of candidatas) {
+			if (r.length >= n) break;
+			// Um agente por casa, e sem colar no outro (casas vizinhas na diagonal valem)
+			if (r.some((l) => Math.abs(Math.floor(l.x) - c.x) + Math.abs(Math.floor(l.y) - c.y) < 1)) continue;
+			if (!aEstrela(GRADE, inicio, { x: c.x, y: c.y })) continue;
+			const x = c.x + 0.5;
+			const y = c.y + 0.5;
+			const dx = onde.x - x;
+			const dy = onde.y - y;
+			const d = Math.hypot(dx, dy) || 1;
+			r.push({
+				id: `${CHAMADO}${c.x},${c.y}`,
+				sala: zonaDaCelula(c.x, c.y) ?? 'corredor',
+				movel: 'em-pe',
+				nome: 'Em pé',
+				x,
+				y,
+				sx: x,
+				sy: y,
+				ox: x,
+				oy: y,
+				dirX: dx / d,
+				dirY: dy / d,
+				sentado: false
+			});
+		}
+		return r;
+	}
+
+	/**
+	 * Leva cada agente chamado até quem aprova (ou de volta ao posto, se a pessoa
+	 * não está no escritório). Refaz a conta só quando a pessoa muda de casa.
+	 */
+	private conferirChamados() {
+		const grupos = new Map<string, { o: Outro; c: Chamado }[]>();
+		for (const [id, c] of this.chamados) {
+			const o = this.outros.get(id);
+			if (!o) continue;
+			const g = grupos.get(c.aprovador) ?? [];
+			g.push({ o, c });
+			grupos.set(c.aprovador, g);
+		}
+		for (const id of [...this.emVolta.keys()]) if (!grupos.has(id)) this.emVolta.delete(id);
+		for (const [aprovador, lista] of grupos) {
+			// Quem espera há mais tempo fica mais perto
+			lista.sort((a, b) => b.c.desde - a.c.desde || a.c.ordem - b.c.ordem);
+			const onde = this.ondeEsta(aprovador);
+			let lugares: Assento[] = [];
+			if (onde) {
+				const casa = `${Math.floor(onde.x)},${Math.floor(onde.y)}:${lista.length}`;
+				const pronto = this.emVolta.get(aprovador);
+				if (pronto?.casa === casa) lugares = pronto.lugares;
+				else {
+					lugares = this.lugaresEmVolta(onde, lista.length);
+					this.emVolta.set(aprovador, { casa, lugares });
+				}
+			} else this.emVolta.delete(aprovador);
+			lista.forEach(({ o, c }, i) => {
+				const alvo = lugares[i] ?? c.posto;
+				const chave = `a:${alvo.id}`;
+				if (o.chave === chave) return;
+				o.chave = chave;
+				this.levarOutro(o, alvo, null);
+			});
+		}
 	}
 
 	/** Vai até a pessoa e para ao lado dela. */
@@ -632,6 +850,7 @@ export class Jogo {
 
 	private andarAte(p: Ponto, salaDestino: string | null = null, folga = 0): boolean {
 		// Mandou andar: se estava sentado, levanta
+		this.sentouPorEscolha = false;
 		this.av.sentado = null;
 		this.av.vaiSentar = null;
 		const rota = this.caminhoEntre(this.av, p);
@@ -690,6 +909,11 @@ export class Jogo {
 
 	private atualizar(dt: number) {
 		this.t += dt;
+		// Quem aprova andou: os agentes que a chamam vão atrás (a conta só refaz se mudou de casa)
+		if (this.chamados.size && this.t >= this.proximaConferencia) {
+			this.proximaConferencia = this.t + 0.5;
+			this.conferirChamados();
+		}
 
 		// Câmera pelo teclado
 		const vel = (720 * dt) / this.zoom;
@@ -889,9 +1113,11 @@ export class Jogo {
 				peca: { caixa, tela: expandir(telaDaCaixa(caixa), 16) },
 				atras: c.x < PREDIO.x0 || c.y < PREDIO.y0,
 				desenhar: () => {
+					// Chegou ao lado de quem aprova: levanta a mão
+					const maoErguida = !!o?.agente && !c.andando && !s && o.chave.startsWith(`a:${CHAMADO}`);
 					desenharAvatar(
 						this.ctx,
-						{ x: c.x, y: c.y, dirX: c.dirX, dirY: c.dirY, andando: c.andando, fase: c.fase, t: this.t, sentado: !!s },
+						{ x: c.x, y: c.y, dirX: c.dirX, dirY: c.dirY, andando: c.andando, fase: c.fase, t: this.t, sentado: !!s, maoErguida },
 						aparencia
 					);
 					if (o && o.situacao !== 'online' && !c.andando) this.desenharSono(c, !!s, sobraNoAlto(aparencia, !!s));
@@ -1251,6 +1477,8 @@ export class Jogo {
 			else {
 				const sala = this.hover.item.sala ? SALA_POR_ID.get(this.hover.item.sala)?.nome : null;
 				texto = sala && this.hover.item.sala !== 'corredor' ? `${this.hover.item.nome} · ${sala}` : this.hover.item.nome;
+				const lugar = this.textoDoLugar(this.hover.item);
+				if (lugar) texto += ` · ${lugar}`;
 			}
 			if (texto) {
 				ctx.font = '600 12px Inter, system-ui, sans-serif';
@@ -1284,8 +1512,16 @@ export class Jogo {
 		return sala ? { tipo: 'sala', id: sala } : null;
 	}
 
+	/** O ponto do chão (mundo) debaixo do clique. */
+	private chaoDoClique(sx: number, sy: number): Ponto {
+		const p = this.paraCena(sx, sy);
+		return paraMundo(p.x, p.y);
+	}
+
 	private interagir(sx: number, sy: number) {
 		const alvo = this.oQueEstaEm(sx, sy);
+		// Interagir com cadeira, sofá ou pufe é sentar
+		if (alvo?.tipo === 'item' && this.sentarNoMovel(alvo.item, this.chaoDoClique(sx, sy))) return;
 		if (!alvo) {
 			this.selecionar({ tipo: 'avatar' });
 			return;
@@ -1305,6 +1541,7 @@ export class Jogo {
 		}
 		if (alvo?.tipo === 'item') {
 			const it = alvo.item;
+			if (this.sentarNoMovel(it, this.chaoDoClique(sx, sy))) return;
 			this.andarAte({ x: it.x + it.w / 2, y: it.y + it.d / 2 });
 			return;
 		}

@@ -93,6 +93,8 @@ export type Pose = {
 	t: number;
 	/** Sentado (no sofá da recepção, quando a pessoa está ausente). */
 	sentado?: boolean;
+	/** Mão levantada, com um aceno leve: o agente pedindo a atenção de quem aprova. */
+	maoErguida?: boolean;
 };
 
 const FORMAIS_COM_CINTO = new Set(['terno', 'blazer', 'social']);
@@ -569,7 +571,7 @@ function sapatoFeminino(ctx: C, tipo: string, px: number, y: number) {
 /** Corpo, roupa e acessórios com os pés na origem (sem translação de mundo). */
 export function desenharBoneco(
 	ctx: C,
-	p: { dirX: number; dirY: number; andando: boolean; fase: number; t: number; sentado?: boolean },
+	p: { dirX: number; dirY: number; andando: boolean; fase: number; t: number; sentado?: boolean; maoErguida?: boolean },
 	a: Aparencia = APARENCIA_PADRAO
 ) {
 	const sentado = !!p.sentado;
@@ -787,9 +789,10 @@ export function desenharBoneco(
 		}
 	});
 
-	// Braço da frente, com o item na mão (no centro da mão, sem o giro do braço)
-	const anguloFrente = -balanco + m.anguloMao;
-	const comItem = a.naMao !== 'nada';
+	// Braço da frente, com o item na mão (no centro da mão, sem o giro do braço).
+	// Mão levantada: o braço sobe para o lado de fora e acena; o item some
+	const anguloFrente = p.maoErguida ? -Math.PI * 0.86 + 0.13 * Math.sin(p.t * 6) : -balanco + m.anguloMao;
+	const comItem = a.naMao !== 'nada' && !p.maoErguida;
 	const naMao = (camada: 'atras' | 'frente') => {
 		ctx.save();
 		ctx.translate(m.ombroX - Math.sin(anguloFrente) * m.braco, m.ombroY + Math.cos(anguloFrente) * m.braco);

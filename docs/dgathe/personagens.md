@@ -640,12 +640,13 @@ ficam em `ANDARES` (`aparencia.ts`) e o `jogo.ts` já aplica as duas. Nenhum jei
 
 Escolhidos em 10/11/2026 pelo cargo e pela personalidade, gravados em `dgathe_agentes.aparencia` como
 `{"personagem":"<id>"}` (o `ponte/agentes.mjs` nunca toca nessa coluna). O personagem não é a pessoa
-famosa do nome do agente. A mistura ficou em 7 de gente da firma, 2 de fantasia, 2 heróis e 1 bicho.
+famosa do nome do agente. A mistura ficou em 8 de gente da firma, 2 de fantasia, 2 heróis e 1 bicho.
 Para trocar: `update dgathe_agentes set aparencia = '{"personagem":"<id>"}' where id = '<agente>'`.
 
 | Agente | Cargo | Personagem | Por quê |
 |---|---|---|---|
-| Assessor | Diretoria | `conselheiro` | escuta a história inteira antes de opinar |
+| Assessor | Sala do Bruno | `conselheiro` | escuta a história inteira antes de opinar |
+| Assessora | Sala da Aline (desde 10/11/2026) | `analista` | observadora e calma: acha o detalhe que ninguém viu |
 | Lewis | Gerente de Desenvolvimento e IA | `diretor` | fala pouco, escuta muito e decide com calma |
 | Clovis | Analista de Sistemas | `detetive` | investiga o problema até achar a causa |
 | Shakira | Designer UX/UI | `diretora-criativa` | ideia e referência visual |

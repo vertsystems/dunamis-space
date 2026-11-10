@@ -107,15 +107,18 @@ describe('mapa do escritório', () => {
 		}
 	});
 
-	it('cada departamento tem uma mesa de gerente; a Diretoria, a do assessor', () => {
+	it('cada departamento tem uma mesa de gerente; a sala do Bruno, a do assessor; a da Aline, a da assessora', () => {
 		for (const sala of ['financeiro', 'comercial', 'dev', 'conteudo', 'estudio', 'design', 'trafego']) {
 			const itens = ITENS.filter((i) => i.sala === sala);
 			expect(itens.filter((i) => i.nome === 'Mesa do gerente'), sala).toHaveLength(1);
 			expect(itens.filter((i) => i.nome === 'Cadeira do gerente'), sala).toHaveLength(1);
 		}
-		const diretoria = ITENS.filter((i) => i.sala === 'diretoria');
-		expect(diretoria.filter((i) => i.nome === 'Mesa do assessor')).toHaveLength(1);
-		expect(diretoria.filter((i) => i.nome === 'Cadeira do assessor')).toHaveLength(1);
+		const bruno = ITENS.filter((i) => i.sala === 'sala-bruno');
+		expect(bruno.filter((i) => i.nome === 'Mesa do assessor')).toHaveLength(1);
+		expect(bruno.filter((i) => i.nome === 'Cadeira do assessor')).toHaveLength(1);
+		const aline = ITENS.filter((i) => i.sala === 'sala-aline');
+		expect(aline.filter((i) => i.nome === 'Mesa da assessora')).toHaveLength(1);
+		expect(aline.filter((i) => i.nome === 'Cadeira da assessora')).toHaveLength(1);
 	});
 
 	it('mesas de cada sala: Tráfego 2 e Design 3 de 2 lugares; Conteúdo 4 e Financeiro 3 de 1 computador', () => {
@@ -144,17 +147,19 @@ describe('mapa do escritório', () => {
 			expect(ITENS.filter((i) => i.sala === sala && i.nome === cadeira), sala).toHaveLength(1);
 		}
 		// As novas ficam do lado de lá da Diretoria e do Conteúdo, que andaram 16 casas
-		expect(bruno.x1).toBeLessThan(SALA_POR_ID.get('diretoria')!.x0);
-		expect(aline.x1).toBeLessThan(SALA_POR_ID.get('diretoria')!.x0);
-		for (const id of ['sala-1', 'sala-2', 'sala-3']) {
-			const s = SALA_POR_ID.get(id)!;
-			expect(s.x1, id).toBeLessThan(SALA_POR_ID.get('conteudo')!.x0);
+		expect(bruno.x1).toBeLessThan(aline.x0);
+		expect(aline.x1).toBeLessThan(SALA_POR_ID.get('sala-4')!.x0);
+		for (const id of ['sala-1', 'sala-2', 'sala-3']) expect(SALA_POR_ID.get(id)!.x1, id).toBeLessThan(SALA_POR_ID.get('conteudo')!.x0);
+		// A Diretoria foi esvaziada no mesmo dia: virou a Sala 4, vazia como as outras
+		expect(SALA_POR_ID.has('diretoria')).toBe(false);
+		for (const id of ['sala-1', 'sala-2', 'sala-3', 'sala-4']) {
+			expect(SALA_POR_ID.get(id)!.setor, id).toBe('A definir');
 			expect(ITENS.filter((i) => i.sala === id), `${id} vazia`).toHaveLength(0);
 		}
 		// O corredor vai de parede a parede, e cada sala nova abre para ele
 		const corredor = SALA_POR_ID.get('corredor')!;
 		expect(corredor.x0).toBe(4);
-		for (const id of ['sala-bruno', 'sala-aline', 'sala-1', 'sala-2', 'sala-3']) {
+		for (const id of ['sala-bruno', 'sala-aline', 'sala-1', 'sala-2', 'sala-3', 'sala-4']) {
 			for (const p of SALA_POR_ID.get(id)!.portas) expect(p.y === corredor.y0 || p.y === corredor.y1 + 1, id).toBe(true);
 		}
 	});

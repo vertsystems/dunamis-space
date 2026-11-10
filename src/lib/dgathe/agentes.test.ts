@@ -49,7 +49,7 @@ describe('lerAgentes', () => {
 			pode: 'editar',
 			ponte: { id: 'mac-bruno', visto_ha: 12, trabalhando: 1 },
 			agentes: [
-				{ id: 'assessor', nome: 'Assessor', cargo: 'Assessor do CEO', sala: 'diretoria', cadeira: 'Cadeira do assessor', ordem: 0, na_fila: 0, pedidos: 1, tarefa: { id: 't1', status: 'trabalhando', titulo: 'X', atividade: 'Lendo', desde: 30 } },
+				{ id: 'assessor', nome: 'Assessor', cargo: 'Assessor do CEO', sala: 'sala-bruno', cadeira: 'Cadeira do assessor', ordem: 0, na_fila: 0, pedidos: 1, tarefa: { id: 't1', status: 'trabalhando', titulo: 'X', atividade: 'Lendo', desde: 30 } },
 				{ id: 'sem-sala', nome: 'Y', sala: 'nao-existe' },
 				{ id: 'livre', nome: 'Livre', sala: 'design', tarefa: null }
 			]
@@ -104,7 +104,7 @@ describe('lerAgentes', () => {
 				{ id: 'shakira', nome: 'Shakira', sala: 'dev', equipe: 'dev', lider: 'sim', ordem: 12,
 					tarefa: { id: null, status: 'aguardando', titulo: null, atividade: null, desde: 4, pai_id: null, subtarefas_abertas: null } },
 				// Banco de antes da 0102: sem os campos novos
-				{ id: 'assessor', nome: 'Assessor', sala: 'diretoria', equipe: '  ', tarefa: { id: 't', status: 'trabalhando', titulo: 'X', atividade: null, desde: 1 } }
+				{ id: 'assessor', nome: 'Assessor', sala: 'sala-bruno', equipe: '  ', tarefa: { id: 't', status: 'trabalhando', titulo: 'X', atividade: null, desde: 1 } }
 			]
 		})!;
 		const [lewis, clovis, shakira, assessor] = l.agentes;
@@ -195,7 +195,7 @@ describe('lugaresDosAgentes', () => {
 	it('trabalhando senta na cadeira dele; livre vai para a copa', () => {
 		const { lugar, reservados } = lugaresDosAgentes([
 			agente('design', { estado: 'trabalhando' }),
-			agente('assessor', { sala: 'diretoria', cadeira: 'Cadeira do assessor', estado: 'esperando' }),
+			agente('assessor', { sala: 'sala-bruno', cadeira: 'Cadeira do assessor', estado: 'esperando' }),
 			agente('trafego', { sala: 'trafego' })
 		]);
 		expect(lugar.get('design')!.nome).toBe('Cadeira do gerente');
@@ -244,13 +244,29 @@ describe('lugaresDosAgentes', () => {
 		expect(DEV.every((id) => outra.get(id)!.id === lugar.get(id)!.id)).toBe(true);
 	});
 	it('os 11 do dev e o assessor livres: todos na copa, cada um num lugar', () => {
-		const lista = [agente('assessor', { sala: 'diretoria', cadeira: 'Cadeira do assessor' }), ...departamento('livre')];
+		const lista = [agente('assessor', { sala: 'sala-bruno', cadeira: 'Cadeira do assessor' }), ...departamento('livre')];
 		const { lugar, reservados } = lugaresDosAgentes(lista);
 		const lugares = lista.map((a) => lugar.get(a.id)!);
 		expect(lugares.every((l) => l.sala === 'copa')).toBe(true);
 		expect(new Set(lugares.map((l) => l.id)).size).toBe(12);
 		// As cadeiras de trabalho continuam reservadas (12) e os lugares da copa também (12)
 		expect(reservados.size).toBe(24);
+	});
+	it('a pausa desvia de onde tem gente sentada, e o posto de cada um vem junto (10/11/2026)', () => {
+		const lista = [agente('a0', { ordem: 0 }), agente('a1', { ordem: 1 })];
+		const livre = lugaresDosAgentes(lista).lugar;
+		const ocupado = livre.get('a0')!.id;
+		const { lugar, postos } = lugaresDosAgentes(lista, null, [ocupado]);
+		expect([...lugar.values()].some((l) => l.id === ocupado)).toBe(false);
+		expect(postos.get('a0')!.nome).toBe('Cadeira do gerente');
+	});
+	it('lê quem aprova os pedidos da tarefa (migration 0106)', () => {
+		const l = lerAgentes({
+			agentes: [{ id: 'steve', nome: 'Steve', sala: 'dev', pedidos: 1, tarefa: { id: 's1', status: 'esperando', desde: 5, aprovador: 'b-1' } }, { id: 'brad', nome: 'Brad', sala: 'dev', tarefa: { id: 's2', status: 'trabalhando', desde: 5 } }]
+		})!;
+		expect(l.agentes.find((a) => a.id === 'steve')!.tarefa!.aprovador).toBe('b-1');
+		expect(l.agentes.find((a) => a.id === 'steve')!.estado).toBe('esperando');
+		expect(l.agentes.find((a) => a.id === 'brad')!.tarefa!.aprovador).toBeNull();
 	});
 	it('quem está parado não senta na cadeira de um agente', () => {
 		const { reservados } = lugaresDosAgentes([agente('design')]);

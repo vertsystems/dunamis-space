@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { HORA, PAUSA_POR_HORA, destinosDosAgentes, pausaAgora, pausasDaHora, pontasDoPinguePongue, pontosDePasseio, type AgenteNaRotina } from './rotina';
 import { assentos, type Assento } from './assentos';
-import { celulaLivre, zonaDaCelula } from './mapa';
+import { SALA_POR_ID, celulaLivre, zonaDaCelula } from './mapa';
 
 const HORA0 = 491_741; // uma hora qualquer (número da hora desde 1970)
 
@@ -102,5 +102,16 @@ describe('destinosDosAgentes', () => {
 		const a = destinosDosAgentes(agentes, s, postos, reservados);
 		const b = destinosDosAgentes([...agentes].reverse(), s, postos, reservados);
 		for (const ag of agentes) expect(a.get(ag.id)!.lugar.id).toBe(b.get(ag.id)!.lugar.id);
+	});
+
+	it('na pausa do sofá, ninguém vai para a sala do Bruno nem para a da Aline (10/11/2026)', () => {
+		const lista: AgenteNaRotina[] = Array.from({ length: 12 }, (_, i) => ({ id: `a${i}`, sala: 'dev', ordem: i, ocupado: false, reuniao: null }));
+		const postos = new Map(lista.map((a, i) => [a.id, assentos().filter((s) => s.sala === 'dev' && s.sentado)[i]]));
+		for (let h = 0; h < 48; h++) {
+			for (let m = 0; m < 60; m += 3) {
+				const r = destinosDosAgentes(lista, h * HORA + m * 60, postos, new Set());
+				for (const d of r.values()) expect(SALA_POR_ID.get(d.lugar.sala)?.dono, d.lugar.id).toBeUndefined();
+			}
+		}
 	});
 });

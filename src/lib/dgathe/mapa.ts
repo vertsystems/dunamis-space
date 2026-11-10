@@ -76,7 +76,7 @@ export const BRUNO = '52875a8f-fa14-49e6-905a-7baf08335da6';
 export const ALINE = '8bed9013-ff26-4410-8a35-c18396503870';
 
 /** Sala vazia (pedido do Bruno, 10/11/2026): fica assim até ele decidir o que ela vai ser. */
-const salaVazia = (n: number, x0: number, x1: number, porta: number): Sala => ({
+const salaVazia = (n: number, x0: number, x1: number, porta: number, lado: 'norte' | 'sul' = 'sul'): Sala => ({
 	id: `sala-${n}`,
 	nome: `Sala ${n}`,
 	setor: 'A definir',
@@ -85,10 +85,10 @@ const salaVazia = (n: number, x0: number, x1: number, porta: number): Sala => ({
 	piso: 'piso',
 	corPiso: '#e4e1da',
 	x0,
-	y0: 15,
+	y0: lado === 'sul' ? 15 : 4,
 	x1,
-	y1: 24,
-	portas: portaSul(porta),
+	y1: lado === 'sul' ? 24 : 12,
+	portas: lado === 'sul' ? portaSul(porta) : portaNorte(porta),
 	especialidades: []
 });
 
@@ -125,21 +125,9 @@ export const SALAS: Sala[] = [
 		especialidades: ['Gestão financeira', 'Gestão de clientes', 'Operação'],
 		dono: { id: ALINE, cadeira: 'Cadeira da Aline' }
 	},
-	{
-		id: 'diretoria',
-		nome: 'Diretoria',
-		setor: 'Direção',
-		descricao: 'A diretoria da casa: o assessor, as decisões e o fechamento da semana.',
-		cor: '#d08a2e',
-		piso: 'madeira',
-		corPiso: '#c9a27a',
-		x0: 20,
-		y0: 4,
-		x1: 27,
-		y1: 12,
-		portas: portaNorte(24),
-		especialidades: ['Estratégia', 'Decisões', 'Fechamento da semana']
-	},
+	// A Diretoria de antes (10/11/2026: o Bruno pediu para esvaziar; o assessor foi
+	// para a sala dele e a Aline ganhou uma assessora na dela)
+	salaVazia(4, 20, 27, 24, 'norte'),
 	{
 		id: 'reuniao',
 		nome: 'Sala de Reunião',
@@ -309,7 +297,7 @@ export const SALAS: Sala[] = [
 		portas: portaSul(55),
 		especialidades: ['Pausa', 'Agentes livres']
 	},
-	// As 3 vazias, do lado de baixo do corredor, entre a parede oeste e o Conteúdo
+	// As 3 vazias de baixo, entre a parede oeste e o Conteúdo
 	salaVazia(1, 4, 8, 5),
 	salaVazia(2, 9, 13, 10),
 	salaVazia(3, 14, 19, 16)
@@ -395,10 +383,10 @@ const naParedeNorte = (x: number, tipo: TipoDeco, largura = 1): Decoracao => ({ 
 const naParedeOeste = (y: number, tipo: TipoDeco, largura = 1): Decoracao => ({ linha: 'v', x: 4, y, tipo, largura });
 
 export const DECORACOES: Decoracao[] = [
-	// Diretoria
+	// Sala 4 (a Diretoria de antes): o quadro do Método MAPA foi para a sala do Bruno
 	naParedeNorte(21, 'janela'),
 	naParedeNorte(22, 'janela'),
-	naParedeNorte(24, 'mapa', 2),
+	naParedeNorte(24, 'janela'),
 	naParedeNorte(26, 'janela'),
 	// Reunião
 	naParedeNorte(29, 'janela'),
@@ -418,8 +406,7 @@ export const DECORACOES: Decoracao[] = [
 	// Sala do Bruno (parede norte e oeste)
 	naParedeNorte(5, 'janela'),
 	naParedeNorte(8, 'metas', 2),
-	naParedeOeste(10, 'janela'),
-	naParedeOeste(11, 'janela'),
+	naParedeOeste(10, 'mapa', 2),
 	// Sala da Aline
 	naParedeNorte(15, 'quadro'),
 	naParedeNorte(17, 'janela'),
@@ -634,21 +621,6 @@ function montarItens(): Item[] {
 	const mesaGerente = (x: number, y: number, tela: string) =>
 		mesaDeFrente(x, y, { tela, mesa: 'Mesa do gerente', cadeira: 'Cadeira do gerente', executiva: true });
 
-	// Diretoria
-	add({ tipo: 'estante', x: 20.06, y: 5, w: 0.42, d: 3, h: 1.75, frente: 'x' });
-	add({ tipo: 'mesa', x: 22, y: 6.15, w: 3, d: 0.85, h: 0.54, cor: '#7a5236', variante: 'executiva' });
-	add({ tipo: 'monitor', x: 23.05, y: 6.35, w: 0.9, d: 0.08, h: 0.48, z: 0.54, frente: '-y', variante: 'texto', bloqueia: false });
-	add({ tipo: 'cadeira', x: 23.2, y: 5.2, w: 0.6, d: 0.6, h: 1.15, frente: 'y', cor: '#1c2534', variante: 'executiva', nome: 'Cadeira do CEO' });
-	add({ tipo: 'cadeira', x: 22.4, y: 7.35, w: 0.48, d: 0.48, h: 0.9, frente: '-y', cor: '#8a6a4a' });
-	add({ tipo: 'cadeira', x: 24.12, y: 7.35, w: 0.48, d: 0.48, h: 0.9, frente: '-y', cor: '#8a6a4a' });
-	add({ tipo: 'sofa', x: 20.1, y: 9.4, w: 0.85, d: 2.2, h: 0.75, frente: 'x', cor: '#3f4d63' });
-	add({ tipo: 'mesaCentro', x: 21.55, y: 9.95, w: 0.9, d: 1.1, h: 0.32, cor: '#5d3f2a' });
-	// O assessor, no canto ao lado da mesa do CEO
-	mesaDeFrente(26, 5, { tela: 'texto', mesa: 'Mesa do assessor', cadeira: 'Cadeira do assessor', cor: '#a07a55' });
-	planta(26, 4, true);
-	planta(27, 12);
-	planta(20, 12);
-
 	// Sala de Reunião
 	add({ tipo: 'mesaReuniao', x: 30, y: 7, w: 4, d: 2, h: 0.54, cor: '#f4f1eb' });
 	for (const x of [30, 31, 32, 33]) {
@@ -779,14 +751,15 @@ function montarItens(): Item[] {
 	add({ tipo: 'mesaCentro', x: 9.8, y: 9.55, w: 1, d: 1, h: 0.72, cor: '#f4f1eb', variante: 'redonda', nome: 'Mesa de conversa' });
 	add({ tipo: 'cadeira', x: 8.95, y: 9.81, w: 0.48, d: 0.48, h: 0.9, frente: 'x', cor: '#2f4a8a' });
 	add({ tipo: 'cadeira', x: 10.06, y: 8.75, w: 0.48, d: 0.48, h: 0.9, frente: 'y', cor: '#2f4a8a' });
+	// O assessor, no canto ao lado da mesa do Bruno (como era na Diretoria)
+	mesaDeFrente(10, 5, { tela: 'texto', mesa: 'Mesa do assessor', cadeira: 'Cadeira do assessor', cor: '#a07a55' });
 	planta(10, 4, true);
 	planta(11, 12);
 	planta(4, 12);
 
 	// Sala da Aline: mesa executiva, estante e cofre no fundo, sofá baixo na
 	// parede que dá para a sala do Bruno (móvel alto ali taparia a sala dele).
-	// O canto da direita fica livre: a estante da Diretoria, do outro lado da
-	// parede, cobre o que estiver ali
+	// A assessora fica no canto da direita
 	add({ tipo: 'estante', x: 12.3, y: 4.06, w: 1.9, d: 0.42, h: 1.75, frente: 'y' });
 	add({ tipo: 'cofre', x: 14.35, y: 4.15, w: 0.75, d: 0.7, h: 0.85, frente: 'y' });
 	add({ tipo: 'mesa', x: 14.5, y: 6.15, w: 3, d: 0.85, h: 0.54, cor: '#6b4a33', variante: 'executiva', nome: 'Mesa da Aline' });
@@ -796,6 +769,7 @@ function montarItens(): Item[] {
 	add({ tipo: 'cadeira', x: 16.62, y: 7.35, w: 0.48, d: 0.48, h: 0.9, frente: '-y', cor: '#a8754f' });
 	add({ tipo: 'sofa', x: 12.1, y: 9.4, w: 0.85, d: 2.2, h: 0.75, frente: 'x', cor: '#8a5a44' });
 	add({ tipo: 'mesaCentro', x: 13.55, y: 9.95, w: 0.9, d: 1.1, h: 0.32, cor: '#593212' });
+	mesaDeFrente(18, 5, { tela: 'planilha', mesa: 'Mesa da assessora', cadeira: 'Cadeira da assessora', cor: '#a07a55' });
 	planta(19, 10, true);
 	planta(19, 12);
 	planta(12, 12);
@@ -834,7 +808,6 @@ export type Tapete = { x0: number; y0: number; x1: number; y1: number; cor: stri
 export const TAPETES: Tapete[] = [
 	{ x0: 4.7, y0: 9.3, x1: 7.3, y1: 11.9, cor: '#3b6ef6', variante: 'listras' },
 	{ x0: 12.8, y0: 9.3, x1: 15.4, y1: 11.9, cor: '#e3a98f', variante: 'redondo' },
-	{ x0: 20.7, y0: 9.3, x1: 23.3, y1: 11.9, cor: '#b5523b', variante: 'listras' },
 	{ x0: 29.4, y0: 6.4, x1: 34.6, y1: 9.6, cor: '#8597ad' },
 	{ x0: 35, y0: 20, x1: 38, y1: 23, cor: '#ff6f00', variante: 'logo' },
 	{ x0: 20.8, y0: 20.9, x1: 23.6, y1: 23.7, cor: '#f6a6b6', variante: 'redondo' },
