@@ -560,6 +560,16 @@
 					{/each}
 				</div>
 			{/if}
+			{#if listaDeAgentes.length}
+				<h4 class="dg-rotulo">Agentes</h4>
+				<div class="dg-atalhos">
+					{#each listaDeAgentes as a (a.id)}
+						<button type="button" class="dg-agente" onclick={() => verAgente(a.id)} title="{a.nome}: {NOME_DO_ESTADO[a.estado]}{a.tarefa?.titulo ? ` · ${a.tarefa.titulo}` : ''}">
+							<span style="--cor: {a.estado === 'esperando' ? '#f5a524' : a.estado === 'trabalhando' ? '#34d399' : '#8b5cf6'}"></span>{a.nome}
+						</button>
+					{/each}
+				</div>
+			{/if}
 			{#if ausentes.length}
 				<h4 class="dg-rotulo">Ausentes (15 min sem mexer)</h4>
 				<div class="dg-atalhos">

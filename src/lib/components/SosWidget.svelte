@@ -19,11 +19,14 @@
 	let {
 		supabase,
 		autorNome = null,
-		autorEmail = null
+		autorEmail = null,
+		aEsquerda = false
 	}: {
 		supabase: SupabaseClient;
 		autorNome?: string | null;
 		autorEmail?: string | null;
+		/** No DGathe o jogo vai até a borda direita: o botão fica embaixo do menu de ícones. */
+		aEsquerda?: boolean;
 	} = $props();
 
 	let aberto = $state(false);
@@ -142,7 +145,7 @@
 	onkeydown={aberto ? (e) => e.key === 'Escape' && (aberto = false) : undefined}
 />
 
-<div bind:this={root} class="fixed right-5 bottom-5 z-40 flex flex-col items-end gap-3">
+<div bind:this={root} class="fixed bottom-5 z-40 flex flex-col gap-3 {aEsquerda ? 'left-5 items-start' : 'right-5 items-end'}">
 	{#if aberto}
 		<div
 			class="w-[min(92vw,22rem)] overflow-hidden rounded-[var(--radius-xl)] border border-grey-200 bg-surface shadow-2xl"

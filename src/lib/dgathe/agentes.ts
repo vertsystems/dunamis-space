@@ -89,10 +89,16 @@ function lerTarefa(bruto: unknown): TarefaAtual | null {
 	};
 }
 
-export function estadoDe(tarefa: TarefaAtual | null, pedidos: number): EstadoAgente {
+/**
+ * O estado que o jogo mostra. Tarefa na fila com a ponte ligada já conta como
+ * trabalho: a ponte espera 15 s antes de agir (folga para o banco, pedido do
+ * Bruno em 10/11/2026), mas na tela o agente vai para a mesa na hora. Só fica
+ * "na fila" com a ponte desligada.
+ */
+export function estadoDe(tarefa: TarefaAtual | null, pedidos: number, ponteLigada = false): EstadoAgente {
 	if (pedidos > 0 || tarefa?.status === 'esperando') return 'esperando';
 	if (tarefa?.status === 'trabalhando') return 'trabalhando';
-	if (tarefa?.status === 'fila') return 'fila';
+	if (tarefa?.status === 'fila') return ponteLigada ? 'trabalhando' : 'fila';
 	return 'livre';
 }
 
@@ -117,6 +123,8 @@ export function lerAgentes(bruto: unknown): LeituraAgentes | null {
 		if (!id || !SALA_POR_ID.has(sala)) continue;
 		const tarefa = lerTarefa(a.tarefa);
 		const pedidos = num(a.pedidos);
+		// Começando (fila com a ponte ligada): o balão e o painel já dizem o que ele faz
+		if (tarefa?.status === 'fila' && ponte.ligada) tarefa.atividade = tarefa.atividade === 'Na fila para continuar' ? 'Lendo a sua mensagem' : 'Lendo o pedido';
 		agentes.push({
 			id,
 			nome: txt(a.nome, id),
@@ -128,7 +136,7 @@ export function lerAgentes(bruto: unknown): LeituraAgentes | null {
 			naFila: num(a.na_fila),
 			pedidos,
 			tarefa,
-			estado: estadoDe(tarefa, pedidos)
+			estado: estadoDe(tarefa, pedidos, ponte.ligada)
 		});
 	}
 	return { pode, ponte, agentes };

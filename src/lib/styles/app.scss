@@ -541,9 +541,17 @@
 		@include sidebar-so-icones;
 	}
 
+	// O DGathe usa a largura toda da tela (pedido do Bruno em 10/11/2026): sem a
+	// coluna centralizada de --ds-app-max, só o menu de ícones fica à esquerda.
+	.app-body.tela-de-jogo {
+		max-width: none;
+	}
+
 	.app-content.tela-de-jogo {
 		padding-top: 0.75rem;
 		padding-bottom: 1rem;
+		padding-left: 1rem;
+		padding-right: 1rem;
 	}
 
 	// Tablet (769-1024px): não havia breakpoint intermediário — o shell voltava ao

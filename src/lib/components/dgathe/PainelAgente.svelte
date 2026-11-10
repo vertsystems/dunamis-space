@@ -137,6 +137,14 @@
 	let rolagem: HTMLDivElement | undefined = $state();
 
 	const aberta = $derived(escolhida ?? agente.tarefa?.id ?? historico[0]?.id ?? null);
+	/**
+	 * Tarefa que vai começar (a ponte espera 15 s antes de agir, para dar folga
+	 * ao banco): para quem olha, o agente já está trabalhando. Só fica "na fila"
+	 * de verdade se a ponte estiver desligada ou se ele já tiver outra tarefa.
+	 */
+	const comecando = $derived(!!tarefa && tarefa.status === 'fila' && ponte.ligada && agente.tarefa?.id === tarefa.id);
+	const statusVisivel = $derived<StatusTarefa | null>(tarefa ? (comecando ? 'trabalhando' : tarefa.status) : null);
+	const doHistorico = (h: ResumoTarefa): StatusTarefa => (h.status === 'fila' && ponte.ligada && h.id === agente.tarefa?.id ? 'trabalhando' : h.status);
 	const abertos = $derived(pedidos.filter((p) => !p.resposta && !p.cancelado));
 	const sala = $derived(SALA_POR_ID.get(agente.sala)?.nome ?? agente.sala);
 
@@ -156,7 +164,35 @@
 		if (!error && Array.isArray(data)) historico = data as ResumoTarefa[];
 	}
 
-	async function lerTarefa() {
+	/**
+	 * Uma leitura da conversa por vez. Pedida no meio de outra, roda logo depois
+	 * dela. Era o defeito de 10/11/2026: o botão de enviar e o ciclo liam juntos,
+	 * a mesma mensagem entrava duas vezes, o Svelte recusava a lista (chave
+	 * repetida) e a conversa parava até o F5.
+	 */
+	let leitura: Promise<void> | null = null;
+	let deNovo = false;
+	function lerTarefa(): Promise<void> {
+		if (leitura) {
+			deNovo = true;
+			return leitura;
+		}
+		leitura = (async () => {
+			try {
+				do {
+					deNovo = false;
+					await lerUmaVez();
+				} while (deNovo);
+			} catch (e) {
+				console.warn('[DGathe] leitura da tarefa:', e);
+			} finally {
+				leitura = null;
+			}
+		})();
+		return leitura;
+	}
+
+	async function lerUmaVez() {
 		const id = aberta;
 		if (!id || !detalhes) {
 			tarefa = null;
@@ -177,7 +213,8 @@
 		const r = data as { tarefa: Tarefa; mensagens: Mensagem[]; pedidos: Pedido[] };
 		tarefa = r.tarefa;
 		pedidos = r.pedidos ?? [];
-		const novas = r.mensagens ?? [];
+		// Só o que ainda não está na tela (nunca a mesma mensagem duas vezes)
+		const novas = (r.mensagens ?? []).filter((m) => m.id > ultimaMensagem);
 		if (novas.length) {
 			const perto = !rolagem || rolagem.scrollHeight - rolagem.scrollTop - rolagem.clientHeight < 80;
 			mensagens = [...mensagens, ...novas];
@@ -186,15 +223,25 @@
 		}
 	}
 
-	// Leitura da tarefa aberta: a cada 2 s enquanto trabalha, a cada 8 s depois
+	// A conversa aberta se atualiza sozinha: a cada 1,5 s enquanto o agente
+	// trabalha, a cada 5 s parada. lerJa() lê na hora (depois de enviar algo).
+	let lerJa = () => {};
 	$effect(() => {
 		void aberta;
 		let parado = false;
-		let timer: ReturnType<typeof setTimeout>;
+		let timer: ReturnType<typeof setTimeout> | undefined;
 		const laco = async () => {
-			await untrack(() => lerTarefa());
-			if (!parado) timer = setTimeout(laco, ativa(untrack(() => tarefa?.status)) ? 2000 : 8000);
+			clearTimeout(timer);
+			try {
+				await untrack(() => lerTarefa());
+			} finally {
+				if (!parado) {
+					clearTimeout(timer);
+					timer = setTimeout(laco, ativa(untrack(() => tarefa?.status)) ? 1500 : 5000);
+				}
+			}
 		};
+		lerJa = () => void laco();
 		void laco();
 		return () => {
 			parado = true;
@@ -248,7 +295,8 @@
 					escolhida = id;
 				}
 			}
-			await lerTarefa();
+			lerJa();
+			queueMicrotask(() => rolagem?.scrollTo({ top: rolagem.scrollHeight }));
 		} finally {
 			enviando = false;
 		}
@@ -264,7 +312,7 @@
 	async function parar() {
 		if (!aberta || !editar) return;
 		await chamar('dgathe_parar', { p_tarefa: aberta }, 'Pedido de parar enviado');
-		await lerTarefa();
+		lerJa();
 	}
 
 	// Respostas: permissão (liberar/negar com motivo) e perguntas (opções ou texto)
@@ -287,7 +335,7 @@
 	async function responder(p: Pedido, resposta: Record<string, unknown>) {
 		const ok = await chamar('dgathe_responder', { p_pedido: p.id, p_resposta: resposta }, '');
 		if (ok !== null) aoAvisar(ok === false ? 'Esse pedido já tinha sido respondido' : 'Resposta enviada');
-		await lerTarefa();
+		lerJa();
 	}
 
 	function responderPergunta(p: Pedido) {
@@ -400,14 +448,14 @@
 			<div class="pa-tarefa">
 				<div class="pa-tarefa-cab">
 					<strong title={tarefa.titulo}>{tarefa.titulo}</strong>
-					<span class="pa-chip {tarefa.status}">{NOME_DO_STATUS[tarefa.status]}</span>
+					<span class="pa-chip {statusVisivel}">{NOME_DO_STATUS[statusVisivel ?? tarefa.status]}</span>
 				</div>
 				<small>
-					{primeiroNome(tarefa.criada_por_nome)} pediu {haQuanto(tarefa.criada_ha)}{#if tarefa.status !== 'fila'} · {duracao(tarefa.duracao)} de trabalho{/if}{#if tarefa.passos} · {tarefa.passos} passo{tarefa.passos > 1 ? 's' : ''}{/if}
+					{primeiroNome(tarefa.criada_por_nome)} pediu {haQuanto(tarefa.criada_ha)}{#if tarefa.status !== 'fila' && tarefa.status !== 'trabalhando' && tarefa.status !== 'esperando'} · {duracao(tarefa.duracao)} de trabalho{/if}{#if tarefa.passos} · {tarefa.passos} passo{tarefa.passos > 1 ? 's' : ''}{/if}
 				</small>
 				{#if ativa(tarefa.status) && editar}
 					<button type="button" class="pa-parar" disabled={tarefa.cancelar} onclick={parar}>
-						<CircleStop size={14} />{tarefa.cancelar ? 'Parando…' : tarefa.status === 'fila' ? 'Tirar da fila' : 'Parar'}
+						<CircleStop size={14} />{tarefa.cancelar ? 'Parando…' : tarefa.status === 'fila' && !comecando ? 'Tirar da fila' : 'Parar'}
 					</button>
 				{/if}
 				{#if tarefa.erro}<p class="pa-erro"><TriangleAlert size={13} />{tarefa.erro}</p>{/if}
@@ -451,8 +499,8 @@
 						<p class="pa-aviso">{it.m.conteudo} · {haQuanto(it.m.ha)}</p>
 					{/if}
 				{/each}
-				{#if ativa(tarefa.status) && tarefa.status !== 'fila'}
-					<p class="pa-digitando"><LoaderCircle size={12} />{tarefa.atividade ?? 'Trabalhando'}</p>
+				{#if statusVisivel === 'trabalhando' || statusVisivel === 'esperando'}
+					<p class="pa-digitando"><LoaderCircle size={12} />{comecando ? (mensagens.some((m) => m.tipo === 'mensagem' && !m.entregue) ? 'Lendo a sua mensagem' : 'Lendo o pedido') : (tarefa.atividade ?? 'Trabalhando')}</p>
 				{/if}
 			</div>
 		{:else if !aberta}
@@ -502,7 +550,7 @@
 					{#each historico as h (h.id)}
 						<li>
 							<button type="button" class:aberta={h.id === aberta} onclick={() => ((escolhida = h.id), (mostrarHistorico = false))}>
-								<span class="pa-chip {h.status}">{NOME_DO_STATUS[h.status]}</span>
+								<span class="pa-chip {doHistorico(h)}">{NOME_DO_STATUS[doHistorico(h)]}</span>
 								<b>{h.titulo}</b>
 								<small>{haQuanto(h.criada_ha)} · {primeiroNome(h.criada_por_nome)}</small>
 							</button>

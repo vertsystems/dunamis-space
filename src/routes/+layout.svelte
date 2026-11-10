@@ -332,7 +332,7 @@
 			</div>
 		</header>
 
-		<div class="app-body">
+		<div class="app-body" class:tela-de-jogo={telaDeJogo}>
 			{#if areas.length}
 				<aside class="app-sidebar" class:so-icones={telaDeJogo}>
 					<div class="sidebar-title">
@@ -387,6 +387,7 @@
 	{#if podeEditar(perms, 'sos')}
 		<SosWidget
 			{supabase}
+			aEsquerda={telaDeJogo}
 			autorNome={perfil?.nome ?? null}
 			autorEmail={session?.user?.email ?? null}
 		/>

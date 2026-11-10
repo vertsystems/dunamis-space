@@ -157,9 +157,19 @@ async function instalar() {
 </plist>
 `
 	);
+	// O bootout volta antes de a ponte velha sair de fato; ligar a nova nesse meio
+	// dá "Bootstrap failed: 5" e deixa a ponte desligada (aconteceu em 10/11/2026).
+	// Espera ela sair e tenta de novo, se precisar.
 	launchctl('bootout', `${DOMINIO}/${ROTULO}`);
-	const r = launchctl('bootstrap', DOMINIO, PLIST);
-	if (r.status !== 0) throw new Error(`launchctl bootstrap falhou: ${r.stderr || r.stdout}`);
+	const dorme = (ms) => new Promise((res) => setTimeout(res, ms));
+	for (let i = 0; i < 60 && launchctl('print', `${DOMINIO}/${ROTULO}`).status === 0; i++) await dorme(250);
+	let r;
+	for (let i = 0; i < 6; i++) {
+		r = launchctl('bootstrap', DOMINIO, PLIST);
+		if (r.status === 0) break;
+		await dorme(2000);
+	}
+	if (r.status !== 0) throw new Error(`launchctl bootstrap falhou: ${r.stderr || r.stdout}. A ponte está DESLIGADA: rode de novo.`);
 	console.log(`Ponte ligada no launchd (${ROTULO}). Log: ${LOG}`);
 	await new Promise((res) => setTimeout(res, 4000));
 	status();

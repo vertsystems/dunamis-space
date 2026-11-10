@@ -38,6 +38,12 @@ describe('lerAgentes', () => {
 		expect(l.agentes[0].estado).toBe('esperando');
 		expect(l.agentes[1].estado).toBe('livre');
 	});
+	it('tarefa começando: trabalhando, com o que ele está fazendo', () => {
+		const ag = (visto: number) =>
+			lerAgentes({ ponte: { visto_ha: visto }, agentes: [{ id: 'x', nome: 'X', sala: 'design', tarefa: { id: 't', status: 'fila', titulo: 'T', atividade: null, desde: 2 } }] })!.agentes[0];
+		expect(ag(5)).toMatchObject({ estado: 'trabalhando', tarefa: { atividade: 'Lendo o pedido' } });
+		expect(ag(500)).toMatchObject({ estado: 'fila', tarefa: { atividade: null } });
+	});
 	it('ponte sem sinal recente está desligada; sem ponte nenhuma, também', () => {
 		expect(lerAgentes({ ponte: { visto_ha: 400 }, agentes: [] })!.ponte.ligada).toBe(false);
 		expect(lerAgentes({ ponte: null, agentes: [] })!.ponte).toEqual({ ligada: false, vistaHa: null, trabalhando: 0 });
@@ -48,6 +54,8 @@ describe('lerAgentes', () => {
 		const t = (status: 'fila' | 'trabalhando' | 'esperando') => ({ id: null, status, titulo: null, atividade: null, desde: 0 });
 		expect(estadoDe(null, 0)).toBe('livre');
 		expect(estadoDe(t('fila'), 0)).toBe('fila');
+		// Com a ponte ligada, a fila já aparece como trabalho (a espera de 15 s é só da ponte)
+		expect(estadoDe(t('fila'), 0, true)).toBe('trabalhando');
 		expect(estadoDe(t('trabalhando'), 0)).toBe('trabalhando');
 		expect(estadoDe(t('esperando'), 0)).toBe('esperando');
 	});

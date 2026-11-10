@@ -2,7 +2,12 @@
 // A ponte do DGathe: liga as tarefas passadas no jogo (dspace.verts.me) ao
 // Claude Code do Mac. Roda o tempo todo pelo launchd (ponte/instalar.mjs).
 //
-// A cada 2-4 s:
+// Folga de 15 s (pedido do Bruno em 10/11/2026, "para o banco respirar"): tarefa
+// nova, tarefa retomada e mensagem no meio do trabalho só entram depois de 15 s.
+// No jogo o agente já aparece trabalhando nesse meio-tempo. Resposta a pedido de
+// permissão e a pergunta vai na hora: o agente está parado esperando.
+//
+// A cada 2 s (com sessão aberta) ou 5 s (sem nenhuma):
 //   - pega a próxima tarefa da fila (uma por agente, até DGATHE_MAX juntas) e
 //     abre uma sessão do Claude Code na pasta do agente, sem terminal: cada
 //     passo chega como JSON e vira uma linha da conversa no jogo
@@ -21,6 +26,7 @@
 //   DGATHE_PONTE_ID   nome desta ponte (padrão: mac-<nome do computador>)
 //   DGATHE_BASE       pasta base das pastas dos agentes (padrão: a VERT SYS)
 //   DGATHE_MAX        quantas tarefas ao mesmo tempo (padrão: 3)
+//   DGATHE_ESPERA     segundos de folga antes de agir numa tarefa ou mensagem nova (padrão: 15)
 //   DGATHE_PATH       PATH das sessões (o do terminal do Bruno)
 //   DGATHE_CLAUDE     caminho do Claude Code (padrão: o mais novo instalado)
 
@@ -68,6 +74,7 @@ const cfg = { ...lerEnv(ARQUIVO_ENV), ...Object.fromEntries(Object.entries(proce
 const ID = cfg.DGATHE_PONTE_ID || `mac-${hostname().split('.')[0].toLowerCase()}`;
 const BASE = cfg.DGATHE_BASE || resolve(AQUI, '../../..');
 const MAX = Math.max(1, Math.min(8, Number(cfg.DGATHE_MAX) || 3));
+const ESPERA = Math.max(0, Math.min(300, Number(cfg.DGATHE_ESPERA ?? 15)));
 
 function log(...partes) {
 	const h = new Date().toLocaleString('pt-BR', { hour12: false });
@@ -348,29 +355,49 @@ class Sessao {
 		this.fimTimer = setTimeout(() => this.talvezEncerrar(), 1500);
 	}
 
-	/** Terminou a rodada: se chegou mensagem nova, continua; senão fecha a sessão. */
+	/**
+	 * Terminou a rodada: se chegou mensagem nova, continua; se tem mensagem ainda
+	 * na folga de 15 s, espera por ela; senão fecha a sessão.
+	 */
 	async talvezEncerrar() {
 		if (this.encerrando || this.saiu || this.aguardandoResultado) return;
-		if (!this.cancelando && !this.desligada && (await this.entregarMensagens())) return;
+		if (!this.cancelando && !this.desligada) {
+			const r = await this.entregarMensagens();
+			if (r.entregou) return;
+			if (r.espera !== null) {
+				clearTimeout(this.fimTimer);
+				this.fimTimer = setTimeout(() => this.talvezEncerrar(), r.espera);
+				return;
+			}
+		}
 		this.encerrando = true;
 		this.proc.stdin.end();
 	}
 
-	/** Mensagens novas do jogo: entram na sessão como se fossem digitadas. */
+	/**
+	 * Mensagens novas do jogo: entram na sessão como se fossem digitadas, depois
+	 * da folga de ESPERA s. `espera` = quanto falta para a próxima amadurecer.
+	 */
 	async entregarMensagens() {
+		const nada = { entregou: false, espera: null };
 		// Sessão ainda abrindo: o iniciar() já leva as mensagens que chegaram antes
-		if (!this.proc || this.encerrando || this.cancelando || this.desligada || this.saiu) return false;
-		const novas = await q(
-			`select id, conteudo, autor_nome from public.dgathe_mensagens where tarefa_id = $1 and not entregue order by id`,
+		if (!this.proc || this.encerrando || this.cancelando || this.desligada || this.saiu) return nada;
+		const pendentes = await q(
+			`select id, conteudo, autor_nome, extract(epoch from now() - criada_em)::float8 as idade
+			from public.dgathe_mensagens where tarefa_id = $1 and not entregue order by id`,
 			[this.id]
 		);
-		if (!novas.length) return false;
+		if (!pendentes.length) return nada;
+		const novas = pendentes.filter((m) => m.idade >= ESPERA);
+		const verdes = pendentes.filter((m) => m.idade < ESPERA);
+		const espera = verdes.length ? Math.ceil((ESPERA - Math.max(...verdes.map((m) => m.idade))) * 1000) + 300 : null;
+		if (!novas.length) return { entregou: false, espera };
 		clearTimeout(this.fimTimer);
-		if (!this.mandarTexto(mensagemParaOAgente(novas))) return false;
+		if (!this.mandarTexto(mensagemParaOAgente(novas))) return nada;
 		await q(`update public.dgathe_mensagens set entregue = true where id = any($1::bigint[])`, [novas.map((m) => m.id)]);
 		await q(`update public.dgathe_tarefas set atividade = 'Lendo a sua mensagem', atualizada_em = now() where id = $1`, [this.id]);
 		log(`tarefa ${this.curto}: entregou ${novas.length} mensagem(ns)`);
-		return true;
+		return { entregou: true, espera };
 	}
 
 	/** Respostas que chegaram do jogo voltam para a sessão. */
@@ -509,6 +536,8 @@ async function pegarTarefa() {
 			select t.id from public.dgathe_tarefas t
 			join public.dgathe_agentes a on a.id = t.agente_id and a.ativo
 			where t.status = 'fila'
+				-- Folga: só o que está na fila há ESPERA s (atualizada_em = quando entrou na fila)
+				and t.atualizada_em <= now() - make_interval(secs => $3::float8)
 				and not (t.agente_id = any($2::text[]))
 				and not exists (
 					select 1 from public.dgathe_tarefas o
@@ -522,7 +551,7 @@ async function pegarTarefa() {
 		set status = 'trabalhando', ponte = $1, iniciada_em = coalesce(t.iniciada_em, now()), atividade = 'Começando', erro = null, cancelar = false, atualizada_em = now()
 		from proxima where t.id = proxima.id
 		returning t.*`,
-		[ID, ocupados]
+		[ID, ocupados, ESPERA]
 	);
 	if (!t) return null;
 	const [agente] = await q(`select * from public.dgathe_agentes where id = $1`, [t.agente_id]);
@@ -551,7 +580,8 @@ async function ciclo() {
 	} catch (e) {
 		log('ciclo:', e.message);
 	} finally {
-		if (!desligando) setTimeout(ciclo, sessoes.size ? 2000 : 3500);
+		// Com a folga de 15 s, olhar a fila a cada 5 s não atrasa ninguém
+		if (!desligando) setTimeout(ciclo, sessoes.size ? 2000 : 5000);
 	}
 }
 
@@ -624,7 +654,7 @@ async function principal() {
 	}
 	const claude = acharClaude();
 	claudeVersao = claude ? versaoDoClaude(claude) : null;
-	log(`ponte ${ID} ligada · base ${BASE} · até ${MAX} tarefa(s) · Claude Code ${claudeVersao ?? 'não encontrado'}`);
+	log(`ponte ${ID} ligada · base ${BASE} · até ${MAX} tarefa(s) · folga de ${ESPERA} s · Claude Code ${claudeVersao ?? 'não encontrado'}`);
 	await recuperar();
 	await pulso();
 	setInterval(pulso, PULSO_MS);
