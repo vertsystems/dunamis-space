@@ -73,6 +73,23 @@ function acaoDoMcp(nome: string): string {
 	return (partes[partes.length - 1] ?? '').replace(/[_-]+/g, ' ').trim();
 }
 
+/**
+ * O líder falando com a equipe (ponte/equipe.mjs, que a sessão chama como
+ * node "$DGATHE_EQUIPE" …): rótulo em português, em vez da descrição que o
+ * modelo dá ao comando (em inglês, às vezes).
+ */
+function passoDaEquipe(comando: string): Passo | null {
+	if (!comando.includes('DGATHE_EQUIPE') && !comando.includes('equipe.mjs')) return null;
+	const m = comando.match(/(?:DGATHE_EQUIPE"?|equipe\.mjs)\s+(delegar|estado|equipe)\b\s*([a-z0-9-]*)/);
+	if (!m) return null;
+	if (m[1] === 'delegar') {
+		const titulo = comando.match(/--titulo\s+(?:"([^"]+)"|'([^']+)')/);
+		const t = titulo?.[1] ?? titulo?.[2];
+		return { rotulo: cortar(`Passando para ${m[2] || 'a equipe'}${t ? `: ${t}` : ''}`), icone: 'ajudante' };
+	}
+	return { rotulo: m[1] === 'estado' ? 'Conferindo como a equipe está' : 'Vendo quem da equipe está livre', icone: 'ajudante' };
+}
+
 /** O rótulo e o ícone de uma ferramenta usada pelo agente. */
 export function passoDaFerramenta(nome: string, entrada: Entrada | null | undefined): Passo {
 	const e = entrada ?? {};
@@ -88,6 +105,8 @@ export function passoDaFerramenta(nome: string, entrada: Entrada | null | undefi
 			return { rotulo: cortar(`Editando ${arquivo(e.notebook_path)}`), icone: 'escrever' };
 		case 'Bash':
 		case 'PowerShell': {
+			const equipe = passoDaEquipe(texto(e.command));
+			if (equipe) return equipe;
 			const d = texto(e.description);
 			return { rotulo: cortar(`No terminal: ${d || texto(e.command) || 'comando'}`), icone: 'terminal' };
 		}

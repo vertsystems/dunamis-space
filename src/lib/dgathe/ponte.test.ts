@@ -236,6 +236,13 @@ describe('passoDaFerramenta', () => {
 		expect(passoDaFerramenta('Skill', { skill: 'carrossel' }).rotulo).toBe('Usando a skill carrossel');
 		expect(passoDaFerramenta('AskUserQuestion', {}).icone).toBe('pergunta');
 	});
+	it('o líder falando com a equipe sai em português', () => {
+		const d = passoDaFerramenta('Bash', { command: 'node "$DGATHE_EQUIPE" delegar clovis --titulo "Levantar requisitos" <<\'PEDIDO\'\nx\nPEDIDO', description: 'Run delegation command' });
+		expect(d).toEqual({ rotulo: 'Passando para clovis: Levantar requisitos', icone: 'ajudante' });
+		expect(passoDaFerramenta('Bash', { command: 'node "$DGATHE_EQUIPE" estado', description: 'Check status' }).rotulo).toBe('Conferindo como a equipe está');
+		expect(passoDaFerramenta('Bash', { command: 'node "$DGATHE_EQUIPE" equipe' }).rotulo).toBe('Vendo quem da equipe está livre');
+		expect(passoDaFerramenta('Bash', { command: 'ls', description: 'Lista' }).rotulo).toBe('No terminal: Lista');
+	});
 	it('conectores pelo nome do serviço', () => {
 		expect(passoDaFerramenta('mcp__claude_ai_Figma__get_screenshot', {})).toEqual({ rotulo: 'No Figma: get screenshot', icone: 'figma' });
 		expect(passoDaFerramenta('mcp__claude_ai_Gmail__send_message', {}).icone).toBe('email');

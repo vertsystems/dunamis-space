@@ -587,7 +587,10 @@ class Sessao {
 		let atividade;
 		if (this.desligada) {
 			status = 'falhou';
-			erro = 'A ponte foi desligada no meio do trabalho. Mande uma mensagem para o agente continuar de onde parou.';
+			// Subtarefa: o líder recebe o aviso no retorno da equipe e decide se pede de novo
+			erro = this.tarefa.pai_id
+				? 'A ponte foi desligada no meio do trabalho. O líder recebe este aviso e decide se pede de novo.'
+				: 'A ponte foi desligada no meio do trabalho. Mande uma mensagem para o agente continuar de onde parou.';
 			atividade = 'Parou: a ponte foi desligada';
 		} else if (this.cancelando) {
 			status = 'cancelada';
@@ -970,7 +973,7 @@ async function pulso() {
 async function recuperar() {
 	const linhas = await qInsistente(
 		`with alvo as (
-			select t.id, t.cancelar,
+			select t.id, t.cancelar, t.pai_id is not null as subtarefa,
 				exists (select 1 from public.dgathe_tarefas s where s.pai_id = t.id
 					and (s.status in ${ABERTOS} or s.relatada_em is null)) as equipe
 			from public.dgathe_tarefas t
@@ -980,6 +983,7 @@ async function recuperar() {
 		set status = case when a.cancelar then 'cancelada' when a.equipe then 'aguardando' else 'falhou' end,
 			erro = case when a.cancelar then null
 				when a.equipe then 'A ponte reiniciou no meio da rodada. Ele retoma sozinho quando a equipe terminar.'
+				when a.subtarefa then 'A ponte reiniciou no meio do trabalho. O líder recebe este aviso e decide se pede de novo.'
 				else 'A ponte reiniciou no meio do trabalho. Mande uma mensagem para o agente continuar de onde parou.' end,
 			atividade = case when a.cancelar then 'Parada a pedido' when a.equipe then 'Esperando a equipe' else 'Parou: a ponte reiniciou' end,
 			terminada_em = case when not a.cancelar and a.equipe then null else now() end,

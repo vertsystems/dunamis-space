@@ -175,6 +175,13 @@ async function instalar() {
 	status();
 }
 
+// De dentro de uma sessão de agente do DGathe (a ponte põe DGATHE_TAREFA no
+// ambiente), recarregar a ponte derrubaria a própria sessão e as dos colegas.
+if (process.env.DGATHE_TAREFA && !tem('--status')) {
+	console.error('Recusado: isto está rodando de dentro de uma sessão de agente do DGathe. Recarregar a ponte derruba as sessões em andamento; peça ao Bruno.');
+	process.exit(1);
+}
+
 try {
 	if (tem('--status')) status();
 	else if (tem('--parar')) parar();
