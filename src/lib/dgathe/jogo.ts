@@ -44,6 +44,7 @@ import { APARENCIA_PADRAO, type Aparencia } from './aparencia';
 import type { Pessoa, Situacao } from './presenca';
 import { alvos, deveMover } from './movimento';
 import { SENTADO_MEIA, type Assento } from './assentos';
+import { COR_AGENTE, NOME_DO_ESTADO, PREFIXO_AGENTE, type Agente } from './agentes';
 
 export const GRADE: Grade = { largura: LARGURA, altura: ALTURA, livre: celulaLivre, parede: paredeEntre };
 
@@ -60,6 +61,8 @@ export type OutroResumo = {
 	andando: boolean;
 	/** inativo = 15 min sem mexer (sentado em algum lugar); offline = saiu (sofá da recepção). */
 	situacao: Situacao;
+	/** Preenchido quando é um agente (id com PREFIXO_AGENTE). */
+	agente: Agente | null;
 };
 
 export type Avisos = {
@@ -115,6 +118,8 @@ type Outro = Corpo & {
 	situacao: Situacao;
 	/** O alvo que está valendo (movimento.ts). */
 	chave: string;
+	/** É um agente (agentes.ts): anda entre a copa e a cadeira dele. */
+	agente?: Agente | null;
 };
 type Desenho = { peca: Desenhavel; atras: boolean; desenhar: () => void };
 
@@ -385,15 +390,82 @@ export class Jogo {
 			if (alvo.assento) this.levarOutro(o, alvo.assento, null);
 			else this.levarOutro(o, null, { x: alvo.x, y: alvo.y, dirX: p.dirX, dirY: p.dirY });
 		}
-		for (const id of [...this.outros.keys()]) if (!vistos.has(id)) this.outros.delete(id);
+		for (const [id, o] of [...this.outros]) if (!vistos.has(id) && !o.agente) this.outros.delete(id);
 		if (this.selecao.tipo === 'pessoa' && !this.outros.has(this.selecao.id)) this.selecionar({ tipo: 'avatar' });
 		this.ultimaInteracao = performance.now();
 		this.emitirOutros();
 	}
 
-	/** Quando os agentes chegarem: as cadeiras deles ficam fora do rodízio de quem está parado. */
+	/** As cadeiras dos agentes ficam fora do rodízio de quem está parado. */
 	definirAssentosDeAgentes(ids: Iterable<string>) {
 		this.assentosDeAgentes = new Set(ids);
+	}
+
+	/**
+	 * Os agentes (agentes.ts) e onde cada um deve estar: a cadeira dele quando
+	 * trabalha, a copa quando está livre. Mudou o lugar, ele anda até lá.
+	 * `reservados` são os assentos que as pessoas não usam.
+	 */
+	definirAgentes(lista: { agente: Agente; lugar: Assento }[], reservados: Iterable<string>) {
+		this.assentosDeAgentes = new Set(reservados);
+		const vistos = new Set<string>();
+		for (const { agente: a, lugar } of lista) {
+			const id = PREFIXO_AGENTE + a.id;
+			vistos.add(id);
+			const pessoa: Pessoa = {
+				id,
+				nome: a.nome,
+				cargo: a.cargo,
+				foto: null,
+				cor: COR_AGENTE,
+				x: lugar.x,
+				y: lugar.y,
+				dirX: lugar.dirX,
+				dirY: lugar.dirY,
+				mov: 0,
+				aparencia: a.aparencia,
+				situacao: 'online',
+				assento: lugar.id,
+				ceo: false,
+				paradoDesde: null,
+				paradoHa: 0
+			};
+			const chave = `a:${lugar.id}`;
+			const o = this.outros.get(id);
+			if (!o) {
+				const novo: Outro = {
+					pessoa,
+					x: lugar.sentado ? lugar.sx : lugar.x,
+					y: lugar.sentado ? lugar.sy : lugar.y,
+					dirX: lugar.dirX,
+					dirY: lugar.dirY,
+					andando: false,
+					fase: 0,
+					caminho: [],
+					sentado: lugar.sentado ? lugar : null,
+					vaiSentar: null,
+					sala: null,
+					mov: 0,
+					situacao: 'online',
+					chave,
+					fim: null,
+					agente: a
+				};
+				novo.sala = zonaNoPonto(novo.x, novo.y);
+				this.outros.set(id, novo);
+				continue;
+			}
+			o.pessoa = pessoa;
+			o.agente = a;
+			if (o.chave !== chave) {
+				o.chave = chave;
+				this.levarOutro(o, lugar, null);
+			}
+		}
+		for (const [id, o] of [...this.outros]) if (o.agente && !vistos.has(id)) this.outros.delete(id);
+		if (this.selecao.tipo === 'pessoa' && !this.outros.has(this.selecao.id)) this.selecionar({ tipo: 'avatar' });
+		this.ultimaInteracao = performance.now();
+		this.emitirOutros();
 	}
 
 	/** O caminho até um ponto, ou até um assento (o chão ao lado e, por fim, a beira dele). */
@@ -482,7 +554,8 @@ export class Jogo {
 				cor: o.pessoa.cor,
 				sala: o.sala,
 				andando: o.caminho.length > 0,
-				situacao: o.situacao
+				situacao: o.situacao,
+				agente: o.agente ?? null
 			}))
 		);
 	}
@@ -753,6 +826,7 @@ export class Jogo {
 						aparencia
 					);
 					if (o && o.situacao !== 'online' && !c.andando) this.desenharSono(c, !!s);
+					if (o?.agente && !c.andando) this.desenharBalaoDoAgente(c, !!s, o.agente);
 				}
 			});
 		};
@@ -775,6 +849,58 @@ export class Jogo {
 			ctx.font = `800 ${5 + k * 4}px Inter, system-ui, sans-serif`;
 			ctx.fillStyle = '#6b7a99';
 			ctx.fillText('z', b.x + 7 + k * 7, topo - k * 12);
+		}
+		ctx.restore();
+	}
+
+	/**
+	 * Em cima do agente: três pontinhos digitando quando trabalha; a mão
+	 * levantada (um "!" laranja que pula) quando espera uma resposta.
+	 */
+	private desenharBalaoDoAgente(onde: Ponto, sentado: boolean, a: Agente) {
+		if (a.estado !== 'trabalhando' && a.estado !== 'esperando') return;
+		const ctx = this.ctx;
+		const b = paraTela(onde.x, onde.y, 0);
+		const topo = b.y - 58 + (sentado ? ABAIXA_SENTADO : 0);
+		ctx.save();
+		if (a.estado === 'esperando') {
+			const pulo = Math.abs(Math.sin(this.t * 4)) * 3;
+			const cx = b.x + 11;
+			const cy = topo - 4 - pulo;
+			ctx.beginPath();
+			ctx.arc(cx, cy, 6.4 + Math.sin(this.t * 6) * 0.6 + 2.2, 0, Math.PI * 2);
+			ctx.fillStyle = 'rgba(245, 165, 36, 0.28)';
+			ctx.fill();
+			ctx.beginPath();
+			ctx.arc(cx, cy, 6.4, 0, Math.PI * 2);
+			ctx.fillStyle = '#f5a524';
+			ctx.fill();
+			ctx.lineWidth = 1.1;
+			ctx.strokeStyle = '#232a3a';
+			ctx.stroke();
+			ctx.fillStyle = '#1c2534';
+			ctx.font = '900 9px Inter, system-ui, sans-serif';
+			ctx.textAlign = 'center';
+			ctx.textBaseline = 'middle';
+			ctx.fillText('!', cx, cy + 0.5);
+		} else {
+			const cx = b.x + 12;
+			const cy = topo - 3;
+			ctx.beginPath();
+			ctx.roundRect(cx - 9, cy - 5.5, 18, 11, 5.5);
+			ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+			ctx.fill();
+			ctx.lineWidth = 0.9;
+			ctx.strokeStyle = '#232a3a';
+			ctx.stroke();
+			for (let i = 0; i < 3; i++) {
+				const fase = (this.t * 2.2 - i * 0.22) % 1;
+				const sobe = fase < 0.5 ? Math.sin(fase * 2 * Math.PI) * 1.6 : 0;
+				ctx.beginPath();
+				ctx.arc(cx - 4.6 + i * 4.6, cy - sobe, 1.35, 0, Math.PI * 2);
+				ctx.fillStyle = COR_AGENTE;
+				ctx.fill();
+			}
 		}
 		ctx.restore();
 	}
@@ -911,6 +1037,25 @@ export class Jogo {
 		});
 		for (const o of this.outros.values()) {
 			const c = pe(o.x, o.y);
+			const y = c.y - (62 - (o.sentado ? ABAIXA_SENTADO : 0)) * this.zoom - 6;
+			if (o.agente) {
+				const a = o.agente;
+				const espera = a.estado === 'esperando';
+				const pisca = espera && Math.sin(this.t * 5) > 0;
+				crachas.push({
+					texto: `${a.nome} · ${NOME_DO_ESTADO[a.estado]}`,
+					x: c.x,
+					y,
+					o: espera
+						? { fundo: pisca ? 'rgba(245, 165, 36, 0.98)' : 'rgba(224, 140, 20, 0.94)', cor: '#1c2534', ponto: '#1c2534' }
+						: {
+								fundo: 'rgba(52, 33, 102, 0.88)',
+								cor: '#efe9ff',
+								ponto: a.estado === 'trabalhando' ? '#34d399' : a.estado === 'fila' ? '#c4b5fd' : '#9aa6ba'
+							}
+				});
+				continue;
+			}
 			const ausente = o.situacao !== 'online';
 			crachas.push({
 				texto: `${primeiroNome(o.pessoa.nome)} · ${o.situacao === 'inativo' ? 'ausente' : o.situacao === 'offline' ? 'offline' : o.pessoa.cargo}`,
@@ -942,9 +1087,12 @@ export class Jogo {
 			if (this.hover.tipo === 'avatar') texto = `${this.opcoes.nome} (você)`;
 			else if (this.hover.tipo === 'pessoa') {
 				const o = this.outros.get(this.hover.id);
-				texto = o
-					? `${o.pessoa.nome} · ${o.situacao === 'inativo' ? 'ausente (15 min sem mexer)' : o.situacao === 'offline' ? 'offline, na recepção' : o.pessoa.cargo}`
-					: '';
+				const a = o?.agente;
+				texto = a
+					? `${a.nome} · ${a.cargo}${a.tarefa?.atividade && a.estado !== 'livre' ? ` · ${a.tarefa.atividade}` : a.estado === 'livre' ? ' · livre, na copa' : ''}`
+					: o
+						? `${o.pessoa.nome} · ${o.situacao === 'inativo' ? 'ausente (15 min sem mexer)' : o.situacao === 'offline' ? 'offline, na recepção' : o.pessoa.cargo}`
+						: '';
 			}
 			else if (this.hover.tipo === 'sala') texto = SALA_POR_ID.get(this.hover.id)?.nome ?? '';
 			else {

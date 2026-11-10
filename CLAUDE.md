@@ -21,10 +21,20 @@ clientes, contratos, financeiro, tarefas, conteúdo, Pag's Up, DMetric e os outr
 | Migrations | `supabase/migrations/`. Aplicar com `PGPASSWORD=… node scripts/run_migration.mjs <arquivo>` ou pelo SQL Editor |
 | Dependências | `~/Documents/repo claude/dspace/node_modules`, com um atalho aqui (o Drive não sincroniza ~30 mil arquivos) |
 | Backup | launchd `com.vertsystems.dunamisspace-backup`, dias 10 e 25 ao meio-dia, grava em `backups/` ([docs/BACKUP.md](docs/BACKUP.md)) |
+| Ponte do DGathe | launchd `com.vertsystems.dgathe-ponte`, roda `ponte/ponte.mjs` o tempo todo: pega as tarefas passadas aos agentes no jogo e abre as sessões do Claude Code no Mac. Configuração em `~/.config/dunamisspace/ponte.env` (senha do usuário `dgathe_ponte`, que só enxerga as tabelas do DGathe), log em `~/Library/Logs/dgathe-ponte.log`. `node ponte/instalar.mjs --status` mostra se está viva; `node ponte/ponte.mjs --conferir` testa banco e Claude Code |
 
 **Se esta pasta mudar de lugar de novo:** o `~/Library/LaunchAgents/com.vertsystems.dunamisspace-backup.plist`
 guarda o caminho completo dela. Atualizar o plist e recarregar (`launchctl bootout` + `bootstrap`),
-senão o backup para em silêncio. Foi o que aconteceu entre 26/08 e 09/11/2026.
+senão o backup para em silêncio. Foi o que aconteceu entre 26/08 e 09/11/2026. A ponte do DGathe
+também guarda o caminho (no plist e no `DGATHE_BASE` do `ponte.env`): rodar `node ponte/instalar.mjs` de novo.
+
+**Ponte do DGathe e os agentes:** cada agente é uma linha em `dgathe_agentes` (sala, cadeira, pasta
+relativa à VERT SYS, instruções, autonomia `perguntar`/`editar`/`livre`). A ponte roda cada tarefa como
+sessão do Claude Code sem terminal (`-p` com stream-json): os passos vão para `dgathe_mensagens`, as
+permissões e as perguntas (AskUserQuestion) viram `dgathe_pedidos` e esperam resposta no jogo, e
+mensagem nova numa tarefa terminada retoma a mesma sessão (`--resume`). As contas que dá para testar
+estão em `src/lib/dgathe/ponte.ts` e `passos.ts` (rodam direto no Node da ponte, sem build: nada de
+enum e import com extensão `.ts`). Mexeu na ponte: `node ponte/instalar.mjs` recarrega o launchd.
 
 ## Como trabalhar
 

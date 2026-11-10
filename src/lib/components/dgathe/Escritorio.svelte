@@ -10,6 +10,8 @@
 	import { assentoPorId } from '$lib/dgathe/assentos';
 	import { lerAparencia, type Aparencia } from '$lib/dgathe/aparencia';
 	import { SALA_POR_ID, SETORES } from '$lib/dgathe/mapa';
+	import { Agentes, lugaresDosAgentes, NOME_DO_ESTADO, PREFIXO_AGENTE, type LeituraAgentes } from '$lib/dgathe/agentes';
+	import PainelAgente from './PainelAgente.svelte';
 	import {
 		Crown,
 		Presentation,
@@ -38,7 +40,8 @@
 		ChevronDown,
 		ChevronUp,
 		Navigation,
-		MousePointerClick
+		MousePointerClick,
+		Hand
 	} from '@lucide/svelte';
 
 	let {
@@ -91,6 +94,9 @@
 	let mini: HTMLCanvasElement;
 	let jogo: Jogo | null = null;
 	let presenca: Presenca | null = null;
+	let agentes: Agentes | null = null;
+	/** Os agentes e a ponte do Mac (agentes.ts), lidos a cada 3 s. */
+	let leitura = $state<LeituraAgentes | null>(null);
 
 	let selecao = $state<Selecao>({ tipo: 'avatar' });
 	let local = $state<string | null>(null);
@@ -108,9 +114,19 @@
 	 * sentado em algum lugar) ou offline (saiu; sentado na recepção).
 	 */
 	let outros = $state<OutroResumo[]>([]);
-	const presentes = $derived(outros.filter((o) => o.situacao === 'online'));
-	const ausentes = $derived(outros.filter((o) => o.situacao === 'inativo'));
-	const offline = $derived(outros.filter((o) => o.situacao === 'offline'));
+	/** Gente de verdade; os agentes andam na mesma lista do jogo, com `agente` preenchido. */
+	const pessoas = $derived(outros.filter((o) => !o.agente));
+	const presentes = $derived(pessoas.filter((o) => o.situacao === 'online'));
+	const ausentes = $derived(pessoas.filter((o) => o.situacao === 'inativo'));
+	const offline = $derived(pessoas.filter((o) => o.situacao === 'offline'));
+	const listaDeAgentes = $derived(leitura?.agentes ?? []);
+	const trabalhando = $derived(listaDeAgentes.filter((a) => a.estado === 'trabalhando' || a.estado === 'esperando'));
+	const precisam = $derived(listaDeAgentes.filter((a) => a.estado === 'esperando'));
+	const tituloAgentes = $derived.by(() => {
+		if (!listaDeAgentes.length) return 'Nenhum agente ainda';
+		const ponte = leitura?.ponte.ligada ? 'Ponte do Mac ligada' : 'Ponte do Mac desligada: as tarefas esperam na fila';
+		return `${listaDeAgentes.map((a) => `${a.nome}: ${NOME_DO_ESTADO[a.estado]}`).join(' · ')}. ${ponte}`;
+	});
 	const nomeDaSala = (id: string | null) => (id ? (SALA_POR_ID.get(id)?.nome ?? id) : 'lado de fora');
 	let conexao = $state<EstadoConexao | 'sozinho'>('sozinho');
 
@@ -128,6 +144,12 @@
 	const pessoaSelecionada = $derived.by(() => {
 		const s = selecao;
 		return s.tipo === 'pessoa' ? (outros.find((o) => o.id === s.id) ?? null) : null;
+	});
+	const agenteSelecionado = $derived.by(() => {
+		const s = selecao;
+		if (s.tipo !== 'pessoa' || !s.id.startsWith(PREFIXO_AGENTE)) return null;
+		const id = s.id.slice(PREFIXO_AGENTE.length);
+		return listaDeAgentes.find((a) => a.id === id) ?? null;
 	});
 	const tituloPessoas = $derived.by(() => {
 		const nomes = [`${nome} (você)`, ...presentes.map((o) => o.nome)].join(', ');
@@ -195,6 +217,7 @@
 						if (jaSincronizou) {
 							const antes = new Map(outros.map((o) => [o.id, o.situacao]));
 							for (const o of lista) {
+								if (o.agente) continue;
 								const era = antes.get(o.id);
 								const n = primeiroNome(o.nome);
 								if (era === o.situacao) continue;
@@ -221,6 +244,32 @@
 				estado: (e) => (conexao = e)
 			});
 			presenca.iniciar(jg.posicao());
+			// Os agentes: na cadeira deles quando trabalham, na copa quando estão livres
+			let estados: Map<string, string> | null = null;
+			agentes = new Agentes(supabase, {
+				leitura: (l) => {
+					const { lugar, reservados } = lugaresDosAgentes(l.agentes);
+					jg.definirAgentes(
+						l.agentes.flatMap((a) => {
+							const onde = lugar.get(a.id);
+							return onde ? [{ agente: a, lugar: onde }] : [];
+						}),
+						reservados
+					);
+					if (estados) {
+						for (const a of l.agentes) {
+							const era = estados.get(a.id);
+							if (!era || era === a.estado) continue;
+							if (a.estado === 'esperando') avisar(`${a.nome} precisa de você`, 4000);
+							else if (a.estado === 'trabalhando' && era !== 'esperando') avisar(`${a.nome} começou: ${a.tarefa?.titulo ?? 'tarefa nova'}`, 3500);
+							else if (a.estado === 'livre' && (era === 'trabalhando' || era === 'esperando')) avisar(`${a.nome} terminou e foi para a copa`, 3500);
+						}
+					}
+					estados = new Map(l.agentes.map((a) => [a.id, a.estado]));
+					leitura = l;
+				}
+			});
+			agentes.iniciar();
 		}
 		// 15 min sem mexer (a vigia é do layout, presenca.ts): com o DGathe aberto
 		// nesta aba, é o meu boneco que anda até o lugar e grava, e levanta ao voltar
@@ -251,6 +300,7 @@
 			clearTimeout(tempoMinimo);
 			clearTimeout(tempoMaximo);
 			presenca?.parar();
+			agentes?.parar();
 			jogo?.destruir();
 		};
 	});
@@ -284,6 +334,11 @@
 		jogo?.irAte(pessoa);
 		tela.focus({ preventScroll: true });
 	}
+
+	function verAgente(id: string) {
+		jogo?.selecionar({ tipo: 'pessoa', id: PREFIXO_AGENTE + id });
+		recolhido = false;
+	}
 </script>
 
 <div class="dg" bind:this={raiz} class:cheia>
@@ -311,8 +366,11 @@
 			{#if ausentes.length || offline.length}<small class="dg-ausentes">{[ausentes.length ? `${ausentes.length} ausente${ausentes.length > 1 ? 's' : ''}` : '', offline.length ? `${offline.length} offline` : ''].filter(Boolean).join(' · ')}</small>{/if}
 				{#if conexao !== 'sozinho'}<i class="dg-sinal {conexao}" aria-hidden="true"></i>{/if}
 			</span>
-			<span title="Agentes trabalhando (próxima fase)"><Bot size={14} /><b>0</b><em>agentes</em></span>
-			<span title="Tarefas em andamento (próxima fase)"><Hammer size={14} /><b>0</b><em>em andamento</em></span>
+			<span title={tituloAgentes}>
+				<Bot size={14} /><b>{listaDeAgentes.length}</b><em>agentes</em>
+				{#if leitura && listaDeAgentes.length}<i class="dg-sinal {leitura.ponte.ligada ? 'online' : 'offline'}" aria-hidden="true"></i>{/if}
+			</span>
+			<span title={trabalhando.length ? trabalhando.map((a) => `${a.nome}: ${a.tarefa?.titulo ?? ''}`).join(' · ') : 'Nenhuma tarefa em andamento'}><Hammer size={14} /><b>{trabalhando.length}</b><em>em andamento</em></span>
 		</div>
 		<div class="dg-acoes">
 			<span class="dg-local" title="Onde você está"><Navigation size={13} />{nomeLocal}</span>
@@ -331,12 +389,32 @@
 		<div class="dg-aviso" role="status">{aviso}</div>
 	{/if}
 
+	<!-- Agente esperando resposta: chama atenção logo abaixo da barra, em qualquer tela -->
+	{#if precisam.length && !(agenteSelecionado && precisam.some((a) => a.id === agenteSelecionado.id))}
+		<button type="button" class="dg-precisa" onclick={() => verAgente(precisam[0].id)} title="Ver o pedido">
+			<Hand size={14} />{precisam.length === 1 ? `${precisam[0].nome} precisa de você` : `${precisam.length} agentes precisam de você`}
+		</button>
+	{/if}
+
 	<!-- Painel do que está selecionado -->
-	<section class="dg-painel" aria-live="polite">
-		{#if salaSelecionada}
+	<section class="dg-painel" class:largo={!!agenteSelecionado} aria-live="polite">
+		{#if agenteSelecionado && leitura && supabase}
+			<PainelAgente
+				agente={agenteSelecionado}
+				ponte={leitura.ponte}
+				pode={leitura.pode}
+				{supabase}
+				aoFechar={() => jogo?.selecionar({ tipo: 'avatar' })}
+				aoIrAte={() => irAte(PREFIXO_AGENTE + agenteSelecionado.id)}
+				aoMudar={() => agentes?.agora()}
+				aoAvisar={(t) => avisar(t)}
+			/>
+		{:else if salaSelecionada}
 			{@const Ico = iconeDa(salaSelecionada.id)}
 			{@const aqui = local === salaSelecionada.id}
-			{@const gente = outros.filter((o) => o.sala === salaSelecionada.id)}
+			{@const gente = pessoas.filter((o) => o.sala === salaSelecionada.id)}
+			{@const daSala = listaDeAgentes.filter((a) => a.sala === salaSelecionada.id)}
+			{@const naSala = outros.filter((o) => o.agente && o.sala === salaSelecionada.id && o.agente.sala !== salaSelecionada.id)}
 			<header class="dg-cab">
 				<span class="dg-ico" style="--cor: {salaSelecionada.cor}"><Ico size={20} /></span>
 				<span class="dg-tit">
@@ -362,20 +440,26 @@
 							<span style="--cor: {o.situacao !== 'online' ? '#9aa6ba' : (o.cor ?? '#9aa6ba')}"></span>{o.nome} · {o.situacao === 'inativo' ? 'ausente' : o.situacao === 'offline' ? 'offline' : o.cargo}
 						</button>
 					{/each}
-					{#if !aqui && !gente.length}<p class="dg-vazio">Ninguém por aqui</p>{/if}
+					{#each naSala as o (o.id)}
+						<button type="button" class="dg-pessoa dg-pessoa-btn" onclick={() => jogo?.selecionar({ tipo: 'pessoa', id: o.id })}>
+							<span style="--cor: #8b5cf6"></span>{o.nome} · agente, {o.agente ? NOME_DO_ESTADO[o.agente.estado] : ''}
+						</button>
+					{/each}
+					{#if !aqui && !gente.length && !naSala.length}<p class="dg-vazio">Ninguém por aqui</p>{/if}
 				</div>
 				<div>
-					<h4>Em andamento</h4>
-					<p class="dg-vazio">Sem tarefas ainda</p>
-				</div>
-				<div>
-					<h4>Concluído</h4>
-					<p class="dg-vazio">As entregas dos agentes aparecem aqui</p>
+					<h4>Agentes do setor</h4>
+					{#each daSala as a (a.id)}
+						<button type="button" class="dg-pessoa dg-pessoa-btn" onclick={() => verAgente(a.id)} title={a.tarefa?.titulo ?? ''}>
+							<span style="--cor: {a.estado === 'esperando' ? '#f5a524' : a.estado === 'trabalhando' ? '#34d399' : '#8b5cf6'}"></span>{a.nome} · {a.estado === 'trabalhando' || a.estado === 'esperando' ? (a.tarefa?.titulo ?? NOME_DO_ESTADO[a.estado]) : NOME_DO_ESTADO[a.estado]}
+						</button>
+					{/each}
+					{#if !daSala.length}<p class="dg-vazio">{salaSelecionada.id === 'copa' ? 'É aqui que os agentes livres esperam a próxima tarefa' : 'Nenhum agente neste setor ainda'}</p>{/if}
 				</div>
 			</div>
 			{#if salaSelecionada.especialidades.length}
 				<div class="dg-esp">
-					<h4>Agentes previstos <span>próxima fase</span></h4>
+					<h4>Especialidades {#if !daSala.length}<span>agentes a criar</span>{/if}</h4>
 					<div class="dg-chips">
 						{#each salaSelecionada.especialidades as e (e)}<span>{e}</span>{/each}
 					</div>
@@ -476,7 +560,7 @@
 		<div class="dg-ajuda" role="dialog" aria-modal="true" aria-label="Controles do DGathe">
 			<div class="dg-ajuda-caixa">
 				<h3>Bem-vindo ao DGathe</h3>
-				<p>O escritório da Dunamis em forma de jogo. Quem estiver logado no dspace aparece aqui com você (com alguns segundos de atraso); quem saiu fica sentado na recepção. Os agentes chegam na próxima fase.</p>
+				<p>O escritório da Dunamis em forma de jogo. Quem estiver logado no dspace aparece aqui com você (com alguns segundos de atraso); quem saiu fica sentado na recepção. Os agentes (crachá roxo) trabalham sentados na mesa deles e esperam a próxima tarefa na copa: clique num deles para passar tarefa, acompanhar o que está fazendo e responder quando ele levantar a mão.</p>
 				<ul>
 					<li><kbd>Botão direito</kbd><span>anda até o ponto</span></li>
 					<li><kbd>Botão esquerdo</kbd><span>seleciona sala, objeto ou pessoa</span></li>
@@ -621,6 +705,33 @@
 		border-radius: 50%;
 		background: #7f8aa0;
 	}
+	.dg-sinal.offline {
+		background: #7f8aa0;
+	}
+	/* À direita, para não cobrir o recado curto (.dg-aviso), que fica no meio */
+	.dg-precisa {
+		position: absolute;
+		top: 56px;
+		right: 12px;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.4rem 0.85rem;
+		border-radius: 999px;
+		background: #f5a524;
+		color: #1c2534;
+		font-size: 12.5px;
+		font-weight: 800;
+		white-space: nowrap;
+		box-shadow: 0 10px 24px -10px rgba(245, 165, 36, 0.8);
+		animation: dg-chama 1.6s ease-in-out infinite;
+		z-index: 3;
+	}
+	@keyframes dg-chama {
+		50% {
+			box-shadow: 0 0 0 6px rgba(245, 165, 36, 0.25), 0 10px 24px -10px rgba(245, 165, 36, 0.8);
+		}
+	}
 	.dg-sinal.online {
 		background: #17b26a;
 		box-shadow: 0 0 0 3px rgba(23, 178, 106, 0.2);
@@ -699,6 +810,9 @@
 	}
 
 	/* Painel de seleção */
+	.dg-painel.largo {
+		width: min(390px, calc(100% - 24px));
+	}
 	.dg-painel {
 		position: absolute;
 		left: 12px;
@@ -1151,6 +1265,11 @@
 	@media (max-width: 700px) {
 		.dg {
 			min-height: 460px;
+		}
+		/* No celular o minimapa sobe para o canto direito: o aviso vai para a esquerda */
+		.dg-precisa {
+			right: auto;
+			left: 12px;
 		}
 		.dg-recursos,
 		.dg-local {
