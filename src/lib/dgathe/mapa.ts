@@ -66,6 +66,11 @@ export type Sala = {
 	 * aqui, primeiro na `cadeira`; e ninguém mais é sorteado para sentar nela.
 	 */
 	dono?: { id: string; cadeira: string };
+	/**
+	 * Pedaços da sala com outro piso (a sala que juntou duas: o Marketing guarda
+	 * o chão escuro do estúdio). O resto usa `piso` e `corPiso`.
+	 */
+	areas?: { x0: number; y0: number; x1: number; y1: number; piso: TipoPiso; corPiso: string }[];
 };
 
 const portaNorte = (x: number) => [x, x + 1].map((c): Aresta => ({ linha: 'h', x: c, y: 13 }));
@@ -204,34 +209,22 @@ export const SALAS: Sala[] = [
 		especialidades: []
 	},
 	{
-		id: 'conteudo',
-		nome: 'Conteúdo & Social Media',
+		// Conteúdo & Social Media e Estúdio viraram uma sala só (pedido do Bruno,
+		// 10/11/2026), sem a parede do meio. O lado do estúdio mantém o chão escuro
+		id: 'marketing',
+		nome: 'Marketing',
 		setor: 'Marketing',
-		descricao: 'Pautas, calendário editorial e as postagens de todos os clientes.',
+		descricao: 'Conteúdo, redes sociais e audiovisual: pautas, calendário, posts de todos os clientes, reels, spots e fotos de produto.',
 		cor: '#e05a7a',
 		piso: 'piso',
 		corPiso: '#f1d0c8',
 		x0: 20,
 		y0: 15,
-		x1: 26,
-		y1: 24,
-		portas: portaSul(23),
-		especialidades: ['Ideias de pauta', 'Calendário editorial', 'Carrosséis e legendas']
-	},
-	{
-		id: 'estudio',
-		nome: 'Estúdio',
-		setor: 'Audiovisual',
-		descricao: 'Foto, vídeo e locução: onde nascem os reels, os spots e as fotos de produto.',
-		cor: '#9b6bd6',
-		piso: 'estudio',
-		corPiso: '#3a3a42',
-		x0: 27,
-		y0: 15,
 		x1: 32,
 		y1: 24,
-		portas: portaSul(29),
-		especialidades: ['Roteiros de vídeo', 'Spots de rádio', 'Fotos de produto']
+		portas: [...portaSul(23), ...portaSul(29)],
+		especialidades: ['Calendário editorial', 'Carrosséis e legendas', 'Roteiros de vídeo', 'Spots e fotos de produto'],
+		areas: [{ x0: 27, y0: 15, x1: 32, y1: 24, piso: 'estudio', corPiso: '#3a3a42' }]
 	},
 	{
 		id: 'recepcao',
@@ -332,9 +325,21 @@ export function zonaNoPonto(x: number, y: number): string | null {
 
 export const ESTACIONAMENTO = { x0: 46, y0: 27, x1: 59, y1: 30 };
 
+/** O pedaço de piso diferente da sala nessa célula (Marketing: o lado do estúdio), ou null. */
+function areaDaCelula(x: number, y: number) {
+	const z = zonaDaCelula(x, y);
+	return (z && SALA_POR_ID.get(z)!.areas?.find((a) => x >= a.x0 && x <= a.x1 && y >= a.y0 && y <= a.y1)) || null;
+}
+
+/** A cor do piso de dentro do prédio nessa célula. */
+export function corDoPiso(x: number, y: number): string {
+	const z = zonaDaCelula(x, y);
+	return areaDaCelula(x, y)?.corPiso ?? (z ? SALA_POR_ID.get(z)!.corPiso : '#e6dfd2');
+}
+
 export function pisoDaCelula(x: number, y: number): TipoPiso {
 	const z = zonaDaCelula(x, y);
-	if (z) return SALA_POR_ID.get(z)!.piso;
+	if (z) return areaDaCelula(x, y)?.piso ?? SALA_POR_ID.get(z)!.piso;
 	if (y === 25 && x >= 2 && x <= 61) return 'calcada';
 	if (x >= 35 && x <= 37 && y >= 26) return 'calcada';
 	const e = ESTACIONAMENTO;
@@ -534,9 +539,20 @@ const NOMES: Partial<Record<TipoItem, string>> = {
 
 function montarItens(): Item[] {
 	const itens: Item[] = [];
+	// O id sai do tipo e do lugar do móvel (não da ordem em que ele nasce): mexer
+	// numa sala não muda o id dos móveis das outras, e o lugar guardado de quem
+	// está sentado continua valendo
+	const ids = new Set<string>();
+	const idDe = (n: NovoItem) => {
+		const base = `${n.tipo.toLowerCase()}-${Math.round(n.x * 100)}-${Math.round(n.y * 100)}`;
+		let id = base;
+		for (let k = 2; ids.has(id); k++) id = `${base}-${k}`;
+		ids.add(id);
+		return id;
+	};
 	const add = (n: NovoItem) => {
 		const item: Item = {
-			id: `i${itens.length + 1}`,
+			id: idDe(n),
 			z: 0,
 			bloqueia: true,
 			nome: NOMES[n.tipo] ?? n.tipo,
@@ -565,15 +581,17 @@ function montarItens(): Item[] {
 	};
 
 	/**
-	 * Baia inteira (pedido do Bruno, 09/11/2026): mesa grande com 3 lugares de
-	 * cada lado, 6 computadores costas com costas e 6 cadeiras para agentes.
-	 * Ocupa 3 casas de largura e 3 de fundo, a partir de (x, y): cadeiras do
-	 * norte na linha y, mesa na y+1, cadeiras do sul na y+2. Deixar uma linha
-	 * livre acima e abaixo, que é por onde se chega às cadeiras.
+	 * Baia inteira (pedido do Bruno, 09/11/2026): mesa grande com `lugares` de
+	 * cada lado (3 de saída; o Dev passou a 4 em 10/11/2026), computadores costas
+	 * com costas e uma cadeira de agente em cada. Ocupa `lugares` casas de
+	 * largura e 3 de fundo, a partir de (x, y): cadeiras do norte na linha y,
+	 * mesa na y+1, cadeiras do sul na y+2. Deixar uma linha livre acima e
+	 * abaixo, que é por onde se chega às cadeiras.
 	 */
-	const baia = (x: number, y: number, telas: string[], opcoes: { cor?: string; cadeira?: string } = {}) => {
-		add({ tipo: 'mesa', x: x + 0.05, y: y + 1.05, w: 2.9, d: 0.9, h: 0.52, cor: opcoes.cor ?? '#f3f0ea' });
-		for (let i = 0; i < 3; i++) {
+	const baia = (x: number, y: number, telas: string[], opcoes: { cor?: string; cadeira?: string; lugares?: number } = {}) => {
+		const n = opcoes.lugares ?? 3;
+		add({ tipo: 'mesa', x: x + 0.05, y: y + 1.05, w: n - 0.1, d: 0.9, h: 0.52, cor: opcoes.cor ?? '#f3f0ea' });
+		for (let i = 0; i < n; i++) {
 			const cx = x + i + 0.5;
 			// De costas um para o outro: o de trás vira para o norte, o da frente para o sul
 			add({ tipo: 'monitor', x: cx - 0.36, y: y + 1.42, w: 0.72, d: 0.08, h: 0.46, z: 0.52, frente: '-y', variante: telas[i % telas.length], bloqueia: false });
@@ -658,18 +676,21 @@ function montarItens(): Item[] {
 	// Desenvolvimento & IA
 	for (const x of [57, 58, 59]) add({ tipo: 'rack', x: x + 0.12, y: 4.12, w: 0.76, d: 0.72, h: 1.95, frente: 'y' });
 	// Duas baias de 6 lugares (os agentes de desenvolvimento e IA)
-	baia(51, 5, ['codigo', 'codigo', 'design'], { cor: '#3a465c', cadeira: '#11161f' });
-	baia(51, 9, ['codigo', 'grafico', 'codigo'], { cor: '#3a465c', cadeira: '#11161f' });
+	// Duas baias de 8 lugares (pedido do Bruno, 10/11/2026: mais 2 cadeiras e 2 computadores em cada)
+	baia(51, 5, ['codigo', 'codigo', 'design', 'grafico'], { cor: '#3a465c', cadeira: '#11161f', lugares: 4 });
+	baia(51, 9, ['codigo', 'grafico', 'codigo', 'design'], { cor: '#3a465c', cadeira: '#11161f', lugares: 4 });
 	mesaGerente(55, 5, 'codigo');
 	add({ tipo: 'nucleo', x: 57.35, y: 8.35, w: 1.3, d: 1.3, h: 1.6 });
 	planta(59, 12);
-	planta(50, 4);
+	// No canto de baixo: no de cima, com as baias de 4 lugares, ela fechava a
+	// passagem de trás e as cadeiras do norte ficavam sem chão para chegar
+	planta(50, 12);
 
 	// Corredor: uma planta em cada ponta
 	planta(4, 13, true);
 	planta(59, 13, true);
 
-	// Conteúdo & Social Media
+	// Marketing, lado do conteúdo (era Conteúdo & Social Media)
 	// 4 mesas de 1 computador em 2 fileiras e o gerente no fundo
 	estacao(21, 17, 'social');
 	estacao(24, 17, 'social');
@@ -679,16 +700,18 @@ function montarItens(): Item[] {
 	add({ tipo: 'luzAnel', x: 26.2, y: 21.2, w: 0.6, d: 0.6, h: 1.7 });
 	add({ tipo: 'pufe', x: 20.1, y: 22.1, w: 0.8, d: 0.8, h: 0.5, cor: '#f2b33d', bloqueia: true });
 	add({ tipo: 'pufe', x: 25.1, y: 23.1, w: 0.8, d: 0.8, h: 0.5, cor: '#4fb6a8', bloqueia: true });
-	planta(26, 24, true);
-	planta(20, 24);
+	// As plantas trocaram de quina (pedido do Bruno, 10/11/2026): as de baixo subiram
+	planta(20, 15, true);
+	planta(26, 15);
 
-	// Estúdio
+	// Marketing, lado do estúdio (era o Estúdio)
 	add({ tipo: 'fundo', x: 27.06, y: 17.6, w: 0.24, d: 3.2, h: 2.2, frente: 'x', nome: 'Fundo infinito' });
 	add({ tipo: 'camera', x: 30.9, y: 18.9, w: 0.5, d: 0.5, h: 1.35, frente: '-x' });
 	add({ tipo: 'softbox', x: 29.2, y: 16.4, w: 0.6, d: 0.6, h: 1.8 });
 	add({ tipo: 'softbox', x: 29.2, y: 22.2, w: 0.6, d: 0.6, h: 1.8 });
 	add({ tipo: 'cadeira', x: 31.3, y: 22.4, w: 0.5, d: 0.5, h: 1.0, frente: '-x', cor: '#2b2b2b', variante: 'diretor', nome: 'Cadeira do diretor' });
-	mesaGerente(28, 23, 'texto');
+	// O Marketing tem um gerente só (a mesa do lado do conteúdo); a do estúdio é a de edição
+	mesaDeFrente(28, 23, { tela: 'texto', mesa: 'Mesa de edição', cadeira: 'Cadeira de edição', executiva: true });
 
 	// Recepção
 	add({ tipo: 'balcao', x: 35, y: 18.15, w: 3, d: 0.75, h: 0.98, frente: 'y' });
@@ -728,7 +751,9 @@ function montarItens(): Item[] {
 	add({ tipo: 'cafeteira', x: 57.3, y: 15.3, w: 0.42, d: 0.38, h: 0.42, z: 0.92, bloqueia: false });
 	add({ tipo: 'pingPong', x: 53.3, y: 18.6, w: 2.4, d: 1.4, h: 0.76 });
 	add({ tipo: 'mesaCentro', x: 57.1, y: 18.6, w: 1, d: 1, h: 0.72, cor: '#f4f1eb', variante: 'redonda', nome: 'Mesa do café' });
-	add({ tipo: 'pufe', x: 56.05, y: 18.75, w: 0.7, d: 0.7, h: 0.45, cor: '#e0662a' });
+	// Do lado norte da mesa do café: na ponta leste do pingue-pongue, ele tapava
+	// o lugar do jogador e a dupla jogava pelos lados (o Bruno viu, 10/11/2026)
+	add({ tipo: 'pufe', x: 57.25, y: 17.6, w: 0.7, d: 0.7, h: 0.45, cor: '#e0662a', frente: 'y' });
 	add({ tipo: 'pufe', x: 58.35, y: 19.6, w: 0.7, d: 0.7, h: 0.45, cor: '#3b6ef6', frente: '-x' });
 	add({ tipo: 'sofa', x: 52.1, y: 21, w: 0.85, d: 2.4, h: 0.75, frente: 'x', cor: '#4f6b4f' });
 	add({ tipo: 'mesaCentro', x: 53.4, y: 21.6, w: 0.9, d: 1.2, h: 0.32, cor: '#6b4a33' });
@@ -803,7 +828,16 @@ function montarItens(): Item[] {
 export const ITENS: Item[] = montarItens();
 
 /** Coisas chapadas no chão: tapetes, capacho, faixas do estacionamento. */
-export type Tapete = { x0: number; y0: number; x1: number; y1: number; cor: string; variante?: 'listras' | 'logo' | 'redondo' | 'capacho' | 'faixa' };
+export type Tapete = {
+	x0: number;
+	y0: number;
+	x1: number;
+	y1: number;
+	cor: string;
+	variante?: 'listras' | 'logo' | 'redondo' | 'capacho' | 'faixa' | 'nome';
+	/** O que vem escrito (tapete de nome). */
+	texto?: string;
+};
 
 export const TAPETES: Tapete[] = [
 	{ x0: 4.7, y0: 9.3, x1: 7.3, y1: 11.9, cor: '#3b6ef6', variante: 'listras' },
@@ -834,6 +868,43 @@ for (const it of ITENS) {
 /** Dá para pisar na célula? */
 export function celulaLivre(x: number, y: number): boolean {
 	return dentroDoMapa(x, y) && bloqueio[y * LARGURA + x] === 0;
+}
+
+// --------------------------------------------------------- tapetes com nome
+
+/**
+ * O nome de cada sala num tapete na porta, na cor da sala (pedido do Bruno,
+ * 10/11/2026, no lugar do nome que flutuava em cima). O tapete fica na casa da
+ * frente da porta, a que nenhuma parede tapa no desenho: nas salas de cima do
+ * corredor, no corredor, bem na frente da porta; nas de baixo, logo depois da
+ * porta, do lado de dentro. A Recepção, aberta para o corredor, ganha o dela no
+ * meio da abertura. Cresce para os lados (até 2 casas de cada) enquanto o chão
+ * estiver livre, sem passar da largura da sala nem encostar no tapete vizinho.
+ */
+const casasDeTapete = new Set<string>();
+export function tapeteDeNome(s: Sala): Tapete | null {
+	if (s.id === 'corredor') return null;
+	let portas = s.portas.filter((p) => p.linha === 'h');
+	if (s.id === 'recepcao') portas = portas.filter((p) => p.y === s.y0).filter((p) => p.x >= s.x0 + 2 && p.x <= s.x0 + 4);
+	else portas = portas.slice(0, 2);
+	if (!portas.length) return null;
+	const linha = portas[0].y;
+	const pode = (x: number) => x >= s.x0 && x <= s.x1 && celulaLivre(x, linha) && !casasDeTapete.has(`${x},${linha}`);
+	let x0 = Math.min(...portas.map((p) => p.x));
+	let x1 = Math.max(...portas.map((p) => p.x));
+	// Nome comprido pede tapete mais largo: cerca de 1 casa para cada 6 letras
+	const quer = Math.max(4, Math.min(6, Math.ceil(s.nome.length / 3.6)));
+	for (let k = 0; k < 2 && x1 - x0 + 1 < quer; k++) {
+		if (pode(x0 - 1)) x0--;
+		if (x1 - x0 + 1 < quer && pode(x1 + 1)) x1++;
+	}
+	for (let x = x0; x <= x1; x++) casasDeTapete.add(`${x},${linha}`);
+	return { x0: x0 + 0.08, y0: linha + 0.14, x1: x1 + 0.92, y1: linha + 0.86, cor: s.cor, variante: 'nome', texto: s.nome.toLocaleUpperCase('pt-BR') };
+}
+
+for (const s of SALAS) {
+	const t = tapeteDeNome(s);
+	if (t) TAPETES.push(t);
 }
 
 /** Célula livre mais perto da porta da sala, do lado de dentro: o "chegar na sala". */

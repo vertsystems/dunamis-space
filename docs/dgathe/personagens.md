@@ -645,8 +645,8 @@ Para trocar: `update dgathe_agentes set aparencia = '{"personagem":"<id>"}' wher
 
 | Agente | Cargo | Personagem | Por quê |
 |---|---|---|---|
-| Assessor | Sala do Bruno | `conselheiro` | escuta a história inteira antes de opinar |
-| Assessora | Sala da Aline (desde 10/11/2026) | `analista` | observadora e calma: acha o detalhe que ninguém viu |
+| Wagner (assessor do Bruno) | Sala do Bruno | `conselheiro` | escuta a história inteira antes de opinar |
+| Adriana (assessora da Aline) | Sala da Aline (desde 10/11/2026) | `analista` | observadora e calma: acha o detalhe que ninguém viu |
 | Lewis | Gerente de Desenvolvimento e IA | `diretor` | fala pouco, escuta muito e decide com calma |
 | Clovis | Analista de Sistemas | `detetive` | investiga o problema até achar a causa |
 | Shakira | Designer UX/UI | `diretora-criativa` | ideia e referência visual |

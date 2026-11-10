@@ -9,7 +9,7 @@ const cruza = (a: { x0: number; y0: number; x1: number; y1: number }, b: { x: nu
 describe('assentos do escritório', () => {
 	it('há lugar na Diretoria, na recepção, na copa e nas salas de trabalho', () => {
 		const salas = new Set(assentos().map((a) => a.sala));
-		for (const s of ['sala-bruno', 'sala-aline', 'recepcao', 'copa', 'reuniao', 'financeiro', 'comercial', 'dev', 'conteudo', 'design', 'trafego']) expect(salas.has(s), s).toBe(true);
+		for (const s of ['sala-bruno', 'sala-aline', 'recepcao', 'copa', 'reuniao', 'financeiro', 'comercial', 'dev', 'marketing', 'design', 'trafego']) expect(salas.has(s), s).toBe(true);
 	});
 
 	it('todo assento tem chão livre na mesma sala para chegar', () => {
@@ -38,7 +38,7 @@ describe('assentos do escritório', () => {
 		expect(salaDoCeo('outra-pessoa')).toBeNull();
 		expect(lugaresDoCeo('outra-pessoa')).toEqual([]);
 		const a = escolherAssento({ ceo: true, id: 'outra-pessoa', ocupados: new Set(), semente: 7 })!;
-		expect(['recepcao', 'copa', 'reuniao', 'financeiro', 'comercial', 'dev', 'conteudo', 'design', 'trafego', 'estudio']).toContain(a.sala);
+		expect(['recepcao', 'copa', 'reuniao', 'financeiro', 'comercial', 'dev', 'marketing', 'design', 'trafego']).toContain(a.sala);
 	});
 
 	it('Bruno e Aline vão para a sala de cada um, primeiro a cadeira deles (10/11/2026)', () => {

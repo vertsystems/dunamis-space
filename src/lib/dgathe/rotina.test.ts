@@ -42,6 +42,8 @@ describe('lugares de pausa', () => {
 	it('as pontas do pingue-pongue são chão livre, uma de frente para a outra', () => {
 		const p = pontasDoPinguePongue();
 		expect(p).toHaveLength(2);
+		// Um em cada ponta da mesa, não pelos lados (o Bruno viu a dupla de lado, 10/11/2026)
+		expect(p.map((a) => a.id)).toEqual(['pingue:oeste', 'pingue:leste']);
 		for (const a of p) expect(celulaLivre(Math.floor(a.x), Math.floor(a.y))).toBe(true);
 		// De frente um para o outro
 		expect(p[0].dirX + p[1].dirX).toBe(0);

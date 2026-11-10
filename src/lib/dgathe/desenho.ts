@@ -7,8 +7,7 @@
 import { paraTela, tom, sorteio, type Ponto, type Caixa } from './iso';
 import {
 	pisoDaCelula,
-	zonaDaCelula,
-	SALA_POR_ID,
+	corDoPiso,
 	DECORACOES,
 	type Item,
 	type Segmento,
@@ -257,8 +256,7 @@ export function desenharLadrilho(ctx: C, x: number, y: number) {
 		return;
 	}
 
-	const sala = SALA_POR_ID.get(zonaDaCelula(x, y) ?? '');
-	const base = sala?.corPiso ?? '#e6dfd2';
+	const base = corDoPiso(x, y);
 	switch (tipo) {
 		case 'madeira': {
 			poli(ctx, losango, (x + y) % 2 ? base : tom(base, 0.97));
@@ -303,6 +301,21 @@ export function desenharTapete(ctx: C, t: Tapete) {
 			quadZ(ctx, z, x0, y0, x1, y1, cor, tom(cor, 0.7));
 			textoNoChao(ctx, 'BEM-VINDO', (x0 + x1) / 2, (y0 + y1) / 2, 9, '#e9dcc8');
 			return;
+		case 'nome': {
+			// O nome da sala na porta: tapete na cor dela, borda mais escura e o nome
+			// em letra de forma, do tamanho que couber no comprimento do tapete
+			quadZ(ctx, z, x0, y0, x1, y1, tom(cor, 0.92), tom(cor, 0.62));
+			quadZ(ctx, z + 0.001, x0 + 0.07, y0 + 0.07, x1 - 0.07, y1 - 0.07, undefined, 'rgba(255,255,255,0.45)');
+			const texto = t.texto ?? '';
+			ctx.save();
+			ctx.font = '800 10px Inter, system-ui, sans-serif';
+			const largura = ctx.measureText(texto).width || 1;
+			ctx.restore();
+			// Uma casa no eixo x do chão vale 32 px no texto deitado; a altura do tapete limita a letra
+			const px = Math.max(5, Math.min(10, (10 * (x1 - x0) * 32 * 0.84) / largura, (y1 - y0) * 32 * 0.5));
+			textoNoChao(ctx, texto, (x0 + x1) / 2, (y0 + y1) / 2, px, '#ffffff', 800);
+			return;
+		}
 		case 'logo': {
 			const cx = (x0 + x1) / 2;
 			const cy = (y0 + y1) / 2;

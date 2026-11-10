@@ -10,7 +10,10 @@ import {
 	SETORES,
 	SEGMENTOS,
 	SALA_POR_ID,
+	TAPETES,
 	celulaLivre,
+	corDoPiso,
+	pisoDaCelula,
 	chegadaDaSala,
 	paredeEntre,
 	zonaDaCelula
@@ -87,11 +90,11 @@ describe('mapa do escritório', () => {
 		expect(altas.every((s) => (s.orient === 'x' && s.y === 4) || (s.orient === 'y' && s.x === 4))).toBe(true);
 	});
 
-	it('a sala de Desenvolvimento tem 2 baias de 6 lugares (12 cadeiras, 12 computadores)', () => {
+	it('a sala de Desenvolvimento tem 2 baias de 8 lugares (16 cadeiras, 16 computadores)', () => {
 		const dev = ITENS.filter((i) => i.sala === 'dev');
-		expect(dev.filter((i) => i.tipo === 'cadeira' && i.nome === 'Cadeira de agente')).toHaveLength(12);
+		expect(dev.filter((i) => i.tipo === 'cadeira' && i.nome === 'Cadeira de agente')).toHaveLength(16);
 		// 12 nas baias e 1 na mesa do gerente
-		expect(dev.filter((i) => i.tipo === 'monitor')).toHaveLength(13);
+		expect(dev.filter((i) => i.tipo === 'monitor')).toHaveLength(17);
 		expect(dev.filter((i) => i.tipo === 'mesa' && i.nome !== 'Mesa do gerente')).toHaveLength(2);
 	});
 
@@ -108,7 +111,7 @@ describe('mapa do escritório', () => {
 	});
 
 	it('cada departamento tem uma mesa de gerente; a sala do Bruno, a do assessor; a da Aline, a da assessora', () => {
-		for (const sala of ['financeiro', 'comercial', 'dev', 'conteudo', 'estudio', 'design', 'trafego']) {
+		for (const sala of ['financeiro', 'comercial', 'dev', 'marketing', 'design', 'trafego']) {
 			const itens = ITENS.filter((i) => i.sala === sala);
 			expect(itens.filter((i) => i.nome === 'Mesa do gerente'), sala).toHaveLength(1);
 			expect(itens.filter((i) => i.nome === 'Cadeira do gerente'), sala).toHaveLength(1);
@@ -134,7 +137,8 @@ describe('mapa do escritório', () => {
 		};
 		expect(contar('trafego')).toEqual({ mesas: 2, cadeiras: 4, computadores: 4 });
 		expect(contar('design')).toEqual({ mesas: 3, cadeiras: 6, computadores: 6 });
-		expect(contar('conteudo')).toEqual({ mesas: 4, cadeiras: 4, computadores: 4 });
+		// Marketing: as 4 do conteúdo, a mesa de edição do estúdio e a cadeira do diretor
+		expect(contar('marketing')).toEqual({ mesas: 5, cadeiras: 6, computadores: 5 });
 		expect(contar('financeiro')).toEqual({ mesas: 3, cadeiras: 3, computadores: 3 });
 	});
 
@@ -149,7 +153,7 @@ describe('mapa do escritório', () => {
 		// As novas ficam do lado de lá da Diretoria e do Conteúdo, que andaram 16 casas
 		expect(bruno.x1).toBeLessThan(aline.x0);
 		expect(aline.x1).toBeLessThan(SALA_POR_ID.get('sala-4')!.x0);
-		for (const id of ['sala-1', 'sala-2', 'sala-3']) expect(SALA_POR_ID.get(id)!.x1, id).toBeLessThan(SALA_POR_ID.get('conteudo')!.x0);
+		for (const id of ['sala-1', 'sala-2', 'sala-3']) expect(SALA_POR_ID.get(id)!.x1, id).toBeLessThan(SALA_POR_ID.get('marketing')!.x0);
 		// A Diretoria foi esvaziada no mesmo dia: virou a Sala 4, vazia como as outras
 		expect(SALA_POR_ID.has('diretoria')).toBe(false);
 		for (const id of ['sala-1', 'sala-2', 'sala-3', 'sala-4']) {
@@ -171,6 +175,52 @@ describe('mapa do escritório', () => {
 				expect(donas.length, `${x},${y}: ${donas.map((s) => s.id)}`).toBeLessThanOrEqual(1);
 			}
 		}
+	});
+
+	it('Conteúdo e Estúdio viraram o Marketing, sem parede no meio e com o chão do estúdio (10/11/2026)', () => {
+		expect(SALA_POR_ID.has('conteudo') || SALA_POR_ID.has('estudio')).toBe(false);
+		const m = SALA_POR_ID.get('marketing')!;
+		expect(zonaDaCelula(22, 20)).toBe('marketing');
+		expect(zonaDaCelula(30, 20)).toBe('marketing');
+		expect(paredeEntre(26, 20, 27, 20)).toBe(false);
+		expect(pisoDaCelula(22, 20)).toBe('piso');
+		expect(pisoDaCelula(30, 20)).toBe('estudio');
+		expect(corDoPiso(30, 20)).toBe('#3a3a42');
+		expect(m.portas).toHaveLength(4);
+		// As plantas do lado do conteúdo subiram para as quinas de cima
+		const plantas = ITENS.filter((i) => i.tipo === 'planta' && i.sala === 'marketing' && i.x < 27).map((i) => `${Math.floor(i.x)},${Math.floor(i.y)}`);
+		expect(plantas).toEqual(expect.arrayContaining(['20,15', '26,15']));
+		expect(plantas).not.toContain('20,24');
+		expect(plantas).not.toContain('26,24');
+	});
+
+	it('cada sala tem o nome num tapete na porta, na casa da frente (que parede nenhuma tapa) (10/11/2026)', () => {
+		const nomes = TAPETES.filter((t) => t.variante === 'nome');
+		const casas = new Set<string>();
+		for (const s of SETORES) {
+			const t = nomes.filter((x) => x.texto === s.nome.toLocaleUpperCase('pt-BR'));
+			expect(t, s.id).toHaveLength(1);
+			const { x0, y0, x1 } = t[0];
+			const linha = Math.floor(y0);
+			for (let x = Math.floor(x0); x <= Math.floor(x1); x++) {
+				expect(celulaLivre(x, linha), `${s.id} ${x},${linha}`).toBe(true);
+				expect(x >= s.x0 && x <= s.x1, `${s.id} ${x} dentro da largura da sala`).toBe(true);
+				expect(casas.has(`${x},${linha}`), `${s.id} ${x},${linha} em cima de outro tapete`).toBe(false);
+				casas.add(`${x},${linha}`);
+			}
+			// Na frente de uma porta da sala: a linha do tapete é a da aresta da porta
+			expect(s.portas.some((p) => p.linha === 'h' && p.y === linha && p.x >= Math.floor(x0) && p.x <= Math.floor(x1)), s.id).toBe(true);
+			// Sala de cima: no corredor; de baixo: dentro dela
+			expect(zonaDaCelula(Math.floor(x0), linha), s.id).toBe(linha === s.y1 + 1 ? 'corredor' : s.id);
+		}
+		expect(nomes.some((t) => t.texto === 'CORREDOR')).toBe(false);
+	});
+
+	it('o id de cada móvel sai do tipo e do lugar dele (não muda quando outra sala é reformada)', () => {
+		expect(new Set(ITENS.map((i) => i.id)).size).toBe(ITENS.length);
+		const cadeira = ITENS.find((i) => i.nome === 'Cadeira do Bruno')!;
+		expect(cadeira.id).toBe('cadeira-720-520');
+		expect(ITENS.every((i) => /^[a-z]+-\d+-\d+(-\d+)?$/.test(i.id))).toBe(true);
 	});
 
 	it('o contador de setores não inclui o corredor', () => {

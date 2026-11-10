@@ -22,7 +22,6 @@
 		Handshake,
 		Cpu,
 		Megaphone,
-		Clapperboard,
 		DoorOpen,
 		Palette,
 		TrendingUp,
@@ -34,7 +33,6 @@
 		CircleQuestionMark,
 		Plus,
 		Minus,
-		Tags,
 		MapPin,
 		Users,
 		Bot,
@@ -89,8 +87,7 @@
 		financeiro: Wallet,
 		comercial: Handshake,
 		dev: Cpu,
-		conteudo: Megaphone,
-		estudio: Clapperboard,
+		marketing: Megaphone,
 		recepcao: DoorOpen,
 		design: Palette,
 		trafego: TrendingUp,
@@ -144,7 +141,6 @@
 	let destino = $state<string | null>(null);
 	let aviso = $state<string | null>(null);
 	let ajuda = $state(false);
-	let nomes = $state(true);
 	let cheia = $state(false);
 	let falhou = $state(false);
 	/** Painel recolhido: só o cabeçalho, para sobrar mapa (no celular, principalmente). */
@@ -484,7 +480,6 @@
 			{#if supabase}<Consumo {supabase} />{/if}
 			<span class="dg-local" title="Onde você está"><Navigation size={13} />{nomeLocal}</span>
 			<button type="button" onclick={() => (jogo?.centralizar(), tela.focus())} title="Voltar a câmera para você (Espaço)" aria-label="Centralizar no avatar"><Crosshair size={16} /></button>
-			<button type="button" class:ativo={nomes} onclick={() => (nomes = jogo?.alternarNomes() ?? nomes)} title="Nomes das salas (N)" aria-label="Mostrar ou esconder nomes das salas"><Tags size={16} /></button>
 			<button type="button" onclick={() => jogo?.zoomEm(1 / 1.2)} title="Afastar (-)" aria-label="Afastar"><Minus size={16} /></button>
 			<button type="button" onclick={() => jogo?.zoomEm(1.2)} title="Aproximar (+)" aria-label="Aproximar"><Plus size={16} /></button>
 			<button type="button" onclick={() => (ajuda = true)} title="Controles" aria-label="Ver os controles"><CircleQuestionMark size={16} /></button>
@@ -717,7 +712,6 @@
 					<li><kbd>Roda do mouse</kbd><span>aproxima e afasta</span></li>
 					<li><kbd>WASD</kbd><kbd>Setas</kbd><span>movem a câmera</span></li>
 					<li><kbd>Espaço</kbd><span>volta a câmera para você</span></li>
-					<li><kbd>N</kbd><span>mostra ou esconde os nomes das salas</span></li>
 					<li><kbd>Toque</kbd><span>no celular: toque no chão para andar</span></li>
 				</ul>
 				<button type="button" onclick={fecharAjuda}>Entrar no escritório</button>
@@ -923,10 +917,6 @@
 	}
 	.dg-acoes button:hover {
 		background: rgba(255, 255, 255, 0.12);
-	}
-	.dg-acoes button.ativo {
-		border-color: rgba(245, 165, 36, 0.5);
-		color: #ffd58a;
 	}
 	.dg-acoes button:focus-visible,
 	.dg-painel button:focus-visible,

@@ -105,8 +105,8 @@ export function pontosDePasseio(sala: string): Assento[] {
 let cachePingue: Assento[] | null = null;
 /**
  * Onde ficam os dois jogadores: nas pontas da mesa, de frente um para o outro.
- * Se uma ponta estiver tapada (na copa, um pufe encosta na ponta direita), os
- * dois jogam pelos lados compridos, frente a frente no meio da mesa.
+ * Só se uma ponta estiver tapada os dois jogam pelos lados compridos (até
+ * 10/11/2026 um pufe tapava a ponta leste e a dupla sempre jogava de lado).
  */
 export function pontasDoPinguePongue(): Assento[] {
 	if (cachePingue) return cachePingue;
@@ -136,7 +136,7 @@ export function pontasDoPinguePongue(): Assento[] {
 }
 
 /** Salas por onde se passeia (os setores e as áreas comuns). */
-const SALAS_DE_PASSEIO = ['recepcao', 'copa', 'reuniao', 'financeiro', 'comercial', 'dev', 'conteudo', 'estudio', 'design', 'trafego'];
+const SALAS_DE_PASSEIO = ['recepcao', 'copa', 'reuniao', 'financeiro', 'comercial', 'dev', 'marketing', 'design', 'trafego'];
 
 // ------------------------------------------------------------ onde cada um fica
 

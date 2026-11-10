@@ -18,7 +18,6 @@ import {
 	ITENS,
 	SEGMENTOS,
 	TAPETES,
-	SALAS,
 	SALA_POR_ID,
 	INICIO,
 	PREDIO,
@@ -290,7 +289,6 @@ export class Jogo {
 	private mouse = { x: 0, y: 0, dentro: false };
 	private arrasto: { x0: number; y0: number; camX: number; camY: number; moveu: boolean; botao: number } | null = null;
 	private teclas = new Set<string>();
-	private mostrarNomes = true;
 
 	private chao: HTMLCanvasElement | null = null;
 	private chaoChave = '';
@@ -408,12 +406,6 @@ export class Jogo {
 		this.cam.x += antes.x - depois.x;
 		this.cam.y += antes.y - depois.y;
 		this.limitarCamera();
-	}
-
-	alternarNomes() {
-		this.ultimaInteracao = performance.now();
-		this.mostrarNomes = !this.mostrarNomes;
-		return this.mostrarNomes;
 	}
 
 	selecionar(s: Selecao) {
@@ -572,9 +564,9 @@ export class Jogo {
 	}
 
 	/** O caminho até um ponto, ou até um assento (o chão ao lado e, por fim, a beira dele). */
-	private planejar(c: Corpo, assento: Assento | null, ponto: Ponto | null): Ponto[] | null {
+	private planejar(c: Corpo, assento: Assento | null, ponto: Ponto | null, estava: Assento | null = null): Ponto[] | null {
 		const alvo = assento ? { x: assento.x, y: assento.y } : ponto!;
-		const rota = Math.hypot(alvo.x - c.x, alvo.y - c.y) < 0.05 ? [{ x: c.x, y: c.y }, alvo] : this.caminhoEntre(c, alvo);
+		const rota = Math.hypot(alvo.x - c.x, alvo.y - c.y) < 0.05 ? [{ x: c.x, y: c.y }, alvo] : this.caminhoDe(c, alvo, estava);
 		if (!rota) return null;
 		if (assento?.sentado) rota.push({ x: assento.sx, y: assento.sy });
 		return rota;
@@ -582,10 +574,11 @@ export class Jogo {
 
 	/** Faz o caminho de outra pessoa (sem caminho: aparece lá). */
 	private levarOutro(o: Outro, assento: Assento | null, ponto: (Ponto & { dirX: number; dirY: number }) | null) {
+		const estava = o.sentado ?? null;
 		o.sentado = null;
 		o.vaiSentar = assento;
 		o.fim = ponto ? { dirX: ponto.dirX, dirY: ponto.dirY } : null;
-		const rota = this.planejar(o, assento, ponto);
+		const rota = this.planejar(o, assento, ponto, estava);
 		if (rota && rota.length > 1) {
 			o.caminho = rota.slice(1);
 			o.andando = true;
@@ -616,7 +609,7 @@ export class Jogo {
 
 	/** O meu boneco vai sentar (15 min sem mexer, com o DGathe aberto; ou clicou no lugar). */
 	sentarEm(a: Assento): boolean {
-		const rota = this.planejar(this.av, a, null);
+		const rota = this.planejar(this.av, a, null, this.av.sentado ?? null);
 		if (!rota) return false;
 		this.sentouPorEscolha = false;
 		this.av.sentado = null;
@@ -849,11 +842,12 @@ export class Jogo {
 	// --------------------------------------------------------------- andar
 
 	private andarAte(p: Ponto, salaDestino: string | null = null, folga = 0): boolean {
-		// Mandou andar: se estava sentado, levanta
+		// Mandou andar: se estava sentado, levanta (e sai pelo chão ao lado do lugar)
+		const estava = this.av.sentado ?? null;
 		this.sentouPorEscolha = false;
 		this.av.sentado = null;
 		this.av.vaiSentar = null;
-		const rota = this.caminhoEntre(this.av, p);
+		const rota = this.caminhoDe(this.av, p, estava);
 		if (!rota) {
 			this.avisos.aviso('Sem passagem até esse ponto');
 			return false;
@@ -868,11 +862,26 @@ export class Jogo {
 		return true;
 	}
 
+	/**
+	 * O caminho de quem está em `de` até `p`. Sentado em `estava`: primeiro vai ao
+	 * chão de chegada do assento (assentos.ts, sempre na mesma sala) e só então
+	 * segue. Era o defeito do sofá da sala do Bruno (10/11/2026): encostado na
+	 * parede do fundo, com a mesa de centro na frente, o chão livre mais perto
+	 * ficava do lado de fora do prédio, e o boneco atravessava a parede.
+	 */
+	private caminhoDe(de: Ponto, p: Ponto, estava: Assento | null): Ponto[] | null {
+		if (!estava) return this.caminhoEntre(de, p);
+		const rota = this.caminhoEntre({ x: estava.x, y: estava.y }, p);
+		if (rota) rota.unshift({ x: de.x, y: de.y });
+		return rota;
+	}
+
 	/** O caminho de `de` até `p` (ou até o chão livre mais perto de `p`), já suavizado. */
 	private caminhoEntre(de: Ponto, p: Ponto): Ponto[] | null {
 		let inicio = { x: Math.floor(de.x), y: Math.floor(de.y) };
-		// Levantando de um assento (dentro do móvel): sai pelo chão livre ao lado
-		if (!celulaLivre(inicio.x, inicio.y)) inicio = livreMaisProxima(GRADE, de, 2) ?? inicio;
+		// Dentro de um móvel: sai pelo chão livre ao lado, primeiro na mesma sala
+		// (sem atravessar parede); só sem nenhum, o mais perto de qualquer lado
+		if (!celulaLivre(inicio.x, inicio.y)) inicio = this.livreNaMesmaSala(de) ?? livreMaisProxima(GRADE, de, 2) ?? inicio;
 		const cx = Math.floor(p.x);
 		const cy = Math.floor(p.y);
 
@@ -905,6 +914,27 @@ export class Jogo {
 			return suavizar(GRADE, pontos);
 		}
 		return null;
+	}
+
+	/** A casa livre mais perto de `p` dentro da mesma sala, sem parede no meio do caminho. */
+	private livreNaMesmaSala(p: Ponto): Ponto | null {
+		const cx = Math.floor(p.x);
+		const cy = Math.floor(p.y);
+		const sala = zonaDaCelula(cx, cy);
+		if (!sala) return null;
+		let melhor: Ponto | null = null;
+		let melhorD = Infinity;
+		for (let y = cy - 2; y <= cy + 2; y++) {
+			for (let x = cx - 2; x <= cx + 2; x++) {
+				if (!celulaLivre(x, y) || zonaDaCelula(x, y) !== sala) continue;
+				const d = Math.hypot(x + 0.5 - p.x, y + 0.5 - p.y);
+				if (d < melhorD) {
+					melhorD = d;
+					melhor = { x, y };
+				}
+			}
+		}
+		return melhor;
 	}
 
 	private atualizar(dt: number) {
@@ -1387,14 +1417,7 @@ export class Jogo {
 			ctx.fillText(texto, x + (o.ponto ? 5 : 0), y + 0.5);
 		};
 
-		if (this.mostrarNomes && this.zoom >= 0.45) {
-			for (const s of SALAS) {
-				if (s.id === 'corredor') continue;
-				const c = this.daCena(paraTela((s.x0 + s.x1 + 1) / 2, (s.y0 + s.y1 + 1) / 2, 0));
-				if (c.x < -80 || c.y < -20 || c.x > this.largura + 80 || c.y > this.altura + 20) continue;
-				pilula(s.nome, c.x, c.y, { ponto: s.cor });
-			}
-		}
+		// O nome das salas fica no tapete da porta (mapa.ts, tapeteDeNome), desenhado no chão
 
 		// Crachás: o meu fica no lugar; o de quem está colado sobe um degrau para
 		// não cobrir o outro. Desenha os dos outros primeiro e o meu por cima.
@@ -1659,7 +1682,6 @@ export class Jogo {
 				e.preventDefault();
 			} else if (k === '+' || k === '=') this.zoomEm(1.15);
 			else if (k === '-') this.zoomEm(1 / 1.15);
-			else if (k === 'n') this.alternarNomes();
 			else if (k === 'escape') this.selecionar({ tipo: 'avatar' });
 		});
 		on(tela, 'keyup', (e) => this.teclas.delete(e.key.toLowerCase()));
