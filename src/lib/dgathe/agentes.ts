@@ -205,7 +205,7 @@ export function lerAgentes(bruto: unknown): LeituraAgentes | null {
 		agentes.push({
 			id,
 			nome: txt(a.nome, id),
-			cargo: txt(a.cargo, 'Agente'),
+			cargo: txt(a.cargo, 'Bandolete'),
 			equipe: equipe || null,
 			lider: a.lider === true,
 			sala,

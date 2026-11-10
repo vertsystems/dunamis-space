@@ -660,7 +660,7 @@ export class Jogo {
 		}
 		const agente = this.postosDosAgentes.get(id);
 		if (agente) return { nome: agente, posto: true };
-		if (this.assentosDeAgentes.has(id)) return { nome: 'um agente', posto: false };
+		if (this.assentosDeAgentes.has(id)) return { nome: 'um Bandolete', posto: false };
 		return null;
 	}
 

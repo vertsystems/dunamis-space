@@ -186,7 +186,7 @@
 				{#if usadoPor.length}
 					<p class="mt-1.5 flex items-start gap-1 text-xs text-[#6d4bd8]">
 						<Bot size={13} class="mt-px shrink-0" />
-						<span>Também é o agente {usadoPor.join(', ')}.</span>
+						<span>Também é o Bandolete {usadoPor.join(', ')}.</span>
 					</p>
 				{/if}
 			{:else}
@@ -241,8 +241,8 @@
 							type="button"
 							onclick={() => escolher(p.aparencia)}
 							aria-pressed={sel}
-							aria-label={p.nome + (deAgente?.length ? ` (agente ${deAgente.join(', ')})` : '')}
-							title={p.nome + (deAgente?.length ? ` · agente ${deAgente.join(', ')}` : '')}
+							aria-label={p.nome + (deAgente?.length ? ` (Bandolete ${deAgente.join(', ')})` : '')}
+							title={p.nome + (deAgente?.length ? ` · Bandolete ${deAgente.join(', ')}` : '')}
 							class="{quadrado} {sel ? 'ring-2 ring-brand' : 'ring-1 ring-grey-200 hover:ring-2 hover:ring-brand/40'}"
 						>
 							<canvas use:cabecinha={p.aparencia} class="size-full"></canvas>

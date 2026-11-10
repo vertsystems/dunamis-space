@@ -593,7 +593,7 @@ class Sessao {
 			// Subtarefa: o líder recebe o aviso no retorno da equipe e decide se pede de novo
 			erro = this.tarefa.pai_id
 				? 'A ponte foi desligada no meio do trabalho. O líder recebe este aviso e decide se pede de novo.'
-				: 'A ponte foi desligada no meio do trabalho. Mande uma mensagem para o agente continuar de onde parou.';
+				: 'A ponte foi desligada no meio do trabalho. Mande uma mensagem para o Bandolete continuar de onde parou.';
 			atividade = 'Parou: a ponte foi desligada';
 		} else if (this.cancelando) {
 			status = 'cancelada';
@@ -724,8 +724,8 @@ async function conferirEquipes() {
 	try {
 		const desativadas = await q(
 			`update public.dgathe_tarefas s
-			set status = 'cancelada', erro = 'O agente foi desativado antes de começar.',
-				atividade = 'Cancelada: agente desativado', terminada_em = now(), atualizada_em = now()
+			set status = 'cancelada', erro = 'O Bandolete foi desativado antes de começar.',
+				atividade = 'Cancelada: Bandolete desativado', terminada_em = now(), atualizada_em = now()
 			from public.dgathe_agentes a
 			where a.id = s.agente_id and not a.ativo and s.pai_id is not null and s.status = 'fila'
 			returning s.id`
@@ -1077,7 +1077,7 @@ async function recuperar() {
 			erro = case when a.cancelar then null
 				when a.equipe then 'A ponte reiniciou no meio da rodada. Ele retoma sozinho quando a equipe terminar.'
 				when a.subtarefa then 'A ponte reiniciou no meio do trabalho. O líder recebe este aviso e decide se pede de novo.'
-				else 'A ponte reiniciou no meio do trabalho. Mande uma mensagem para o agente continuar de onde parou.' end,
+				else 'A ponte reiniciou no meio do trabalho. Mande uma mensagem para o Bandolete continuar de onde parou.' end,
 			atividade = case when a.cancelar then 'Parada a pedido' when a.equipe then 'Esperando a equipe' else 'Parou: a ponte reiniciou' end,
 			terminada_em = case when not a.cancelar and a.equipe then null else now() end,
 			cancelar = false, atualizada_em = now()

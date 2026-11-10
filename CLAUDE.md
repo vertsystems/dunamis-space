@@ -36,6 +36,10 @@ mensagem nova numa tarefa terminada retoma a mesma sessão (`--resume`). As cont
 estão em `src/lib/dgathe/ponte.ts` e `passos.ts` (rodam direto no Node da ponte, sem build: nada de
 enum e import com extensão `.ts`). Mexeu na ponte: `node ponte/instalar.mjs` recarrega o launchd.
 
+**Os agentes se chamam Bandoletes (desde 10/11/2026):** é o nome que o Bruno deu aos agentes de IA do
+DGathe. Vale em todo texto de tela (jogo, painel, permissões) e a ponte avisa cada agente do nome. No
+código, no banco e nos arquivos (`dgathe_agentes`, `agentes/`, `Agente`) continua "agente".
+
 **Equipes de agentes (desde 10/11/2026):** a definição de cada agente de equipe mora em
 `agentes/<equipe>/<id>.md` (cabeçalho + instruções, formato em [agentes/README.md](agentes/README.md)) e
 vai para o banco com `node ponte/agentes.mjs` (`--conferir` mostra sem gravar). O líder da equipe delega

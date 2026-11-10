@@ -43,7 +43,7 @@ volta do valor são tiradas. Tudo depois do segundo `---` é o corpo, que vira a
 | `equipe` | a equipe | igual à pasta (`agentes/dev/` → `dev`); minúsculas, números e hífen, 2 a 30 caracteres |
 | `lider` | se lidera a equipe (só o líder delega) | `sim` ou `não` (também `nao`, `true`, `false`) |
 | `sala` | sala do mapa onde ele trabalha | id da sala em `src/lib/dgathe/mapa.ts` (ex.: `dev`) |
-| `cadeira` | nome do móvel onde senta | ex.: `Cadeira do gerente`, `Cadeira de agente` |
+| `cadeira` | nome do móvel onde senta | ex.: `Cadeira do gerente`, `Cadeira de Bandolete` |
 | `pasta` | pasta de trabalho da sessão | relativa à VERT SYS, sem `..` e sem começar com `/` |
 | `autonomia` | o que faz sem pedir licença | `perguntar`, `editar` ou `livre` |
 | `modelo` | modelo do Claude Code | vazio = o padrão do Mac; senão `opus`, `sonnet`, `haiku`… |

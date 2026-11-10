@@ -242,7 +242,7 @@ Resposta (exemplo, com detalhe):
     },
     {
       "id": "clovis", "nome": "Clovis", "cargo": "Analista de Sistemas",
-      "sala": "dev", "cadeira": "Cadeira de agente", "aparencia": null, "ordem": 11,
+      "sala": "dev", "cadeira": "Cadeira de Bandolete", "aparencia": null, "ordem": 11,
       "equipe": "dev", "lider": false, "na_fila": 0, "pedidos": 0,
       "tarefa": {
         "id": "9b1c…", "status": "trabalhando", "titulo": "Requisitos da agenda",
@@ -978,16 +978,16 @@ Os 11 (todos `equipe: dev`, `sala: dev`, `pasta: dunamiscompany`, `autonomia: ed
 | Arquivo | id | nome | cargo | lider | cadeira | ordem |
 |---|---|---|---|---|---|---|
 | `lewis.md` | lewis | Lewis | Gerente de Desenvolvimento e IA | sim | Cadeira do gerente | 10 |
-| `clovis.md` | clovis | Clovis | Analista de Sistemas | não | Cadeira de agente | 11 |
-| `shakira.md` | shakira | Shakira | Designer UX/UI | não | Cadeira de agente | 12 |
-| `steve.md` | steve | Steve | Desenvolvedor Full Stack | não | Cadeira de agente | 13 |
-| `aoki.md` | aoki | Aoki | Engenheiro de IA | não | Cadeira de agente | 14 |
-| `bonjovi.md` | bonjovi | BonJovi | Especialista em Automação | não | Cadeira de agente | 15 |
-| `lowe.md` | lowe | Lowe | Engenheiro de Dados | não | Cadeira de agente | 16 |
-| `jackie.md` | jackie | Jackie | Analista de QA | não | Cadeira de agente | 17 |
-| `smith.md` | smith | Smith | Engenheiro DevOps | não | Cadeira de agente | 18 |
-| `brad.md` | brad | Brad | Desenvolvedor Frontend | não | Cadeira de agente | 19 |
-| `blade.md` | blade | Blade | Engenheiro de Segurança da Informação | não | Cadeira de agente | 20 |
+| `clovis.md` | clovis | Clovis | Analista de Sistemas | não | Cadeira de Bandolete | 11 |
+| `shakira.md` | shakira | Shakira | Designer UX/UI | não | Cadeira de Bandolete | 12 |
+| `steve.md` | steve | Steve | Desenvolvedor Full Stack | não | Cadeira de Bandolete | 13 |
+| `aoki.md` | aoki | Aoki | Engenheiro de IA | não | Cadeira de Bandolete | 14 |
+| `bonjovi.md` | bonjovi | BonJovi | Especialista em Automação | não | Cadeira de Bandolete | 15 |
+| `lowe.md` | lowe | Lowe | Engenheiro de Dados | não | Cadeira de Bandolete | 16 |
+| `jackie.md` | jackie | Jackie | Analista de QA | não | Cadeira de Bandolete | 17 |
+| `smith.md` | smith | Smith | Engenheiro DevOps | não | Cadeira de Bandolete | 18 |
+| `brad.md` | brad | Brad | Desenvolvedor Frontend | não | Cadeira de Bandolete | 19 |
+| `blade.md` | blade | Blade | Engenheiro de Segurança da Informação | não | Cadeira de Bandolete | 20 |
 
 O `assessor` continua só no banco (`equipe` nula), fora dos arquivos.
 

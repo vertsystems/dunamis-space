@@ -125,10 +125,11 @@ describe('preambulo das equipes', () => {
 	const lewis = agente({ id: 'lewis', nome: 'Lewis', cargo: 'Gerente de Desenvolvimento e IA', equipe: 'dev', lider: true, instrucoes: 'Manual do Lewis.' });
 	const clovis = agente({ id: 'clovis', nome: 'Clovis', cargo: 'Analista de Sistemas', equipe: 'dev', lider: false, instrucoes: 'Manual do Clovis.' });
 
-	it('sem equipe, igual ao de antes das equipes (o assessor não muda)', () => {
+	it('sem equipe, igual ao de antes das equipes (o assessor não muda; desde 10/11/2026, com o nome Bandoletes)', () => {
 		const antes = [
 			'## Você está no DGathe',
 			'Você é Assessor, Assessor do CEO da Dunamis Company, e trabalha pelo DGathe (o escritório da Dunamis em forma de jogo, dentro do dspace). Quem passou esta tarefa: Bruno Santana.',
+			'- Na Dunamis, os agentes de IA do DGathe, como você, são chamados de Bandoletes: use esse nome ao falar de você ou dos colegas com a equipe.',
 			'- Ninguém acompanha este terminal. Seus textos e passos aparecem no painel do jogo, e a pessoa responde por lá.',
 			'- Precisou de uma decisão ou de um dado que não tem? Pergunte com a ferramenta AskUserQuestion: a pergunta aparece no jogo e você espera a resposta. Não termine com pergunta solta no texto quando der para perguntar assim.',
 			'- Antes de publicar, mandar algo para fora (e-mail, WhatsApp, post), gastar dinheiro ou apagar arquivo, pergunte pelo AskUserQuestion, a não ser que as instruções abaixo liberem.',

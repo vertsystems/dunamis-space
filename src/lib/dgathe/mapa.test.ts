@@ -92,7 +92,7 @@ describe('mapa do escritório', () => {
 
 	it('a sala de Desenvolvimento tem 2 baias de 8 lugares (16 cadeiras, 16 computadores)', () => {
 		const dev = ITENS.filter((i) => i.sala === 'dev');
-		expect(dev.filter((i) => i.tipo === 'cadeira' && i.nome === 'Cadeira de agente')).toHaveLength(16);
+		expect(dev.filter((i) => i.tipo === 'cadeira' && i.nome === 'Cadeira de Bandolete')).toHaveLength(16);
 		// 12 nas baias e 1 na mesa do gerente
 		expect(dev.filter((i) => i.tipo === 'monitor')).toHaveLength(17);
 		expect(dev.filter((i) => i.tipo === 'mesa' && i.nome !== 'Mesa do gerente')).toHaveLength(2);

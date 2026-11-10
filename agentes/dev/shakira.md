@@ -5,7 +5,7 @@ cargo: Designer UX/UI
 equipe: dev
 lider: não
 sala: dev
-cadeira: Cadeira de agente
+cadeira: Cadeira de Bandolete
 pasta: dunamiscompany
 autonomia: editar
 modelo:

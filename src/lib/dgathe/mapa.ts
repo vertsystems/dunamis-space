@@ -279,7 +279,7 @@ export const SALAS: Sala[] = [
 		id: 'copa',
 		nome: 'Copa & Lounge',
 		setor: 'Convivência',
-		descricao: 'Café, pausa e conversa. Na próxima fase, é aqui que os agentes esperam a próxima tarefa.',
+		descricao: 'Café, pausa e conversa: é aqui que os Bandoletes passam as pausas.',
 		cor: '#b07a3c',
 		piso: 'cozinha',
 		corPiso: '#efe2c8',
@@ -288,7 +288,7 @@ export const SALAS: Sala[] = [
 		x1: 59,
 		y1: 24,
 		portas: portaSul(55),
-		especialidades: ['Pausa', 'Agentes livres']
+		especialidades: ['Pausa', 'Bandoletes livres']
 	},
 	// As 3 vazias de baixo, entre a parede oeste e o Conteúdo
 	salaVazia(1, 4, 8, 5),
@@ -596,8 +596,8 @@ function montarItens(): Item[] {
 			// De costas um para o outro: o de trás vira para o norte, o da frente para o sul
 			add({ tipo: 'monitor', x: cx - 0.36, y: y + 1.42, w: 0.72, d: 0.08, h: 0.46, z: 0.52, frente: '-y', variante: telas[i % telas.length], bloqueia: false });
 			add({ tipo: 'monitor', x: cx - 0.36, y: y + 1.5, w: 0.72, d: 0.08, h: 0.46, z: 0.52, frente: 'y', variante: telas[(i + 1) % telas.length], bloqueia: false });
-			add({ tipo: 'cadeira', x: cx - 0.24, y: y + 0.3, w: 0.48, d: 0.48, h: 0.92, frente: 'y', cor: opcoes.cadeira, nome: 'Cadeira de agente' });
-			add({ tipo: 'cadeira', x: cx - 0.24, y: y + 2.22, w: 0.48, d: 0.48, h: 0.92, frente: '-y', cor: opcoes.cadeira, nome: 'Cadeira de agente' });
+			add({ tipo: 'cadeira', x: cx - 0.24, y: y + 0.3, w: 0.48, d: 0.48, h: 0.92, frente: 'y', cor: opcoes.cadeira, nome: 'Cadeira de Bandolete' });
+			add({ tipo: 'cadeira', x: cx - 0.24, y: y + 2.22, w: 0.48, d: 0.48, h: 0.92, frente: '-y', cor: opcoes.cadeira, nome: 'Cadeira de Bandolete' });
 		}
 	};
 

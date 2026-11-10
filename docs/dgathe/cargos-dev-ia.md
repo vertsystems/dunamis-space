@@ -43,16 +43,16 @@
 | id | Nome | Cargo (manual) | Mesa | ordem | Cadeira | Líder |
 |---|---|---|---|---|---|---|
 | `lewis` | Lewis | Gerente de Desenvolvimento e IA | Gerência | 10 | Cadeira do gerente | sim |
-| `clovis` | Clovis | Analista de Sistemas | 01 | 11 | Cadeira de agente | não |
-| `shakira` | Shakira | Designer UX/UI | 02 | 12 | Cadeira de agente | não |
-| `steve` | Steve | Desenvolvedor Full Stack | 03 | 13 | Cadeira de agente | não |
-| `aoki` | Aoki | Engenheiro de IA | 04 | 14 | Cadeira de agente | não |
-| `bonjovi` | BonJovi | Especialista em Automação | 05 | 15 | Cadeira de agente | não |
-| `lowe` | Lowe | Engenheiro de Dados | 06 | 16 | Cadeira de agente | não |
-| `jackie` | Jackie | Analista de QA | 07 | 17 | Cadeira de agente | não |
-| `smith` | Smith | Engenheiro DevOps | 08 | 18 | Cadeira de agente | não |
-| `brad` | Brad | Desenvolvedor Frontend | 09 | 19 | Cadeira de agente | não |
-| `blade` | Blade | Engenheiro de Segurança da Informação (AppSec e IA) ¹ | 10 | 20 | Cadeira de agente | não |
+| `clovis` | Clovis | Analista de Sistemas | 01 | 11 | Cadeira de Bandolete | não |
+| `shakira` | Shakira | Designer UX/UI | 02 | 12 | Cadeira de Bandolete | não |
+| `steve` | Steve | Desenvolvedor Full Stack | 03 | 13 | Cadeira de Bandolete | não |
+| `aoki` | Aoki | Engenheiro de IA | 04 | 14 | Cadeira de Bandolete | não |
+| `bonjovi` | BonJovi | Especialista em Automação | 05 | 15 | Cadeira de Bandolete | não |
+| `lowe` | Lowe | Engenheiro de Dados | 06 | 16 | Cadeira de Bandolete | não |
+| `jackie` | Jackie | Analista de QA | 07 | 17 | Cadeira de Bandolete | não |
+| `smith` | Smith | Engenheiro DevOps | 08 | 18 | Cadeira de Bandolete | não |
+| `brad` | Brad | Desenvolvedor Frontend | 09 | 19 | Cadeira de Bandolete | não |
+| `blade` | Blade | Engenheiro de Segurança da Informação (AppSec e IA) ¹ | 10 | 20 | Cadeira de Bandolete | não |
 
 Igual para os 11 (decisões 9 e 10): equipe `dev`, sala `dev` (Desenvolvimento & IA), pasta
 `dunamiscompany`, autonomia `editar`, modelo e esforço vazios (os padrões do Mac), ativo. A aparência

@@ -494,7 +494,7 @@
 	{/if}
 
 	{#if !detalhes}
-		<p class="pa-vazio">Você vê os agentes no mapa. Para acompanhar as tarefas, peça acesso ao módulo "DGathe: agentes" na tela de Permissões.</p>
+		<p class="pa-vazio">Você vê os Bandoletes no mapa. Para acompanhar as tarefas, peça acesso ao módulo "DGathe: Bandoletes" na tela de Permissões.</p>
 	{:else}
 		{#each abertos as p (p.id)}
 			<div class="pa-pedido">
@@ -504,7 +504,7 @@
 					{#if p.resumo}<pre>{p.resumo}</pre>{/if}
 					{#if editar}
 						{#if negando[p.id]}
-							<input type="text" placeholder="Motivo (opcional, o agente lê)" bind:value={motivo[p.id]} maxlength="500" />
+							<input type="text" placeholder="Motivo (opcional, o Bandolete lê)" bind:value={motivo[p.id]} maxlength="500" />
 							<div class="pa-botoes">
 								<button type="button" class="nao" onclick={() => responder(p, { permitir: false, motivo: motivo[p.id] ?? '' })}>Negar</button>
 								<button type="button" class="leve" onclick={() => (negando[p.id] = false)}>Voltar</button>
@@ -541,7 +541,7 @@
 						</div>
 					{/if}
 				{/if}
-				{#if !editar}<p class="pa-vazio">Esperando quem pode responder pelos agentes.</p>{/if}
+				{#if !editar}<p class="pa-vazio">Esperando quem pode responder pelos Bandoletes.</p>{/if}
 			</div>
 		{/each}
 

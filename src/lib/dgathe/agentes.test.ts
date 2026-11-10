@@ -98,7 +98,7 @@ describe('lerAgentes', () => {
 			agentes: [
 				{ id: 'lewis', nome: 'Lewis', sala: 'dev', cadeira: 'Cadeira do gerente', equipe: 'dev', lider: true, ordem: 10,
 					tarefa: { id: 'p1', status: 'aguardando', titulo: 'Agenda', atividade: 'Esperando a equipe', desde: 312.5, pai_id: null, subtarefas_abertas: 2 } },
-				{ id: 'clovis', nome: 'Clovis', sala: 'dev', cadeira: 'Cadeira de agente', equipe: 'dev', lider: false, ordem: 11,
+				{ id: 'clovis', nome: 'Clovis', sala: 'dev', cadeira: 'Cadeira de Bandolete', equipe: 'dev', lider: false, ordem: 11,
 					tarefa: { id: 's1', status: 'trabalhando', titulo: 'Requisitos', atividade: 'Escrevendo', desde: 95, pai_id: 'p1', subtarefas_abertas: 0 } },
 				// Sem o módulo: equipe e líder vêm, o resto da tarefa vem nulo
 				{ id: 'shakira', nome: 'Shakira', sala: 'dev', equipe: 'dev', lider: 'sim', ordem: 12,
@@ -219,7 +219,7 @@ describe('lugaresDosAgentes', () => {
 		expect(lugar.get('y')!.sala).toBe('design');
 	});
 	it('aguardando: o líder espera a equipe sentado na mesa dele', () => {
-		const { lugar } = lugaresDosAgentes([agente('lewis', { sala: 'dev', estado: 'aguardando' }), agente('clovis', { sala: 'dev', cadeira: 'Cadeira de agente', ordem: 1 })]);
+		const { lugar } = lugaresDosAgentes([agente('lewis', { sala: 'dev', estado: 'aguardando' }), agente('clovis', { sala: 'dev', cadeira: 'Cadeira de Bandolete', ordem: 1 })]);
 		expect(lugar.get('lewis')).toMatchObject({ sala: 'dev', nome: 'Cadeira do gerente', sentado: true });
 		expect(lugar.get('clovis')!.sala).toBe('copa');
 	});
@@ -227,7 +227,7 @@ describe('lugaresDosAgentes', () => {
 	const DEV = ['lewis', 'clovis', 'shakira', 'steve', 'aoki', 'bonjovi', 'lowe', 'jackie', 'smith', 'brad', 'blade'];
 	const departamento = (estado: EstadoAgente) =>
 		DEV.map((id, i) =>
-			agente(id, { sala: 'dev', equipe: 'dev', lider: i === 0, cadeira: i === 0 ? 'Cadeira do gerente' : 'Cadeira de agente', ordem: 10 + i, estado: i === 0 && estado === 'trabalhando' ? 'aguardando' : estado })
+			agente(id, { sala: 'dev', equipe: 'dev', lider: i === 0, cadeira: i === 0 ? 'Cadeira do gerente' : 'Cadeira de Bandolete', ordem: 10 + i, estado: i === 0 && estado === 'trabalhando' ? 'aguardando' : estado })
 		);
 	it('os 11 do dev trabalhando: cada um na sua cadeira da sala dev, Lewis na do gerente', () => {
 		// Embaralhado: a cadeira sai da ordem, não da posição na lista
@@ -237,7 +237,7 @@ describe('lugaresDosAgentes', () => {
 		expect(cadeiras.every((c) => c.sala === 'dev' && c.sentado && c.movel === 'cadeira')).toBe(true);
 		expect(new Set(cadeiras.map((c) => c.id)).size).toBe(11);
 		expect(lugar.get('lewis')!.nome).toBe('Cadeira do gerente');
-		expect(DEV.slice(1).every((id) => lugar.get(id)!.nome === 'Cadeira de agente')).toBe(true);
+		expect(DEV.slice(1).every((id) => lugar.get(id)!.nome === 'Cadeira de Bandolete')).toBe(true);
 		expect(reservados.size).toBe(11);
 		// A mesma lista em outra tela dá as mesmas cadeiras
 		const outra = lugaresDosAgentes(departamento('trabalhando')).lugar;

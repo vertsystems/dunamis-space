@@ -119,7 +119,7 @@
 	async function chamarReuniao(sala: string, ids: string[]) {
 		if (!supabase) return;
 		const { error } = await supabase.rpc('dgathe_chamar_reuniao', { p_sala: sala, p_agentes: ids, p_minutos: 15 });
-		avisar(error ? 'Não deu para chamar a reunião agora' : 'Reunião chamada: os agentes estão indo para a sala (15 min)');
+		avisar(error ? 'Não deu para chamar a reunião agora' : 'Reunião chamada: os Bandoletes estão indo para a sala (15 min)');
 		agentes?.agora();
 	}
 	async function encerrarReuniao(id: string) {
@@ -161,7 +161,7 @@
 	const emAndamento = (a: Agente) => (a.estado === 'aguardando' ? `${a.nome}: ${NOME_DO_ESTADO.aguardando}` : `${a.nome}: ${a.tarefa?.titulo ?? ''}`);
 	const precisam = $derived(listaDeAgentes.filter((a) => a.estado === 'esperando'));
 	const tituloAgentes = $derived.by(() => {
-		if (!listaDeAgentes.length) return 'Nenhum agente ainda';
+		if (!listaDeAgentes.length) return 'Nenhum Bandolete ainda';
 		const ponte = leitura?.ponte.ligada ? 'Ponte do Mac ligada' : 'Ponte do Mac desligada: as tarefas esperam na fila';
 		return `${listaDeAgentes.map((a) => `${a.nome}: ${NOME_DO_ESTADO[a.estado]}`).join(' · ')}. ${ponte}`;
 	});
@@ -471,7 +471,7 @@
 				{#if conexao !== 'sozinho'}<i class="dg-sinal {conexao}" aria-hidden="true"></i>{/if}
 			</span>
 			<span title={tituloAgentes}>
-				<Bot size={14} /><b>{listaDeAgentes.length}</b><em>agentes</em>
+				<Bot size={14} /><b>{listaDeAgentes.length}</b><em>Bandoletes</em>
 				{#if leitura && listaDeAgentes.length}<i class="dg-sinal {leitura.ponte.ligada ? 'online' : 'offline'}" aria-hidden="true"></i>{/if}
 			</span>
 			<span title={trabalhando.length ? trabalhando.map(emAndamento).join(' · ') : 'Nenhuma tarefa em andamento'}><Hammer size={14} /><b>{trabalhando.length}</b><em>em andamento</em></span>
@@ -496,7 +496,7 @@
 	<!-- Agente esperando resposta: chama atenção logo abaixo da barra, em qualquer tela -->
 	{#if precisam.length && !(agenteSelecionado && precisam.some((a) => a.id === agenteSelecionado.id))}
 		<button type="button" class="dg-precisa" onclick={() => verAgente(precisam[0].id)} title="Ver o pedido">
-			<Hand size={14} />{precisam.length === 1 ? `${precisam[0].nome} precisa de você` : `${precisam.length} agentes precisam de você`}
+			<Hand size={14} />{precisam.length === 1 ? `${precisam[0].nome} precisa de você` : `${precisam.length} Bandoletes precisam de você`}
 		</button>
 	{/if}
 
@@ -554,19 +554,19 @@
 					{/each}
 					{#each naSala as o (o.id)}
 						<button type="button" class="dg-pessoa dg-pessoa-btn" onclick={() => jogo?.selecionar({ tipo: 'pessoa', id: o.id })}>
-							<span style="--cor: {o.agente ? COR_DO_ESTADO[o.agente.estado] : COR_DO_ESTADO.livre}"></span>{o.nome} · agente, {o.agente ? NOME_DO_ESTADO[o.agente.estado] : ''}
+							<span style="--cor: {o.agente ? COR_DO_ESTADO[o.agente.estado] : COR_DO_ESTADO.livre}"></span>{o.nome} · Bandolete, {o.agente ? NOME_DO_ESTADO[o.agente.estado] : ''}
 						</button>
 					{/each}
 					{#if !aqui && !gente.length && !naSala.length}<p class="dg-vazio">Ninguém por aqui</p>{/if}
 				</div>
 				<div>
-					<h4>Agentes do setor</h4>
+					<h4>Bandoletes do setor</h4>
 					{#each daSala as a (a.id)}
 						<button type="button" class="dg-pessoa dg-pessoa-btn" onclick={() => verAgente(a.id)} title="{a.cargo}{a.lider ? ' · líder da equipe' : ''}{a.tarefa?.titulo ? ` · ${a.tarefa.titulo}` : ''}">
 							<span style="--cor: {COR_DO_ESTADO[a.estado]}"></span>{a.nome} · {a.estado === 'trabalhando' || a.estado === 'esperando' ? (a.tarefa?.titulo ?? NOME_DO_ESTADO[a.estado]) : NOME_DO_ESTADO[a.estado]}{#if a.lider}<em class="dg-lider">líder</em>{/if}
 						</button>
 					{/each}
-					{#if !daSala.length}<p class="dg-vazio">{salaSelecionada.id === 'copa' ? 'É aqui que os agentes passam as pausas' : 'Nenhum agente neste setor ainda'}</p>{/if}
+					{#if !daSala.length}<p class="dg-vazio">{salaSelecionada.id === 'copa' ? 'É aqui que os Bandoletes passam as pausas' : 'Nenhum Bandolete neste setor ainda'}</p>{/if}
 				</div>
 			</div>
 			{#if reunioesAqui.length || (leitura?.pode === 'editar' && (salaSelecionada.id === 'reuniao' || !!salaSelecionada.dono))}
@@ -585,14 +585,14 @@
 								{@const ids = listaDeAgentes.filter((a) => a.equipe === eq).map((a) => a.id)}
 								<button type="button" class="dg-reuniao-btn" onclick={() => chamarReuniao(salaSelecionada.id, ids)}>Chamar a equipe {eq} ({ids.length})</button>
 							{/each}
-							<button type="button" class="dg-reuniao-btn" onclick={() => chamarReuniao(salaSelecionada.id, listaDeAgentes.map((a) => a.id))}>Chamar todos os agentes</button>
+							<button type="button" class="dg-reuniao-btn" onclick={() => chamarReuniao(salaSelecionada.id, listaDeAgentes.map((a) => a.id))}>Chamar todos os Bandoletes</button>
 						</div>
 					{/if}
 				</div>
 			{/if}
 			{#if salaSelecionada.especialidades.length}
 				<div class="dg-esp">
-					<h4>Especialidades {#if !daSala.length}<span>agentes a criar</span>{/if}</h4>
+					<h4>Especialidades {#if !daSala.length}<span>Bandoletes a criar</span>{/if}</h4>
 					<div class="dg-chips">
 						{#each salaSelecionada.especialidades as e (e)}<span>{e}</span>{/each}
 					</div>
@@ -653,7 +653,7 @@
 				</div>
 			{/if}
 			{#if listaDeAgentes.length}
-				<h4 class="dg-rotulo">Agentes</h4>
+				<h4 class="dg-rotulo">Bandoletes</h4>
 				<div class="dg-atalhos">
 					{#each listaDeAgentes as a (a.id)}
 						<button type="button" class="dg-agente" onclick={() => verAgente(a.id)} title="{a.nome}{a.lider ? ' (líder da equipe)' : ''}: {NOME_DO_ESTADO[a.estado]}{a.tarefa?.titulo ? ` · ${a.tarefa.titulo}` : ''}">
@@ -703,7 +703,7 @@
 		<div class="dg-ajuda" role="dialog" aria-modal="true" aria-label="Controles do DGathe">
 			<div class="dg-ajuda-caixa">
 				<h3>Bem-vindo ao DGathe</h3>
-				<p>O escritório da Dunamis em forma de jogo. Quem estiver logado no dspace aparece aqui com você (com alguns segundos de atraso); quem saiu fica sentado na recepção. Os agentes (crachá roxo) trabalham sentados na mesa deles e esperam a próxima tarefa na copa: clique num deles para passar tarefa, acompanhar o que está fazendo e responder quando ele levantar a mão. O gerente de um setor distribui o trabalho para a equipe: enquanto ela trabalha, ele espera sentado na mesa dele, e o painel dele mostra quem está fazendo o quê.</p>
+				<p>O escritório da Dunamis em forma de jogo. Quem estiver logado no dspace aparece aqui com você (com alguns segundos de atraso); quem saiu fica sentado na recepção. Os Bandoletes, nossos agentes de IA (crachá roxo), trabalham sentados na mesa deles e passam as pausas pela copa: clique num deles para passar tarefa, acompanhar o que está fazendo e responder quando ele vier até você de mão levantada. O gerente de um setor distribui o trabalho para a equipe: enquanto ela trabalha, ele espera sentado na mesa dele, e o painel dele mostra quem está fazendo o quê.</p>
 				<ul>
 					<li><kbd>Botão direito</kbd><span>anda até o ponto</span></li>
 					<li><kbd>Botão esquerdo</kbd><span>seleciona sala, objeto ou pessoa</span></li>
