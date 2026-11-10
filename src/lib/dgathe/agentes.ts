@@ -12,14 +12,20 @@
 //     tarefa". Primeiro os pufes e o sofá; lotou, em pé por lá
 // A cadeira de cada agente fica reservada mesmo com ele na copa: ninguém do
 // rodízio de quem está parado senta nela (Jogo.definirAssentosDeAgentes).
+//
+// Equipes (10/11/2026, departamento de Desenvolvimento & IA, migration 0102 e
+// docs/dgathe/contrato-equipes.md): o líder distribui o trabalho em subtarefas
+// e, enquanto a equipe trabalha, a tarefa dele fica "aguardando". Ele espera
+// sentado na mesa dele, não na copa.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { assentos, type Assento } from './assentos';
 import { lerAparencia, type Aparencia } from './aparencia';
+import { destinosDosAgentes, type Destino } from './rotina';
 import { SALA_POR_ID, celulaLivre, zonaDaCelula } from './mapa';
 
-export type EstadoAgente = 'livre' | 'fila' | 'trabalhando' | 'esperando';
-export type StatusTarefa = 'fila' | 'trabalhando' | 'esperando' | 'concluida' | 'falhou' | 'cancelada';
+export type EstadoAgente = 'livre' | 'fila' | 'trabalhando' | 'esperando' | 'aguardando';
+export type StatusTarefa = 'fila' | 'trabalhando' | 'esperando' | 'aguardando' | 'concluida' | 'falhou' | 'cancelada';
 export type Nivel = 'editar' | 'ver' | 'nenhum';
 
 export type TarefaAtual = {
@@ -27,14 +33,22 @@ export type TarefaAtual = {
 	status: StatusTarefa;
 	titulo: string | null;
 	atividade: string | null;
-	/** Há quantos segundos começou (ou entrou na fila). */
+	/** Há quantos segundos começou (ou entrou na fila; em "aguardando", há quanto espera a equipe). */
 	desde: number;
+	/** A tarefa-pai, quando esta é uma subtarefa (null sem o detalhe). */
+	paiId: string | null;
+	/** Subtarefas ainda rodando (null sem o detalhe ou com o banco de antes da 0102). */
+	subtarefasAbertas: number | null;
 };
 
 export type Agente = {
 	id: string;
 	nome: string;
 	cargo: string;
+	/** A equipe (ex.: 'dev'); null = agente avulso, como o assessor. */
+	equipe: string | null;
+	/** Lidera a equipe: é quem distribui o trabalho. */
+	lider: boolean;
 	sala: string;
 	cadeira: string;
 	aparencia: Aparencia;
@@ -43,10 +57,31 @@ export type Agente = {
 	pedidos: number;
 	tarefa: TarefaAtual | null;
 	estado: EstadoAgente;
+	/** Reunião em que está agora (migration 0103): vai para a sala dela e, no fim, volta ao posto. */
+	reuniao?: ReuniaoDoAgente | null;
 };
 
+export type ReuniaoDoAgente = { id: string; sala: string; titulo: string; ate: number };
+export type Reuniao = ReuniaoDoAgente & { participantes: string[]; criadaPor: string };
+
 export type EstadoPonte = { ligada: boolean; vistaHa: number | null; trabalhando: number };
-export type LeituraAgentes = { pode: Nivel; ponte: EstadoPonte; agentes: Agente[] };
+export type LeituraAgentes = {
+	pode: Nivel;
+	ponte: EstadoPonte;
+	agentes: Agente[];
+	/** Hora do servidor (s desde 1970) na leitura: a rotina de pausas dá igual em todas as telas. */
+	agora?: number | null;
+	/** Reuniões em andamento. */
+	reunioes?: Reuniao[];
+};
+
+function lerReuniao(bruto: unknown): ReuniaoDoAgente | null {
+	if (!bruto || typeof bruto !== 'object') return null;
+	const r = bruto as Record<string, unknown>;
+	const sala = typeof r.sala === 'string' ? r.sala : '';
+	if (typeof r.id !== 'string' || !SALA_POR_ID.has(sala)) return null;
+	return { id: r.id, sala, titulo: typeof r.titulo === 'string' ? r.titulo : 'Reunião', ate: Number(r.ate) || 0 };
+}
 
 /** Sem sinal da ponte há mais que isso (s): desligada. Ela dá sinal a cada 20 s. */
 export const PONTE_VALIDADE = 75;
@@ -54,22 +89,35 @@ export const PONTE_VALIDADE = 75;
 export const PREFIXO_AGENTE = 'agente:';
 export const COR_AGENTE = '#8b5cf6';
 
-const STATUS: StatusTarefa[] = ['fila', 'trabalhando', 'esperando', 'concluida', 'falhou', 'cancelada'];
+const STATUS: StatusTarefa[] = ['fila', 'trabalhando', 'esperando', 'aguardando', 'concluida', 'falhou', 'cancelada'];
+/** Subtarefa "aberta": ainda vai rodar ou está rodando. */
+export const STATUS_ABERTOS: StatusTarefa[] = ['fila', 'trabalhando', 'esperando'];
 
 export const NOME_DO_ESTADO: Record<EstadoAgente, string> = {
-	livre: 'livre',
+	livre: 'disponível',
 	fila: 'na fila',
 	trabalhando: 'trabalhando',
-	esperando: 'precisa de você'
+	esperando: 'precisa de você',
+	aguardando: 'esperando a equipe'
 };
 
 export const NOME_DO_STATUS: Record<StatusTarefa, string> = {
 	fila: 'Na fila',
 	trabalhando: 'Trabalhando',
 	esperando: 'Precisa de você',
+	aguardando: 'Esperando a equipe',
 	concluida: 'Concluída',
 	falhou: 'Parou com erro',
 	cancelada: 'Parada'
+};
+
+/** O ponto colorido de cada estado nas listas do escritório. */
+export const COR_DO_ESTADO: Record<EstadoAgente, string> = {
+	livre: '#8b5cf6',
+	fila: '#c4b5fd',
+	trabalhando: '#34d399',
+	esperando: '#f5a524',
+	aguardando: '#38bdf8'
 };
 
 const txt = (v: unknown, padrao = '') => (typeof v === 'string' ? v : padrao);
@@ -85,19 +133,41 @@ function lerTarefa(bruto: unknown): TarefaAtual | null {
 		status,
 		titulo: typeof t.titulo === 'string' ? t.titulo : null,
 		atividade: typeof t.atividade === 'string' ? t.atividade : null,
-		desde: num(t.desde)
+		desde: num(t.desde),
+		paiId: typeof t.pai_id === 'string' ? t.pai_id : null,
+		subtarefasAbertas: typeof t.subtarefas_abertas === 'number' || (typeof t.subtarefas_abertas === 'string' && t.subtarefas_abertas !== '') ? num(t.subtarefas_abertas) : null
 	};
+}
+
+/**
+ * O que um agente "começando" está fazendo (tarefa na fila com a ponte ligada:
+ * a ponte espera 15 s, mas na tela ele já trabalha). Sai da atividade que a
+ * ponte e o banco gravaram ao pôr a tarefa na fila.
+ */
+export function atividadeComecando(atividade: string | null): string {
+	if (atividade === 'Na fila para continuar') return 'Lendo a sua mensagem';
+	if (atividade === 'Na fila com o retorno da equipe') return 'Lendo o retorno da equipe';
+	return 'Lendo o pedido';
+}
+
+/** A linha de estado do líder enquanto a equipe trabalha. */
+export function textoAguardando(abertas: number | null): string {
+	if (abertas === null) return 'Esperando a equipe';
+	if (abertas <= 0) return 'A equipe terminou: já vai revisar';
+	return `Esperando a equipe: ${abertas} subtarefa${abertas > 1 ? 's abertas' : ' aberta'}`;
 }
 
 /**
  * O estado que o jogo mostra. Tarefa na fila com a ponte ligada já conta como
  * trabalho: a ponte espera 15 s antes de agir (folga para o banco, pedido do
  * Bruno em 10/11/2026), mas na tela o agente vai para a mesa na hora. Só fica
- * "na fila" com a ponte desligada.
+ * "na fila" com a ponte desligada. "aguardando" é o líder esperando a equipe
+ * terminar as subtarefas (não tem sessão aberta, então nem a ponte conta).
  */
-export function estadoDe(tarefa: TarefaAtual | null, pedidos: number, ponteLigada = false): EstadoAgente {
+export function estadoDe(tarefa: Pick<TarefaAtual, 'status'> | null, pedidos: number, ponteLigada = false): EstadoAgente {
 	if (pedidos > 0 || tarefa?.status === 'esperando') return 'esperando';
 	if (tarefa?.status === 'trabalhando') return 'trabalhando';
+	if (tarefa?.status === 'aguardando') return 'aguardando';
 	if (tarefa?.status === 'fila') return ponteLigada ? 'trabalhando' : 'fila';
 	return 'livre';
 }
@@ -124,11 +194,14 @@ export function lerAgentes(bruto: unknown): LeituraAgentes | null {
 		const tarefa = lerTarefa(a.tarefa);
 		const pedidos = num(a.pedidos);
 		// Começando (fila com a ponte ligada): o balão e o painel já dizem o que ele faz
-		if (tarefa?.status === 'fila' && ponte.ligada) tarefa.atividade = tarefa.atividade === 'Na fila para continuar' ? 'Lendo a sua mensagem' : 'Lendo o pedido';
+		if (tarefa?.status === 'fila' && ponte.ligada) tarefa.atividade = atividadeComecando(tarefa.atividade);
+		const equipe = txt(a.equipe).trim();
 		agentes.push({
 			id,
 			nome: txt(a.nome, id),
 			cargo: txt(a.cargo, 'Agente'),
+			equipe: equipe || null,
+			lider: a.lider === true,
 			sala,
 			cadeira: txt(a.cadeira, 'Cadeira do gerente'),
 			aparencia: lerAparencia(a.aparencia, COR_AGENTE),
@@ -136,10 +209,144 @@ export function lerAgentes(bruto: unknown): LeituraAgentes | null {
 			naFila: num(a.na_fila),
 			pedidos,
 			tarefa,
-			estado: estadoDe(tarefa, pedidos, ponte.ligada)
+			estado: estadoDe(tarefa, pedidos, ponte.ligada),
+			reuniao: lerReuniao(a.reuniao)
 		});
 	}
-	return { pode, ponte, agentes };
+	const agora = typeof b.agora === 'number' && Number.isFinite(b.agora) ? b.agora : null;
+	const reunioes: Reuniao[] = [];
+	for (const x of Array.isArray(b.reunioes) ? b.reunioes : []) {
+		const r = lerReuniao(x);
+		const o = x as Record<string, unknown>;
+		if (r) reunioes.push({ ...r, participantes: Array.isArray(o.participantes) ? o.participantes.map(String) : [], criadaPor: txt(o.criada_por) });
+	}
+	return { pode, ponte, agentes, agora, reunioes };
+}
+
+/** Uma subtarefa na tarefa do líder (campo `subtarefas` de dgathe_tarefa, migration 0102). */
+export type Subtarefa = {
+	id: string;
+	agente_id: string;
+	agente_nome: string;
+	agente_cargo: string;
+	titulo: string;
+	status: StatusTarefa;
+	atividade: string | null;
+	/** Começo do resultado (até 300 caracteres). */
+	resumo: string | null;
+	erro: string | null;
+	passos: number;
+	/** Perguntas ou licenças esperando resposta no painel do especialista. */
+	pedidos: number;
+	rodada_do_pai: number | null;
+	/** O resultado já foi entregue ao líder num "Retorno da equipe". */
+	relatada: boolean;
+	criada_ha: number;
+	duracao: number;
+};
+
+/** A tarefa-pai de uma subtarefa (campo `pai` de dgathe_tarefa). */
+export type PaiDaTarefa = { id: string; titulo: string; status: StatusTarefa; agente_id: string; agente_nome: string };
+
+const statusOu = (v: unknown, padrao: StatusTarefa): StatusTarefa => (STATUS.includes(v as StatusTarefa) ? (v as StatusTarefa) : padrao);
+const textoOuNulo = (v: unknown) => (typeof v === 'string' && v.trim() ? v : null);
+
+/** Lê a lista de subtarefas; com o banco de antes da 0102 (sem o campo), fica vazia. */
+export function lerSubtarefas(bruto: unknown): Subtarefa[] {
+	if (!Array.isArray(bruto)) return [];
+	const lista: Subtarefa[] = [];
+	for (const linha of bruto) {
+		if (!linha || typeof linha !== 'object') continue;
+		const s = linha as Record<string, unknown>;
+		const id = txt(s.id);
+		const agente = txt(s.agente_id);
+		if (!id || !agente) continue;
+		lista.push({
+			id,
+			agente_id: agente,
+			agente_nome: txt(s.agente_nome, agente),
+			agente_cargo: txt(s.agente_cargo),
+			titulo: txt(s.titulo, 'Tarefa'),
+			status: statusOu(s.status, 'fila'),
+			atividade: textoOuNulo(s.atividade),
+			resumo: textoOuNulo(s.resumo),
+			erro: textoOuNulo(s.erro),
+			passos: num(s.passos),
+			pedidos: num(s.pedidos),
+			rodada_do_pai: s.rodada_do_pai === null || s.rodada_do_pai === undefined ? null : num(s.rodada_do_pai),
+			relatada: s.relatada === true,
+			criada_ha: num(s.criada_ha),
+			duracao: num(s.duracao)
+		});
+	}
+	return lista;
+}
+
+/** Lê a tarefa-pai; null quando não é subtarefa (ou o banco ainda não manda). */
+export function lerPai(bruto: unknown): PaiDaTarefa | null {
+	if (!bruto || typeof bruto !== 'object') return null;
+	const p = bruto as Record<string, unknown>;
+	const id = txt(p.id);
+	const agente = txt(p.agente_id);
+	if (!id || !agente) return null;
+	return { id, titulo: txt(p.titulo, 'Tarefa'), status: statusOu(p.status, 'concluida'), agente_id: agente, agente_nome: txt(p.agente_nome, agente) };
+}
+
+export const contarAbertas = (subs: { status: StatusTarefa }[]) => subs.filter((s) => STATUS_ABERTOS.includes(s.status)).length;
+
+/**
+ * Subtarefa que vai começar (na fila, a ponte ligada e ela é a tarefa atual do
+ * especialista): na lista do líder aparece trabalhando, como no resto do jogo.
+ * Se o especialista ainda está noutra tarefa, ela fica "na fila" de verdade.
+ */
+export function subtarefaComecando(s: Pick<Subtarefa, 'id' | 'agente_id' | 'status'>, agentes: Pick<Agente, 'id' | 'tarefa'>[], ponteLigada: boolean): boolean {
+	return s.status === 'fila' && ponteLigada && agentes.some((a) => a.id === s.agente_id && a.tarefa?.id === s.id);
+}
+
+/** A primeira linha com texto, sem a marcação do markdown (título, item, negrito). */
+export function primeiraLinha(texto: string | null): string | null {
+	for (const bruta of (texto ?? '').split('\n')) {
+		const l = bruta
+			.replace(/^\s*(#{1,6}\s+|[-*>]\s+|\d+[.)]\s+)/, '')
+			.replace(/\*\*|`/g, '')
+			.trim();
+		if (l) return l;
+	}
+	return null;
+}
+
+/**
+ * A linha de baixo de uma subtarefa na lista da equipe: o que faz agora
+ * (aberta), o começo do resultado (concluída) ou o erro (parou).
+ */
+export function linhaDaSubtarefa(s: Pick<Subtarefa, 'status' | 'atividade' | 'resumo' | 'erro'>, comecando = false): string {
+	if (comecando) return atividadeComecando(s.atividade);
+	if (s.status === 'fila') return s.atividade ?? 'Na fila';
+	if (s.status === 'trabalhando' || s.status === 'esperando') return s.atividade ?? NOME_DO_STATUS[s.status];
+	if (s.status === 'concluida') return primeiraLinha(s.resumo) ?? '(terminou sem texto final)';
+	if (s.status === 'cancelada') return s.erro ?? '(parada antes de terminar)';
+	return s.erro ?? NOME_DO_STATUS[s.status];
+}
+
+/**
+ * O "Retorno da equipe" (equipe.ts, mensagemDaEquipe) pronto para o blocos():
+ * a linha "Tarefa: …" e a "Erro: …" ficam num parágrafo só delas (no texto da
+ * ponte o resultado vem logo embaixo, e o markdown juntaria os dois) e o "---"
+ * antes do fecho vira só um respiro. Dentro de bloco de código nada muda.
+ */
+export function textoDoRetorno(conteudo: string): string {
+	const saida: string[] = [];
+	let codigo = false;
+	for (const linha of conteudo.split('\n')) {
+		if (/^\s*```/.test(linha)) codigo = !codigo;
+		if (!codigo && /^\s*-{3,}\s*$/.test(linha)) {
+			saida.push('');
+			continue;
+		}
+		saida.push(linha);
+		if (!codigo && /^(Tarefa|Erro): /.test(linha)) saida.push('');
+	}
+	return saida.join('\n');
 }
 
 /** Lugares em pé na copa, para quando os pufes e o sofá lotarem. */
@@ -166,7 +373,15 @@ function emPeNaCopa(ocupadas: Set<string>): Assento[] {
  * Onde cada agente fica agora e os assentos que ficam fora do rodízio das
  * pessoas. A mesma lista dá o mesmo resultado em qualquer tela.
  */
-export function lugaresDosAgentes(lista: Agente[]): { lugar: Map<string, Assento>; reservados: Set<string> } {
+/**
+ * Onde cada agente fica agora. Com `agoraS` (a hora do servidor), vale a rotina
+ * (rotina.ts): reunião, posto com tarefa, 20% de pausas, senão o posto. Sem ela,
+ * a regra antiga: livre na copa.
+ */
+export function lugaresDosAgentes(
+	lista: Agente[],
+	agoraS?: number | null
+): { lugar: Map<string, Assento>; reservados: Set<string>; momento: Map<string, Destino> } {
 	const todos = assentos();
 	const reservados = new Set<string>();
 	const mesa = new Map<string, Assento>();
@@ -183,12 +398,28 @@ export function lugaresDosAgentes(lista: Agente[]): { lugar: Map<string, Assento
 	}
 
 	const lugar = new Map<string, Assento>();
+	const momento = new Map<string, Destino>();
+	if (typeof agoraS === 'number' && Number.isFinite(agoraS)) {
+		const destinos = destinosDosAgentes(
+			ordenados.map((a) => ({ id: a.id, sala: a.sala, ordem: a.ordem, ocupado: a.estado !== 'livre', reuniao: a.reuniao?.sala ?? null })),
+			agoraS,
+			mesa,
+			reservados
+		);
+		for (const [id, d] of destinos) {
+			lugar.set(id, d.lugar);
+			reservados.add(d.lugar.id);
+			momento.set(id, d);
+		}
+		return { lugar, reservados, momento };
+	}
 	const naCopa = todos.filter((s) => s.sala === 'copa' && s.sentado);
 	const chao = new Set(naCopa.map((s) => `${Math.floor(s.x)},${Math.floor(s.y)}`));
 	let emPe: Assento[] | null = null;
 	for (const a of ordenados) {
 		const m = mesa.get(a.id);
-		if (m && (a.estado === 'trabalhando' || a.estado === 'esperando')) {
+		// Na mesa: trabalhando, esperando resposta ou (o líder) esperando a equipe
+		if (m && (a.estado === 'trabalhando' || a.estado === 'esperando' || a.estado === 'aguardando')) {
 			lugar.set(a.id, m);
 			continue;
 		}
@@ -202,7 +433,7 @@ export function lugaresDosAgentes(lista: Agente[]): { lugar: Map<string, Assento
 		lugar.set(a.id, fim);
 		reservados.add(fim.id);
 	}
-	return { lugar, reservados };
+	return { lugar, reservados, momento };
 }
 
 type Ouvintes = {

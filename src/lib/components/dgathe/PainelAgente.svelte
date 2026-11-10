@@ -2,10 +2,35 @@
 	// O painel de um agente no DGathe: o que está fazendo, o que precisa de
 	// resposta, a conversa da tarefa e a caixa para passar tarefa ou mandar
 	// mensagem. Quem executa é a ponte do Mac (ponte/ponte.mjs); aqui só se lê
-	// e grava pelo banco (funções da migration 0101).
+	// e grava pelo banco (funções das migrations 0101 e 0102).
+	//
+	// Equipes (10/11/2026, docs/dgathe/contrato-equipes.md, seção 7.2): no
+	// painel do líder, a tarefa lista as subtarefas da equipe (clicar abre o
+	// especialista); no do especialista, "Pedida por Lewis" leva de volta à
+	// tarefa do líder. Enquanto a equipe trabalha, a tarefa do líder fica
+	// "aguardando": dá para mandar mensagem e parar tudo, e a conversa é lida
+	// a cada 5 s (não há sessão aberta, nada muda depressa).
 	import { untrack } from 'svelte';
 	import type { SupabaseClient } from '@supabase/supabase-js';
-	import { duracao, haQuanto, NOME_DO_STATUS, type Agente, type EstadoPonte, type Nivel, type StatusTarefa } from '$lib/dgathe/agentes';
+	import {
+		contarAbertas,
+		duracao,
+		haQuanto,
+		lerPai,
+		lerSubtarefas,
+		linhaDaSubtarefa,
+		NOME_DO_STATUS,
+		STATUS_ABERTOS,
+		subtarefaComecando,
+		textoAguardando,
+		textoDoRetorno,
+		type Agente,
+		type EstadoPonte,
+		type Nivel,
+		type PaiDaTarefa,
+		type StatusTarefa,
+		type Subtarefa
+	} from '$lib/dgathe/agentes';
 	import { blocos } from '$lib/dgathe/texto';
 	import { SALA_POR_ID } from '$lib/dgathe/mapa';
 	import type { Icone } from '$lib/dgathe/passos';
@@ -36,7 +61,8 @@
 		Unplug,
 		TriangleAlert,
 		LoaderCircle,
-		Check
+		Check,
+		CornerUpLeft
 	} from '@lucide/svelte';
 
 	let {
@@ -47,7 +73,11 @@
 		aoFechar,
 		aoIrAte,
 		aoMudar,
-		aoAvisar
+		aoAvisar,
+		aoVerAgente,
+		tarefaInicial = null,
+		agentes = [],
+		momento = null
 	}: {
 		agente: Agente;
 		ponte: EstadoPonte;
@@ -58,6 +88,14 @@
 		/** Algo mudou no banco (tarefa nova, parou): o escritório relê os agentes já. */
 		aoMudar: () => void;
 		aoAvisar: (texto: string) => void;
+		/** Abre o painel de outro agente (subtarefa ou tarefa-pai). */
+		aoVerAgente: (agenteId: string, tarefaId: string | null) => void;
+		/** Tarefa para abrir quando o painel deste agente aparece (veio de um clique noutro painel). */
+		tarefaInicial?: string | null;
+		/** Todos os agentes da última leitura: dizem se a subtarefa na fila já está começando. */
+		agentes?: Agente[];
+		/** O que a rotina diz que ele faz agora (posto, pausa, reunião), vindo do escritório. */
+		momento?: string | null;
 	} = $props();
 
 	type ResumoTarefa = {
@@ -71,8 +109,20 @@
 		passos: number;
 		criada_ha: number;
 		duracao: number;
+		/** Da 0102 em diante; com o banco de antes, não vêm. */
+		pai_id?: string | null;
+		criada_por_agente?: string | null;
+		subtarefas?: number;
 	};
-	type Tarefa = ResumoTarefa & { pedido: string; resultado: string | null; cancelar: boolean };
+	type Tarefa = Omit<ResumoTarefa, 'resumo' | 'subtarefas'> & {
+		pedido: string;
+		resultado: string | null;
+		cancelar: boolean;
+		pai_id?: string | null;
+		criada_por_agente?: string | null;
+		rodada?: number;
+		rodada_do_pai?: number | null;
+	};
 	type Mensagem = {
 		id: number;
 		tipo: 'pedido' | 'mensagem' | 'texto' | 'passo' | 'resultado' | 'aviso';
@@ -115,8 +165,10 @@
 	};
 	const iconeDo = (m: Mensagem) => ICONES[(m.detalhe?.icone as Icone) ?? 'ferramenta'] ?? Wrench;
 
-	const ATIVOS: StatusTarefa[] = ['fila', 'trabalhando', 'esperando'];
-	const ativa = (s: StatusTarefa | undefined) => !!s && ATIVOS.includes(s);
+	/** Rodando (ou para rodar): a conversa é lida a cada 1,5 s. */
+	const ativa = (s: StatusTarefa | undefined) => !!s && STATUS_ABERTOS.includes(s);
+	/** Ainda não terminou: inclui o líder esperando a equipe (dá para parar e falar com ele). */
+	const emAberto = (s: StatusTarefa | undefined) => ativa(s) || s === 'aguardando';
 	const editar = $derived(pode === 'editar');
 	const detalhes = $derived(pode !== 'nenhum');
 
@@ -128,6 +180,10 @@
 	let tarefa = $state<Tarefa | null>(null);
 	let mensagens = $state<Mensagem[]>([]);
 	let pedidos = $state<Pedido[]>([]);
+	/** A tarefa do líder, quando a aberta é uma subtarefa. */
+	let pai = $state<PaiDaTarefa | null>(null);
+	/** O que a equipe faz nesta tarefa (só a tarefa do líder tem). */
+	let subtarefas = $state<Subtarefa[]>([]);
 	let ultimaMensagem = 0;
 	let carregada: string | null = null;
 
@@ -147,6 +203,13 @@
 	const doHistorico = (h: ResumoTarefa): StatusTarefa => (h.status === 'fila' && ponte.ligada && h.id === agente.tarefa?.id ? 'trabalhando' : h.status);
 	const abertos = $derived(pedidos.filter((p) => !p.resposta && !p.cancelado));
 	const sala = $derived(SALA_POR_ID.get(agente.sala)?.nome ?? agente.sala);
+	const subAbertas = $derived(contarAbertas(subtarefas));
+	const aguardando = $derived(tarefa?.status === 'aguardando');
+	/** "Parar tudo": a tarefa do líder com a equipe ainda trabalhando. */
+	const pararTudo = $derived(aguardando || subAbertas > 0);
+	/** Na fila com o retorno da equipe ainda por ler. */
+	const comRetorno = $derived(mensagens.some((m) => m.tipo === 'mensagem' && !m.entregue && !!m.detalhe?.equipe));
+	const statusDaSub = (s: Subtarefa): StatusTarefa => (subtarefaComecando(s, agentes, ponte.ligada) ? 'trabalhando' : s.status);
 
 	// Modo da caixa de texto: com tarefa aberta, fala nela; sem, passa tarefa nova
 	let ultimaAberta: string | null = null;
@@ -160,8 +223,10 @@
 
 	async function lerHistorico() {
 		if (!detalhes) return;
-		const { data, error } = await supabase.rpc('dgathe_tarefas_do_agente', { p_agente: agente.id, p_limite: 12 });
-		if (!error && Array.isArray(data)) historico = data as ResumoTarefa[];
+		const de = agente.id;
+		const { data, error } = await supabase.rpc('dgathe_tarefas_do_agente', { p_agente: de, p_limite: 12 });
+		// Trocou de agente no meio da leitura: a resposta é do anterior
+		if (!error && Array.isArray(data) && de === agente.id) historico = data as ResumoTarefa[];
 	}
 
 	/**
@@ -207,12 +272,16 @@
 			mensagens = [];
 			pedidos = [];
 			tarefa = null;
+			pai = null;
+			subtarefas = [];
 		}
 		const { data, error } = await supabase.rpc('dgathe_tarefa', { p_id: id, p_depois: ultimaMensagem });
 		if (error || !data || carregada !== id) return;
-		const r = data as { tarefa: Tarefa; mensagens: Mensagem[]; pedidos: Pedido[] };
+		const r = data as { tarefa: Tarefa; mensagens: Mensagem[]; pedidos: Pedido[]; pai?: unknown; subtarefas?: unknown };
 		tarefa = r.tarefa;
 		pedidos = r.pedidos ?? [];
+		pai = lerPai(r.pai);
+		subtarefas = lerSubtarefas(r.subtarefas);
 		// Só o que ainda não está na tela (nunca a mesma mensagem duas vezes)
 		const novas = (r.mensagens ?? []).filter((m) => m.id > ultimaMensagem);
 		if (novas.length) {
@@ -224,7 +293,8 @@
 	}
 
 	// A conversa aberta se atualiza sozinha: a cada 1,5 s enquanto o agente
-	// trabalha, a cada 5 s parada. lerJa() lê na hora (depois de enviar algo).
+	// trabalha, a cada 5 s parada ou esperando a equipe (a lista da equipe vem
+	// na mesma leitura). lerJa() lê na hora (depois de enviar algo).
 	let lerJa = () => {};
 	$effect(() => {
 		void aberta;
@@ -259,12 +329,19 @@
 		return () => clearInterval(timer);
 	});
 
-	// Trocou de agente: volta a seguir a tarefa atual
+	// Trocou de agente: volta a seguir a tarefa atual, ou abre a que veio do
+	// clique noutro painel (a subtarefa na lista do líder, a tarefa-pai no
+	// especialista). O histórico do anterior sai na hora, para a tarefa dele não
+	// abrir no painel do novo enquanto o histórico deste não chega.
 	let agenteAnterior = '';
+	let inicialAnterior: string | null = null;
 	$effect(() => {
-		if (agente.id !== agenteAnterior) {
+		const inicial = tarefaInicial ?? null;
+		if (agente.id !== agenteAnterior || inicial !== inicialAnterior) {
+			if (agente.id !== agenteAnterior) historico = [];
 			agenteAnterior = agente.id;
-			escolhida = null;
+			inicialAnterior = inicial;
+			escolhida = inicial;
 			mostrarHistorico = false;
 		}
 	});
@@ -286,7 +363,8 @@
 		enviando = true;
 		try {
 			if (modo === 'nesta' && aberta) {
-				const r = await chamar('dgathe_mandar_mensagem', { p_tarefa: aberta, p_texto: t }, ativa(tarefa?.status) ? 'Mensagem enviada' : `${agente.nome} vai continuar esta tarefa`);
+				const ok = ativa(tarefa?.status) ? 'Mensagem enviada' : aguardando ? `${agente.nome} vai ler a sua mensagem` : `${agente.nome} vai continuar esta tarefa`;
+				const r = await chamar('dgathe_mandar_mensagem', { p_tarefa: aberta, p_texto: t }, ok);
 				if (r) texto = '';
 			} else {
 				const id = await chamar('dgathe_passar_tarefa', { p_agente: agente.id, p_pedido: t }, `Tarefa passada para ${agente.nome}`);
@@ -311,7 +389,7 @@
 
 	async function parar() {
 		if (!aberta || !editar) return;
-		await chamar('dgathe_parar', { p_tarefa: aberta }, 'Pedido de parar enviado');
+		await chamar('dgathe_parar', { p_tarefa: aberta }, pararTudo ? 'Pedido de parar enviado: a equipe para junto' : 'Pedido de parar enviado');
 		lerJa();
 	}
 
@@ -362,20 +440,28 @@
 	});
 
 	const primeiroNome = (n: string | null) => (n ?? '').split(/\s+/)[0] || 'Alguém';
+	/** Retorno da equipe: "rodada 1 · 2 subtarefas". */
+	const sobreORetorno = (m: Mensagem) => {
+		const rodada = typeof m.detalhe?.rodada === 'number' ? ` · rodada ${m.detalhe.rodada}` : '';
+		const n = Array.isArray(m.detalhe?.subtarefas) ? m.detalhe.subtarefas.length : 0;
+		return `${rodada}${n ? ` · ${n} subtarefa${n > 1 ? 's' : ''}` : ''}`;
+	};
 	const estadoTexto = $derived.by(() => {
 		const t = agente.tarefa;
+		if (agente.reuniao) return `Em reunião: ${agente.reuniao.titulo}`;
 		if (agente.estado === 'esperando') return 'Precisa de você';
+		if (agente.estado === 'aguardando') return textoAguardando(t?.subtarefasAbertas ?? null);
 		if (agente.estado === 'trabalhando') return t?.atividade || 'Trabalhando';
 		if (agente.estado === 'fila') return ponte.ligada ? 'Tarefa na fila, já vai começar' : 'Tarefa na fila: a ponte do Mac está desligada';
-		return 'Livre, na copa';
+		return momento ?? 'Livre';
 	});
 </script>
 
 <header class="pa-cab">
-	<span class="pa-retrato" class:trabalhando={agente.estado === 'trabalhando'} class:esperando={agente.estado === 'esperando'}><Bot size={20} /></span>
+	<span class="pa-retrato" class:trabalhando={agente.estado === 'trabalhando'} class:esperando={agente.estado === 'esperando'} class:aguardando={agente.estado === 'aguardando'}><Bot size={20} /></span>
 	<span class="pa-tit">
 		<strong>{agente.nome} <em>IA</em></strong>
-		<small>{agente.cargo} · {sala}</small>
+		<small title="{agente.cargo}{agente.lider ? ' · líder da equipe' : ''} · {sala}">{agente.cargo}{agente.lider ? ' · líder da equipe' : ''} · {sala}</small>
 	</span>
 	<button type="button" class="pa-icone" onclick={() => (recolhido = !recolhido)} aria-label={recolhido ? 'Abrir o painel' : 'Recolher o painel'} title={recolhido ? 'Abrir o painel' : 'Recolher o painel'}>
 		{#if recolhido}<ChevronUp size={16} />{:else}<ChevronDown size={16} />{/if}
@@ -384,7 +470,7 @@
 </header>
 
 <p class="pa-estado {agente.estado}">
-	<span></span>{estadoTexto}{#if agente.tarefa && agente.estado !== 'livre'}<i> · {duracao(agente.tarefa.desde)}</i>{/if}
+	<span></span>{estadoTexto}{#if agente.tarefa && agente.estado !== 'livre'}<i>{` · ${duracao(agente.tarefa.desde)}`}</i>{/if}
 </p>
 
 {#if !recolhido}
@@ -451,15 +537,44 @@
 					<span class="pa-chip {statusVisivel}">{NOME_DO_STATUS[statusVisivel ?? tarefa.status]}</span>
 				</div>
 				<small>
-					{primeiroNome(tarefa.criada_por_nome)} pediu {haQuanto(tarefa.criada_ha)}{#if tarefa.status !== 'fila' && tarefa.status !== 'trabalhando' && tarefa.status !== 'esperando'} · {duracao(tarefa.duracao)} de trabalho{/if}{#if tarefa.passos} · {tarefa.passos} passo{tarefa.passos > 1 ? 's' : ''}{/if}
+					{primeiroNome(tarefa.criada_por_nome)} pediu {haQuanto(tarefa.criada_ha)}{emAberto(tarefa.status) ? '' : ` · ${duracao(tarefa.duracao)} de trabalho`}{tarefa.passos ? ` · ${tarefa.passos} passo${tarefa.passos > 1 ? 's' : ''}` : ''}
 				</small>
-				{#if ativa(tarefa.status) && editar}
-					<button type="button" class="pa-parar" disabled={tarefa.cancelar} onclick={parar}>
-						<CircleStop size={14} />{tarefa.cancelar ? 'Parando…' : tarefa.status === 'fila' && !comecando ? 'Tirar da fila' : 'Parar'}
+				{#if pai}
+					<p class="pa-pai">Pedida por {pai.agente_nome} · parte de “{pai.titulo}”</p>
+					<button type="button" class="pa-link" onclick={() => aoVerAgente(pai!.agente_id, pai!.id)}><CornerUpLeft size={13} />Ver a tarefa de {pai.agente_nome}</button>
+				{/if}
+				{#if emAberto(tarefa.status) && editar}
+					<button
+						type="button"
+						class="pa-parar"
+						disabled={tarefa.cancelar}
+						onclick={parar}
+						title={pararTudo ? 'Para esta tarefa e as subtarefas abertas da equipe' : undefined}
+					>
+						<CircleStop size={14} />{tarefa.cancelar ? 'Parando…' : pararTudo ? 'Parar tudo' : tarefa.status === 'fila' && !comecando ? 'Tirar da fila' : 'Parar'}
 					</button>
 				{/if}
 				{#if tarefa.erro}<p class="pa-erro"><TriangleAlert size={13} />{tarefa.erro}</p>{/if}
 			</div>
+
+			{#if subtarefas.length}
+				<div class="pa-equipe-lista">
+					<h4><Users size={13} />Equipe nesta tarefa<small>{subAbertas} aberta{subAbertas === 1 ? '' : 's'} · {subtarefas.length} no total</small></h4>
+					<ul class:rola={subtarefas.length > 6}>
+						{#each subtarefas as s (s.id)}
+							{@const st = statusDaSub(s)}
+							<li>
+								<button type="button" onclick={() => aoVerAgente(s.agente_id, s.id)} title="Abrir {s.agente_nome}{s.agente_cargo ? ` (${s.agente_cargo})` : ''}">
+									<span class="pa-chip {st}">{NOME_DO_STATUS[st]}</span>
+									<span class="pa-sub-tit"><b>{s.agente_nome}</b> · {s.titulo}</span>
+									<small class:erro={s.status === 'falhou'}>{linhaDaSubtarefa(s, st !== s.status)}</small>
+									{#if s.pedidos > 0 && ativa(s.status)}<em class="pa-sub-precisa"><Hand size={12} />precisa de você</em>{/if}
+								</button>
+							</li>
+						{/each}
+					</ul>
+				</div>
+			{/if}
 
 			<div class="pa-conversa" bind:this={rolagem}>
 				{#each itens as it, n (it.tipo === 'msg' ? `m${it.m.id}` : `p${it.lista[0].id}`)}
@@ -477,9 +592,23 @@
 								{/each}
 							</details>
 						{/if}
+					{:else if it.m.tipo === 'mensagem' && it.m.detalhe?.equipe}
+						<details class="pa-equipe" open={n === itens.length - 1}>
+							<summary><Users size={12} /><span>Retorno da equipe{sobreORetorno(it.m)}{#if !it.m.entregue}<i>{' · esperando entregar'}</i>{/if}</span></summary>
+							<div class="pa-agente">
+								{#each blocos(textoDoRetorno(it.m.conteudo)) as b, k (k)}
+									{#if b.tipo === 'codigo'}<pre>{b.texto}</pre>
+									{:else}
+										<p class:titulo={b.tipo === 'titulo'} class:item={b.tipo === 'item'}>
+											{#if b.tipo === 'item'}<span class="pa-marca">{b.numero ? `${b.numero}.` : '•'}</span>{/if}{#each b.partes as pt, j (j)}{#if pt.codigo}<code>{pt.t}</code>{:else if pt.negrito}<b>{pt.t}</b>{:else}{pt.t}{/if}{/each}
+										</p>
+									{/if}
+								{/each}
+							</div>
+						</details>
 					{:else if it.m.tipo === 'pedido' || it.m.tipo === 'mensagem'}
 						<div class="pa-pessoa">
-							<small>{primeiroNome(it.m.autor_nome)}{#if it.m.tipo === 'mensagem' && !it.m.entregue} · esperando entregar{/if}</small>
+							<small>{primeiroNome(it.m.autor_nome)}{it.m.tipo === 'mensagem' && !it.m.entregue ? ' · esperando entregar' : ''}</small>
 							<p>{it.m.conteudo}</p>
 						</div>
 					{:else if it.m.tipo === 'texto'}
@@ -494,13 +623,19 @@
 							{/each}
 						</div>
 					{:else if it.m.tipo === 'resultado'}
-						<p class="pa-aviso">Terminou a rodada{#if typeof it.m.detalhe?.duracao_ms === 'number'} em {duracao(Number(it.m.detalhe.duracao_ms) / 1000)}{/if}</p>
+						<p class="pa-aviso">Terminou a rodada{typeof it.m.detalhe?.duracao_ms === 'number' ? ` em ${duracao(Number(it.m.detalhe.duracao_ms) / 1000)}` : ''}</p>
+					{:else if it.m.tipo === 'aviso' && typeof it.m.detalhe?.agente === 'string'}
+						{@const alvo = it.m.detalhe.agente}
+						{@const sub = typeof it.m.detalhe.subtarefa === 'string' ? it.m.detalhe.subtarefa : null}
+						<button type="button" class="pa-aviso pa-aviso-link" onclick={() => aoVerAgente(alvo, sub)} title="Abrir quem recebeu">{it.m.conteudo} · {haQuanto(it.m.ha)}</button>
 					{:else}
 						<p class="pa-aviso">{it.m.conteudo} · {haQuanto(it.m.ha)}</p>
 					{/if}
 				{/each}
 				{#if statusVisivel === 'trabalhando' || statusVisivel === 'esperando'}
-					<p class="pa-digitando"><LoaderCircle size={12} />{comecando ? (mensagens.some((m) => m.tipo === 'mensagem' && !m.entregue) ? 'Lendo a sua mensagem' : 'Lendo o pedido') : (tarefa.atividade ?? 'Trabalhando')}</p>
+					<p class="pa-digitando"><LoaderCircle size={12} />{comecando ? (comRetorno ? 'Lendo o retorno da equipe' : mensagens.some((m) => m.tipo === 'mensagem' && !m.entregue) ? 'Lendo a sua mensagem' : 'Lendo o pedido') : (tarefa.atividade ?? 'Trabalhando')}</p>
+				{:else if aguardando}
+					<p class="pa-digitando pa-esperando-equipe"><Users size={12} />Esperando a equipe ({subAbertas} aberta{subAbertas === 1 ? '' : 's'})</p>
 				{/if}
 			</div>
 		{:else if !aberta}
@@ -512,10 +647,11 @@
 				{#if aberta && tarefa}
 					<div class="pa-modos" role="radiogroup" aria-label="O que fazer com o texto">
 						<button type="button" role="radio" aria-checked={modo === 'nesta'} class:ativo={modo === 'nesta'} onclick={() => (modo = 'nesta')}>
-							{ativa(tarefa.status) ? 'Mensagem nesta tarefa' : 'Continuar esta tarefa'}
+							{ativa(tarefa.status) ? 'Mensagem nesta tarefa' : aguardando ? `Mensagem para ${agente.nome}` : 'Continuar esta tarefa'}
 						</button>
 						<button type="button" role="radio" aria-checked={modo === 'nova'} class:ativo={modo === 'nova'} onclick={() => (modo = 'nova')}>
-							Tarefa nova{agente.estado !== 'livre' ? ' (fila)' : ''}
+							<!-- Esperando a equipe ele está livre para outra tarefa: a nova começa logo -->
+							Tarefa nova{agente.estado === 'trabalhando' || agente.estado === 'esperando' || agente.estado === 'fila' ? ' (fila)' : ''}
 						</button>
 					</div>
 				{/if}
@@ -527,7 +663,9 @@
 					placeholder={modo === 'nesta' && aberta
 						? ativa(tarefa?.status)
 							? `Fale com ${agente.nome}: entra no meio do trabalho`
-							: `O que ${agente.nome} deve fazer a seguir nesta tarefa?`
+							: aguardando
+								? `Fale com ${agente.nome}: ele lê agora, e a equipe segue trabalhando`
+								: `O que ${agente.nome} deve fazer a seguir nesta tarefa?`
 						: `O que ${agente.nome} deve fazer?`}
 				></textarea>
 				<button type="button" class="pa-enviar" disabled={!texto.trim() || enviando} onclick={enviar}>
@@ -538,7 +676,8 @@
 			</div>
 		{/if}
 
-		{#if historico.length > (aberta ? 1 : 0) || escolhida}
+		<!-- Aberta pelo clique noutro painel, mas é a atual dele: nada para voltar -->
+		{#if historico.length > (aberta ? 1 : 0) || (escolhida && escolhida !== agente.tarefa?.id)}
 			<button type="button" class="pa-hist-botao" onclick={() => (mostrarHistorico = !mostrarHistorico)}>
 				<History size={13} />Tarefas anteriores ({historico.length}){#if mostrarHistorico}<ChevronUp size={13} />{:else}<ChevronDown size={13} />{/if}
 			</button>
@@ -552,7 +691,7 @@
 							<button type="button" class:aberta={h.id === aberta} onclick={() => ((escolhida = h.id), (mostrarHistorico = false))}>
 								<span class="pa-chip {doHistorico(h)}">{NOME_DO_STATUS[doHistorico(h)]}</span>
 								<b>{h.titulo}</b>
-								<small>{haQuanto(h.criada_ha)} · {primeiroNome(h.criada_por_nome)}</small>
+								<small>{haQuanto(h.criada_ha)} · {primeiroNome(h.criada_por_nome)}{(h.subtarefas ?? 0) > 0 ? ` · ${h.subtarefas} subtarefa${h.subtarefas === 1 ? '' : 's'}` : ''}</small>
 							</button>
 						</li>
 					{/each}
@@ -589,6 +728,10 @@
 		color: #1c2534;
 		box-shadow: 0 0 0 2px #f5a524;
 		animation: pa-pulso 1.2s ease-in-out infinite;
+	}
+	/* O líder esperando a equipe: anel azul, parado (não pede nada a ninguém) */
+	.pa-retrato.aguardando {
+		box-shadow: 0 0 0 2px #38bdf8;
 	}
 	@keyframes pa-pulso {
 		50% {
@@ -663,6 +806,13 @@
 	}
 	.pa-estado.fila span {
 		background: #c4b5fd;
+	}
+	.pa-estado.aguardando {
+		color: #bae6fd;
+	}
+	.pa-estado.aguardando span {
+		background: #38bdf8;
+		box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
 	}
 	.pa-estado i {
 		font-style: normal;
@@ -868,6 +1018,119 @@
 		background: rgba(239, 68, 68, 0.2);
 		color: #fecaca;
 	}
+	.pa-chip.aguardando {
+		background: rgba(56, 189, 248, 0.18);
+		color: #bae6fd;
+	}
+	/* Subtarefa: de quem veio e o caminho de volta para a tarefa do líder */
+	.pa-pai {
+		margin: 0.4rem 0 0;
+		font-size: 0.72rem;
+		line-height: 1.4;
+		color: #bae6fd;
+	}
+	.pa-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		margin-top: 0.3rem;
+		padding: 0.25rem 0.55rem;
+		border-radius: 8px;
+		background: rgba(56, 189, 248, 0.14);
+		color: #bae6fd;
+		font-size: 0.72rem;
+		font-weight: 700;
+	}
+	.pa-link:hover {
+		background: rgba(56, 189, 248, 0.24);
+	}
+	.pa-link + .pa-parar {
+		margin-left: 0.35rem;
+	}
+
+	/* Equipe nesta tarefa (a tarefa do líder) */
+	.pa-equipe-lista {
+		margin-top: 0.65rem;
+		padding: 0.5rem 0.55rem;
+		border-radius: 12px;
+		background: rgba(56, 189, 248, 0.07);
+		border: 1px solid rgba(56, 189, 248, 0.28);
+	}
+	.pa-equipe-lista h4 {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		margin: 0 0 0.35rem;
+		font-size: 0.76rem;
+		color: #bae6fd;
+	}
+	.pa-equipe-lista h4 small {
+		margin-left: auto;
+		font-weight: 500;
+		color: var(--dg-suave);
+	}
+	.pa-equipe-lista ul {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.pa-equipe-lista ul.rola {
+		max-height: 180px;
+		overflow-y: auto;
+		padding-right: 0.15rem;
+	}
+	.pa-equipe-lista button {
+		display: grid;
+		grid-template-columns: 6.6rem minmax(0, 1fr);
+		align-items: center;
+		gap: 0.1rem 0.4rem;
+		width: 100%;
+		padding: 0.3rem 0.4rem;
+		border-radius: 8px;
+		text-align: left;
+		font-size: 0.74rem;
+		color: var(--dg-texto);
+	}
+	.pa-equipe-lista button:hover {
+		background: rgba(255, 255, 255, 0.07);
+	}
+	.pa-equipe-lista .pa-chip {
+		justify-self: start;
+	}
+	.pa-sub-tit {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.pa-sub-tit b {
+		font-weight: 700;
+	}
+	.pa-equipe-lista button small {
+		grid-column: 2;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		color: var(--dg-suave);
+		font-size: 0.66rem;
+	}
+	.pa-equipe-lista button small.erro {
+		color: #fecaca;
+	}
+	.pa-sub-precisa {
+		grid-column: 2;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		font-style: normal;
+		font-size: 0.66rem;
+		font-weight: 700;
+		color: #ffd58a;
+	}
 	.pa-parar {
 		display: inline-flex;
 		align-items: center;
@@ -993,6 +1256,51 @@
 		font-size: 0.64rem;
 		color: var(--dg-suave);
 	}
+	/* "Passou para Clovis: …": abre quem recebeu */
+	.pa-aviso-link {
+		padding: 0.1rem 0.45rem;
+		border-radius: 999px;
+		color: #bae6fd;
+		text-align: center;
+	}
+	.pa-aviso-link:hover {
+		background: rgba(56, 189, 248, 0.14);
+	}
+	/* Retorno da equipe: o que cada subtarefa entregou, para o líder revisar */
+	.pa-equipe {
+		align-self: stretch;
+		border-left: 3px solid #38bdf8;
+		border-radius: 4px 12px 12px 4px;
+		background: rgba(56, 189, 248, 0.08);
+	}
+	.pa-equipe summary {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.35rem;
+		padding: 0.35rem 0.55rem;
+		font-size: 0.72rem;
+		font-weight: 700;
+		color: #bae6fd;
+		cursor: pointer;
+		list-style: none;
+	}
+	.pa-equipe summary :global(svg) {
+		flex-shrink: 0;
+		margin-top: 0.12rem;
+	}
+	.pa-equipe summary::-webkit-details-marker {
+		display: none;
+	}
+	.pa-equipe summary i {
+		font-style: normal;
+		font-weight: 500;
+		color: var(--dg-suave);
+	}
+	.pa-equipe .pa-agente {
+		max-width: none;
+		margin: 0 0.35rem 0.35rem;
+		background: rgba(0, 0, 0, 0.18);
+	}
 	.pa-digitando {
 		display: flex;
 		align-items: center;
@@ -1004,6 +1312,12 @@
 	.pa-digitando :global(svg),
 	:global(.gira) {
 		animation: pa-gira 1s linear infinite;
+	}
+	.pa-esperando-equipe {
+		color: #bae6fd;
+	}
+	.pa-digitando.pa-esperando-equipe :global(svg) {
+		animation: none;
 	}
 	@keyframes pa-gira {
 		to {

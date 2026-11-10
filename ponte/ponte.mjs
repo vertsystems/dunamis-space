@@ -14,26 +14,44 @@
 //   - entrega as mensagens novas de quem está no jogo (no meio do trabalho)
 //   - leva as respostas dos pedidos de permissão e das perguntas de volta para
 //     a sessão, que fica esperando enquanto ninguém responde
-//   - interrompe a sessão quando alguém clica em Parar
+//   - interrompe a sessão quando alguém clica em Parar (parar a tarefa do
+//     líder para também as subtarefas abertas: o banco marca, a ponte corta)
+//   - devolve ao líder o retorno da equipe (conferirEquipes)
 // A cada 20 s grava o sinal de vida (o jogo mostra se a ponte está ligada).
+// A cada minuto confere o fechamento semanal (conferirFechamentos).
+//
+// Equipes (versão 1.1, docs/dgathe/contrato-equipes.md): o líder de uma equipe
+// roda `node "$DGATHE_EQUIPE" delegar <agente>` dentro da sessão e isso cria
+// uma subtarefa (pai_id = a tarefa dele), que entra na fila normal. Quando a
+// rodada do líder termina com subtarefa aberta ou ainda não relatada, a tarefa
+// dele fica `aguardando` (sem sessão). Quando a última subtarefa fecha, a ponte
+// grava na tarefa do líder a mensagem "Retorno da equipe" (autor 'Equipe') e a
+// devolve para a fila: ele retoma a mesma conversa e revisa, manda corrigir ou
+// fecha. Toda sexta às 17h de Brasília a ponte cria, uma vez por semana, a
+// tarefa de fechamento semanal de cada líder ativo (dgathe_fechamentos guarda
+// o que já foi criado, então reiniciar ou rodar duas pontes não duplica).
 //
 // Uso:
 //   node ponte/ponte.mjs              roda (é o que o launchd chama)
 //   node ponte/ponte.mjs --conferir   mostra a configuração e testa o banco e o Claude Code
+//   node ponte/ponte.mjs --fechamento <agente> [--sexta AAAA-MM-DD]
+//                                     cria o fechamento semanal daquele líder e sai
 //
 // Configuração em ~/.config/dunamisspace/ponte.env (fora do Drive):
-//   DGATHE_PG_SENHA   senha do usuário dgathe_ponte no banco (criada pelo instalar.mjs)
-//   DGATHE_PONTE_ID   nome desta ponte (padrão: mac-<nome do computador>)
-//   DGATHE_BASE       pasta base das pastas dos agentes (padrão: a VERT SYS)
-//   DGATHE_MAX        quantas tarefas ao mesmo tempo (padrão: 3)
-//   DGATHE_ESPERA     segundos de folga antes de agir numa tarefa ou mensagem nova (padrão: 15)
-//   DGATHE_PATH       PATH das sessões (o do terminal do Bruno)
-//   DGATHE_CLAUDE     caminho do Claude Code (padrão: o mais novo instalado)
+//   DGATHE_PG_SENHA     senha do usuário dgathe_ponte no banco (criada pelo instalar.mjs)
+//   DGATHE_PONTE_ID     nome desta ponte (padrão: mac-<nome do computador>)
+//   DGATHE_BASE         pasta base das pastas dos agentes (padrão: a VERT SYS)
+//   DGATHE_MAX          quantas tarefas ao mesmo tempo (padrão: 3)
+//   DGATHE_ESPERA       segundos de folga antes de agir numa tarefa ou mensagem nova (padrão: 15)
+//   DGATHE_PATH         PATH das sessões (o do terminal do Bruno)
+//   DGATHE_CLAUDE       caminho do Claude Code (padrão: o mais novo instalado)
+//   DGATHE_FECHAMENTO   0 desliga o fechamento semanal automático (padrão: ligado;
+//                       o instalar.mjs não guarda esta chave ao reescrever o arquivo)
 
 import { execFileSync, spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { homedir, hostname } from 'node:os';
+import { homedir, hostname, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
@@ -48,8 +66,19 @@ import {
 	respostaParaOClaude
 } from '../src/lib/dgathe/ponte.ts';
 import { cortar, passoDaFerramenta, resumoDoPedido } from '../src/lib/dgathe/passos.ts';
+import {
+	AUTOR_DA_EQUIPE,
+	dataDaSexta,
+	fimDaRodada,
+	mensagemDaEquipe,
+	pedidoDoFechamento,
+	periodoDaSexta,
+	periodoDoFechamento,
+	proximoFechamento
+} from '../src/lib/dgathe/equipe.ts';
+import { lerUsoDoClaude } from './uso.mjs';
 
-const VERSAO = '1.0';
+const VERSAO = '1.2';
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const ARQUIVO_ENV = join(homedir(), '.config/dunamisspace/ponte.env');
 
@@ -75,6 +104,10 @@ const ID = cfg.DGATHE_PONTE_ID || `mac-${hostname().split('.')[0].toLowerCase()}
 const BASE = cfg.DGATHE_BASE || resolve(AQUI, '../../..');
 const MAX = Math.max(1, Math.min(8, Number(cfg.DGATHE_MAX) || 3));
 const ESPERA = Math.max(0, Math.min(300, Number(cfg.DGATHE_ESPERA ?? 15)));
+const FECHAMENTO = cfg.DGATHE_FECHAMENTO !== '0';
+/** A linha de comando que o líder roda dentro da sessão (vai no ambiente como DGATHE_EQUIPE). */
+const CLI_DA_EQUIPE = join(AQUI, 'equipe.mjs');
+const ABERTOS = `('fila', 'trabalhando', 'esperando')`;
 
 function log(...partes) {
 	const h = new Date().toLocaleString('pt-BR', { hour12: false });
@@ -137,11 +170,14 @@ const db = new pg.Pool({
 	password: cfg.DGATHE_PG_SENHA,
 	database: 'postgres',
 	ssl: { rejectUnauthorized: false },
-	max: 4,
+	// 6 (era 4): entram as transações do fim da rodada, do retorno da equipe e do fechamento
+	max: 6,
 	idleTimeoutMillis: 30_000,
 	connectionTimeoutMillis: 15_000
 });
 db.on('error', (e) => log('banco:', e.message));
+
+const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function q(sql, params = []) {
 	return (await db.query(sql, params)).rows;
@@ -154,9 +190,57 @@ async function qInsistente(sql, params) {
 			return await q(sql, params);
 		} catch (e) {
 			if (i >= 12) throw e;
-			await new Promise((r) => setTimeout(r, 2000 + i * 1000));
+			await dormir(2000 + i * 1000);
 		}
 	}
+}
+
+/**
+ * Erro de conexão (vale tentar de novo): queda de rede, banco reiniciando,
+ * conflito de trava. Erro de regra (constraint, trigger, SQL errado) não.
+ */
+function erroPassageiro(e) {
+	const c = e?.code;
+	if (!c) return true;
+	if (/^E[A-Z]+$/.test(c)) return true; // ECONNRESET, ETIMEDOUT, ENOTFOUND…
+	return /^(08|53|57P)/.test(c) || c === '40001' || c === '40P01';
+}
+
+/**
+ * Uma transação num cliente só do pool: begin, fn(cliente), commit; erro →
+ * rollback. Com `insistir`, erro de conexão tenta de novo por até ~2 min (o
+ * fim da rodada não pode se perder), como o qInsistente.
+ */
+async function emTransacao(fn, { insistir = false } = {}) {
+	for (let i = 0; ; i++) {
+		let c;
+		try {
+			c = await db.connect();
+		} catch (e) {
+			if (!insistir || i >= 12) throw e;
+			await dormir(2000 + i * 1000);
+			continue;
+		}
+		try {
+			await c.query('begin');
+			const r = await fn(c);
+			await c.query('commit');
+			c.release();
+			return r;
+		} catch (e) {
+			await c.query('rollback').catch(() => {});
+			const passageiro = erroPassageiro(e);
+			// Cliente com a conexão quebrada não volta para o pool
+			c.release(passageiro ? true : undefined);
+			if (!insistir || !passageiro || i >= 12) throw e;
+			await dormir(2000 + i * 1000);
+		}
+	}
+}
+
+/** Uma consulta dentro de uma transação, devolvendo as linhas. */
+async function qc(c, sql, params = []) {
+	return (await c.query(sql, params)).rows;
 }
 
 // ---------------------------------------------------------------- sessão
@@ -213,16 +297,17 @@ class Sessao {
 		);
 		const extra = pendentes.length ? mensagemParaOAgente(pendentes) : '';
 		const primeira = retomar ? extra || 'Continue de onde parou.' : extra ? `${this.tarefa.pedido}\n\n---\n\n${extra}` : this.tarefa.pedido;
+		const comRetorno = pendentes.some((m) => m.autor_nome === AUTOR_DA_EQUIPE);
 
 		const args = argumentosDoClaude(this.agente, {
 			sessao: this.sessao,
 			retomar,
 			nome: nomeDaSessao(this.agente, this.tarefa),
-			preambulo: preambulo(this.agente, this.tarefa)
+			preambulo: preambulo(this.agente, this.tarefa, await this.contextoDaEquipe())
 		});
 		this.proc = spawn(claude, args, {
 			cwd,
-			env: ambiente({ DGATHE_TAREFA: this.id, DGATHE_AGENTE: this.agente.id }),
+			env: ambiente({ DGATHE_TAREFA: this.id, DGATHE_AGENTE: this.agente.id, DGATHE_EQUIPE: CLI_DA_EQUIPE }),
 			stdio: ['pipe', 'pipe', 'pipe']
 		});
 		// Enquanto a tarefa roda, o Mac não dorme sozinho (tampa fechada na bateria ainda dorme)
@@ -244,7 +329,7 @@ class Sessao {
 		}
 		await q(
 			`update public.dgathe_tarefas set sessao_id = $2, atividade = $3, atualizada_em = now() where id = $1`,
-			[this.id, this.sessao, retomar ? 'Retomando a conversa' : 'Começando']
+			[this.id, this.sessao, comRetorno ? 'Lendo o retorno da equipe' : retomar ? 'Retomando a conversa' : 'Começando']
 		);
 		this.escrever(() =>
 			q(`insert into public.dgathe_mensagens (tarefa_id, tipo, conteudo, detalhe) values ($1, 'aviso', $2, $3)`, [
@@ -253,7 +338,33 @@ class Sessao {
 				{ ponte: ID, retomar }
 			])
 		);
-		log(`tarefa ${this.curto} (${this.agente.id}): ${retomar ? 'retomou' : 'começou'} em ${this.agente.pasta}`);
+		log(`tarefa ${this.curto} (${this.agente.id}): ${retomar ? 'retomou' : 'começou'} em ${this.agente.pasta}${comRetorno ? ' com o retorno da equipe' : ''}`);
+	}
+
+	/**
+	 * Para o preâmbulo: quem é da equipe agora e, numa subtarefa, o projeto e o
+	 * líder. Falhou a leitura: a sessão começa sem isso (nunca deixa de começar).
+	 */
+	async contextoDaEquipe() {
+		if (!this.agente.equipe) return undefined;
+		try {
+			const membros = await q(
+				`select id, nome, cargo, lider from public.dgathe_agentes where equipe = $1 and ativo order by ordem, nome`,
+				[this.agente.equipe]
+			);
+			let pai = null;
+			if (this.tarefa.pai_id) {
+				const [p] = await q(
+					`select p.titulo, a.nome from public.dgathe_tarefas p join public.dgathe_agentes a on a.id = p.agente_id where p.id = $1`,
+					[this.tarefa.pai_id]
+				);
+				if (p) pai = { titulo: p.titulo, lider: p.nome };
+			}
+			return { membros, pai };
+		} catch (e) {
+			log(`tarefa ${this.curto}: não li a equipe (${e.message}); segue sem a lista`);
+			return undefined;
+		}
 	}
 
 	aoLinha(linha) {
@@ -395,7 +506,8 @@ class Sessao {
 		clearTimeout(this.fimTimer);
 		if (!this.mandarTexto(mensagemParaOAgente(novas))) return nada;
 		await q(`update public.dgathe_mensagens set entregue = true where id = any($1::bigint[])`, [novas.map((m) => m.id)]);
-		await q(`update public.dgathe_tarefas set atividade = 'Lendo a sua mensagem', atualizada_em = now() where id = $1`, [this.id]);
+		const atividade = novas.some((m) => m.autor_nome === AUTOR_DA_EQUIPE) ? 'Lendo o retorno da equipe' : 'Lendo a sua mensagem';
+		await q(`update public.dgathe_tarefas set atividade = $2, atualizada_em = now() where id = $1`, [this.id, atividade]);
 		log(`tarefa ${this.curto}: entregou ${novas.length} mensagem(ns)`);
 		return { entregou: true, espera };
 	}
@@ -490,21 +602,50 @@ class Sessao {
 			erro = cortar(doClaude || `O Claude Code fechou sem terminar (código ${codigo ?? '?'}${sinal ? `, ${sinal}` : ''}). ${saida}`.trim(), 2000);
 			atividade = 'Parou com erro';
 		}
+		let fim = { status, atividade, abertas: 0 };
 		try {
-			await qInsistente(`update public.dgathe_pedidos set cancelado = true where tarefa_id = $1 and resposta is null and not cancelado`, [this.id]);
-			// Mensagem que chegou enquanto fechava: volta para a fila e retoma a conversa
-			await qInsistente(
-				`update public.dgathe_tarefas t set
-					status = case when $2 <> 'cancelada' and exists (select 1 from public.dgathe_mensagens m where m.tarefa_id = t.id and not m.entregue) then 'fila' else $2 end,
-					erro = $3, atividade = $4, cancelar = false, terminada_em = now(), atualizada_em = now()
-				where id = $1`,
-				[this.id, status, erro, atividade]
-			);
+			fim = await this.gravarFim(status, erro, atividade);
 		} catch (e) {
 			log(`tarefa ${this.curto}: não consegui gravar o fim:`, e.message);
 		}
-		log(`tarefa ${this.curto}: ${status}${erro ? ` (${erro.slice(0, 160)})` : ''}`);
+		if (fim.status === 'aguardando') log(`tarefa ${this.curto}: esperando a equipe (${fim.abertas} subtarefa(s) aberta(s))`);
+		else log(`tarefa ${this.curto}: ${fim.status}${erro ? ` (${erro.slice(0, 160)})` : ''}`);
 		this.aoTerminar(this);
+	}
+
+	/**
+	 * O fim da rodada numa transação que trava a linha da tarefa, para não
+	 * correr com dgathe_mandar_mensagem nem com o `equipe.mjs delegar` (os dois
+	 * travam a mesma linha): Parar vence; mensagem que chegou enquanto fechava
+	 * devolve para a fila (retoma a conversa); equipe com subtarefa aberta ou
+	 * não relatada deixa a tarefa `aguardando` (contrato, seção 2.3).
+	 */
+	gravarFim(base, erro, atividadeDaBase) {
+		return emTransacao(
+			async (c) => {
+				await qc(c, `update public.dgathe_pedidos set cancelado = true where tarefa_id = $1 and resposta is null and not cancelado`, [this.id]);
+				await qc(c, `select id from public.dgathe_tarefas where id = $1 for update`, [this.id]);
+				const [x] = await qc(
+					c,
+					`select exists (select 1 from public.dgathe_mensagens m where m.tarefa_id = $1 and not m.entregue) as pendente,
+						exists (select 1 from public.dgathe_tarefas s where s.pai_id = $1
+							and (s.status in ${ABERTOS} or s.relatada_em is null)) as equipe,
+						(select count(*)::int from public.dgathe_tarefas s where s.pai_id = $1 and s.status in ${ABERTOS}) as abertas`,
+					[this.id]
+				);
+				const f = fimDaRodada({ base, atividade: atividadeDaBase, mensagemPendente: x.pendente, pendenciaDeEquipe: x.equipe });
+				await qc(
+					c,
+					`update public.dgathe_tarefas
+					set status = $2, erro = $3, atividade = $4, cancelar = false,
+						terminada_em = case when $5::boolean then now() else null end, atualizada_em = now()
+					where id = $1`,
+					[this.id, f.status, erro, f.atividade, f.terminada]
+				);
+				return { ...f, abertas: x.abertas };
+			},
+			{ insistir: true }
+		);
 	}
 
 	/** Nem chegou a abrir a sessão (pasta errada, Claude Code sumiu...). */
@@ -548,7 +689,9 @@ async function pegarTarefa() {
 			for update of t skip locked
 		)
 		update public.dgathe_tarefas t
-		set status = 'trabalhando', ponte = $1, iniciada_em = coalesce(t.iniciada_em, now()), atividade = 'Começando', erro = null, cancelar = false, atualizada_em = now()
+		set status = 'trabalhando', ponte = $1, iniciada_em = coalesce(t.iniciada_em, now()), atividade = 'Começando', erro = null, cancelar = false,
+			-- Cada sessão aberta é uma rodada (as subtarefas guardam em qual rodada do líder nasceram)
+			rodada = t.rodada + 1, atualizada_em = now()
 		from proxima where t.id = proxima.id
 		returning t.*`,
 		[ID, ocupados, ESPERA]
@@ -556,6 +699,167 @@ async function pegarTarefa() {
 	if (!t) return null;
 	const [agente] = await q(`select * from public.dgathe_agentes where id = $1`, [t.agente_id]);
 	return agente ? { tarefa: t, agente } : null;
+}
+
+// ------------------------------------------------------------ equipes
+
+let conferindoEquipes = false;
+
+/**
+ * O retorno da equipe (contrato, seção 2.4), a cada ciclo: (a) subtarefa na
+ * fila de agente desativado é cancelada (senão o líder espera para sempre);
+ * (b) acha as tarefas-pai sem subtarefa aberta e com retorno a receber; (c)
+ * para cada uma, numa transação, grava a mensagem "Retorno da equipe", marca
+ * as subtarefas como relatadas e devolve a tarefa `aguardando` para a fila.
+ */
+async function conferirEquipes() {
+	if (conferindoEquipes || desligando) return;
+	conferindoEquipes = true;
+	try {
+		const desativadas = await q(
+			`update public.dgathe_tarefas s
+			set status = 'cancelada', erro = 'O agente foi desativado antes de começar.',
+				atividade = 'Cancelada: agente desativado', terminada_em = now(), atualizada_em = now()
+			from public.dgathe_agentes a
+			where a.id = s.agente_id and not a.ativo and s.pai_id is not null and s.status = 'fila'
+			returning s.id`
+		);
+		if (desativadas.length) log(`equipe: ${desativadas.length} subtarefa(s) de agente desativado cancelada(s)`);
+
+		const pais = await q(
+			`select p.id from public.dgathe_tarefas p
+			where p.status in ('aguardando', 'fila', 'trabalhando', 'esperando')
+				and exists (select 1 from public.dgathe_tarefas s where s.pai_id = p.id)
+				and not exists (select 1 from public.dgathe_tarefas s where s.pai_id = p.id and s.status in ${ABERTOS})
+				and (p.status = 'aguardando' or exists (select 1 from public.dgathe_tarefas s where s.pai_id = p.id and s.relatada_em is null))
+			order by p.atualizada_em
+			limit 20`
+		);
+		for (const { id } of pais) {
+			if (desligando) break;
+			try {
+				const r = await entregarRetorno(id);
+				if (r) log(`equipe: retorno de ${r.subtarefas} subtarefa(s) para ${id.slice(0, 8)} (${r.agente})`);
+			} catch (e) {
+				log(`equipe: retorno para ${id.slice(0, 8)} falhou:`, e.message);
+			}
+		}
+	} catch (e) {
+		log('equipe:', e.message);
+	} finally {
+		conferindoEquipes = false;
+	}
+}
+
+/** O passo (c) para uma tarefa-pai. null = nada a fazer (travada por outro, mudou, ou não tem retorno). */
+function entregarRetorno(paiId) {
+	return emTransacao(async (c) => {
+		const [p] = await qc(c, `select id, agente_id, status, rodada from public.dgathe_tarefas where id = $1 for update skip locked`, [paiId]);
+		if (!p || !['aguardando', 'fila', 'trabalhando', 'esperando'].includes(p.status)) return null;
+		const [x] = await qc(c, `select exists (select 1 from public.dgathe_tarefas s where s.pai_id = $1 and s.status in ${ABERTOS}) as aberta`, [paiId]);
+		if (x.aberta) return null;
+		const subs = await qc(
+			c,
+			`select s.id, s.agente_id, a.nome as agente_nome, a.cargo as agente_cargo, s.titulo, s.status, s.atividade,
+				s.resultado, s.erro, s.rodada_do_pai, s.relatada_em, 0 as pedidos
+			from public.dgathe_tarefas s join public.dgathe_agentes a on a.id = s.agente_id
+			where s.pai_id = $1 and s.relatada_em is null and s.status in ('concluida', 'falhou', 'cancelada')
+			order by s.criada_em
+			for update of s`,
+			[paiId]
+		);
+		// Só o `aguardando` sem novidade recebe o aviso vazio (para nunca ficar preso)
+		if (!subs.length && p.status !== 'aguardando') return null;
+		const ids = subs.map((s) => s.id);
+		await qc(
+			c,
+			`insert into public.dgathe_mensagens (tarefa_id, tipo, conteudo, autor_nome, entregue, detalhe)
+			values ($1, 'mensagem', $2, $3, false, $4)`,
+			[paiId, mensagemDaEquipe(subs, p.rodada), AUTOR_DA_EQUIPE, { equipe: true, rodada: p.rodada, subtarefas: ids }]
+		);
+		if (ids.length) await qc(c, `update public.dgathe_tarefas set relatada_em = now() where id = any($1::uuid[])`, [ids]);
+		// fila: continua na fila (sem mexer na folga); trabalhando/esperando: a sessão entrega a mensagem
+		await qc(
+			c,
+			`update public.dgathe_tarefas
+			set status = 'fila', erro = null, terminada_em = null, cancelar = false,
+				atividade = 'Na fila com o retorno da equipe', atualizada_em = now()
+			where id = $1 and status = 'aguardando'`,
+			[paiId]
+		);
+		return { subtarefas: ids.length, agente: p.agente_id };
+	});
+}
+
+let proximaConferenciaDeFechamento = 0;
+
+/** Uma vez por minuto: na janela de sexta 17h a segunda 17h (Brasília), cria o fechamento de cada líder que ainda não tem. */
+async function conferirFechamentos() {
+	if (!FECHAMENTO || desligando || Date.now() < proximaConferenciaDeFechamento) return;
+	proximaConferenciaDeFechamento = Date.now() + 60_000;
+	const periodo = periodoDoFechamento(new Date());
+	if (!periodo) return;
+	try {
+		const lideres = await q(
+			`select a.id, a.nome, a.equipe from public.dgathe_agentes a
+			where a.lider and a.ativo and a.equipe is not null
+				and not exists (select 1 from public.dgathe_fechamentos f where f.agente_id = a.id and f.sexta = $1::date)
+			order by a.ordem, a.id`,
+			[periodo.sexta]
+		);
+		for (const l of lideres) {
+			const r = await criarFechamento(l, periodo);
+			if (r.criada) log(`fechamento: tarefa ${r.tarefa.slice(0, 8)} para ${l.id} (sexta ${dataDaSexta(periodo.sexta)})`);
+		}
+	} catch (e) {
+		log('fechamento:', e.message);
+	}
+}
+
+/**
+ * Cria o fechamento semanal de um líder (contrato, seção 5.2). A linha em
+ * dgathe_fechamentos entra antes da tarefa, na mesma transação: se já existe,
+ * não cria nada (reiniciar a ponte ou rodar duas nunca duplica).
+ */
+function criarFechamento(lider, periodo) {
+	return emTransacao(async (c) => {
+		const novo = await qc(
+			c,
+			`insert into public.dgathe_fechamentos (agente_id, sexta) values ($1, $2::date) on conflict do nothing returning agente_id`,
+			[lider.id, periodo.sexta]
+		);
+		if (!novo.length) {
+			const [f] = await qc(c, `select tarefa_id from public.dgathe_fechamentos where agente_id = $1 and sexta = $2::date`, [lider.id, periodo.sexta]);
+			return { criada: false, tarefa: f?.tarefa_id ?? null };
+		}
+		const linhas = await qc(
+			c,
+			`select t.id, t.pai_id, t.agente_id, a.nome as agente_nome, t.titulo, t.status, t.criada_por_nome,
+				t.criada_em, t.terminada_em, left(t.resultado, 300) as resumo, t.erro
+			from public.dgathe_tarefas t join public.dgathe_agentes a on a.id = t.agente_id
+			where a.equipe = $1
+				and not exists (select 1 from public.dgathe_fechamentos f where f.tarefa_id = t.id)
+				and ((t.criada_em >= $2 and t.criada_em < $3)
+					or (t.terminada_em >= $2 and t.terminada_em < $3)
+					or t.status in ('fila', 'trabalhando', 'esperando', 'aguardando'))
+			order by t.criada_em
+			limit 300`,
+			[lider.equipe, periodo.inicio, periodo.fim]
+		);
+		const { titulo, pedido } = pedidoDoFechamento(periodo, lider.equipe, linhas, lider.id);
+		const [t] = await qc(
+			c,
+			`insert into public.dgathe_tarefas (agente_id, titulo, pedido, criada_por_nome) values ($1, $2, $3, 'DGathe') returning id`,
+			[lider.id, titulo, pedido]
+		);
+		await qc(
+			c,
+			`insert into public.dgathe_mensagens (tarefa_id, tipo, conteudo, autor_nome, detalhe) values ($1, 'pedido', $2, 'DGathe', $3)`,
+			[t.id, pedido, { fechamento: periodo.sexta }]
+		);
+		await qc(c, `update public.dgathe_fechamentos set tarefa_id = $3 where agente_id = $1 and sexta = $2::date`, [lider.id, periodo.sexta, t.id]);
+		return { criada: true, tarefa: t.id };
+	});
 }
 
 async function ciclo() {
@@ -570,6 +874,9 @@ async function ciclo() {
 				await s.verificarPedidos().catch((e) => log(`tarefa ${s.curto}: pedidos:`, e.message));
 			}
 		}
+		await conferirEquipes();
+		await conferirFechamentos();
+		await abrirReunioes().catch((e) => log('reuniões:', e.message));
 		while (!desligando && sessoes.size < MAX) {
 			const achou = await pegarTarefa();
 			if (!achou) break;
@@ -585,6 +892,61 @@ async function ciclo() {
 	}
 }
 
+// --------------------------------------------------------- consumo e reuniões
+
+const USO_MS = 60_000;
+let usoFalhou = false;
+
+/**
+ * O consumo do plano do Claude (janela de 5 h, semana, Fable) para o medidor do
+ * jogo: pergunta ao Claude Code (get_usage, sem chamar o modelo, não gasta
+ * limite) e grava em dgathe_uso (migration 0103). A cada minuto.
+ */
+async function atualizarUso() {
+	const claude = acharClaude();
+	if (!claude) return;
+	try {
+		const u = await lerUsoDoClaude({ claude, env: ambiente(), cwd: tmpdir() });
+		if (!u) return;
+		await q(
+			`insert into public.dgathe_uso (ponte, plano, sessao_pct, sessao_zera, semanal_pct, semanal_zera, modelos, lido_em)
+			values ($1, $2, $3, $4, $5, $6, $7, now())
+			on conflict (ponte) do update set plano = excluded.plano, sessao_pct = excluded.sessao_pct,
+				sessao_zera = excluded.sessao_zera, semanal_pct = excluded.semanal_pct,
+				semanal_zera = excluded.semanal_zera, modelos = excluded.modelos, lido_em = now()`,
+			[ID, u.plano, u.sessao?.pct ?? null, u.sessao?.zera ?? null, u.semanal?.pct ?? null, u.semanal?.zera ?? null, JSON.stringify(u.modelos)]
+		);
+		if (usoFalhou) log('consumo: voltou a ler');
+		usoFalhou = false;
+	} catch (e) {
+		// Uma linha no log quando começa a falhar, não uma por minuto
+		if (!usoFalhou) log('consumo:', e.message);
+		usoFalhou = true;
+	}
+}
+
+/**
+ * Reunião de alinhamento (pedido do Bruno em 10/11/2026): quando um líder
+ * distribui uma rodada do projeto para 2 ou mais especialistas, todos vão
+ * para a Sala de Reunião por 2 min e depois para os postos. Uma por rodada
+ * (índice único em tarefa_id + rodada), aberta pelo que a ponte vê no banco.
+ */
+async function abrirReunioes() {
+	await q(
+		`insert into public.dgathe_reunioes (sala, titulo, participantes, tarefa_id, rodada, criada_por, fim)
+		select 'reuniao', left('Alinhamento: ' || p.titulo, 120),
+			array[p.agente_id] || array_agg(distinct s.agente_id), p.id, s.rodada_do_pai, l.nome,
+			now() + interval '2 minutes'
+		from public.dgathe_tarefas s
+		join public.dgathe_tarefas p on p.id = s.pai_id
+		join public.dgathe_agentes l on l.id = p.agente_id
+		where s.criada_em > now() - interval '90 seconds' and s.rodada_do_pai is not null
+		group by p.id, p.titulo, p.agente_id, s.rodada_do_pai, l.nome
+		having count(distinct s.agente_id) >= 2
+		on conflict (tarefa_id, rodada) where tarefa_id is not null do nothing`
+	);
+}
+
 async function pulso() {
 	try {
 		await q(
@@ -597,19 +959,56 @@ async function pulso() {
 	}
 }
 
-/** Ao ligar: o que esta ponte deixou pela metade (Mac reiniciou, ponte caiu) fica marcado. */
+/**
+ * Ao ligar: o que esta ponte deixou pela metade (Mac reiniciou, ponte caiu)
+ * fica marcado (contrato, seção 2.6). Pedido de parar vira `cancelada`; quem
+ * tem equipe com pendência fica `aguardando` (retoma sozinho com o retorno);
+ * o resto vira `falhou`. A pendência é lida no estado de antes do update,
+ * então a subtarefa que estava rodando e virou `falhou` agora ainda conta.
+ * `aguardando` não tem sessão: nunca entra aqui.
+ */
 async function recuperar() {
 	const linhas = await qInsistente(
-		`update public.dgathe_tarefas
-		set status = 'falhou', erro = 'A ponte reiniciou no meio do trabalho. Mande uma mensagem para o agente continuar de onde parou.',
-			atividade = 'Parou: a ponte reiniciou', cancelar = false, terminada_em = now(), atualizada_em = now()
-		where ponte = $1 and status in ('trabalhando', 'esperando')
-		returning id`,
+		`with alvo as (
+			select t.id, t.cancelar,
+				exists (select 1 from public.dgathe_tarefas s where s.pai_id = t.id
+					and (s.status in ${ABERTOS} or s.relatada_em is null)) as equipe
+			from public.dgathe_tarefas t
+			where t.ponte = $1 and t.status in ('trabalhando', 'esperando')
+		)
+		update public.dgathe_tarefas t
+		set status = case when a.cancelar then 'cancelada' when a.equipe then 'aguardando' else 'falhou' end,
+			erro = case when a.cancelar then null
+				when a.equipe then 'A ponte reiniciou no meio da rodada. Ele retoma sozinho quando a equipe terminar.'
+				else 'A ponte reiniciou no meio do trabalho. Mande uma mensagem para o agente continuar de onde parou.' end,
+			atividade = case when a.cancelar then 'Parada a pedido' when a.equipe then 'Esperando a equipe' else 'Parou: a ponte reiniciou' end,
+			terminada_em = case when not a.cancelar and a.equipe then null else now() end,
+			cancelar = false, atualizada_em = now()
+		from alvo a
+		where t.id = a.id
+		returning t.id, t.status`,
 		[ID]
 	);
 	if (linhas.length) {
 		await qInsistente(`update public.dgathe_pedidos set cancelado = true where tarefa_id = any($1::uuid[]) and resposta is null`, [linhas.map((l) => l.id)]);
-		log(`${linhas.length} tarefa(s) ficaram pela metade e foram marcadas`);
+		const esperando = linhas.filter((l) => l.status === 'aguardando').length;
+		log(`${linhas.length} tarefa(s) ficaram pela metade e foram marcadas${esperando ? ` (${esperando} esperando a equipe)` : ''}`);
+	}
+}
+
+/**
+ * A migration 0102 (equipes) está aplicada? Sem ela esta ponte quebra no
+ * primeiro fim de rodada. 'sim' | 'nao' | 'erro' (banco fora do ar: não dá para saber).
+ */
+async function temEquipesNoBanco() {
+	try {
+		await q(`select pai_id, criada_por_agente, rodada, rodada_do_pai, relatada_em from public.dgathe_tarefas limit 0`);
+		await q(`select equipe, lider from public.dgathe_agentes limit 0`);
+		await q(`select agente_id, sexta, tarefa_id from public.dgathe_fechamentos limit 0`);
+		return 'sim';
+	} catch (e) {
+		// 42703 = coluna não existe; 42P01 = tabela não existe; 42501 = sem permissão (grant da 0102)
+		return ['42703', '42P01', '42501'].includes(e?.code) ? 'nao' : 'erro';
 	}
 }
 
@@ -634,36 +1033,143 @@ async function conferir() {
 	console.log('Pasta base:', BASE, existsSync(BASE) ? '' : '(NÃO EXISTE)');
 	console.log('Tarefas ao mesmo tempo:', MAX);
 	console.log('Claude Code:', claude ?? 'NÃO ENCONTRADO', claude ? `→ ${versaoDoClaude(claude) ?? 'não respondeu'}` : '');
+	console.log('Linha de comando da equipe:', CLI_DA_EQUIPE, existsSync(CLI_DA_EQUIPE) ? '' : '(NÃO EXISTE)');
 	try {
 		const [r] = await q(
 			`select (select count(*) from public.dgathe_agentes where ativo) as agentes, (select count(*) from public.dgathe_tarefas where status = 'fila') as fila`
 		);
 		console.log(`Banco: ok (${r.agentes} agente(s) ativo(s), ${r.fila} tarefa(s) na fila)`);
+		if ((await temEquipesNoBanco()) === 'sim') {
+			console.log('Migration 0102 (equipes): aplicada');
+			const equipes = await q(
+				`select equipe, count(*)::int as n, min(nome) filter (where lider) as lider
+				from public.dgathe_agentes where ativo and equipe is not null group by equipe order by equipe`
+			);
+			console.log(
+				'Equipes:',
+				equipes.length ? equipes.map((e) => `${e.equipe}: ${e.n} agente(s), ${e.lider ? `líder ${e.lider}` : 'sem líder ativo'}`).join(' · ') : 'nenhuma'
+			);
+			const [a] = await q(`select count(*)::int as n from public.dgathe_tarefas where status = 'aguardando'`);
+			console.log(`Esperando a equipe: ${a.n} tarefa(s)`);
+		} else {
+			console.log('Migration 0102 (equipes): NÃO APLICADA → aplique supabase/migrations/0102_dgathe_equipes.sql antes de ligar esta ponte');
+			process.exitCode = 1;
+		}
 	} catch (e) {
 		console.log('Banco: FALHOU →', e.message);
 		process.exitCode = 1;
 	}
+	const proxima = proximoFechamento(new Date());
+	console.log(
+		'Fechamento semanal:',
+		FECHAMENTO
+			? `ligado (sexta 17h de Brasília; o próximo sai em ${proxima.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' })})`
+			: 'DESLIGADO (DGATHE_FECHAMENTO=0)'
+	);
 	await db.end();
+}
+
+/** `--fechamento <agente> [--sexta AAAA-MM-DD]`: cria o fechamento de um líder e sai (contrato, seção 5.4). */
+async function fechamentoManual() {
+	const argv = process.argv.slice(2);
+	const valor = (flag) => {
+		const i = argv.indexOf(flag);
+		return i >= 0 ? argv[i + 1] : undefined;
+	};
+	const agente = valor('--fechamento');
+	const sexta = valor('--sexta');
+	try {
+		if (!agente || agente.startsWith('--')) {
+			console.error('Uso: node ponte/ponte.mjs --fechamento <agente> [--sexta AAAA-MM-DD]');
+			return 2;
+		}
+		let periodo;
+		if (argv.includes('--sexta')) {
+			try {
+				periodo = periodoDaSexta(sexta ?? '');
+			} catch {
+				console.error('--sexta precisa ser uma sexta-feira no formato AAAA-MM-DD.');
+				return 2;
+			}
+		} else {
+			periodo = periodoDoFechamento(new Date());
+			if (!periodo) {
+				console.error('Sem --sexta e fora da janela (sexta 17h a segunda 17h, Brasília).');
+				return 2;
+			}
+		}
+		if (!cfg.DGATHE_PG_SENHA) {
+			console.error(`Sem senha do banco em ${ARQUIVO_ENV}. Rode: node ponte/instalar.mjs`);
+			return 1;
+		}
+		const [lider] = await q(
+			`select id, nome, equipe from public.dgathe_agentes where id = $1 and lider and ativo and equipe is not null`,
+			[agente]
+		);
+		if (!lider) {
+			console.error(`${agente} não é líder ativo.`);
+			return 3;
+		}
+		const r = await criarFechamento(lider, periodo);
+		const quando = dataDaSexta(periodo.sexta);
+		const tarefa = r.tarefa ? r.tarefa.slice(0, 8) : 'apagada';
+		if (r.criada) console.log(`Fechamento criado para ${lider.nome} (sexta ${quando}): tarefa ${tarefa}`);
+		else console.log(`Já existe o fechamento de ${lider.nome} da sexta ${quando} (tarefa ${tarefa}).`);
+		return 0;
+	} catch (e) {
+		console.error('Não deu:', e.message);
+		return 1;
+	} finally {
+		await db.end().catch(() => {});
+	}
 }
 
 async function principal() {
 	if (process.argv.includes('--conferir')) return conferir();
+	if (process.argv.includes('--fechamento')) {
+		process.exitCode = await fechamentoManual();
+		return;
+	}
 	if (!cfg.DGATHE_PG_SENHA) {
 		log(`Sem senha do banco em ${ARQUIVO_ENV}. Rode: node ponte/instalar.mjs`);
 		process.exit(1);
 	}
 	const claude = acharClaude();
 	claudeVersao = claude ? versaoDoClaude(claude) : null;
-	log(`ponte ${ID} ligada · base ${BASE} · até ${MAX} tarefa(s) · folga de ${ESPERA} s · Claude Code ${claudeVersao ?? 'não encontrado'}`);
+	log(`ponte ${ID} ligada · versão ${VERSAO} · base ${BASE} · até ${MAX} tarefa(s) · folga de ${ESPERA} s · Claude Code ${claudeVersao ?? 'não encontrado'}`);
+	// Sem a migration 0102 esta versão quebra no primeiro fim de rodada: espera
+	// em vez de sair (o launchd religaria em laço) e sem sinal de vida, para o
+	// jogo mostrar que a ponte não está pegando tarefa
+	for (let ultimo = null; ; ) {
+		const r = await temEquipesNoBanco();
+		if (r === 'sim') break;
+		if (r !== ultimo)
+			log(
+				r === 'nao'
+					? 'a migration 0102 (equipes) não está aplicada: esperando por ela (confiro a cada minuto)'
+					: 'não consegui falar com o banco para conferir a migration 0102: tento de novo em 1 minuto'
+			);
+		ultimo = r;
+		await dormir(60_000);
+	}
 	await recuperar();
 	await pulso();
 	setInterval(pulso, PULSO_MS);
+	void atualizarUso();
+	setInterval(() => void atualizarUso(), USO_MS);
 	process.on('SIGTERM', () => desligar('SIGTERM'));
 	process.on('SIGINT', () => desligar('SIGINT'));
 	ciclo();
 }
 
-principal().catch((e) => {
-	log('falhou ao ligar:', e.message);
-	process.exit(1);
-});
+// Para testar as transações sem ligar o laço (um script importa este arquivo
+// com DGATHE_PONTE_COMO_MODULO=1 e um DGATHE_PONTE_ID próprio). O launchd nunca
+// passa essa variável, então rodar a ponte continua igual.
+export { Sessao, conferirEquipes, conferirFechamentos, entregarRetorno, criarFechamento, recuperar, temEquipesNoBanco, db };
+
+if (process.env.DGATHE_PONTE_COMO_MODULO !== '1') {
+	principal().catch((e) => {
+		log('falhou ao ligar:', e.message);
+		process.exit(1);
+	});
+}

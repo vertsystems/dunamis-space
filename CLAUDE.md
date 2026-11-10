@@ -36,6 +36,15 @@ mensagem nova numa tarefa terminada retoma a mesma sessão (`--resume`). As cont
 estão em `src/lib/dgathe/ponte.ts` e `passos.ts` (rodam direto no Node da ponte, sem build: nada de
 enum e import com extensão `.ts`). Mexeu na ponte: `node ponte/instalar.mjs` recarrega o launchd.
 
+**Equipes de agentes (desde 10/11/2026):** a definição de cada agente de equipe mora em
+`agentes/<equipe>/<id>.md` (cabeçalho + instruções, formato em [agentes/README.md](agentes/README.md)) e
+vai para o banco com `node ponte/agentes.mjs` (`--conferir` mostra sem gravar). O líder da equipe delega
+de dentro da sessão com `node ponte/equipe.mjs delegar` (subtarefas com `pai_id`); a tarefa dele fica
+`aguardando` até a equipe terminar, e a ponte devolve o retorno na mesma conversa. Toda sexta às 17h a
+ponte cria o fechamento semanal de cada líder. O contrato técnico é
+[docs/dgathe/contrato-equipes.md](docs/dgathe/contrato-equipes.md) e os cargos do departamento de
+Desenvolvimento & IA estão em [docs/dgathe/cargos-dev-ia.md](docs/dgathe/cargos-dev-ia.md).
+
 ## Como trabalhar
 
 - `npm run dev` sobe local na porta 5173. Todas as rotas pedem login
@@ -45,6 +54,10 @@ enum e import com extensão `.ts`). Mexeu na ponte: `node ponte/instalar.mjs` re
   `node_modules` e recria a pasta inteira dentro do Drive)
 - Terminou e passou na verificação: commit na `main` e push, sem pedir confirmação. O Bruno
   autorizou em 08/09/2026 ("suba direto para o dspace.verts.me")
+- **Os agentes do DGathe não seguem a regra de cima.** Numa sessão aberta pela ponte (com
+  `DGATHE_TAREFA` no ambiente), publicar passa pelo gerente e pela aprovação do CEO no jogo (as
+  instruções de cada um estão em `agentes/`), e `node ponte/instalar.mjs` nunca roda de dentro de
+  uma sessão: ele derruba todas, inclusive a de quem rodou
 - Avisar antes do que mexe no banco de produção (migration, ensaio de carga) e do que apaga dados.
   O banco local é o de produção
 - Texto de tela e mensagem de commit em português

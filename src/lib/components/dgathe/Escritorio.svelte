@@ -11,8 +11,10 @@
 	import { assentoPorId } from '$lib/dgathe/assentos';
 	import { lerAparencia, type Aparencia } from '$lib/dgathe/aparencia';
 	import { SALA_POR_ID, SETORES } from '$lib/dgathe/mapa';
-	import { Agentes, lugaresDosAgentes, NOME_DO_ESTADO, PREFIXO_AGENTE, type LeituraAgentes } from '$lib/dgathe/agentes';
+	import { Agentes, COR_DO_ESTADO, lugaresDosAgentes, NOME_DO_ESTADO, PREFIXO_AGENTE, type Agente, type LeituraAgentes } from '$lib/dgathe/agentes';
 	import PainelAgente from './PainelAgente.svelte';
+	import Consumo from './Consumo.svelte';
+	import { NOME_DA_ATIVIDADE, type Destino } from '$lib/dgathe/rotina';
 	import {
 		Crown,
 		Presentation,
@@ -98,8 +100,35 @@
 	let agentes: Agentes | null = null;
 	/** Os agentes e a ponte do Mac (agentes.ts), lidos a cada 3 s. */
 	let leitura = $state<LeituraAgentes | null>(null);
+	/** O que cada agente está fazendo agora pela rotina (posto, pausa, reunião). */
+	let momentos = $state<Map<string, Destino>>(new Map());
+	function textoDoMomento(id: string): string | null {
+		const m = momentos.get(id);
+		if (!m) return null;
+		if (m.motivo === 'reuniao') return 'Em reunião de alinhamento';
+		if (m.motivo === 'pausa' && m.atividade) return `Na pausa: ${NOME_DA_ATIVIDADE[m.atividade]}`;
+		return 'No posto, esperando a próxima tarefa';
+	}
+	async function chamarReuniao(sala: string, ids: string[]) {
+		if (!supabase) return;
+		const { error } = await supabase.rpc('dgathe_chamar_reuniao', { p_sala: sala, p_agentes: ids, p_minutos: 15 });
+		avisar(error ? 'Não deu para chamar a reunião agora' : 'Reunião chamada: os agentes estão indo para a sala (15 min)');
+		agentes?.agora();
+	}
+	async function encerrarReuniao(id: string) {
+		if (!supabase) return;
+		const { error } = await supabase.rpc('dgathe_encerrar_reuniao', { p_id: id });
+		avisar(error ? 'Não deu para encerrar a reunião agora' : 'Reunião encerrada: cada um volta para o seu posto');
+		agentes?.agora();
+	}
 
 	let selecao = $state<Selecao>({ tipo: 'avatar' });
+	/**
+	 * A tarefa para abrir no painel do agente, quando ele foi aberto de outro
+	 * painel (a subtarefa na lista do líder, a tarefa-pai no especialista). Vale
+	 * enquanto aquele agente continuar selecionado.
+	 */
+	let tarefaPedida = $state<{ agente: string; tarefa: string | null } | null>(null);
 	let local = $state<string | null>(null);
 	let andando = $state(false);
 	let destino = $state<string | null>(null);
@@ -121,7 +150,9 @@
 	const ausentes = $derived(pessoas.filter((o) => o.situacao === 'inativo'));
 	const offline = $derived(pessoas.filter((o) => o.situacao === 'offline'));
 	const listaDeAgentes = $derived(leitura?.agentes ?? []);
-	const trabalhando = $derived(listaDeAgentes.filter((a) => a.estado === 'trabalhando' || a.estado === 'esperando'));
+	// "Em andamento" conta também o líder esperando a equipe: o projeto dele está aberto
+	const trabalhando = $derived(listaDeAgentes.filter((a) => a.estado === 'trabalhando' || a.estado === 'esperando' || a.estado === 'aguardando'));
+	const emAndamento = (a: Agente) => (a.estado === 'aguardando' ? `${a.nome}: ${NOME_DO_ESTADO.aguardando}` : `${a.nome}: ${a.tarefa?.titulo ?? ''}`);
 	const precisam = $derived(listaDeAgentes.filter((a) => a.estado === 'esperando'));
 	const tituloAgentes = $derived.by(() => {
 		if (!listaDeAgentes.length) return 'Nenhum agente ainda';
@@ -232,6 +263,9 @@
 					selecao: (s) => {
 						selecao = s;
 						if (s.tipo === 'sala') recolhido = false;
+						// Selecionou outra coisa: a tarefa pedida não vale mais (clicar de novo
+						// no agente, pelo mapa, volta a seguir a tarefa atual dele)
+						if (tarefaPedida && !(s.tipo === 'pessoa' && s.id === PREFIXO_AGENTE + tarefaPedida.agente)) tarefaPedida = null;
 					},
 					local: (id) => {
 						local = id;
@@ -289,7 +323,9 @@
 			let estados: Map<string, string> | null = null;
 			agentes = new Agentes(supabase, {
 				leitura: (l) => {
-					const { lugar, reservados } = lugaresDosAgentes(l.agentes);
+					// Com a hora do servidor, vale a rotina: posto, 20% de pausas e reunião
+					const { lugar, reservados, momento } = lugaresDosAgentes(l.agentes, l.agora);
+					momentos = momento;
 					jg.definirAgentes(
 						l.agentes.flatMap((a) => {
 							const onde = lugar.get(a.id);
@@ -302,8 +338,10 @@
 							const era = estados.get(a.id);
 							if (!era || era === a.estado) continue;
 							if (a.estado === 'esperando') avisar(`${a.nome} precisa de você`, 4000);
+							else if (a.estado === 'aguardando' && (era === 'trabalhando' || era === 'esperando')) avisar(`${a.nome} distribuiu o trabalho e espera a equipe`, 3500);
+							else if (a.estado === 'trabalhando' && era === 'aguardando') avisar(`${a.nome} voltou a trabalhar: ${a.tarefa?.titulo ?? 'tarefa'}`, 3500);
 							else if (a.estado === 'trabalhando' && era !== 'esperando') avisar(`${a.nome} começou: ${a.tarefa?.titulo ?? 'tarefa nova'}`, 3500);
-							else if (a.estado === 'livre' && (era === 'trabalhando' || era === 'esperando')) avisar(`${a.nome} terminou e foi para a copa`, 3500);
+							else if (a.estado === 'livre' && (era === 'trabalhando' || era === 'esperando' || era === 'aguardando')) avisar(`${a.nome} terminou a tarefa`, 3500);
 						}
 					}
 					estados = new Map(l.agentes.map((a) => [a.id, a.estado]));
@@ -376,7 +414,9 @@
 		tela.focus({ preventScroll: true });
 	}
 
-	function verAgente(id: string) {
+	/** Abre o painel do agente; com `tarefa`, já naquela tarefa (veio de outro painel). */
+	function verAgente(id: string, tarefa: string | null = null) {
+		tarefaPedida = { agente: id, tarefa };
 		jogo?.selecionar({ tipo: 'pessoa', id: PREFIXO_AGENTE + id });
 		recolhido = false;
 	}
@@ -411,9 +451,10 @@
 				<Bot size={14} /><b>{listaDeAgentes.length}</b><em>agentes</em>
 				{#if leitura && listaDeAgentes.length}<i class="dg-sinal {leitura.ponte.ligada ? 'online' : 'offline'}" aria-hidden="true"></i>{/if}
 			</span>
-			<span title={trabalhando.length ? trabalhando.map((a) => `${a.nome}: ${a.tarefa?.titulo ?? ''}`).join(' · ') : 'Nenhuma tarefa em andamento'}><Hammer size={14} /><b>{trabalhando.length}</b><em>em andamento</em></span>
+			<span title={trabalhando.length ? trabalhando.map(emAndamento).join(' · ') : 'Nenhuma tarefa em andamento'}><Hammer size={14} /><b>{trabalhando.length}</b><em>em andamento</em></span>
 		</div>
 		<div class="dg-acoes">
+			{#if supabase}<Consumo {supabase} />{/if}
 			<span class="dg-local" title="Onde você está"><Navigation size={13} />{nomeLocal}</span>
 			<button type="button" onclick={() => (jogo?.centralizar(), tela.focus())} title="Voltar a câmera para você (Espaço)" aria-label="Centralizar no avatar"><Crosshair size={16} /></button>
 			<button type="button" class:ativo={nomes} onclick={() => (nomes = jogo?.alternarNomes() ?? nomes)} title="Nomes das salas (N)" aria-label="Mostrar ou esconder nomes das salas"><Tags size={16} /></button>
@@ -449,12 +490,18 @@
 				aoIrAte={() => irAte(PREFIXO_AGENTE + agenteSelecionado.id)}
 				aoMudar={() => agentes?.agora()}
 				aoAvisar={(t) => avisar(t)}
+				aoVerAgente={verAgente}
+				tarefaInicial={tarefaPedida?.agente === agenteSelecionado.id ? tarefaPedida.tarefa : null}
+				agentes={listaDeAgentes}
+				momento={textoDoMomento(agenteSelecionado.id)}
 			/>
 		{:else if salaSelecionada}
 			{@const Ico = iconeDa(salaSelecionada.id)}
 			{@const aqui = local === salaSelecionada.id}
 			{@const gente = pessoas.filter((o) => o.sala === salaSelecionada.id)}
 			{@const daSala = listaDeAgentes.filter((a) => a.sala === salaSelecionada.id)}
+			{@const reunioesAqui = (leitura?.reunioes ?? []).filter((r) => r.sala === salaSelecionada.id)}
+			{@const equipes = [...new Set(listaDeAgentes.map((a) => a.equipe).filter((e): e is string => !!e))]}
 			{@const naSala = outros.filter((o) => o.agente && o.sala === salaSelecionada.id && o.agente.sala !== salaSelecionada.id)}
 			<header class="dg-cab">
 				<span class="dg-ico" style="--cor: {salaSelecionada.cor}"><Ico size={20} /></span>
@@ -483,7 +530,7 @@
 					{/each}
 					{#each naSala as o (o.id)}
 						<button type="button" class="dg-pessoa dg-pessoa-btn" onclick={() => jogo?.selecionar({ tipo: 'pessoa', id: o.id })}>
-							<span style="--cor: #8b5cf6"></span>{o.nome} · agente, {o.agente ? NOME_DO_ESTADO[o.agente.estado] : ''}
+							<span style="--cor: {o.agente ? COR_DO_ESTADO[o.agente.estado] : COR_DO_ESTADO.livre}"></span>{o.nome} · agente, {o.agente ? NOME_DO_ESTADO[o.agente.estado] : ''}
 						</button>
 					{/each}
 					{#if !aqui && !gente.length && !naSala.length}<p class="dg-vazio">Ninguém por aqui</p>{/if}
@@ -491,13 +538,34 @@
 				<div>
 					<h4>Agentes do setor</h4>
 					{#each daSala as a (a.id)}
-						<button type="button" class="dg-pessoa dg-pessoa-btn" onclick={() => verAgente(a.id)} title={a.tarefa?.titulo ?? ''}>
-							<span style="--cor: {a.estado === 'esperando' ? '#f5a524' : a.estado === 'trabalhando' ? '#34d399' : '#8b5cf6'}"></span>{a.nome} · {a.estado === 'trabalhando' || a.estado === 'esperando' ? (a.tarefa?.titulo ?? NOME_DO_ESTADO[a.estado]) : NOME_DO_ESTADO[a.estado]}
+						<button type="button" class="dg-pessoa dg-pessoa-btn" onclick={() => verAgente(a.id)} title="{a.cargo}{a.lider ? ' · líder da equipe' : ''}{a.tarefa?.titulo ? ` · ${a.tarefa.titulo}` : ''}">
+							<span style="--cor: {COR_DO_ESTADO[a.estado]}"></span>{a.nome} · {a.estado === 'trabalhando' || a.estado === 'esperando' ? (a.tarefa?.titulo ?? NOME_DO_ESTADO[a.estado]) : NOME_DO_ESTADO[a.estado]}{#if a.lider}<em class="dg-lider">líder</em>{/if}
 						</button>
 					{/each}
-					{#if !daSala.length}<p class="dg-vazio">{salaSelecionada.id === 'copa' ? 'É aqui que os agentes livres esperam a próxima tarefa' : 'Nenhum agente neste setor ainda'}</p>{/if}
+					{#if !daSala.length}<p class="dg-vazio">{salaSelecionada.id === 'copa' ? 'É aqui que os agentes passam as pausas' : 'Nenhum agente neste setor ainda'}</p>{/if}
 				</div>
 			</div>
+			{#if reunioesAqui.length || (leitura?.pode === 'editar' && (salaSelecionada.id === 'reuniao' || salaSelecionada.id === 'diretoria'))}
+				<div class="dg-reuniao">
+					<h4>Reunião de alinhamento</h4>
+					{#each reunioesAqui as r (r.id)}
+						<p>
+							<strong>{r.titulo}</strong>
+							<small>{r.participantes.map((id) => listaDeAgentes.find((a) => a.id === id)?.nome ?? id).join(', ')} · até {new Date(r.ate * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</small>
+						</p>
+						{#if leitura?.pode === 'editar'}<button type="button" class="dg-reuniao-btn" onclick={() => encerrarReuniao(r.id)}>Encerrar e voltar aos postos</button>{/if}
+					{/each}
+					{#if !reunioesAqui.length && leitura?.pode === 'editar'}
+						<div class="dg-chips">
+							{#each equipes as eq (eq)}
+								{@const ids = listaDeAgentes.filter((a) => a.equipe === eq).map((a) => a.id)}
+								<button type="button" class="dg-reuniao-btn" onclick={() => chamarReuniao(salaSelecionada.id, ids)}>Chamar a equipe {eq} ({ids.length})</button>
+							{/each}
+							<button type="button" class="dg-reuniao-btn" onclick={() => chamarReuniao(salaSelecionada.id, listaDeAgentes.map((a) => a.id))}>Chamar todos os agentes</button>
+						</div>
+					{/if}
+				</div>
+			{/if}
 			{#if salaSelecionada.especialidades.length}
 				<div class="dg-esp">
 					<h4>Especialidades {#if !daSala.length}<span>agentes a criar</span>{/if}</h4>
@@ -564,8 +632,8 @@
 				<h4 class="dg-rotulo">Agentes</h4>
 				<div class="dg-atalhos">
 					{#each listaDeAgentes as a (a.id)}
-						<button type="button" class="dg-agente" onclick={() => verAgente(a.id)} title="{a.nome}: {NOME_DO_ESTADO[a.estado]}{a.tarefa?.titulo ? ` · ${a.tarefa.titulo}` : ''}">
-							<span style="--cor: {a.estado === 'esperando' ? '#f5a524' : a.estado === 'trabalhando' ? '#34d399' : '#8b5cf6'}"></span>{a.nome}
+						<button type="button" class="dg-agente" onclick={() => verAgente(a.id)} title="{a.nome}{a.lider ? ' (líder da equipe)' : ''}: {NOME_DO_ESTADO[a.estado]}{a.tarefa?.titulo ? ` · ${a.tarefa.titulo}` : ''}">
+							<span style="--cor: {COR_DO_ESTADO[a.estado]}"></span>{a.nome}
 						</button>
 					{/each}
 				</div>
@@ -611,7 +679,7 @@
 		<div class="dg-ajuda" role="dialog" aria-modal="true" aria-label="Controles do DGathe">
 			<div class="dg-ajuda-caixa">
 				<h3>Bem-vindo ao DGathe</h3>
-				<p>O escritório da Dunamis em forma de jogo. Quem estiver logado no dspace aparece aqui com você (com alguns segundos de atraso); quem saiu fica sentado na recepção. Os agentes (crachá roxo) trabalham sentados na mesa deles e esperam a próxima tarefa na copa: clique num deles para passar tarefa, acompanhar o que está fazendo e responder quando ele levantar a mão.</p>
+				<p>O escritório da Dunamis em forma de jogo. Quem estiver logado no dspace aparece aqui com você (com alguns segundos de atraso); quem saiu fica sentado na recepção. Os agentes (crachá roxo) trabalham sentados na mesa deles e esperam a próxima tarefa na copa: clique num deles para passar tarefa, acompanhar o que está fazendo e responder quando ele levantar a mão. O gerente de um setor distribui o trabalho para a equipe: enquanto ela trabalha, ele espera sentado na mesa dele, e o painel dele mostra quem está fazendo o quê.</p>
 				<ul>
 					<li><kbd>Botão direito</kbd><span>anda até o ponto</span></li>
 					<li><kbd>Botão esquerdo</kbd><span>seleciona sala, objeto ou pessoa</span></li>
@@ -861,6 +929,35 @@
 	}
 
 	/* Painel de seleção */
+	.dg-reuniao {
+		margin-top: 0.7rem;
+		padding-top: 0.6rem;
+		border-top: 1px solid var(--dg-borda);
+	}
+	.dg-reuniao h4 {
+		margin: 0 0 0.35rem;
+		font-size: 0.72rem;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: var(--dg-suave);
+	}
+	.dg-reuniao p {
+		display: flex;
+		flex-direction: column;
+		margin: 0 0 0.35rem;
+		font-size: 0.78rem;
+	}
+	.dg-reuniao small {
+		color: var(--dg-suave);
+	}
+	.dg-reuniao-btn {
+		padding: 0.3rem 0.6rem;
+		border-radius: 8px;
+		background: rgba(56, 189, 248, 0.16);
+		color: #bae6fd;
+		font-size: 0.74rem;
+		font-weight: 600;
+	}
 	.dg-painel.largo {
 		width: min(390px, calc(100% - 24px));
 	}
@@ -993,6 +1090,17 @@
 		margin: 0.2rem 0 0;
 		font-size: 13px;
 		font-weight: 600;
+	}
+	/* Quem lidera a equipe do setor (é com ele que se fala do projeto) */
+	.dg-lider {
+		margin-left: 0.35rem;
+		padding: 0 0.35rem;
+		border-radius: 999px;
+		background: rgba(56, 189, 248, 0.18);
+		color: #bae6fd;
+		font-style: normal;
+		font-size: 0.62rem;
+		font-weight: 700;
 	}
 	.dg-pessoa span,
 	.dg-atalhos span {

@@ -18,6 +18,10 @@ export type AgenteDaPonte = {
 	autonomia: Autonomia;
 	modelo: string | null;
 	esforco: string | null;
+	/** Equipe do agente (ex.: 'dev'); null = fora de equipe, como o assessor. Migration 0102. */
+	equipe?: string | null;
+	/** Só o líder delega (docs/dgathe/contrato-equipes.md). */
+	lider?: boolean;
 };
 
 export type TarefaDaPonte = {
@@ -25,7 +29,16 @@ export type TarefaDaPonte = {
 	titulo: string;
 	criada_por_nome: string;
 	sessao_id: string | null;
+	/** Subtarefa: a tarefa do líder que a criou. */
+	pai_id?: string | null;
 };
+
+export type MembroDoPreambulo = { id: string; nome: string; cargo: string; lider: boolean };
+/** O que a ponte lê da equipe antes de abrir a sessão. Falhou a leitura: vem undefined e o preâmbulo sai sem a lista. */
+export type ContextoDaEquipe = { membros: MembroDoPreambulo[]; pai: { titulo: string; lider: string } | null };
+
+/** Quem escreve a mensagem de retorno das subtarefas (igual a AUTOR_DA_EQUIPE em equipe.ts). */
+const AUTOR_DA_EQUIPE = 'Equipe';
 
 export type PedidoDaPonte = { tipo: 'permissao' | 'pergunta'; entrada: Record<string, unknown> | null };
 
@@ -42,8 +55,12 @@ export function resolverPasta(base: string, pasta: string): string {
 	return destino;
 }
 
-/** O que vai junto do CLAUDE.md da pasta: quem é o agente e como trabalhar sem ninguém no terminal. */
-export function preambulo(a: AgenteDaPonte, t: Pick<TarefaDaPonte, 'criada_por_nome'>): string {
+/**
+ * O que vai junto do CLAUDE.md da pasta: quem é o agente e como trabalhar sem
+ * ninguém no terminal. Agente de equipe ganha uma seção antes das instruções
+ * dele: o líder aprende a delegar; o especialista, a quem entregar.
+ */
+export function preambulo(a: AgenteDaPonte, t: Pick<TarefaDaPonte, 'criada_por_nome' | 'pai_id'>, ctx?: ContextoDaEquipe): string {
 	const quem = t.criada_por_nome?.trim() || 'alguém da equipe';
 	const linhas = [
 		'## Você está no DGathe',
@@ -53,10 +70,88 @@ export function preambulo(a: AgenteDaPonte, t: Pick<TarefaDaPonte, 'criada_por_n
 		'- Antes de publicar, mandar algo para fora (e-mail, WhatsApp, post), gastar dinheiro ou apagar arquivo, pergunte pelo AskUserQuestion, a não ser que as instruções abaixo liberem.',
 		'- Ao terminar, responda em português, em poucas linhas: o que fez, o caminho de cada arquivo criado ou alterado e o que ficou pendente.'
 	];
+	const equipe = a.equipe?.trim();
+	if (equipe) linhas.push('', ...(a.lider ? secaoDoLider(a, equipe, ctx) : secaoDoEspecialista(equipe, t, quem, ctx)));
 	const proprias = a.instrucoes?.trim();
 	if (proprias) linhas.push('', '## Suas instruções', proprias);
 	return linhas.join('\n');
 }
+
+function secaoDoLider(a: AgenteDaPonte, equipe: string, ctx?: ContextoDaEquipe): string[] {
+	const linhas = [
+		`## Você lidera a equipe "${equipe}"`,
+		'Você coordena: planeja, distribui para os especialistas certos, revisa e presta contas ao CEO. Quem executa é a equipe.',
+		// O PEDIDO que fecha o texto tem que começar na coluna 1, senão o terminal não acha o fim
+		'- Para passar trabalho a um especialista (o pedido vai pelo stdin; a linha PEDIDO que fecha começa na coluna 1):',
+		'```bash',
+		`node "$DGATHE_EQUIPE" delegar <id> --titulo "Título curto" <<'PEDIDO'`,
+		'Objetivo, contexto, arquivos e pastas, critérios de aceitação e o que entregar.',
+		'PEDIDO',
+		'```',
+		'- Pode delegar para vários na mesma rodada: eles trabalham em paralelo. Depois, encerre a rodada com um texto curto dizendo o que distribuiu e o que espera. Não fique esperando nem consultando em laço: quando todas as subtarefas abertas terminarem, o retorno de cada uma chega aqui, nesta mesma conversa, e você continua.',
+		'- node "$DGATHE_EQUIPE" estado mostra as subtarefas desta tarefa (estado <número> mostra uma inteira). node "$DGATHE_EQUIPE" equipe mostra quem está livre.',
+		'- Limites: 12 subtarefas abertas por vez e 6 rodadas de delegação por tarefa. Subtarefa não cria subtarefa e você não delega para si.',
+		'- Perguntas e pedidos de licença dos especialistas vão direto ao CEO pelo jogo: você não precisa repassar.',
+		'- No retorno: confira as evidências, mande corrigir com nova delegação ou feche com o relatório que as suas instruções pedem.'
+	];
+	if (ctx) {
+		const outros = ctx.membros.filter((m) => m.id !== a.id);
+		linhas.push('Sua equipe agora:');
+		if (outros.length) for (const m of outros) linhas.push(`- ${m.id}: ${m.nome}, ${m.cargo}`);
+		else linhas.push('- (ninguém ativo além de você)');
+	}
+	return linhas;
+}
+
+function secaoDoEspecialista(equipe: string, t: Pick<TarefaDaPonte, 'pai_id'>, quem: string, ctx?: ContextoDaEquipe): string[] {
+	const titulo = `## Você é da equipe "${equipe}"`;
+	if (t.pai_id) {
+		// Subtarefa: o líder vem da tarefa-pai; sem ela, da lista da equipe
+		const lider = ctx?.pai?.lider?.trim() || ctx?.membros.find((m) => m.lider)?.nome || null;
+		const projeto = ctx?.pai?.titulo?.trim() ? `, dentro do projeto "${ctx.pai.titulo.trim()}"` : '';
+		return [
+			titulo,
+			lider ? `Esta tarefa veio de ${lider}, líder da equipe${projeto}.` : `Esta tarefa veio do líder da equipe${projeto}.`,
+			`- O seu texto final volta para ${lider ?? 'o líder'}, que revisa antes de levar ao CEO. Entregue o que fez, as evidências (testes e comandos rodados com o resultado, caminhos dos arquivos) e o que ficou pendente.`,
+			`- Você não delega. Se precisar de outro especialista, diga no texto final quem e para quê: ${lider ?? 'o líder'} decide.`,
+			'- Perguntas e pedidos de licença continuam indo ao CEO pelo jogo (AskUserQuestion).'
+		];
+	}
+	const lider = ctx?.membros.find((m) => m.lider)?.nome;
+	return [
+		titulo,
+		`Esta tarefa veio direto de ${quem}. Se ela pedir outro especialista, diga no texto final: quem distribui o trabalho é ${lider ? `${lider}, líder da equipe` : 'o líder da equipe'}.`
+	];
+}
+
+/**
+ * O que um agente de equipe com autonomia `editar` só roda com licença no
+ * jogo. O Mac do Bruno libera o terminal inteiro, e o departamento só pode
+ * publicar com a aprovação do CEO (decisão 10; ponto P2 de
+ * docs/dgathe/cargos-dev-ia.md): push (no dspace é deploy; os repositórios são
+ * públicos), a CLI da Vercel (deploy, rollback, variáveis) e o instalador da
+ * ponte, que derruba todas as sessões (o `--status` continua livre). O "ask"
+ * vence o "allow" das configurações do Mac e pega também o comando depois de
+ * `cd … &&` (testado em 10/11/2026 com o Claude Code 2.1.321). É trava contra
+ * engano, não contra má-fé: `git -C pasta push` ou um script escapam.
+ */
+export const PEDIR_LICENCA_NA_EQUIPE = [
+	'Bash(git push)',
+	'Bash(git push:*)',
+	'Bash(npx vercel:*)',
+	'Bash(npx -y vercel:*)',
+	'Bash(npx vercel@latest:*)',
+	'Bash(npx -y vercel@latest:*)',
+	'Bash(vercel:*)',
+	'Bash(node ponte/instalar.mjs)',
+	'Bash(node dunamisspace/ponte/instalar.mjs)',
+	'Bash(node ponte/instalar.mjs --parar:*)',
+	'Bash(node dunamisspace/ponte/instalar.mjs --parar:*)',
+	'Bash(node ponte/instalar.mjs --senha-nova:*)',
+	'Bash(node dunamisspace/ponte/instalar.mjs --senha-nova:*)',
+	'Bash(node ponte/instalar.mjs --sem-launchd:*)',
+	'Bash(node dunamisspace/ponte/instalar.mjs --sem-launchd:*)'
+];
 
 /** Os argumentos do Claude Code para uma rodada da tarefa. */
 export function argumentosDoClaude(
@@ -78,7 +173,11 @@ export function argumentosDoClaude(
 	else if (a.autonomia === 'perguntar')
 		// O Mac do Bruno libera o terminal inteiro nas configurações; aqui ele volta a pedir
 		args.push('--permission-mode', 'default', '--settings', JSON.stringify({ permissions: { ask: ['Bash', 'PowerShell'] } }));
-	else args.push('--permission-mode', 'acceptEdits');
+	else {
+		args.push('--permission-mode', 'acceptEdits');
+		// Agente de equipe: publicar e mexer na ponte voltam a pedir licença (o assessor não muda)
+		if (a.equipe?.trim()) args.push('--settings', JSON.stringify({ permissions: { ask: PEDIR_LICENCA_NA_EQUIPE } }));
+	}
 	if (o.retomar) args.push('--resume', o.sessao);
 	else args.push('--session-id', o.sessao);
 	args.push('--name', o.nome, '--append-system-prompt', o.preambulo);
@@ -93,10 +192,16 @@ export function nomeDaSessao(a: Pick<AgenteDaPonte, 'nome'>, t: Pick<TarefaDaPon
 	return `DGathe · ${a.nome} · ${titulo}`;
 }
 
-/** Mensagens que chegaram pelo jogo, num texto só para o agente. */
+/**
+ * Mensagens que chegaram pelo jogo, num texto só para o agente. O retorno da
+ * equipe (autor 'Equipe', gravado pela ponte) já vem com cabeçalho próprio e
+ * passa como está.
+ */
 export function mensagemParaOAgente(lista: { autor_nome: string | null; conteudo: string }[]): string {
 	return lista
-		.map((m) => `Mensagem de ${m.autor_nome?.trim() || 'alguém da equipe'} pelo DGathe:\n\n${m.conteudo}`)
+		.map((m) =>
+			m.autor_nome === AUTOR_DA_EQUIPE ? m.conteudo : `Mensagem de ${m.autor_nome?.trim() || 'alguém da equipe'} pelo DGathe:\n\n${m.conteudo}`
+		)
 		.join('\n\n---\n\n');
 }
 
