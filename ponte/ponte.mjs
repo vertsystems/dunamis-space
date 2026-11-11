@@ -18,7 +18,7 @@
 //     líder para também as subtarefas abertas: o banco marca, a ponte corta)
 //   - devolve ao líder o retorno da equipe (conferirEquipes)
 // A cada 20 s grava o sinal de vida (o jogo mostra se a ponte está ligada).
-// A cada minuto confere o fechamento semanal (conferirFechamentos).
+// A cada minuto confere o fechamento semanal, se estiver ligado (conferirFechamentos).
 //
 // Equipes (versão 1.1, docs/dgathe/contrato-equipes.md): o líder de uma equipe
 // roda `node "$DGATHE_EQUIPE" delegar <agente>` dentro da sessão e isso cria
@@ -27,9 +27,11 @@
 // dele fica `aguardando` (sem sessão). Quando a última subtarefa fecha, a ponte
 // grava na tarefa do líder a mensagem "Retorno da equipe" (autor 'Equipe') e a
 // devolve para a fila: ele retoma a mesma conversa e revisa, manda corrigir ou
-// fecha. Toda sexta às 17h de Brasília a ponte cria, uma vez por semana, a
-// tarefa de fechamento semanal de cada líder ativo (dgathe_fechamentos guarda
-// o que já foi criado, então reiniciar ou rodar duas pontes não duplica).
+// fecha. Com DGATHE_FECHAMENTO=1, toda sexta às 17h de Brasília a ponte cria,
+// uma vez por semana, a tarefa de fechamento semanal de cada líder ativo
+// (dgathe_fechamentos guarda o que já foi criado, então reiniciar ou rodar duas
+// pontes não duplica). Desligado por padrão desde 11/11/2026, pedido do Bruno:
+// nenhum agente fecha a semana sozinho; o fechamento sai quando um CEO pede.
 //
 // Uso:
 //   node ponte/ponte.mjs              roda (é o que o launchd chama)
@@ -45,7 +47,7 @@
 //   DGATHE_ESPERA       segundos de folga antes de agir numa tarefa ou mensagem nova (padrão: 15)
 //   DGATHE_PATH         PATH das sessões (o do terminal do Bruno)
 //   DGATHE_CLAUDE       caminho do Claude Code (padrão: o mais novo instalado)
-//   DGATHE_FECHAMENTO   0 desliga o fechamento semanal automático (padrão: ligado;
+//   DGATHE_FECHAMENTO   1 liga o fechamento semanal automático (padrão: desligado desde 11/11/2026;
 //                       o instalar.mjs não guarda esta chave ao reescrever o arquivo)
 
 import { execFileSync, spawn } from 'node:child_process';
@@ -72,7 +74,6 @@ import {
 import { cortar, passoDaFerramenta, resumoDoPedido } from '../src/lib/dgathe/passos.ts';
 import {
 	AUTOR_DA_EQUIPE,
-	EQUIPES_SEM_FECHAMENTO,
 	dataDaSexta,
 	fimDaRodada,
 	mensagemDaEquipe,
@@ -109,7 +110,7 @@ const ID = cfg.DGATHE_PONTE_ID || `mac-${hostname().split('.')[0].toLowerCase()}
 const BASE = cfg.DGATHE_BASE || resolve(AQUI, '../../..');
 const MAX = Math.max(1, Math.min(8, Number(cfg.DGATHE_MAX) || 3));
 const ESPERA = Math.max(0, Math.min(300, Number(cfg.DGATHE_ESPERA ?? 15)));
-const FECHAMENTO = cfg.DGATHE_FECHAMENTO !== '0';
+const FECHAMENTO = cfg.DGATHE_FECHAMENTO === '1';
 /** A linha de comando que o líder roda dentro da sessão (vai no ambiente como DGATHE_EQUIPE). */
 const CLI_DA_EQUIPE = join(AQUI, 'equipe.mjs');
 /**
@@ -865,7 +866,7 @@ function entregarRetorno(paiId) {
 
 let proximaConferenciaDeFechamento = 0;
 
-/** Uma vez por minuto: na janela de sexta 17h a segunda 17h (Brasília), cria o fechamento de cada líder que ainda não tem (menos as EQUIPES_SEM_FECHAMENTO). */
+/** Uma vez por minuto: na janela de sexta 17h a segunda 17h (Brasília), cria o fechamento de cada líder que ainda não tem. */
 async function conferirFechamentos() {
 	if (!FECHAMENTO || desligando || Date.now() < proximaConferenciaDeFechamento) return;
 	proximaConferenciaDeFechamento = Date.now() + 60_000;
@@ -875,10 +876,9 @@ async function conferirFechamentos() {
 		const lideres = await q(
 			`select a.id, a.nome, a.equipe from public.dgathe_agentes a
 			where a.lider and a.ativo and a.equipe is not null
-				and not (a.equipe = any($2::text[]))
 				and not exists (select 1 from public.dgathe_fechamentos f where f.agente_id = a.id and f.sexta = $1::date)
 			order by a.ordem, a.id`,
-			[periodo.sexta, [...EQUIPES_SEM_FECHAMENTO]]
+			[periodo.sexta]
 		);
 		for (const l of lideres) {
 			const r = await criarFechamento(l, periodo);
@@ -1230,7 +1230,7 @@ async function conferir() {
 		'Fechamento semanal:',
 		FECHAMENTO
 			? `ligado (sexta 17h de Brasília; o próximo sai em ${proxima.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' })})`
-			: 'DESLIGADO (DGATHE_FECHAMENTO=0)'
+			: 'desligado (o padrão desde 11/11/2026; DGATHE_FECHAMENTO=1 no ponte.env liga)'
 	);
 	await db.end();
 }

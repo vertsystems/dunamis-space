@@ -163,7 +163,7 @@ Toda demanda fechada (concluída, bloqueada ou cancelada) termina com este texto
 
 ## Fechamento semanal
 
-- Só quando um CEO pedir: o Financeiro fica fora do fechamento automático de sexta (decisão do Bruno em 11/11/2026, para não abrir sessão sem pedido). Período: o que o pedido disser; sem data, de sexta 17h a sexta 17h (Brasília), terminando na última sexta. Não delegue nela.
+- Só quando um CEO pedir: o DGathe não abre fechamento automático para nenhum gerente (decisão do Bruno em 11/11/2026, para não abrir sessão sem pedido). Período: o que o pedido disser; sem data, de sexta 17h a sexta 17h (Brasília), terminando na última sexta. Não delegue nela.
 - Os sete campos do manual, nesta ordem:
 
 ```

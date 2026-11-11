@@ -1,6 +1,7 @@
 // As equipes de agentes do DGathe (departamento de Desenvolvimento & IA, pedido
 // do Bruno em 10/11/2026): o líder delega subtarefas aos especialistas, a ponte
-// devolve o retorno deles e toda sexta cria o fechamento semanal. Aqui ficam as
+// devolve o retorno deles e monta o fechamento semanal (o automático de sexta só
+// com DGATHE_FECHAMENTO=1, desligado desde 11/11/2026). Aqui ficam as
 // decisões e os textos, sem banco nem processo, para dar para testar no vitest.
 // Quem usa: ponte/ponte.mjs (fim da rodada, retorno, fechamento) e
 // ponte/equipe.mjs (a linha de comando que o líder roda dentro da sessão).
@@ -53,19 +54,6 @@ const LIMITE_RETORNO = 38000;
 /** Cada entrega no retorno: o resto o líder lê com `estado <id>`. */
 const LIMITE_POR_ENTREGA = 8000;
 const LIMITE_ITENS_DO_FECHAMENTO = 60;
-
-/**
- * Equipes fora do fechamento semanal automático de sexta (decisão do Bruno em
- * 11/11/2026): o Financeiro fecha a semana só quando um CEO pede, para não abrir
- * sessão sem pedido. O `node ponte/ponte.mjs --fechamento <agente>` continua
- * valendo para elas.
- */
-export const EQUIPES_SEM_FECHAMENTO: readonly string[] = ['financeiro'];
-
-/** Se o líder desta equipe recebe o fechamento semanal automático. */
-export function temFechamentoAutomatico(equipe: string | null | undefined): boolean {
-	return !!equipe && !EQUIPES_SEM_FECHAMENTO.includes(equipe);
-}
 const LIMITE_SUBS_POR_ITEM = 40;
 
 // ------------------------------------------------------------ pequenas contas

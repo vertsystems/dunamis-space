@@ -53,7 +53,7 @@ n8n, Make e Zapier não estão em uso (nem conta, nem chave, nem fluxo). Adotar 
 |---|---|---|
 | Cron da Vercel | `vercel.json` + rota `+server.ts` que confere o `CRON_SECRET` | faxinas do SOS e do Pag's Up, robôs e relatórios do DMetric, `/api/manter-banco/` do PageLinks |
 | launchd no Mac | `~/Library/LaunchAgents/com.vertsystems.*.plist` | backup do dspace (dias 10 e 25), ponte do DGathe |
-| Fila da ponte do DGathe | `dunamisspace/ponte/ponte.mjs` | tarefas dos agentes, fechamento semanal de sexta às 17h |
+| Fila da ponte do DGathe | `dunamisspace/ponte/ponte.mjs` | tarefas dos agentes; fechamento semanal automático só com `DGATHE_FECHAMENTO=1` (desligado desde 11/11/2026) |
 | Webhook entre sistemas | rota com segredo próprio | DMetric ↔ PageLinks (`/api/dmetric/botoes`), coleta do DMetric em `/api/dm` |
 | Rotina do Contex OS | `/rotina` (`rotinas.md` + `node scripts/rotinas.js`) | nenhuma registrada ainda |
 

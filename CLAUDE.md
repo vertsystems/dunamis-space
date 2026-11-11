@@ -44,8 +44,9 @@ código, no banco e nos arquivos (`dgathe_agentes`, `agentes/`, `Agente`) contin
 `agentes/<equipe>/<id>.md` (cabeçalho + instruções, formato em [agentes/README.md](agentes/README.md)) e
 vai para o banco com `node ponte/agentes.mjs` (`--conferir` mostra sem gravar). O líder da equipe delega
 de dentro da sessão com `node ponte/equipe.mjs delegar` (subtarefas com `pai_id`); a tarefa dele fica
-`aguardando` até a equipe terminar, e a ponte devolve o retorno na mesma conversa. Toda sexta às 17h a
-ponte cria o fechamento semanal de cada líder. O contrato técnico é
+`aguardando` até a equipe terminar, e a ponte devolve o retorno na mesma conversa. O fechamento semanal
+só acontece quando um CEO pede: o automático de sexta foi desligado em 11/11/2026, a pedido do Bruno
+(`DGATHE_FECHAMENTO=1` no `ponte.env` liga de novo). O contrato técnico é
 [docs/dgathe/contrato-equipes.md](docs/dgathe/contrato-equipes.md) e os cargos do departamento de
 Desenvolvimento & IA estão em [docs/dgathe/cargos-dev-ia.md](docs/dgathe/cargos-dev-ia.md).
 
@@ -58,8 +59,8 @@ redistribuem para a equipe (dois níveis no máximo). A memória deles mora no C
 **Departamento Financeiro (desde 11/11/2026):** a equipe `financeiro` (Warren, o Gerente Financeiro, e
 sete especialistas, em `agentes/financeiro/`) segue o manual em `docs/dgathe/manual-departamento-financeiro.pdf`.
 Eles preparam e conferem; quem aprova e mexe no dinheiro são os CEOs. O trabalho e a memória moram em
-`dunamiscompany/financeiro/` (fora do git, porque o repositório do Contex OS é público), e o Financeiro
-fica fora do fechamento semanal automático (`EQUIPES_SEM_FECHAMENTO`). Seção 11 do contrato das equipes.
+`dunamiscompany/financeiro/` (fora do git, porque o repositório do Contex OS é público). Seção 11 do
+contrato das equipes.
 
 ## Como trabalhar
 

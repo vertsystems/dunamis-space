@@ -86,7 +86,7 @@ A aparência de cada um veio na migration 0110 (`barao`, `executivo` e `veterano
 `agentes/financeiro/` é a equipe do Financeiro: o Warren (Gerente Financeiro, líder) e sete
 especialistas (Ada, Benjamin, Silvio, Janet, Peter, Ray e Luca), um para cada cadeira do "Manual de
 Implementação · Departamento Financeiro" v1.0 ([`docs/dgathe/manual-departamento-financeiro.pdf`](../docs/dgathe/manual-departamento-financeiro.pdf)).
-Funciona como o dev (o Warren delega para a equipe; os diretores passam trabalho a ele), com três
+Funciona como o dev (o Warren delega para a equipe; os diretores passam trabalho a ele), com duas
 diferenças:
 
 - **Não mexem em dinheiro.** Preparam, conferem e propõem; um CEO aprova e uma pessoa paga, cobra
@@ -95,8 +95,6 @@ diferenças:
   trabalho (`financeiro/README.md`), a pasta de entrada, as demandas, os registros de pendências e
   de aprovações, o caderno de cada um e os cenários de aceite. A pasta está fora do git
   (`.git/info/exclude` da dunamiscompany), porque o repositório do Contex OS é público.
-- **Sem fechamento semanal automático** (decisão do Bruno em 11/11/2026): a equipe está em
-  `EQUIPES_SEM_FECHAMENTO` (`src/lib/dgathe/equipe.ts`) e fecha a semana só quando um CEO pede.
 
 As sete mesas repetem, palavra por palavra, as seções "Regras do Departamento Financeiro", "Como
 trabalhar aqui", "Como você aprende", "Permissões" e o formato da "Entrega". Mudou uma regra comum:

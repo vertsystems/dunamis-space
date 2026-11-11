@@ -384,7 +384,7 @@ se o CEO oferecer.
 - Só as mesas necessárias participam.
 
 **Entregas ao CEO:** o relatório de conclusão como texto final da tarefa, com cópia em
-`projetos/dev-ia/relatorios/` (seção 16); o fechamento semanal toda sexta às 17h (seção 17); a
+`projetos/dev-ia/relatorios/` (seção 16); o fechamento semanal (seção 17; o automático de sexta foi desligado em 11/11/2026); a
 sinalização de risco crítico e os pedidos de aprovação, pelo AskUserQuestion.
 
 ---
@@ -728,7 +728,7 @@ decisão do CEO (custo e credencial). Até lá, as "ferramentas equivalentes" s�
 |---|---|---|
 | Cron da Vercel | `vercel.json` + rota `+server.ts` que confere o `CRON_SECRET` | faxinas do SOS e do Pag's Up; robôs e relatórios do DMetric; `/api/manter-banco/` do PageLinks |
 | launchd no Mac | `~/Library/LaunchAgents/com.vertsystems.*.plist` | backup do dspace (dias 10 e 25); ponte do DGathe |
-| Fila da ponte do DGathe | `ponte/ponte.mjs` | tarefa dos agentes; fechamento semanal toda sexta às 17h (decisão 8) |
+| Fila da ponte do DGathe | `ponte/ponte.mjs` | tarefa dos agentes; fechamento semanal automático desligado desde 11/11/2026 (decisão 8) |
 | Webhook entre sistemas | rota com segredo próprio | DMetric ↔ PageLinks (`/api/dmetric/botoes`, `DMETRIC_PAGELINKS_SEGREDO`); coleta do DMetric em `/api/dm` |
 | Rotina do Contex OS | `/rotina` (`rotinas.md` + `node scripts/rotinas.js`) | nenhuma registrada (não achei `rotinas.md`) |
 
@@ -1264,7 +1264,7 @@ período, sem duplicar integralmente os relatórios individuais."
 Nota do manual: "O relatório semanal aproveita os registros já realizados. O envio automático exige
 uma rotina de agendamento e um canal de comunicação com o CEO."
 
-**No DGathe** (decisão 8): a ponte cria uma tarefa automática para cada líder ativo toda sexta às 17h
+**No DGathe** (decisão 8; desligado em 11/11/2026 a pedido do Bruno, o fechamento passou a sair quando o CEO pede): a ponte cria uma tarefa automática para cada líder ativo toda sexta às 17h
 (Brasília), uma única vez por semana, mesmo depois de reinício, com o que está no banco (tarefas e
 subtarefas da semana). O agendamento é a ponte; o canal é o próprio DGathe (o resultado da tarefa).
 

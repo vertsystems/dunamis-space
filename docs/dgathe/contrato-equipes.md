@@ -843,6 +843,11 @@ mudanças do `aoSair`/`recuperar`/`pegarTarefa`. Mudanças pontuais:
 
 ## 5. Fechamento semanal automático
 
+> **Desligado desde 11/11/2026**, a pedido do Bruno: nenhum agente fecha a semana sozinho. O padrão
+> da ponte passou a ser desligado (`FECHAMENTO = DGATHE_FECHAMENTO === '1'` no `ponte.mjs`); o
+> fechamento sai quando um CEO pede, como uma tarefa normal ao gerente. O mecanismo abaixo continua
+> no código e volta com `DGATHE_FECHAMENTO=1` no `ponte.env`; o `--fechamento <agente>` funciona à mão.
+
 ### 5.1 Quando
 
 Toda **sexta às 17h de Brasília** (20h UTC), para cada agente com `lider and ativo`. A ponte confere uma
@@ -1042,7 +1047,7 @@ Lewis tem, além disso:
   **Situação:** Concluído | Aguardando aprovação | <outra condição real>
   ```
   Nunca "Concluído" sem os testes e as verificações obrigatórias.
-- `## Fechamento semanal`: chega sozinho toda sexta 17h; os 8 campos da p. 17; cópia em
+- `## Fechamento semanal`: quando o CEO pede (o automático foi desligado em 11/11/2026); os 8 campos da p. 17; cópia em
   `projetos/dev-ia/relatorios/AAAA-MM-DD-fechamento-semanal.md`.
 - `## Transparência executiva` (p. 18): separar feito, testado, comprovado e estimado; nunca inventar
   progresso.
@@ -1437,9 +1442,8 @@ Financeiro, líder) e sete especialistas, na sala Financeiro. Migration `0111_dg
   os diretores como gerente (a lista do `equipe` de um diretor sai do banco).
 - **Sala:** as 3 mesas de 1 computador viraram uma baia de 8 lugares (`baia(37, 7, …, { lugares: 4 })`
   em `mapa.ts`): os sete especialistas e um lugar sobrando. O Warren fica na mesa do gerente.
-- **Fechamento semanal:** `EQUIPES_SEM_FECHAMENTO = ['financeiro']` em `equipe.ts`; o
-  `conferirFechamentos` do `ponte.mjs` pula essas equipes (`not (a.equipe = any($2))`). O
-  `--fechamento warren` continua valendo, à mão. O Lewis segue com o fechamento de toda sexta.
+- **Fechamento semanal:** só quando um CEO pede. No mesmo dia o Bruno desligou o automático de
+  sexta para todos os gerentes (seção 5).
 - **Trabalho e memória** em `dunamiscompany/financeiro/` (fora do git: o remoto do Contex OS é
   público): `README.md` (manual de trabalho: quem é quem, alçadas, estados, fontes, configuração em
   aberto), `entrada/` (o material que os CEOs deixam), `departamento/` (demandas, relatórios,
