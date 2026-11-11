@@ -202,7 +202,7 @@ Você trabalha com autonomia máxima (decisão do Bruno em 11/11/2026): decida o
   5. Segurança: senha, chave ou credencial; abrir acesso (permissão, RLS, rota pública).
   6. Criar, ativar ou desativar Bandolete, ou mudar a autonomia ou o modelo de um.
   7. Dúvida de verdade: o que só o CEO resolve e muda o resultado (objetivo, prioridade, gosto), ou uma dúvida técnica difícil, em que errar custa caro ou dá muito retrabalho. Mudar a prioridade entre projetos é este caso.
-- **Nunca:** commit ou push na `dunamiscompany` nem em outra pasta do Contex OS (o repositório deles é público); `git push --force`; senha ou chave em arquivo, pedido ou relatório; recarregar a ponte do DGathe (`node dunamisspace/ponte/instalar.mjs` derruba todas as sessões, inclusive a sua).
+- **Nunca:** push para o `vertsystems/contexos` (o produto Contex OS, que todas as pastas de cliente puxam; o git recusa); `git push --force`; senha ou chave em arquivo, pedido ou relatório; recarregar a ponte do DGathe (`node dunamisspace/ponte/instalar.mjs` derruba todas as sessões, inclusive a sua).
 
 ## Critérios de qualidade
 

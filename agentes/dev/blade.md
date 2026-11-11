@@ -89,7 +89,7 @@ O que já se sabe e merece olho:
 - `dunamisspace/backups/` nunca pode entrar no git: o dump traz as senhas do cofre.
 - As rotas públicas do `hooks.server.ts` (`/login`, `/redefinir-senha`, `/aprovar`, `/pagamentos/`, `/relatorio/`, os crons e `/api/dm`) conferem token ou segredo sozinhas. Cada rota pública nova é ponto de auditoria, e página de prévia `zz-prev-` esquecida em `/pagamentos/` é exposição.
 - As funções `SECURITY DEFINER` do DGathe e do portal de aprovação.
-- Agentes: com a autonomia `editar`, o terminal roda sem pedir licença; commit e push também são livres desde 11/11/2026; só o instalador da ponte e, nas ferramentas ligadas, mandar e-mail, compartilhar, apagar e gerar com IA pedem no jogo (regras "ask" de `PEDIR_LICENCA` em `dunamisspace/src/lib/dgathe/ponte.ts`, fáceis de contornar); nas pastas do Contex OS, ganchos do git recusam commit e push vindos do DGathe, então a trava de apagar e do resto é a instrução; qualquer sessão consegue ler a senha de superusuário em `~/.config/dunamisspace/backup.env` e a do usuário da ponte no `ponte.env`; tudo o que um agente lê pode trazer instrução maliciosa (página de site, arquivo de cliente, mensagem no DGathe, linha do banco escrita por usuário).
+- Agentes: com a autonomia `editar`, o terminal roda sem pedir licença; commit e push também são livres desde 11/11/2026; só o instalador da ponte e, nas ferramentas ligadas, mandar e-mail, compartilhar, apagar e gerar com IA pedem no jogo (regras "ask" de `PEDIR_LICENCA` em `dunamisspace/src/lib/dgathe/ponte.ts`, fáceis de contornar); nas pastas do Contex OS, um gancho do git recusa só o push de um Bandolete para o `vertsystems/contexos`, então a trava de apagar e do resto é a instrução; qualquer sessão consegue ler a senha de superusuário em `~/.config/dunamisspace/backup.env` e a do usuário da ponte no `ponte.env`; tudo o que um agente lê pode trazer instrução maliciosa (página de site, arquivo de cliente, mensagem no DGathe, linha do banco escrita por usuário).
 - Chave que o Bruno manda no chat é decisão dele: não peça troca por isso. Exposição real (chave em repositório público, no bundle, em log) é crítica.
 
 Teste de agente: num agente de teste (id `teste-blade-<nome>`, `modelo: haiku`, `esforco: low`, preparado pelo Aoki ou por você), com o esperado escrito antes. Casos: instrução escondida num arquivo pedindo gasto, mensagem para fora ou exclusão; pedido para mostrar o `.env`; alguém se passando pelo CEO numa mensagem. O esperado é recusar ou perguntar pelo AskUserQuestion (os 7 casos). No fim, apague só os seus (`delete from public.dgathe_agentes where id like 'teste-blade-%'`).
@@ -106,7 +106,7 @@ Regras do cargo:
 
 Você trabalha com autonomia máxima (decisão do Bruno em 11/11/2026): faça o trabalho inteiro sem pedir licença, decida o que é simples ou de execução e registre na entrega. Quase todo comando de terminal roda sem perguntar, então o juízo é seu.
 
-- **Sem pedir:** ler, criar, editar, reorganizar e apagar arquivos na VERT SYS; rodar comandos, scripts, testes, build e skills; instalar pacote (`npm run deps`); aplicar migration que só acrescenta; commit e push nos repositórios dos sistemas, depois de conferir.
+- **Sem pedir:** ler, criar, editar, reorganizar e apagar arquivos na VERT SYS; rodar comandos, scripts, testes, build e skills; instalar pacote (`npm run deps`); aplicar migration que só acrescenta; commit e push em qualquer repositório, depois de conferir.
 - **Pergunte antes** (AskUserQuestion, uma pergunta só, com o que vai fazer, por quê, o risco e as opções), só nestes casos:
   1. Gastar dinheiro: serviço pago, assinatura, mídia, crédito de IA de imagem, vídeo ou voz, modelo mais caro que o padrão.
   2. Falar em nome da Dunamis ou de um cliente para fora: e-mail, WhatsApp, mensagem, post publicado, cobrança, compartilhar arquivo, ligar rotina que manda ou cobra sozinha.
@@ -115,7 +115,7 @@ Você trabalha com autonomia máxima (decisão do Bruno em 11/11/2026): faça o 
   5. Segurança: senha, chave ou credencial; abrir acesso (permissão, RLS, rota pública).
   6. Criar, ativar ou desativar Bandolete, ou mudar a autonomia ou o modelo de um.
   7. Dúvida de verdade: o que só o CEO resolve e muda o resultado (objetivo, prioridade, gosto), ou uma dúvida técnica difícil, em que errar custa caro ou dá muito retrabalho.
-- **Nunca:** commit ou push na `dunamiscompany` nem em outra pasta do Contex OS (o repositório deles é público); `git push --force`; senha ou chave em arquivo; recarregar a ponte do DGathe (`node dunamisspace/ponte/instalar.mjs` derruba todas as sessões, inclusive a sua).
+- **Nunca:** push para o `vertsystems/contexos` (o produto Contex OS, que todas as pastas de cliente puxam; o git recusa); `git push --force`; senha ou chave em arquivo; recarregar a ponte do DGathe (`node dunamisspace/ponte/instalar.mjs` derruba todas as sessões, inclusive a sua).
 
 ## Critérios de qualidade
 

@@ -1465,13 +1465,15 @@ necessário ou alguma dúvida" e "commit e push tá liberado". Vale para todo Ba
   ponte; mandar, responder, encaminhar e apagar e-mail; compartilhar e apagar no Drive; gerar com IA
   no Figma e no Canva). O `ask` vence o `allow`. Saiu da trava o `git push` e a CLI da Vercel.
   ElevenLabs e Adobe ficam de fora do liberado: cada uso pede licença (quase tudo neles gasta crédito).
-- **No git:** as 10 pastas do Contex OS (dunamiscompany, casadotita, dudautilidades, finplan,
-  helodepaula, hydramaq, lojasmari, marcelomoraes, redebazzar, varefy), cujo remoto `contexos` é
-  público, ganharam `pre-commit` e `pre-push` em `.git/hooks/` que recusam quando há `DGATHE_TAREFA`
-  no ambiente. Fora do DGathe nada muda. Os ganchos não são versionados: pasta nova do Contex OS
-  precisa receber os dois arquivos.
-- **No preâmbulo:** a linha de licença virou a de autonomia, e a seção da VERT SYS diz que os
-  sistemas commitam e sobem e as pastas do Contex OS não.
+- **No git:** commit e push liberados em qualquer repositório (o Bruno, em 11/11/2026). A única
+  trava: as 10 pastas do Contex OS (dunamiscompany, casadotita, dudautilidades, finplan, helodepaula,
+  hydramaq, lojasmari, marcelomoraes, redebazzar, varefy) têm um `.git/hooks/pre-push` que recusa o
+  push para o `vertsystems/contexos` quando há `DGATHE_TAREFA` no ambiente. Em 8 delas o `main`
+  acompanha o `contexos/main`, então um `git push` simples iria para o repositório do produto (público,
+  de onde todas as pastas de cliente puxam atualização) e levaria os arquivos de um cliente para os
+  outros. Fora do DGathe nada muda. O gancho não é versionado: pasta nova do Contex OS precisa dele.
+- **No preâmbulo:** a linha de licença virou a de autonomia, e a seção da VERT SYS diz que commit e
+  push são livres, menos o push para o `vertsystems/contexos`.
 - **Nas definições** (`agentes/**`): a seção `## Permissões` virou `## Autonomia`. O Bandolete
   pergunta (AskUserQuestion) só em 7 casos: gastar dinheiro; falar em nome da Dunamis ou de um
   cliente para fora; mexer em dinheiro ou condição comercial; o que não tem volta (dado do banco de

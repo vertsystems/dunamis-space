@@ -113,7 +113,7 @@ export function secaoDaBase(a: Pick<AgenteDaPonte, 'pasta'>, base: BaseDoPreambu
 		`Você enxerga e edita a pasta VERT SYS inteira (${base.caminho}), onde ficam os projetos do grupo: a Dunamis, as marcas, os sistemas e uma pasta para cada cliente. A sua pasta de trabalho continua sendo ${a.pasta}.`,
 		'- Antes de mexer no projeto de um cliente ou de outra marca, leia o CLAUDE.md e a _memoria/ da pasta dele e siga as regras e a identidade de lá. Nunca misture marca, tom, dado ou arquivo de um cliente com o de outro.',
 		'- Skill própria de outra pasta fica em <pasta>/.claude/skills/<nome>/SKILL.md: quando o pedido for daquele projeto, leia e siga a de lá.',
-		'- Os sistemas têm repositório git próprio (dspace, PageLinks, MariHub e os outros): commit e push liberados, depois de conferir. As pastas do Contex OS (a dunamiscompany e as de cliente e de marca) não se commitam nem sobem: o repositório delas é público, e o git recusa.'
+		'- Commit e push liberados em qualquer repositório da VERT SYS, depois de conferir. A única exceção é o push para o vertsystems/contexos (o produto Contex OS, de onde as pastas de cliente puxam atualização): o git recusa, porque levaria os arquivos de um cliente para os outros.'
 	];
 	if (base.pastas.length) {
 		linhas.push('As pastas de agora:');
