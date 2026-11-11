@@ -75,7 +75,7 @@ contrato das equipes.
   11/11/2026), depois de conferir; no departamento de Desenvolvimento & IA quem publica é o Smith,
   assim que o QA passa. Numa sessão aberta pela ponte (com `DGATHE_TAREFA` no ambiente), eles só
   perguntam no jogo antes de gastar dinheiro, falar para fora, mexer em dinheiro, apagar o que não
-  tem volta, mexer em senha ou acesso, criar Bandolete ou numa dúvida que só o CEO resolve (seção 12
+  tem volta, mexer em senha ou acesso, criar Bandolete ou numa dúvida de verdade, do negócio ou técnica difícil (seção 12
   do contrato das equipes). `node ponte/instalar.mjs` nunca roda de dentro de uma sessão: ele derruba
   todas, inclusive a de quem rodou
 - Avisar antes do que mexe no banco de produção (migration, ensaio de carga) e do que apaga dados.

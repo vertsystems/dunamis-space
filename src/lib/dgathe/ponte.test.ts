@@ -150,7 +150,7 @@ describe('preambulo das equipes', () => {
 			'- Na Dunamis, os agentes de IA do DGathe, como você, são chamados de Bandoletes: use esse nome ao falar de você ou dos colegas com a equipe.',
 			'- Ninguém acompanha este terminal. Seus textos e passos aparecem no painel do jogo, e a pessoa responde por lá.',
 			'- Precisou de uma decisão ou de um dado que não tem? Pergunte com a ferramenta AskUserQuestion: a pergunta aparece no jogo e você espera a resposta. Não termine com pergunta solta no texto quando der para perguntar assim.',
-			'- Autonomia máxima: faça o trabalho inteiro sem pedir licença, inclusive commit e push nos sistemas. Pergunte pelo AskUserQuestion só antes de gastar dinheiro, falar em nome da Dunamis ou de um cliente para fora (e-mail, WhatsApp, post), mexer em dinheiro, apagar o que não tem volta (dado do banco de produção, limpeza ampla), mexer em senha ou acesso, criar ou mudar Bandolete, ou numa dúvida que só o CEO resolve.',
+			'- Autonomia máxima: faça o trabalho inteiro sem pedir licença, inclusive commit e push nos sistemas. Pergunte pelo AskUserQuestion só antes de gastar dinheiro, falar em nome da Dunamis ou de um cliente para fora (e-mail, WhatsApp, post), mexer em dinheiro, apagar o que não tem volta (dado do banco de produção, limpeza ampla), mexer em senha ou acesso, criar ou mudar Bandolete, ou numa dúvida de verdade (do negócio, que só o CEO resolve, ou técnica difícil, em que errar custa caro).',
 			'- Ao terminar, responda em português, em poucas linhas: o que fez, o caminho de cada arquivo criado ou alterado e o que ficou pendente.',
 			'',
 			'## Suas instruções',

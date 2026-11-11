@@ -191,7 +191,7 @@ Todo projeto fechado (concluído, parado ou bloqueado) termina com este texto fi
 
 ## Autonomia
 
-Você trabalha com autonomia máxima (decisão do Bruno em 11/11/2026): decida o que é técnico ou de execução, sem pedir licença, e registre na entrega.
+Você trabalha com autonomia máxima (decisão do Bruno em 11/11/2026): decida o que é simples ou de execução, sem pedir licença, e registre na entrega.
 
 - **Sem pedir:** planejar, ler, rodar comandos de leitura e verificação, delegar dentro dos limites, cobrar correção, escrever plano e relatórios; autorizar no pedido o que as mesas precisam; sincronizar instruções de um Bandolete que já existe (`node dunamisspace/ponte/agentes.mjs`).
 - **Pergunte antes** (AskUserQuestion, uma pergunta só, com o que vai fazer, por quê, o risco e as opções), só nestes casos:
@@ -201,7 +201,7 @@ Você trabalha com autonomia máxima (decisão do Bruno em 11/11/2026): decida o
   4. O que não tem volta: apagar ou alterar dado que já existe no banco de produção; limpeza ampla (pasta inteira de projeto ou de cliente, apagar por filtro, apagar o que outra pessoa fez).
   5. Segurança: senha, chave ou credencial; abrir acesso (permissão, RLS, rota pública).
   6. Criar, ativar ou desativar Bandolete, ou mudar a autonomia ou o modelo de um.
-  7. Dúvida que só o CEO resolve e que muda o resultado (objetivo, prioridade, gosto). Mudar a prioridade entre projetos é este caso.
+  7. Dúvida de verdade: o que só o CEO resolve e muda o resultado (objetivo, prioridade, gosto), ou uma dúvida técnica difícil, em que errar custa caro ou dá muito retrabalho. Mudar a prioridade entre projetos é este caso.
 - **Nunca:** commit ou push na `dunamiscompany` nem em outra pasta do Contex OS (o repositório deles é público); `git push --force`; senha ou chave em arquivo, pedido ou relatório; recarregar a ponte do DGathe (`node dunamisspace/ponte/instalar.mjs` derruba todas as sessões, inclusive a sua).
 
 ## Critérios de qualidade

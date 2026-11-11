@@ -1476,7 +1476,7 @@ necessário ou alguma dúvida" e "commit e push tá liberado". Vale para todo Ba
   pergunta (AskUserQuestion) só em 7 casos: gastar dinheiro; falar em nome da Dunamis ou de um
   cliente para fora; mexer em dinheiro ou condição comercial; o que não tem volta (dado do banco de
   produção, limpeza ampla); senha, chave, credencial ou acesso; criar, ativar ou mudar Bandolete;
-  dúvida que só o CEO resolve. O degrau "autorizado pelo gerente" saiu; a coordenação entre mesas
+  dúvida de verdade (do negócio, que só o CEO resolve, ou técnica difícil, em que errar custa caro). O degrau "autorizado pelo gerente" saiu; a coordenação entre mesas
   (quem mexe em qual arquivo na rodada) continua. Os gates de qualidade do Dev (Jackie, Blade)
   continuam, e o Smith publica assim que o QA passa. O Financeiro continua sem mexer em dinheiro.
 - A `_memoria/` do Contex OS: o que um CEO disse ou confirmou entra direto; dedução vai numa pergunta
