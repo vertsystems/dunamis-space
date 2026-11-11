@@ -1,5 +1,10 @@
 # Cargos do Departamento de Desenvolvimento & IA
 
+> **Autonomia máxima desde 11/11/2026** (decisão do Bruno): as regras de aprovação deste documento
+> (publicar com o CEO, "autorizado pelo gerente", ponto P2) foram substituídas pela seção
+> `## Autonomia` de cada agente e pela seção 12 de `contrato-equipes.md`. Commit e push são livres;
+> o Smith publica assim que o QA passa. O resto do documento continua valendo.
+
 > Base para quem escreve as instruções de cada agente (`agentes/dev/<id>.md`).
 > Fonte: `docs/dgathe/manual-departamento-dev-ia.pdf` (19 páginas, novembro de 2026), lido inteiro em
 > 10/11/2026, mais o que existe hoje nos sistemas da Dunamis, conferido por comando no mesmo dia.

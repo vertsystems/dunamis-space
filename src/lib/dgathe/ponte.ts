@@ -90,7 +90,7 @@ export function preambulo(
 		'- Na Dunamis, os agentes de IA do DGathe, como você, são chamados de Bandoletes: use esse nome ao falar de você ou dos colegas com a equipe.',
 		'- Ninguém acompanha este terminal. Seus textos e passos aparecem no painel do jogo, e a pessoa responde por lá.',
 		'- Precisou de uma decisão ou de um dado que não tem? Pergunte com a ferramenta AskUserQuestion: a pergunta aparece no jogo e você espera a resposta. Não termine com pergunta solta no texto quando der para perguntar assim.',
-		'- Antes de publicar, mandar algo para fora (e-mail, WhatsApp, post), gastar dinheiro ou apagar arquivo, pergunte pelo AskUserQuestion, a não ser que as instruções abaixo liberem.',
+		'- Autonomia máxima: faça o trabalho inteiro sem pedir licença, inclusive commit e push nos sistemas. Pergunte pelo AskUserQuestion só antes de gastar dinheiro, falar em nome da Dunamis ou de um cliente para fora (e-mail, WhatsApp, post), mexer em dinheiro, apagar o que não tem volta (dado do banco de produção, limpeza ampla), mexer em senha ou acesso, criar ou mudar Bandolete, ou numa dúvida que só o CEO resolve.',
 		'- Ao terminar, responda em português, em poucas linhas: o que fez, o caminho de cada arquivo criado ou alterado e o que ficou pendente.'
 	];
 	if (base) linhas.push('', ...secaoDaBase(a, base));
@@ -113,7 +113,7 @@ export function secaoDaBase(a: Pick<AgenteDaPonte, 'pasta'>, base: BaseDoPreambu
 		`Você enxerga e edita a pasta VERT SYS inteira (${base.caminho}), onde ficam os projetos do grupo: a Dunamis, as marcas, os sistemas e uma pasta para cada cliente. A sua pasta de trabalho continua sendo ${a.pasta}.`,
 		'- Antes de mexer no projeto de um cliente ou de outra marca, leia o CLAUDE.md e a _memoria/ da pasta dele e siga as regras e a identidade de lá. Nunca misture marca, tom, dado ou arquivo de um cliente com o de outro.',
 		'- Skill própria de outra pasta fica em <pasta>/.claude/skills/<nome>/SKILL.md: quando o pedido for daquele projeto, leia e siga a de lá.',
-		'- Os sistemas têm repositório git próprio; nas pastas de cliente e de marca não se commita sem o CEO pedir.'
+		'- Os sistemas têm repositório git próprio (dspace, PageLinks, MariHub e os outros): commit e push liberados, depois de conferir. As pastas do Contex OS (a dunamiscompany e as de cliente e de marca) não se commitam nem sobem: o repositório delas é público, e o git recusa.'
 	];
 	if (base.pastas.length) {
 		linhas.push('As pastas de agora:');
@@ -230,24 +230,38 @@ function secaoDoEspecialista(equipe: string, t: Pick<TarefaDaPonte, 'pai_id'>, q
 }
 
 /**
- * O que um agente de equipe com autonomia `editar` só roda com licença no
- * jogo. O Mac do Bruno libera o terminal inteiro, e o departamento só pode
- * publicar com a aprovação do CEO (decisão 10; ponto P2 de
- * docs/dgathe/cargos-dev-ia.md): push (no dspace é deploy; os repositórios são
- * públicos), a CLI da Vercel (deploy, rollback, variáveis) e o instalador da
- * ponte, que derruba todas as sessões (o `--status` continua livre). O "ask"
- * vence o "allow" das configurações do Mac e pega também o comando depois de
- * `cd … &&` (testado em 10/11/2026 com o Claude Code 2.1.321). É trava contra
- * engano, não contra má-fé: `git -C pasta push` ou um script escapam.
+ * Autonomia máxima (decisão do Bruno em 11/11/2026: "commit e push tá liberado,
+ * sem ficar me pedindo toda hora"). Com autonomia `editar`, o Bandolete não pede
+ * licença para editar em qualquer pasta (inclusive fora da VERT SYS, como os
+ * Downloads), buscar e ler na web, commitar e publicar (o terminal inteiro já é
+ * liberado nas configurações do Mac) nem para usar o Gmail, o Drive, o Claude
+ * Docs, o Figma e o Canva ligados à conta.
  */
-export const PEDIR_LICENCA_NA_EQUIPE = [
-	'Bash(git push)',
-	'Bash(git push:*)',
-	'Bash(npx vercel:*)',
-	'Bash(npx -y vercel:*)',
-	'Bash(npx vercel@latest:*)',
-	'Bash(npx -y vercel@latest:*)',
-	'Bash(vercel:*)',
+export const LIBERADO_SEM_PEDIR = [
+	'Write',
+	'Edit',
+	'NotebookEdit',
+	'WebFetch',
+	'WebSearch',
+	'mcp__claude_ai_Gmail',
+	'mcp__claude_ai_Google_Drive',
+	'mcp__claude_ai_Claude_Docs',
+	'mcp__claude_ai_Figma',
+	'mcp__claude_ai_Canva'
+];
+
+/**
+ * O que continua pedindo licença no jogo, mesmo liberado acima: o instalador da
+ * ponte, que derruba todas as sessões (o `--status` continua livre), e, nas
+ * ferramentas ligadas, o que fala para fora em nome da Dunamis (mandar,
+ * responder ou encaminhar e-mail; compartilhar no Drive), apaga (lixeira do
+ * Gmail e do Drive) ou gera com IA, que gasta crédito. O "ask" vence o "allow"
+ * e pega também o comando depois de `cd … &&` (testado em 10/11/2026 com o
+ * Claude Code 2.1.321). O ElevenLabs e o Adobe ficam fora do liberado: cada uso
+ * pede licença, porque quase tudo neles gasta crédito. É trava contra engano,
+ * não contra má-fé.
+ */
+export const PEDIR_LICENCA = [
 	'Bash(node ponte/instalar.mjs)',
 	'Bash(node dunamisspace/ponte/instalar.mjs)',
 	'Bash(node ponte/instalar.mjs --parar:*)',
@@ -255,7 +269,22 @@ export const PEDIR_LICENCA_NA_EQUIPE = [
 	'Bash(node ponte/instalar.mjs --senha-nova:*)',
 	'Bash(node dunamisspace/ponte/instalar.mjs --senha-nova:*)',
 	'Bash(node ponte/instalar.mjs --sem-launchd:*)',
-	'Bash(node dunamisspace/ponte/instalar.mjs --sem-launchd:*)'
+	'Bash(node dunamisspace/ponte/instalar.mjs --sem-launchd:*)',
+	'mcp__claude_ai_Gmail__send_message',
+	'mcp__claude_ai_Gmail__reply',
+	'mcp__claude_ai_Gmail__forward',
+	'mcp__claude_ai_Gmail__trash_message',
+	'mcp__claude_ai_Gmail__trash_thread',
+	'mcp__claude_ai_Google_Drive__share_file',
+	'mcp__claude_ai_Google_Drive__trash_file',
+	'mcp__claude_ai_Figma__generate_image',
+	'mcp__claude_ai_Figma__generate_vector_illustration',
+	'mcp__claude_ai_Figma__weave_run_model',
+	'mcp__claude_ai_Figma__weave_run_tool',
+	'mcp__claude_ai_Canva__generate-image',
+	'mcp__claude_ai_Canva__generate-design',
+	'mcp__claude_ai_Canva__generate-design-structured',
+	'mcp__claude_ai_Canva__create-video'
 ];
 
 /** Os argumentos do Claude Code para uma rodada da tarefa. */
@@ -280,8 +309,8 @@ export function argumentosDoClaude(
 		args.push('--permission-mode', 'default', '--settings', JSON.stringify({ permissions: { ask: ['Bash', 'PowerShell'] } }));
 	else {
 		args.push('--permission-mode', 'acceptEdits');
-		// Agente de equipe (diretoria inclusive): publicar e mexer na ponte voltam a pedir licença (o assessor não muda)
-		if (a.equipe?.trim()) args.push('--settings', JSON.stringify({ permissions: { ask: PEDIR_LICENCA_NA_EQUIPE } }));
+		// Autonomia máxima (11/11/2026), para todo Bandolete com editar, com equipe ou não
+		args.push('--settings', JSON.stringify({ permissions: { allow: LIBERADO_SEM_PEDIR, ask: PEDIR_LICENCA } }));
 	}
 	if (o.retomar) args.push('--resume', o.sessao);
 	else args.push('--session-id', o.sessao);

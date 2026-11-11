@@ -144,8 +144,11 @@ O que ele garante:
 ## Quem pode sincronizar
 
 Criar, ativar ou desativar agente, mudar a autonomia para `livre` ou trocar o modelo do padrão é
-decisão do CEO. Mexer só nas instruções passa pelo gerente da equipe (ver
-`docs/dgathe/cargos-dev-ia.md`, seção 3.1). O `--conferir` é livre: não grava nada.
+decisão do CEO. Mexer só nas instruções de um agente que já existe e sincronizar é livre desde
+11/11/2026 (autonomia máxima): registre na entrega o que mudou. O `--conferir` não grava nada.
+
+Toda definição tem a seção `## Autonomia` (no lugar da antiga `## Permissões`), com os 7 casos em
+que o Bandolete ainda pergunta ao CEO. A regra inteira está na seção 12 do contrato das equipes.
 
 ## Testar sem mexer nos agentes de verdade
 

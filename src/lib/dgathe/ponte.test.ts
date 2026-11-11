@@ -6,7 +6,8 @@ import {
 	modeloDaSessao,
 	nomeDaSessao,
 	pastasDaBase,
-	PEDIR_LICENCA_NA_EQUIPE,
+	LIBERADO_SEM_PEDIR,
+	PEDIR_LICENCA,
 	preambulo,
 	resolverPasta,
 	respostaParaOClaude,
@@ -68,17 +69,24 @@ describe('argumentosDoClaude', () => {
 		// O terminal volta a pedir licença, mesmo liberado nas configurações do Mac
 		expect(JSON.parse(valor(p, '--settings')).permissions.ask).toContain('Bash');
 	});
-	it('agente de equipe com editar pede licença para publicar e mexer na ponte; o assessor não muda', () => {
-		const dev = argumentosDoClaude(agente({ id: 'smith', equipe: 'dev', autonomia: 'editar' }), o);
-		expect(valor(dev, '--permission-mode')).toBe('acceptEdits');
-		const ask: string[] = JSON.parse(valor(dev, '--settings')).permissions.ask;
-		expect(ask).toEqual(PEDIR_LICENCA_NA_EQUIPE);
-		for (const r of ['Bash(git push:*)', 'Bash(npx -y vercel@latest:*)', 'Bash(node dunamisspace/ponte/instalar.mjs)']) expect(ask).toContain(r);
-		// O --status é leitura e continua sem pedir
-		expect(ask.some((r) => r.includes('--status'))).toBe(false);
-		// Sem equipe (o assessor) e com equipe vazia: igual a antes
-		expect(argumentosDoClaude(agente(), o)).not.toContain('--settings');
-		expect(argumentosDoClaude(agente({ equipe: '  ' }), o)).not.toContain('--settings');
+	it('autonomia máxima (11/11/2026): editar libera commit, push, edição e as ferramentas ligadas; só a ponte e o que fala para fora pedem', () => {
+		for (const a of [agente({ id: 'smith', equipe: 'dev', autonomia: 'editar' }), agente({ id: 'sun', equipe: 'diretoria', autonomia: 'editar' }), agente()]) {
+			const args = argumentosDoClaude(a, o);
+			expect(valor(args, '--permission-mode')).toBe('acceptEdits');
+			const { allow, ask } = JSON.parse(valor(args, '--settings')).permissions as { allow: string[]; ask: string[] };
+			expect(allow).toEqual(LIBERADO_SEM_PEDIR);
+			expect(ask).toEqual(PEDIR_LICENCA);
+		}
+		// Publicar não pede mais licença
+		expect(PEDIR_LICENCA.some((r) => /git push|vercel/.test(r))).toBe(false);
+		// A ponte continua pedindo; o --status é leitura e continua livre
+		expect(PEDIR_LICENCA).toContain('Bash(node dunamisspace/ponte/instalar.mjs)');
+		expect(PEDIR_LICENCA.some((r) => r.includes('--status'))).toBe(false);
+		// Mandar e-mail e compartilhar arquivo pedem; ler o Gmail e o Drive não
+		for (const r of ['mcp__claude_ai_Gmail__send_message', 'mcp__claude_ai_Google_Drive__share_file']) expect(PEDIR_LICENCA).toContain(r);
+		for (const r of ['mcp__claude_ai_Gmail', 'mcp__claude_ai_Google_Drive', 'Write', 'WebFetch']) expect(LIBERADO_SEM_PEDIR).toContain(r);
+		// Toda regra de pedir dentro de um servidor liberado é de uma ferramenta só
+		for (const r of PEDIR_LICENCA.filter((x) => x.startsWith('mcp__'))) expect(r.split('__')).toHaveLength(3);
 		// perguntar já pede para todo o terminal; livre é decisão do CEO
 		expect(JSON.parse(valor(argumentosDoClaude(agente({ equipe: 'dev', autonomia: 'perguntar' }), o), '--settings')).permissions.ask).toEqual(['Bash', 'PowerShell']);
 		expect(argumentosDoClaude(agente({ equipe: 'dev', autonomia: 'livre' }), o)).not.toContain('--settings');
@@ -88,10 +96,6 @@ describe('argumentosDoClaude', () => {
 		expect(valor(a, '--add-dir')).toBe(BASE);
 		expect(a[a.indexOf('--add-dir') + 2]).toMatch(/^--/);
 		expect(argumentosDoClaude(agente(), o)).not.toContain('--add-dir');
-	});
-	it('diretoria pede licença para publicar, como as equipes', () => {
-		const d = argumentosDoClaude(agente({ id: 'sun', equipe: 'diretoria', autonomia: 'editar' }), o);
-		expect(JSON.parse(valor(d, '--settings')).permissions.ask).toEqual(PEDIR_LICENCA_NA_EQUIPE);
 	});
 	it('só passa modelo e esforço quando o agente tem', () => {
 		expect(argumentosDoClaude(agente(), o)).not.toContain('--model');
@@ -146,7 +150,7 @@ describe('preambulo das equipes', () => {
 			'- Na Dunamis, os agentes de IA do DGathe, como você, são chamados de Bandoletes: use esse nome ao falar de você ou dos colegas com a equipe.',
 			'- Ninguém acompanha este terminal. Seus textos e passos aparecem no painel do jogo, e a pessoa responde por lá.',
 			'- Precisou de uma decisão ou de um dado que não tem? Pergunte com a ferramenta AskUserQuestion: a pergunta aparece no jogo e você espera a resposta. Não termine com pergunta solta no texto quando der para perguntar assim.',
-			'- Antes de publicar, mandar algo para fora (e-mail, WhatsApp, post), gastar dinheiro ou apagar arquivo, pergunte pelo AskUserQuestion, a não ser que as instruções abaixo liberem.',
+			'- Autonomia máxima: faça o trabalho inteiro sem pedir licença, inclusive commit e push nos sistemas. Pergunte pelo AskUserQuestion só antes de gastar dinheiro, falar em nome da Dunamis ou de um cliente para fora (e-mail, WhatsApp, post), mexer em dinheiro, apagar o que não tem volta (dado do banco de produção, limpeza ampla), mexer em senha ou acesso, criar ou mudar Bandolete, ou numa dúvida que só o CEO resolve.',
 			'- Ao terminar, responda em português, em poucas linhas: o que fez, o caminho de cada arquivo criado ou alterado e o que ficou pendente.',
 			'',
 			'## Suas instruções',

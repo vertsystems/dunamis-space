@@ -71,10 +71,13 @@ contrato das equipes.
   `node_modules` e recria a pasta inteira dentro do Drive)
 - Terminou e passou na verificação: commit na `main` e push, sem pedir confirmação. O Bruno
   autorizou em 08/09/2026 ("suba direto para o dspace.verts.me")
-- **Os agentes do DGathe não seguem a regra de cima.** Numa sessão aberta pela ponte (com
-  `DGATHE_TAREFA` no ambiente), publicar passa pelo gerente e pela aprovação do CEO no jogo (as
-  instruções de cada um estão em `agentes/`), e `node ponte/instalar.mjs` nunca roda de dentro de
-  uma sessão: ele derruba todas, inclusive a de quem rodou
+- **Os agentes do DGathe também commitam e publicam sem pedir** (autonomia máxima, decisão do Bruno em
+  11/11/2026), depois de conferir; no departamento de Desenvolvimento & IA quem publica é o Smith,
+  assim que o QA passa. Numa sessão aberta pela ponte (com `DGATHE_TAREFA` no ambiente), eles só
+  perguntam no jogo antes de gastar dinheiro, falar para fora, mexer em dinheiro, apagar o que não
+  tem volta, mexer em senha ou acesso, criar Bandolete ou numa dúvida que só o CEO resolve (seção 12
+  do contrato das equipes). `node ponte/instalar.mjs` nunca roda de dentro de uma sessão: ele derruba
+  todas, inclusive a de quem rodou
 - Avisar antes do que mexe no banco de produção (migration, ensaio de carga) e do que apaga dados.
   O banco local é o de produção
 - Texto de tela e mensagem de commit em português

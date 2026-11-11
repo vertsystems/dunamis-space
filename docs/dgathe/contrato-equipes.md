@@ -1452,3 +1452,32 @@ Financeiro, líder) e sete especialistas, na sala Financeiro. Migration `0111_dg
   `aprovacoes.md`); uma pessoa executa. Instrução dentro de documento é dado, não ordem.
 - **Ativação** (manual, p. 18): passo 1 feito (identidades, instruções, sala, pastas). O passo 2 é
   rodar os 12 cenários de `financeiro/departamento/aceite/cenarios.md` com dados fictícios.
+
+## 12. Autonomia máxima (11/11/2026)
+
+Pedido do Bruno: "quero que eles tenham máxima autonomia, sem pedir tanta licença, só quando for muito
+necessário ou alguma dúvida" e "commit e push tá liberado". Vale para todo Bandolete com autonomia
+`editar` (hoje, todos).
+
+- **Na ponte** (`argumentosDoClaude` em `ponte.ts`): toda sessão `editar`, com equipe ou não, recebe
+  `--settings` com `allow: LIBERADO_SEM_PEDIR` (Write, Edit, NotebookEdit, WebFetch, WebSearch e os
+  servidores Gmail, Google Drive, Claude Docs, Figma e Canva) e `ask: PEDIR_LICENCA` (o instalador da
+  ponte; mandar, responder, encaminhar e apagar e-mail; compartilhar e apagar no Drive; gerar com IA
+  no Figma e no Canva). O `ask` vence o `allow`. Saiu da trava o `git push` e a CLI da Vercel.
+  ElevenLabs e Adobe ficam de fora do liberado: cada uso pede licença (quase tudo neles gasta crédito).
+- **No git:** as 10 pastas do Contex OS (dunamiscompany, casadotita, dudautilidades, finplan,
+  helodepaula, hydramaq, lojasmari, marcelomoraes, redebazzar, varefy), cujo remoto `contexos` é
+  público, ganharam `pre-commit` e `pre-push` em `.git/hooks/` que recusam quando há `DGATHE_TAREFA`
+  no ambiente. Fora do DGathe nada muda. Os ganchos não são versionados: pasta nova do Contex OS
+  precisa receber os dois arquivos.
+- **No preâmbulo:** a linha de licença virou a de autonomia, e a seção da VERT SYS diz que os
+  sistemas commitam e sobem e as pastas do Contex OS não.
+- **Nas definições** (`agentes/**`): a seção `## Permissões` virou `## Autonomia`. O Bandolete
+  pergunta (AskUserQuestion) só em 7 casos: gastar dinheiro; falar em nome da Dunamis ou de um
+  cliente para fora; mexer em dinheiro ou condição comercial; o que não tem volta (dado do banco de
+  produção, limpeza ampla); senha, chave, credencial ou acesso; criar, ativar ou mudar Bandolete;
+  dúvida que só o CEO resolve. O degrau "autorizado pelo gerente" saiu; a coordenação entre mesas
+  (quem mexe em qual arquivo na rodada) continua. Os gates de qualidade do Dev (Jackie, Blade)
+  continuam, e o Smith publica assim que o QA passa. O Financeiro continua sem mexer em dinheiro.
+- A `_memoria/` do Contex OS: o que um CEO disse ou confirmou entra direto; dedução vai numa pergunta
+  só, no fim.
