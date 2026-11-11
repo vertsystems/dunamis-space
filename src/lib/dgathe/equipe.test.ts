@@ -16,6 +16,7 @@ import {
 	proximoFechamento,
 	rodadaAtual,
 	rodadasUsadas,
+	textoDaDiretoria,
 	textoDaEquipe,
 	textoDaSubtarefa,
 	textoDeAjuda,
@@ -156,6 +157,74 @@ describe('verificarDelegacao (tabela 3.2, na ordem)', () => {
 	});
 });
 
+describe('diretoria (11/11/2026): diretor → gerente → equipe', () => {
+	const SUN = agente('sun', { nome: 'Sun', cargo: 'Diretor Estratégico', equipe: 'diretoria' });
+	const PEP = agente('pep', { nome: 'Pep', cargo: 'Diretor Tático', equipe: 'diretoria' });
+	const WAGNER = agente('assessor', { nome: 'Wagner', cargo: 'Assessor do Bruno', equipe: null });
+	const doDiretor = (extra: Partial<Parameters<typeof verificarDelegacao>[0]> = {}) =>
+		verificarDelegacao({
+			tarefa: tarefa({ agente_id: 'sun' }),
+			eu: SUN,
+			destinoId: 'lewis',
+			destino: LEWIS,
+			subtarefas: [],
+			pedido: 'Monte o painel.',
+			...extra
+		});
+
+	it('o diretor passa para o gerente de qualquer equipe', () => {
+		expect(doDiretor()).toBeNull();
+		expect(doDiretor({ destino: { ...LEWIS, equipe: 'marketing' } })).toBeNull();
+	});
+	it('o diretor não passa para especialista, assessor nem outro diretor', () => {
+		for (const destino of [CLOVIS, WAGNER, PEP]) {
+			const r = doDiretor({ destinoId: destino.id, destino });
+			expect(r?.codigo).toBe('equipe');
+			expect(r?.mensagem).toContain('não é gerente de equipe');
+		}
+		expect(doDiretor({ destinoId: 'sun', destino: SUN })?.codigo).toBe('si');
+		expect(doDiretor({ destinoId: 'x', destino: null })?.mensagem).toBe('Não existe agente "x". Veja os gerentes com: node "$DGATHE_EQUIPE" equipe');
+	});
+	it('o diretor só delega da tarefa que recebeu dos CEOs', () => {
+		expect(doDiretor({ tarefa: tarefa({ agente_id: 'sun', pai_id: 'p' }), acima: { equipe: 'diretoria', pai_id: null } })?.codigo).toBe('profundidade');
+	});
+	it('o gerente redistribui a tarefa que veio de um diretor (segundo nível)', () => {
+		const sub = tarefa({ pai_id: 'tarefa-do-sun' });
+		expect(pode({ tarefa: sub, acima: { equipe: 'diretoria', pai_id: null } })).toBeNull();
+		// Veio de outro gerente, de um assessor ou sem saber de onde: continua barrado
+		expect(pode({ tarefa: sub, acima: { equipe: 'dev', pai_id: null } })?.codigo).toBe('profundidade');
+		expect(pode({ tarefa: sub, acima: { equipe: null, pai_id: null } })?.codigo).toBe('profundidade');
+		expect(pode({ tarefa: sub })?.codigo).toBe('profundidade');
+		// Terceiro nível nunca
+		expect(pode({ tarefa: sub, acima: { equipe: 'diretoria', pai_id: 'mais-acima' } })?.codigo).toBe('profundidade');
+		// No segundo nível, só para a própria equipe
+		expect(pode({ tarefa: sub, acima: { equipe: 'diretoria', pai_id: null }, destino: { ...CLOVIS, equipe: 'marketing' } })?.codigo).toBe('equipe');
+	});
+	it('especialista da equipe continua sem delegar, mesmo numa tarefa de diretor', () => {
+		const r = pode({ tarefa: tarefa({ agente_id: 'clovis', pai_id: 'p' }), eu: CLOVIS, acima: { equipe: 'diretoria', pai_id: null } });
+		expect(r?.codigo).toBe('lider');
+	});
+	it('o equipe do diretor lista os gerentes e os diretores', () => {
+		const t = textoDaDiretoria(
+			[{ id: 'lewis', nome: 'Lewis', cargo: 'Gerente de Desenvolvimento e IA', lider: true, equipe: 'dev', membros: 11, agora: null, naFila: 0 }],
+			[
+				{ id: 'sun', nome: 'Sun', cargo: 'Diretor Estratégico', lider: false, agora: null, naFila: 0 },
+				{ id: 'henry', nome: 'Henry', cargo: 'Diretor Operacional', lider: false, agora: { status: 'aguardando', titulo: 'Semana', atividade: null }, naFila: 0 }
+			],
+			'sun'
+		);
+		expect(t.split('\n')).toEqual([
+			'Diretoria · gerentes que recebem trabalho:',
+			'- lewis · Lewis · Gerente de Desenvolvimento e IA · equipe dev (11 ativos) · livre',
+			'Diretores:',
+			'- sun · Sun (você) · Diretor Estratégico · livre',
+			'- henry · Henry · Diretor Operacional · esperando a equipe: "Semana"',
+			`Para delegar a um gerente: node "$DGATHE_EQUIPE" delegar <id> --titulo "…" <<'PEDIDO' … PEDIDO`
+		]);
+		expect(textoDaDiretoria([], [], 'sun')).toContain('nenhum gerente ativo');
+	});
+});
+
 describe('contas da rodada', () => {
 	it('rodada atual é no mínimo 1 (tarefa pega pela ponte velha tem rodada 0)', () => {
 		expect(rodadaAtual({ rodada: 0 })).toBe(1);
@@ -165,9 +234,9 @@ describe('contas da rodada', () => {
 		expect(rodadasUsadas([])).toBe(0);
 		expect(rodadasUsadas([{ rodada_do_pai: 1 }, { rodada_do_pai: 1 }, { rodada_do_pai: 3 }])).toBe(2);
 	});
-	it('abertas são fila, trabalhando e esperando', () => {
+	it('abertas são fila, trabalhando, esperando e aguardando (o gerente que espera a equipe ainda não terminou)', () => {
 		const st = ['fila', 'trabalhando', 'esperando', 'aguardando', 'concluida', 'falhou', 'cancelada'] as StatusTarefa[];
-		expect(contarAbertas(st.map((status) => ({ status })))).toBe(3);
+		expect(contarAbertas(st.map((status) => ({ status })))).toBe(4);
 	});
 });
 

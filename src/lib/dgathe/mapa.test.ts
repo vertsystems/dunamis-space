@@ -152,20 +152,31 @@ describe('mapa do escritório', () => {
 		}
 		// As novas ficam do lado de lá da Diretoria e do Conteúdo, que andaram 16 casas
 		expect(bruno.x1).toBeLessThan(aline.x0);
-		expect(aline.x1).toBeLessThan(SALA_POR_ID.get('sala-4')!.x0);
+		expect(aline.x1).toBeLessThan(SALA_POR_ID.get('diretoria')!.x0);
 		for (const id of ['sala-1', 'sala-2', 'sala-3']) expect(SALA_POR_ID.get(id)!.x1, id).toBeLessThan(SALA_POR_ID.get('marketing')!.x0);
-		// A Diretoria foi esvaziada no mesmo dia: virou a Sala 4, vazia como as outras
-		expect(SALA_POR_ID.has('diretoria')).toBe(false);
-		for (const id of ['sala-1', 'sala-2', 'sala-3', 'sala-4']) {
+		// A Sala 4 (a Diretoria esvaziada no dia 10) voltou a ser a Diretoria em 11/11/2026
+		expect(SALA_POR_ID.has('sala-4')).toBe(false);
+		for (const id of ['sala-1', 'sala-2', 'sala-3']) {
 			expect(SALA_POR_ID.get(id)!.setor, id).toBe('A definir');
 			expect(ITENS.filter((i) => i.sala === id), `${id} vazia`).toHaveLength(0);
 		}
 		// O corredor vai de parede a parede, e cada sala nova abre para ele
 		const corredor = SALA_POR_ID.get('corredor')!;
 		expect(corredor.x0).toBe(4);
-		for (const id of ['sala-bruno', 'sala-aline', 'sala-1', 'sala-2', 'sala-3', 'sala-4']) {
+		for (const id of ['sala-bruno', 'sala-aline', 'sala-1', 'sala-2', 'sala-3', 'diretoria']) {
 			for (const p of SALA_POR_ID.get(id)!.portas) expect(p.y === corredor.y0 || p.y === corredor.y1 + 1, id).toBe(true);
 		}
+	});
+
+	it('a Diretoria tem uma cadeira de diretor para cada um dos três e a mesa de alinhamento (11/11/2026)', () => {
+		const d = SALA_POR_ID.get('diretoria')!;
+		expect(d.setor).toBe('Diretoria');
+		const itens = ITENS.filter((i) => i.sala === 'diretoria');
+		expect(itens.filter((i) => i.nome === 'Cadeira de diretor')).toHaveLength(3);
+		expect(itens.filter((i) => i.nome === 'Mesa de diretor')).toHaveLength(3);
+		expect(itens.filter((i) => i.nome === 'Mesa de alinhamento')).toHaveLength(1);
+		// A porta continua livre
+		for (const x of [24, 25]) expect(itens.some((i) => i.bloqueia && x + 0.5 > i.x && x + 0.5 < i.x + i.w && 12.5 > i.y && 12.5 < i.y + i.d), `${x},12`).toBe(false);
 	});
 
 	it('salas não se sobrepõem', () => {

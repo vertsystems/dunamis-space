@@ -20,7 +20,18 @@ export const LIMITE_RODADAS = 6;
 /** O banco aceita pedido de 1 a 20.000 caracteres (dgathe_tarefas.pedido). */
 export const LIMITE_PEDIDO = 20000;
 export const AUTOR_DA_EQUIPE = 'Equipe';
-export const STATUS_ABERTOS: StatusTarefa[] = ['fila', 'trabalhando', 'esperando'];
+/**
+ * A equipe dos diretores (pedido do Bruno em 11/11/2026): Estratégico, Tático e
+ * Operacional, logo abaixo dos CEOs. Não tem líder: cada diretor passa trabalho
+ * aos gerentes das outras equipes, que redistribuem para a equipe deles.
+ */
+export const EQUIPE_DIRETORIA = 'diretoria';
+/**
+ * Ainda vai rodar ou está rodando. "aguardando" entra desde a diretoria: o
+ * gerente que recebeu de um diretor e espera a própria equipe ainda não
+ * terminou, e o diretor não pode receber o retorno antes dele.
+ */
+export const STATUS_ABERTOS: StatusTarefa[] = ['fila', 'trabalhando', 'esperando', 'aguardando'];
 export const STATUS_TERMINADOS: StatusTarefa[] = ['concluida', 'falhou', 'cancelada'];
 
 /** Para o líder ler. */
@@ -102,6 +113,13 @@ export function normalizarTitulo(titulo: string | null | undefined, pedido: stri
 // ------------------------------------------------------------ delegação
 
 export type AgenteDaEquipe = { id: string; nome: string; cargo: string; equipe: string | null; lider: boolean; ativo: boolean };
+/** A tarefa de cima da tarefa de quem delega (quando ela é subtarefa), com a equipe de quem a recebeu. */
+export type TarefaDeCima = { equipe: string | null; pai_id: string | null };
+
+/** Diretor (equipe "diretoria"): delega aos gerentes das outras equipes. */
+export function ehDiretor(a: { equipe: string | null } | null | undefined): boolean {
+	return a?.equipe === EQUIPE_DIRETORIA;
+}
 export type TarefaDaEquipe = { id: string; agente_id: string; status: StatusTarefa; pai_id: string | null; rodada: number; cancelar: boolean };
 export type CodigoRecusa = 'pedido' | 'tarefa' | 'parada' | 'lider' | 'profundidade' | 'destino' | 'si' | 'inativo' | 'equipe' | 'abertas' | 'rodadas';
 export type Recusa = { codigo: CodigoRecusa; mensagem: string; saida: 2 | 3 };
@@ -131,23 +149,42 @@ export function verificarDelegacao(c: {
 	subtarefas: { status: StatusTarefa; rodada_do_pai: number }[];
 	pedido: string;
 	tarefaId?: string | null;
+	/** A tarefa de cima, quando a tarefa de quem delega é uma subtarefa (o gerente que recebeu de um diretor). */
+	acima?: TarefaDeCima | null;
 }): Recusa | null {
 	const semPedido = verificarPedido(c.pedido);
 	if (semPedido) return semPedido;
 	const { tarefa, eu, destino } = c;
+	const diretor = ehDiretor(eu);
 	if (!tarefa || !eu || tarefa.agente_id !== eu.id)
 		return recusa('tarefa', `A tarefa ${curto(c.tarefaId ?? tarefa?.id ?? '')} não existe ou não é sua.`);
 	if (tarefa.status !== 'trabalhando' && tarefa.status !== 'esperando')
 		return recusa('parada', `Esta tarefa não está em andamento (${tarefa.status}): só dá para delegar de dentro de uma rodada.`);
 	if (tarefa.cancelar) return recusa('parada', 'Esta tarefa está sendo parada.');
-	if (!eu.lider || !eu.equipe)
+	if (!diretor && (!eu.lider || !eu.equipe))
 		return recusa('lider', 'Só o líder da equipe delega. Se precisa de outro especialista, diga no texto final: o líder decide.');
-	if (tarefa.pai_id)
-		return recusa('profundidade', 'Esta tarefa já é uma subtarefa, e subtarefa não cria subtarefa. Diga no texto final o que falta.');
-	if (!destino) return recusa('destino', `Não existe agente "${c.destinoId}". Veja quem é da equipe com: ${COMANDO} equipe`);
+	if (tarefa.pai_id) {
+		// Dois níveis no máximo: diretor → gerente → equipe. O diretor só delega da
+		// tarefa que recebeu dos CEOs; o gerente, de uma que veio direto de um diretor.
+		const deDiretor = !diretor && ehDiretor(c.acima) && !c.acima?.pai_id;
+		if (diretor) return recusa('profundidade', 'O diretor só delega da tarefa que recebeu dos CEOs. Diga no texto final o que falta.');
+		if (!deDiretor)
+			return recusa('profundidade', 'Esta tarefa já é uma subtarefa, e subtarefa não cria subtarefa. Diga no texto final o que falta.');
+	}
+	if (!destino)
+		return recusa(
+			'destino',
+			`Não existe agente "${c.destinoId}". Veja ${diretor ? 'os gerentes' : 'quem é da equipe'} com: ${COMANDO} equipe`
+		);
 	if (destino.id === eu.id) return recusa('si', 'Você não delega para si mesmo: faça você ou escolha um especialista.');
 	if (!destino.ativo) return recusa('inativo', `${destino.nome} está desativado e não recebe tarefas.`);
-	if (destino.equipe !== eu.equipe) return recusa('equipe', `${destino.nome} não é da sua equipe (${eu.equipe}).`);
+	if (diretor) {
+		if (!destino.lider || !destino.equipe || ehDiretor(destino))
+			return recusa(
+				'equipe',
+				`${destino.nome} não é gerente de equipe: o diretor passa o trabalho ao gerente, que distribui para a equipe dele. Veja os gerentes com: ${COMANDO} equipe`
+			);
+	} else if (destino.equipe !== eu.equipe) return recusa('equipe', `${destino.nome} não é da sua equipe (${eu.equipe}).`);
 	if (contarAbertas(c.subtarefas) >= LIMITE_ABERTAS)
 		return recusa('abertas', `Esta tarefa já tem ${LIMITE_ABERTAS} subtarefas abertas. Encerre a rodada e espere o retorno.`);
 	const rodada = rodadaAtual(tarefa);
@@ -214,7 +251,7 @@ export function lerArgumentos(argv: string[]): Argumentos | { erro: string } {
 
 export function textoDeAjuda(): string {
 	return [
-		'Equipe do DGathe: o líder passa trabalho aos especialistas da equipe de dentro da tarefa dele.',
+		'Equipe do DGathe: o líder passa trabalho aos especialistas da equipe de dentro da tarefa dele; o diretor, aos gerentes das equipes.',
 		'',
 		`${COMANDO} delegar <id> --titulo "Título curto" <<'PEDIDO'`,
 		'Objetivo, contexto, arquivos e pastas, critérios de aceitação e o que entregar.',
@@ -224,11 +261,11 @@ export function textoDeAjuda(): string {
 		`${COMANDO} estado [<número>|<id>]`,
 		'    As subtarefas desta tarefa. Com o número da lista (ou o começo do id), uma inteira.',
 		`${COMANDO} equipe`,
-		'    Quem é da equipe e o que cada um faz agora.',
+		'    Quem é da equipe e o que cada um faz agora (para um diretor: os gerentes e os outros diretores).',
 		`${COMANDO} ajuda`,
 		'    Este texto.',
 		'',
-		`Regras: só o líder delega, só para agentes ativos da própria equipe e nunca para si; subtarefa não cria subtarefa; até ${LIMITE_ABERTAS} subtarefas abertas e ${LIMITE_RODADAS} rodadas de delegação por tarefa.`,
+		`Regras: o líder delega só para agentes ativos da própria equipe; o diretor, só para os gerentes; ninguém para si. Subtarefa não cria subtarefa, a não ser a do gerente que recebeu de um diretor (dois níveis no máximo). Até ${LIMITE_ABERTAS} subtarefas abertas e ${LIMITE_RODADAS} rodadas de delegação por tarefa.`,
 		'Depois de delegar, encerre a rodada com um texto curto: quando todas as subtarefas abertas terminarem, o retorno de cada uma chega nesta conversa.',
 		'',
 		'Fora de uma sessão (teste): --tarefa <uuid> no lugar de DGATHE_TAREFA e --como <agente> no lugar de DGATHE_AGENTE.',
@@ -345,29 +382,49 @@ export type Membro = {
 };
 
 /** O `equipe`: quem é da equipe e o que faz agora. `naFila` = tarefas na fila além da de `agora`. */
+/** "livre", "trabalhando: …" etc., mais a fila, para as listas do `equipe`. */
+function agoraDoMembro(m: Membro): string {
+	const naFila = Number(m.naFila) || 0;
+	let agora = 'livre';
+	let fila = naFila ? ` · ${naFila} na fila` : '';
+	if (m.agora) {
+		const titulo = `"${umaLinha(m.agora.titulo, 80)}"`;
+		if (m.agora.status === 'trabalhando')
+			agora = `trabalhando: ${titulo}${m.agora.atividade?.trim() ? ` (${umaLinha(m.agora.atividade, 60)})` : ''}`;
+		else if (m.agora.status === 'esperando') agora = `esperando resposta do CEO: ${titulo}`;
+		else if (m.agora.status === 'aguardando') agora = `esperando a equipe: ${titulo}`;
+		else {
+			agora = `na fila: ${titulo}`;
+			fila = naFila ? ` · mais ${naFila} na fila` : '';
+		}
+	}
+	return `${agora}${fila}`;
+}
+
 export function textoDaEquipe(equipe: string, membros: Membro[], euId: string): string {
 	const lider = membros.find((m) => m.lider);
 	const linhas = [`Equipe ${equipe} · ${lider ? `líder: ${lider.nome} (${lider.id})` : 'sem líder ativo'}`];
 	for (const m of membros) {
 		const voce = m.id === euId ? ' (você)' : '';
-		const naFila = Number(m.naFila) || 0;
-		let agora = 'livre';
-		let fila = naFila ? ` · ${naFila} na fila` : '';
-		if (m.agora) {
-			const titulo = `"${umaLinha(m.agora.titulo, 80)}"`;
-			if (m.agora.status === 'trabalhando')
-				agora = `trabalhando: ${titulo}${m.agora.atividade?.trim() ? ` (${umaLinha(m.agora.atividade, 60)})` : ''}`;
-			else if (m.agora.status === 'esperando') agora = `esperando resposta do CEO: ${titulo}`;
-			else if (m.agora.status === 'aguardando') agora = `esperando a equipe: ${titulo}`;
-			else {
-				agora = `na fila: ${titulo}`;
-				fila = naFila ? ` · mais ${naFila} na fila` : '';
-			}
-		}
-		linhas.push(`- ${m.id} · ${m.nome}${voce} · ${m.cargo} · ${agora}${fila}`);
+		linhas.push(`- ${m.id} · ${m.nome}${voce} · ${m.cargo} · ${agoraDoMembro(m)}`);
 	}
 	if (!membros.length) linhas.push('(ninguém ativo nesta equipe)');
 	linhas.push(`Para delegar: ${COMANDO} delegar <id> --titulo "…" <<'PEDIDO' … PEDIDO`);
+	return linhas.join('\n');
+}
+
+/**
+ * O `equipe` de um diretor: os gerentes (quem recebe o trabalho dele), com a
+ * equipe e quantos ativos ela tem, e os outros diretores.
+ */
+export function textoDaDiretoria(gerentes: (Membro & { equipe: string; membros: number })[], diretores: Membro[], euId: string): string {
+	const linhas = ['Diretoria · gerentes que recebem trabalho:'];
+	for (const g of gerentes)
+		linhas.push(`- ${g.id} · ${g.nome} · ${g.cargo} · equipe ${g.equipe} (${plural(g.membros, 'ativo', 'ativos')}) · ${agoraDoMembro(g)}`);
+	if (!gerentes.length) linhas.push('(nenhum gerente ativo: faça você ou diga ao CEO o que precisa)');
+	linhas.push('Diretores:');
+	for (const d of diretores) linhas.push(`- ${d.id} · ${d.nome}${d.id === euId ? ' (você)' : ''} · ${d.cargo} · ${agoraDoMembro(d)}`);
+	linhas.push(`Para delegar a um gerente: ${COMANDO} delegar <id> --titulo "…" <<'PEDIDO' … PEDIDO`);
 	return linhas.join('\n');
 }
 

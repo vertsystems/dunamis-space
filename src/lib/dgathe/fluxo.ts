@@ -1,7 +1,8 @@
 // O mapa dos Bandoletes (pedido do Bruno em 10/11/2026): um botão no topo do
 // DGathe que abre o fluxo do trabalho, como o mapa de agentes do Claude Code.
 // Cada pedido vira uma árvore: o Bandolete que recebeu (o líder, numa equipe)
-// e, ligados a ele, os da equipe com as subtarefas.
+// e, ligados a ele, os da equipe com as subtarefas. Desde a diretoria
+// (11/11/2026) a árvore pode ter dois níveis: diretor → gerente → equipe.
 //
 // Os dados vêm de dgathe_mapa (migration 0109); aqui ficam a leitura, a
 // montagem das árvores e os textos curtos de cada cartão. A tela é
@@ -34,8 +35,15 @@ export type NoDoFluxo = {
 	terminadaHa: number | null;
 };
 
-/** Um pedido: quem recebeu e a equipe que ele chamou (vazia fora de equipe). */
-export type Projeto = { raiz: NoDoFluxo; equipe: NoDoFluxo[]; aberto: boolean };
+/** Quem recebeu de quem está em cima, e a equipe que ele chamou (o gerente que recebeu de um diretor). */
+export type Ramo = { no: NoDoFluxo; equipe: NoDoFluxo[] };
+/** Um pedido: quem recebeu e quem ele chamou (vazio fora de equipe). */
+export type Projeto = { raiz: NoDoFluxo; equipe: Ramo[]; aberto: boolean };
+
+/** Todos os cartões de um pedido, de cima para baixo. */
+export function nosDoProjeto(p: Projeto): NoDoFluxo[] {
+	return [p.raiz, ...p.equipe.flatMap((r) => [r.no, ...r.equipe])];
+}
 
 /** O ponto de cada cartão: o status da tarefa, com "precisa" na frente de tudo. */
 export type EstadoDoNo = 'precisa' | 'trabalhando' | 'aguardando' | 'fila' | 'concluida' | 'falhou' | 'parada';
@@ -123,7 +131,7 @@ const PESO: Record<EstadoDoNo, number> = { precisa: 0, trabalhando: 1, fila: 2, 
 /** O estado que mais pede atenção num pedido inteiro (o líder esperando e alguém da equipe precisando de você = precisa). */
 export function estadoDoProjeto(p: Projeto): EstadoDoNo {
 	let melhor = estadoDoNo(p.raiz);
-	for (const n of p.equipe) {
+	for (const n of nosDoProjeto(p)) {
 		const e = estadoDoNo(n);
 		if (PESO[e] < PESO[melhor]) melhor = e;
 	}
@@ -131,25 +139,29 @@ export function estadoDoProjeto(p: Projeto): EstadoDoNo {
 }
 
 /**
- * As árvores, abertas primeiro. Aberto = quem recebeu ou alguém da equipe ainda
- * vai trabalhar. Entre os abertos, quem precisa de você sobe; depois, o mais
- * recente. Entre os terminados, o que terminou por último. A equipe fica na
- * ordem em que foi chamada. Subtarefa sem o pai na lista vira um pedido próprio.
+ * As árvores, abertas primeiro. Aberto = alguém do pedido ainda vai trabalhar.
+ * Entre os abertos, quem precisa de você sobe; depois, o mais recente. Entre os
+ * terminados, o que terminou por último. Cada equipe fica na ordem em que foi
+ * chamada. Subtarefa sem o pai na lista vira um pedido próprio; abaixo do
+ * segundo nível não existe (a trava do banco não deixa).
  */
 export function montarProjetos(nos: NoDoFluxo[]): { abertos: Projeto[]; terminados: Projeto[] } {
-	const raizes = new Map<string, Projeto>();
-	for (const n of nos) if (!n.paiId) raizes.set(n.id, { raiz: n, equipe: [], aberto: false });
+	const ids = new Set(nos.map((n) => n.id));
+	const filhos = new Map<string, NoDoFluxo[]>();
 	for (const n of nos) {
-		if (!n.paiId) continue;
-		const p = raizes.get(n.paiId);
-		if (p) p.equipe.push(n);
-		else raizes.set(n.id, { raiz: n, equipe: [], aberto: false });
+		if (!n.paiId || !ids.has(n.paiId)) continue;
+		if (!filhos.has(n.paiId)) filhos.set(n.paiId, []);
+		filhos.get(n.paiId)!.push(n);
 	}
-	const todos = [...raizes.values()];
-	for (const p of todos) {
-		p.equipe.sort((a, b) => b.criadaHa - a.criadaHa);
-		p.aberto = ABERTOS.includes(p.raiz.status) || p.equipe.some((n) => ABERTOS.includes(n.status));
-	}
+	const naOrdem = (lista: NoDoFluxo[] | undefined) => [...(lista ?? [])].sort((a, b) => b.criadaHa - a.criadaHa);
+	const todos: Projeto[] = nos
+		.filter((n) => !n.paiId || !ids.has(n.paiId))
+		.map((raiz) => ({
+			raiz,
+			equipe: naOrdem(filhos.get(raiz.id)).map((no) => ({ no, equipe: naOrdem(filhos.get(no.id)) })),
+			aberto: false
+		}));
+	for (const p of todos) p.aberto = nosDoProjeto(p).some((n) => ABERTOS.includes(n.status));
 	const abertos = todos
 		.filter((p) => p.aberto)
 		.sort((a, b) => {
@@ -198,7 +210,7 @@ export function nomeDoModelo(id: string | null): string | null {
 
 /** "4 Bandoletes · 2 trabalhando · 1 precisa de você", só com os pedidos abertos. */
 export function resumoDoMapa(abertos: Projeto[]): string {
-	const nos = abertos.flatMap((p) => [p.raiz, ...p.equipe]);
+	const nos = abertos.flatMap(nosDoProjeto);
 	const vivos = nos.filter((n) => ABERTOS.includes(n.status));
 	const quem = new Set(vivos.map((n) => n.agenteId)).size;
 	if (!quem) return 'Nenhum Bandolete trabalhando agora';

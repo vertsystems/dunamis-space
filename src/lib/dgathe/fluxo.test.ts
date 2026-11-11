@@ -7,6 +7,7 @@ import {
 	lerFluxo,
 	montarProjetos,
 	nomeDoModelo,
+	nosDoProjeto,
 	resumoDoMapa,
 	tokensCurtos,
 	type NoDoFluxo
@@ -87,7 +88,7 @@ describe('montarProjetos', () => {
 
 	it('separa abertos e terminados, a equipe embaixo do líder na ordem em que foi chamada', () => {
 		expect(abertos.map((p) => p.raiz.id)).toEqual(['orfa', 'wagner', 'lider']);
-		expect(abertos[2].equipe.map((n) => n.id)).toEqual(['shakira', 'steve']);
+		expect(abertos[2].equipe.map((r) => r.no.id)).toEqual(['shakira', 'steve']);
 		expect(terminados.map((p) => p.raiz.id)).toEqual(['recente', 'velho']);
 	});
 	it('líder terminado com alguém da equipe ainda rodando continua aberto', () => {
@@ -104,6 +105,31 @@ describe('montarProjetos', () => {
 		);
 		expect(r.abertos.map((p) => p.raiz.id)).toEqual(['b', 'a']);
 		expect(estadoDoProjeto(r.abertos[0])).toBe('precisa');
+	});
+});
+
+describe('dois níveis: diretor → gerente → equipe (11/11/2026)', () => {
+	const nos = ler(
+		linha('sun', { agente_id: 'sun', agente_nome: 'Sun', status: 'aguardando', criada_ha: 900 }),
+		linha('lewis', { pai_id: 'sun', agente_id: 'lewis', status: 'aguardando', criada_ha: 800 }),
+		linha('clovis', { pai_id: 'lewis', agente_id: 'clovis', agente_nome: 'Clovis', status: 'concluida', terminada_ha: 30, criada_ha: 700 }),
+		linha('steve', { pai_id: 'lewis', agente_id: 'steve', agente_nome: 'Steve', status: 'esperando', criada_ha: 600 }),
+		linha('neto', { pai_id: 'sumiu', agente_id: 'brad', criada_ha: 5 })
+	);
+	const { abertos } = montarProjetos(nos);
+	it('o gerente fica embaixo do diretor e a equipe embaixo do gerente', () => {
+		const sun = abertos.find((p) => p.raiz.id === 'sun')!;
+		expect(sun.equipe.map((r) => r.no.id)).toEqual(['lewis']);
+		expect(sun.equipe[0].equipe.map((n) => n.id)).toEqual(['clovis', 'steve']);
+		expect(nosDoProjeto(sun).map((n) => n.id)).toEqual(['sun', 'lewis', 'clovis', 'steve']);
+	});
+	it('quem precisa de você no fundo da árvore sobe o pedido inteiro', () => {
+		expect(abertos[0].raiz.id).toBe('sun');
+		expect(estadoDoProjeto(abertos[0])).toBe('precisa');
+		expect(resumoDoMapa(abertos)).toBe('4 Bandoletes · 1 trabalhando · 1 precisa de você');
+	});
+	it('subtarefa sem o pai na lista vira pedido próprio', () => {
+		expect(abertos.some((p) => p.raiz.id === 'neto')).toBe(true);
 	});
 });
 

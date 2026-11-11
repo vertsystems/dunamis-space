@@ -130,9 +130,24 @@ export const SALAS: Sala[] = [
 		especialidades: ['Gestão financeira', 'Gestão de clientes', 'Operação'],
 		dono: { id: ALINE, cadeira: 'Cadeira da Aline' }
 	},
-	// A Diretoria de antes (10/11/2026: o Bruno pediu para esvaziar; o assessor foi
-	// para a sala dele e a Aline ganhou uma assessora na dela)
-	salaVazia(4, 20, 27, 24, 'norte'),
+	// A Diretoria voltou em 11/11/2026, com os três diretores Bandoletes (no dia
+	// 10 ela tinha sido esvaziada: o assessor foi para a sala do Bruno e a Aline
+	// ganhou uma assessora na dela). Fica entre as salas dos CEOs e a Reunião
+	{
+		id: 'diretoria',
+		nome: 'Diretoria',
+		setor: 'Diretoria',
+		descricao: 'Os três diretores Bandoletes, logo abaixo dos CEOs: o Estratégico decide o rumo, o Tático transforma em plano e o Operacional faz acontecer.',
+		cor: '#c08a2b',
+		piso: 'carpete',
+		corPiso: '#b9ab96',
+		x0: 20,
+		y0: 4,
+		x1: 27,
+		y1: 12,
+		portas: portaNorte(24),
+		especialidades: ['Estratégia e rumo', 'Planejamento tático', 'Operação do dia a dia', 'Coordenação dos gerentes']
+	},
 	{
 		id: 'reuniao',
 		nome: 'Sala de Reunião',
@@ -388,10 +403,9 @@ const naParedeNorte = (x: number, tipo: TipoDeco, largura = 1): Decoracao => ({ 
 const naParedeOeste = (y: number, tipo: TipoDeco, largura = 1): Decoracao => ({ linha: 'v', x: 4, y, tipo, largura });
 
 export const DECORACOES: Decoracao[] = [
-	// Sala 4 (a Diretoria de antes): o quadro do Método MAPA foi para a sala do Bruno
+	// Diretoria (11/11/2026): o quadro de metas no meio, janelas dos lados
 	naParedeNorte(21, 'janela'),
-	naParedeNorte(22, 'janela'),
-	naParedeNorte(24, 'janela'),
+	naParedeNorte(23, 'metas', 2),
 	naParedeNorte(26, 'janela'),
 	// Reunião
 	naParedeNorte(29, 'janela'),
@@ -798,6 +812,21 @@ function montarItens(): Item[] {
 	planta(19, 10, true);
 	planta(19, 12);
 	planta(12, 12);
+
+	// Diretoria (11/11/2026): as três mesas dos diretores no fundo, com a
+	// passagem por trás das cadeiras, e a mesa de alinhamento no meio. A porta
+	// (x 24 e 25) e a coluna da direita ficam livres para chegar às mesas
+	mesaDeFrente(20, 5, { tela: 'grafico', mesa: 'Mesa de diretor', cadeira: 'Cadeira de diretor', executiva: true, cor: '#6b4a33' });
+	mesaDeFrente(23, 5, { tela: 'planilha', mesa: 'Mesa de diretor', cadeira: 'Cadeira de diretor', executiva: true, cor: '#6b4a33' });
+	mesaDeFrente(26, 5, { tela: 'texto', mesa: 'Mesa de diretor', cadeira: 'Cadeira de diretor', executiva: true, cor: '#6b4a33' });
+	add({ tipo: 'mesaReuniao', x: 21, y: 8.4, w: 3, d: 1.2, h: 0.54, cor: '#f4f1eb', nome: 'Mesa de alinhamento' });
+	for (const x of [21, 22, 23]) {
+		add({ tipo: 'cadeira', x: x + 0.26, y: 7.6, w: 0.48, d: 0.48, h: 0.9, frente: 'y', cor: '#5a4630' });
+		add({ tipo: 'cadeira', x: x + 0.26, y: 9.92, w: 0.48, d: 0.48, h: 0.9, frente: '-y', cor: '#5a4630' });
+	}
+	planta(20, 12, true);
+	planta(27, 12);
+	planta(27, 9);
 
 	// Salas 1, 2 e 3: vazias, como o Bruno pediu
 

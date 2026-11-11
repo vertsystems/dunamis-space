@@ -30,12 +30,14 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import pg from 'pg';
 import {
+	EQUIPE_DIRETORIA,
 	acharSubtarefa,
 	contarAbertas,
 	lerArgumentos,
 	normalizarTitulo,
 	rodadaAtual,
 	rodadasUsadas,
+	textoDaDiretoria,
 	textoDaEquipe,
 	textoDaSubtarefa,
 	textoDeAjuda,
@@ -152,7 +154,18 @@ async function delegar(a) {
 		const eu = agentes.find((x) => x.id === como) ?? null;
 		const destino = agentes.find((x) => x.id === destinoId) ?? null;
 		const { rows: subs } = await c.query(`select status, rodada_do_pai from public.dgathe_tarefas where pai_id = $1`, [tarefaId]);
-		const r = verificarDelegacao({ tarefa: tarefa ?? null, eu, destinoId: a.alvo, destino, subtarefas: subs, pedido, tarefaId });
+		// Subtarefa: a tarefa de cima diz se veio de um diretor (o gerente pode redistribuir)
+		let acima = null;
+		if (tarefa?.pai_id) {
+			const {
+				rows: [x]
+			} = await c.query(
+				`select t.pai_id, a.equipe from public.dgathe_tarefas t join public.dgathe_agentes a on a.id = t.agente_id where t.id = $1`,
+				[tarefa.pai_id]
+			);
+			acima = x ?? null;
+		}
+		const r = verificarDelegacao({ tarefa: tarefa ?? null, eu, destinoId: a.alvo, destino, subtarefas: subs, pedido, tarefaId, acima });
 		if (r) {
 			await c.query('rollback');
 			throw new Saida(r.saida, `Recusado: ${r.mensagem}`);
@@ -235,28 +248,36 @@ async function equipe(a) {
 		} = await c.query(`${SELECT_AGENTE} where id = $1`, [como]);
 		if (!eu?.equipe) throw recusado('Você não está em nenhuma equipe.');
 		// O "agora" de cada um com a mesma prioridade da dgathe_agentes_agora
-		const { rows } = await c.query(
-			`select a.id, a.nome, a.cargo, a.lider,
+		const colunas = `a.id, a.nome, a.cargo, a.lider, a.equipe,
 				(select jsonb_build_object('status', t.status, 'titulo', t.titulo, 'atividade', t.atividade)
 					from public.dgathe_tarefas t
 					where t.agente_id = a.id and t.status in ('fila', 'trabalhando', 'esperando', 'aguardando')
 					order by case t.status when 'esperando' then 0 when 'trabalhando' then 1 when 'aguardando' then 2 else 3 end, t.criada_em
 					limit 1) as agora,
-				(select count(*)::int from public.dgathe_tarefas t where t.agente_id = a.id and t.status = 'fila') as fila
-			from public.dgathe_agentes a
-			where a.equipe = $1 and a.ativo
-			order by a.ordem, a.nome`,
-			[eu.equipe]
-		);
-		const membros = rows.map((m) => ({
+				(select count(*)::int from public.dgathe_tarefas t where t.agente_id = a.id and t.status = 'fila') as fila,
+				(select count(*)::int from public.dgathe_agentes m where m.equipe = a.equipe and m.ativo) as membros`;
+		const membro = (m) => ({
 			id: m.id,
 			nome: m.nome,
 			cargo: m.cargo,
 			lider: m.lider,
+			equipe: m.equipe,
+			membros: m.membros,
 			agora: m.agora,
 			naFila: Math.max(0, m.fila - (m.agora?.status === 'fila' ? 1 : 0))
-		}));
-		return textoDaEquipe(eu.equipe, membros, eu.id);
+		});
+		const { rows } = await c.query(`select ${colunas} from public.dgathe_agentes a where a.equipe = $1 and a.ativo order by a.ordem, a.nome`, [
+			eu.equipe
+		]);
+		if (eu.equipe === EQUIPE_DIRETORIA) {
+			// O diretor vê os gerentes (quem recebe o trabalho dele) e os outros diretores
+			const { rows: gerentes } = await c.query(
+				`select ${colunas} from public.dgathe_agentes a where a.lider and a.ativo and a.equipe is not null and a.equipe <> $1 order by a.ordem, a.nome`,
+				[EQUIPE_DIRETORIA]
+			);
+			return textoDaDiretoria(gerentes.map(membro), rows.map(membro), eu.id);
+		}
+		return textoDaEquipe(eu.equipe, rows.map(membro), eu.id);
 	} finally {
 		await c.end().catch(() => {});
 	}

@@ -5,10 +5,12 @@ import {
 	mensagemParaOAgente,
 	modeloDaSessao,
 	nomeDaSessao,
+	pastasDaBase,
 	PEDIR_LICENCA_NA_EQUIPE,
 	preambulo,
 	resolverPasta,
 	respostaParaOClaude,
+	tituloDoClaudeMd,
 	tokensDoContexto,
 	type AgenteDaPonte
 } from './ponte';
@@ -80,6 +82,16 @@ describe('argumentosDoClaude', () => {
 		// perguntar já pede para todo o terminal; livre é decisão do CEO
 		expect(JSON.parse(valor(argumentosDoClaude(agente({ equipe: 'dev', autonomia: 'perguntar' }), o), '--settings')).permissions.ask).toEqual(['Bash', 'PowerShell']);
 		expect(argumentosDoClaude(agente({ equipe: 'dev', autonomia: 'livre' }), o)).not.toContain('--settings');
+	});
+	it('a VERT SYS inteira entra como diretório extra, logo antes de outra opção (11/11/2026)', () => {
+		const a = argumentosDoClaude(agente(), { ...o, base: BASE });
+		expect(valor(a, '--add-dir')).toBe(BASE);
+		expect(a[a.indexOf('--add-dir') + 2]).toMatch(/^--/);
+		expect(argumentosDoClaude(agente(), o)).not.toContain('--add-dir');
+	});
+	it('diretoria pede licença para publicar, como as equipes', () => {
+		const d = argumentosDoClaude(agente({ id: 'sun', equipe: 'diretoria', autonomia: 'editar' }), o);
+		expect(JSON.parse(valor(d, '--settings')).permissions.ask).toEqual(PEDIR_LICENCA_NA_EQUIPE);
 	});
 	it('só passa modelo e esforço quando o agente tem', () => {
 		expect(argumentosDoClaude(agente(), o)).not.toContain('--model');
@@ -283,5 +295,63 @@ describe('tokens e modelo da sessão (mapa dos Bandoletes)', () => {
 		expect(modeloDaSessao('')).toBeNull();
 		expect(modeloDaSessao(42)).toBeNull();
 		expect(modeloDaSessao('a'.repeat(80))).toBeNull();
+	});
+});
+
+describe('a VERT SYS no preâmbulo (11/11/2026)', () => {
+	const base = { caminho: BASE, pastas: [{ pasta: 'dunamiscompany', titulo: 'Dunamis Company — Contex OS' }, { pasta: 'designapps', titulo: null }] };
+	it('diz onde está, como andar e lista as pastas, antes das instruções', () => {
+		const p = preambulo(agente(), { criada_por_nome: 'Bruno Santana' }, undefined, base);
+		expect(p).toContain(`## A pasta VERT SYS\nVocê enxerga e edita a pasta VERT SYS inteira (${BASE})`);
+		expect(p).toContain('A sua pasta de trabalho continua sendo dunamiscompany.');
+		expect(p).toContain('leia o CLAUDE.md e a _memoria/ da pasta dele');
+		expect(p).toContain('As pastas de agora:\n- dunamiscompany: Dunamis Company — Contex OS\n- designapps: sem CLAUDE.md\n\n## Suas instruções');
+	});
+	it('sem a base, o preâmbulo fica como antes', () => {
+		expect(preambulo(agente(), { criada_por_nome: 'Bruno Santana' })).not.toContain('VERT SYS');
+	});
+	it('título do CLAUDE.md e as pastas que entram', () => {
+		expect(tituloDoClaudeMd('# Lojas Mari — Contex OS\n\ntexto')).toBe('Lojas Mari — Contex OS');
+		expect(tituloDoClaudeMd('intro\n## sub\n#   Título  \n')).toBe('Título');
+		expect(tituloDoClaudeMd('# \n')).toBeNull();
+		expect(tituloDoClaudeMd(null)).toBeNull();
+		expect(tituloDoClaudeMd('# ' + 'x'.repeat(150))?.length).toBe(100);
+		expect(pastasDaBase(['vertsystems', '#off', '.vscode', 'alinesantana', 'dunamiscompany'])).toEqual(['alinesantana', 'dunamiscompany', 'vertsystems']);
+	});
+});
+
+describe('preâmbulo da diretoria (11/11/2026)', () => {
+	const sun = agente({ id: 'sun', nome: 'Sun', cargo: 'Diretor Estratégico', equipe: 'diretoria', lider: false, instrucoes: 'Manual do Sun.' });
+	const ctx = {
+		membros: [
+			{ id: 'sun', nome: 'Sun', cargo: 'Diretor Estratégico', lider: false },
+			{ id: 'pep', nome: 'Pep', cargo: 'Diretor Tático', lider: false }
+		],
+		pai: null,
+		gerentes: [{ id: 'lewis', nome: 'Lewis', cargo: 'Gerente de Desenvolvimento e IA', equipe: 'dev' }]
+	};
+	it('o diretor aprende a delegar aos gerentes e vê quem são', () => {
+		const p = preambulo(sun, { criada_por_nome: 'Bruno Santana', pai_id: null }, ctx);
+		expect(p).toContain('## Você é da Diretoria');
+		expect(p).toContain(`\nnode "$DGATHE_EQUIPE" delegar <id-do-gerente> --titulo "Título curto" <<'PEDIDO'\nObjetivo, contexto, arquivos e pastas, critérios de aceitação e o que entregar.\nPEDIDO\n`);
+		expect(p).toContain('Gerentes agora:\n- lewis: Lewis, Gerente de Desenvolvimento e IA (equipe dev)\nOs outros diretores:\n- pep: Pep, Diretor Tático\n\n## Suas instruções\nManual do Sun.');
+		expect(p).not.toContain('Você é da equipe "diretoria"');
+		expect(p).not.toContain('- sun: Sun');
+	});
+	it('sem gerente ativo, diz o que fazer', () => {
+		expect(preambulo(sun, { criada_por_nome: 'Bruno Santana', pai_id: null }, { ...ctx, gerentes: [] })).toContain('- (nenhum gerente ativo');
+	});
+	it('o gerente que recebeu de um diretor sabe para quem volta', () => {
+		const lewis = agente({ id: 'lewis', nome: 'Lewis', cargo: 'Gerente de Desenvolvimento e IA', equipe: 'dev', lider: true });
+		const p = preambulo(
+			lewis,
+			{ criada_por_nome: 'Sun', pai_id: 'p1' },
+			{ membros: [{ id: 'lewis', nome: 'Lewis', cargo: 'Gerente', lider: true }], pai: { titulo: 'Plano do trimestre', lider: 'Sun', diretor: true } }
+		);
+		expect(p).toContain(
+			'## Você lidera a equipe "dev"\nEsta tarefa veio de Sun, da Diretoria, dentro do pedido "Plano do trimestre". Distribua para a sua equipe como sempre; o seu texto final volta para Sun, que revisa antes de levar ao CEO.\nVocê coordena: planeja, distribui para os especialistas certos, revisa e presta contas a Sun.'
+		);
+		// Tarefa direta do CEO: igual a antes
+		expect(preambulo(lewis, { criada_por_nome: 'Bruno Santana', pai_id: null }, { membros: [], pai: null })).toContain('presta contas ao CEO');
 	});
 });

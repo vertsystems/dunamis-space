@@ -65,6 +65,22 @@ Ignorados: este `README.md`, `README.md` dentro das pastas e nomes que começam 
 para rascunho: `_rascunho.md`). Um `.md` solto aqui na raiz, fora de uma pasta de equipe, também é
 ignorado, mas dá aviso.
 
+## A diretoria (desde 11/11/2026)
+
+`agentes/diretoria/` é a equipe dos três diretores (Sun, Estratégico; Pep, Tático; Henry,
+Operacional), logo abaixo dos CEOs. Ela é diferente das outras equipes em três pontos:
+
+- **Não tem líder.** Todos com `lider: não`; `lider: sim` na diretoria é erro aqui e o banco também
+  recusa (`dgathe_agentes_diretoria_check`, migration 0110). Equipe sem líder não dá aviso só nela.
+- **Delega para cima das equipes.** O diretor passa trabalho só aos gerentes (líderes ativos das
+  outras equipes), e só da tarefa que recebeu dos CEOs. O gerente redistribui para a equipe dele:
+  dois níveis no máximo (diretor → gerente → equipe). Os CEOs continuam passando direto a qualquer gerente.
+- **A memória fica no Contex OS.** O que eles aprendem trabalhando mora em `dunamiscompany/diretoria/`
+  (o caderno de cada um, `decisoes.md` e o manual da diretoria em `README.md`). O arquivo aqui é o
+  cargo; o caderno é a experiência. Correção que deve mudar o cargo para sempre entra aqui.
+
+A aparência de cada um veio na migration 0110 (`barao`, `executivo` e `veterano`) e se troca no jogo.
+
 ## Sincronizar
 
 ```sh

@@ -2,8 +2,9 @@
 	// O mapa dos Bandoletes (pedido do Bruno em 10/11/2026), aberto pelo botão
 	// do topo do DGathe: cada pedido como uma árvore, quem recebeu à esquerda e a
 	// equipe que ele chamou à direita, ligados por linhas, como o mapa de agentes
-	// do Claude Code. Clique num cartão abre o painel daquele Bandolete já na
-	// tarefa. As contas ficam em $lib/dgathe/fluxo.ts; os dados, em dgathe_mapa
+	// do Claude Code; o gerente que recebeu de um diretor leva a equipe dele
+	// embaixo (dois níveis, 11/11/2026). Clique num cartão abre o painel daquele
+	// Bandolete já na tarefa. As contas ficam em $lib/dgathe/fluxo.ts; os dados, em dgathe_mapa
 	// (migration 0109).
 	import { onMount, untrack } from 'svelte';
 	import { fade } from 'svelte/transition';
@@ -197,11 +198,20 @@
 	<li class="fx-projeto" class:terminado={!p.aberto}>
 		<p class="fx-quem">{deQuem(p)} · {quando(p)}</p>
 		<div class="fx-galhos" class:sozinho={!p.equipe.length}>
-			<div class="fx-raiz">{@render cartao(p.raiz, true, p.equipe)}</div>
+			<div class="fx-raiz">{@render cartao(p.raiz, true, p.equipe.map((r) => r.no))}</div>
 			{#if p.equipe.length}
 				<ul class="fx-equipe">
-					{#each p.equipe as n (n.id)}
-						<li class="fx-ramo">{@render cartao(n, false, [])}</li>
+					{#each p.equipe as r (r.no.id)}
+						<li class="fx-ramo">
+							{@render cartao(r.no, false, r.equipe)}
+							{#if r.equipe.length}
+								<ul class="fx-sub">
+									{#each r.equipe as n (n.id)}
+										<li class="fx-folha">{@render cartao(n, false, [])}</li>
+									{/each}
+								</ul>
+							{/if}
+						</li>
 					{/each}
 				</ul>
 			{/if}
@@ -371,11 +381,17 @@
 		color: var(--dg-suave, #9aa6ba);
 	}
 
-	/* A árvore: quem recebeu à esquerda, a equipe à direita, ligados por linhas */
+	/*
+	 * A árvore: quem recebeu à esquerda, a equipe à direita, ligados por linhas
+	 * na altura do título de cada cartão (--meio). Alinhar pelo título, e não pelo
+	 * meio do cartão, deixa as linhas certas quando um gerente leva a equipe dele
+	 * embaixo (o cartão dele fica no alto de um bloco mais comprido)
+	 */
 	.fx-galhos {
+		--meio: 19px;
 		display: grid;
 		grid-template-columns: minmax(0, 0.95fr) minmax(0, 1fr);
-		align-items: center;
+		align-items: start;
 	}
 	.fx-galhos.sozinho {
 		grid-template-columns: minmax(0, 420px);
@@ -392,11 +408,12 @@
 		content: '';
 		position: absolute;
 		left: 0;
-		top: 50%;
+		top: var(--meio);
 		width: 18px;
 		border-top: 1px solid var(--linha);
 	}
-	.fx-ramo {
+	.fx-ramo,
+	.fx-folha {
 		position: relative;
 	}
 	/* Da espinha até cada um da equipe */
@@ -404,11 +421,11 @@
 		content: '';
 		position: absolute;
 		left: -18px;
-		top: 50%;
+		top: var(--meio);
 		width: 18px;
 		border-top: 1px solid var(--linha);
 	}
-	/* A espinha, um pedaço por ramo (cobre o espaço entre eles) */
+	/* A espinha, um pedaço por ramo (cobre o espaço de 8px entre eles) */
 	.fx-ramo::after {
 		content: '';
 		position: absolute;
@@ -418,13 +435,51 @@
 		border-left: 1px solid var(--linha);
 	}
 	.fx-ramo:first-child::after {
-		top: 50%;
+		top: var(--meio);
 	}
 	.fx-ramo:last-child::after {
-		bottom: 50%;
+		bottom: auto;
+		height: calc(var(--meio) + 4px);
 	}
-	.fx-ramo:only-child::after {
+	.fx-ramo:first-child:last-child::after {
 		display: none;
+	}
+	/* O segundo nível: a equipe do gerente, embaixo dele, com a espinha saindo do cartão */
+	.fx-sub {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		margin-top: 6px;
+		padding-left: 24px;
+	}
+	.fx-folha::before {
+		content: '';
+		position: absolute;
+		left: -13px;
+		top: var(--meio);
+		width: 13px;
+		border-top: 1px solid var(--linha);
+	}
+	.fx-folha::after {
+		content: '';
+		position: absolute;
+		left: -13px;
+		top: -3px;
+		bottom: -3px;
+		border-left: 1px solid var(--linha);
+	}
+	.fx-folha:first-child::after {
+		top: -6px;
+	}
+	.fx-folha:last-child::after {
+		bottom: auto;
+		height: calc(var(--meio) + 3px);
+	}
+	.fx-folha:first-child:last-child::after {
+		height: calc(var(--meio) + 6px);
+	}
+	.fx-sub .fx-no {
+		padding: 0.45rem 0.6rem;
 	}
 
 	/* O cartão */
@@ -585,14 +640,16 @@
 			left: -14px;
 			width: 14px;
 		}
-		.fx-ramo::after,
-		.fx-ramo:only-child::after {
-			display: block;
+		.fx-ramo::after {
 			left: -14px;
-			top: -4px;
 		}
 		.fx-ramo:first-child::after {
 			top: -8px;
+		}
+		.fx-ramo:first-child:last-child::after {
+			display: block;
+			top: -8px;
+			height: calc(var(--meio) + 8px);
 		}
 	}
 </style>

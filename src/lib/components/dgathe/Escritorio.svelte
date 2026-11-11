@@ -84,7 +84,7 @@
 		'sala-1': SquareDashed,
 		'sala-2': SquareDashed,
 		'sala-3': SquareDashed,
-		'sala-4': SquareDashed,
+		diretoria: Crown,
 		reuniao: Presentation,
 		financeiro: Wallet,
 		comercial: Handshake,
@@ -601,7 +601,7 @@
 						<div class="dg-chips">
 							{#each equipes as eq (eq)}
 								{@const ids = listaDeAgentes.filter((a) => a.equipe === eq).map((a) => a.id)}
-								<button type="button" class="dg-reuniao-btn" onclick={() => chamarReuniao(salaSelecionada.id, ids)}>Chamar a equipe {eq} ({ids.length})</button>
+								<button type="button" class="dg-reuniao-btn" onclick={() => chamarReuniao(salaSelecionada.id, ids)}>{eq === 'diretoria' ? 'Chamar a diretoria' : `Chamar a equipe ${eq}`} ({ids.length})</button>
 							{/each}
 							<button type="button" class="dg-reuniao-btn" onclick={() => chamarReuniao(salaSelecionada.id, listaDeAgentes.map((a) => a.id))}>Chamar todos os Bandoletes</button>
 						</div>
@@ -732,7 +732,7 @@
 		<div class="dg-ajuda" role="dialog" aria-modal="true" aria-label="Controles do DGathe">
 			<div class="dg-ajuda-caixa">
 				<h3>Bem-vindo ao DGathe</h3>
-				<p>O escritório da Dunamis em forma de jogo. Quem estiver logado no dspace aparece aqui com você (com alguns segundos de atraso); quem saiu fica sentado na recepção. Os Bandoletes, nossos agentes de IA (crachá roxo), trabalham sentados na mesa deles e passam as pausas pela copa: clique num deles para passar tarefa, acompanhar o que está fazendo e responder quando ele vier até você de mão levantada. O gerente de um setor distribui o trabalho para a equipe: enquanto ela trabalha, ele espera sentado na mesa dele, e o painel dele mostra quem está fazendo o quê. O botão de rede no topo abre o mapa dos Bandoletes: cada pedido com quem recebeu, a equipe que ele chamou, o tempo e os tokens de cada um.</p>
+				<p>O escritório da Dunamis em forma de jogo. Quem estiver logado no dspace aparece aqui com você (com alguns segundos de atraso); quem saiu fica sentado na recepção. Os Bandoletes, nossos agentes de IA (crachá roxo), trabalham sentados na mesa deles e passam as pausas pela copa: clique num deles para passar tarefa, acompanhar o que está fazendo e responder quando ele vier até você de mão levantada. O gerente de um setor distribui o trabalho para a equipe: enquanto ela trabalha, ele espera sentado na mesa dele, e o painel dele mostra quem está fazendo o quê. Na Diretoria ficam os três diretores (Estratégico, Tático e Operacional), que coordenam a operação e passam trabalho aos gerentes. O botão de rede no topo abre o mapa dos Bandoletes: cada pedido com quem recebeu, a equipe que ele chamou, o tempo e os tokens de cada um.</p>
 				<ul>
 					<li><kbd>Botão direito</kbd><span>anda até o ponto</span></li>
 					<li><kbd>Botão esquerdo</kbd><span>seleciona sala, objeto ou pessoa</span></li>

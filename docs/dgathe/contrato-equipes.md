@@ -1385,3 +1385,44 @@ Quando o retorno da equipe chegar, termine respondendo só com as duas palavras 
 Opcional, só com o ok da conversa principal (modelo padrão, gasta mais): pedir a Lewis um projeto
 mínimo ("peça a Clovis três critérios de aceite para um botão de sair do dspace e feche com o
 Relatório de conclusão") e conferir o relatório e a cópia em `projetos/dev-ia/relatorios/`.
+
+## 10. Diretoria e VERT SYS inteira (11/11/2026)
+
+Pedido do Bruno: os Bandoletes enxergam a pasta VERT SYS inteira, e três diretores (Estratégico,
+Tático e Operacional), logo abaixo dos CEOs, coordenam a operação passando trabalho aos gerentes.
+Migration `0110_dgathe_diretoria.sql`, ponte 1.5.
+
+**VERT SYS.** Toda sessão abre com `--add-dir <VERT SYS>` (logo antes de outra opção, porque a
+opção aceita vários caminhos). A pasta de trabalho continua a do agente, com o `CLAUDE.md` e as
+skills de lá. O preâmbulo ganha a seção "A pasta VERT SYS" (`secaoDaBase` em `ponte.ts`), com as
+regras de andar entre projetos e a lista das pastas de cima com o título do `CLAUDE.md` de cada
+uma, lida a cada sessão (`baseDoPreambulo` no `ponte.mjs`; fora as escondidas e as que começam com `#`).
+
+**Diretoria.** É a equipe `diretoria`, sem líder (check no banco e erro no `definicao.ts`).
+
+| Quem delega | De qual tarefa | Para quem |
+|---|---|---|
+| Diretor | só da que recebeu dos CEOs (sem `pai_id`) | gerente (líder ativo) de outra equipe |
+| Gerente | da dele, ou de uma que veio direto de um diretor | ativos da própria equipe |
+| Especialista, assessor | ninguém | ninguém |
+
+- Profundidade máxima 2: diretor → gerente → equipe. A trava fica no banco
+  (`dgathe_subtarefa_valida`) e se repete com mensagem amigável no `verificarDelegacao` (parâmetro
+  `acima`: a tarefa de cima e a equipe de quem a recebeu, lida pelo `equipe.mjs`).
+- `aguardando` passou a contar como aberta (`ABERTOS` no `ponte.mjs`, `STATUS_ABERTOS` no
+  `equipe.ts`, `subtarefas_abertas` da `dgathe_agentes_agora`): o gerente que espera a própria equipe
+  ainda não terminou, e o diretor só recebe o retorno quando ele fecha. Sem isso, o diretor acordaria
+  com um retorno vazio a cada volta da ponte, em laço. Antes da diretoria nenhuma subtarefa ficava
+  `aguardando`, então nada mudou para as equipes.
+- `dgathe_parar` para a árvore inteira (recursivo até 3 níveis), inclusive o gerente em `aguardando`.
+- `equipe` de um diretor lista os gerentes (com a equipe e quantos ativos) e os outros diretores
+  (`textoDaDiretoria`).
+- Preâmbulo: o diretor recebe "Você é da Diretoria" (como delegar aos gerentes, a lista deles e
+  dos outros diretores); o gerente com tarefa de diretor recebe a linha de onde veio e para quem
+  volta o relatório. A diretoria também pede licença para publicar (`PEDIR_LICENCA_NA_EQUIPE`).
+- O mapa dos Bandoletes (`dgathe_mapa` e `fluxo.ts`) desenha os dois níveis.
+- Não há fechamento semanal para a diretoria (ela não tem líder), por decisão do Bruno: os
+  diretores só trabalham quando os CEOs pedem.
+- A memória dos diretores fica no Contex OS da Dunamis, em `dunamiscompany/diretoria/`
+  (manual, `decisoes.md` e o `caderno.md` de cada um), lida no começo e atualizada no fim de cada tarefa.
+

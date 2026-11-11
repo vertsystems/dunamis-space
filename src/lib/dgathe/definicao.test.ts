@@ -333,6 +333,16 @@ describe('conferirConjunto', () => {
 		]);
 	});
 
+	it('diretoria (11/11/2026): sem líder é o normal, e líder nela é erro', () => {
+		const sun = item('agentes/diretoria/sun.md', { id: 'sun', nome: 'Sun', equipe: 'diretoria', lider: false, sala: 'diretoria', ordem: 2 });
+		const pep = item('agentes/diretoria/pep.md', { id: 'pep', nome: 'Pep', equipe: 'diretoria', lider: false, sala: 'diretoria', ordem: 3 });
+		expect(conferirConjunto([item('agentes/dev/lewis.md', {}), sun, pep])).toEqual([]);
+		const comLider = item('agentes/diretoria/pep.md', { id: 'pep', nome: 'Pep', equipe: 'diretoria', lider: true, sala: 'diretoria', ordem: 3 });
+		expect(conferirConjunto([sun, comLider])).toEqual([
+			{ arquivo: 'agentes/diretoria/pep.md', linha: null, mensagem: 'pep está na diretoria com "lider: sim": a diretoria não tem líder', aviso: false }
+		]);
+	});
+
 	it('equipe sem líder ativo é aviso, apontando a pasta', () => {
 		const p = conferirConjunto([
 			item('agentes/dev/lewis.md', { lider: false }),

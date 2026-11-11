@@ -62,9 +62,11 @@ import {
 	mensagemParaOAgente,
 	modeloDaSessao,
 	nomeDaSessao,
+	pastasDaBase,
 	preambulo,
 	resolverPasta,
 	respostaParaOClaude,
+	tituloDoClaudeMd,
 	tokensDoContexto
 } from '../src/lib/dgathe/ponte.ts';
 import { cortar, passoDaFerramenta, resumoDoPedido } from '../src/lib/dgathe/passos.ts';
@@ -80,7 +82,7 @@ import {
 } from '../src/lib/dgathe/equipe.ts';
 import { lerUsoDoClaude } from './uso.mjs';
 
-const VERSAO = '1.4';
+const VERSAO = '1.5';
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const ARQUIVO_ENV = join(homedir(), '.config/dunamisspace/ponte.env');
 
@@ -109,7 +111,15 @@ const ESPERA = Math.max(0, Math.min(300, Number(cfg.DGATHE_ESPERA ?? 15)));
 const FECHAMENTO = cfg.DGATHE_FECHAMENTO !== '0';
 /** A linha de comando que o líder roda dentro da sessão (vai no ambiente como DGATHE_EQUIPE). */
 const CLI_DA_EQUIPE = join(AQUI, 'equipe.mjs');
-const ABERTOS = `('fila', 'trabalhando', 'esperando')`;
+/**
+ * Subtarefa que ainda não terminou. "aguardando" entra desde a diretoria
+ * (11/11/2026): o gerente que recebeu de um diretor e espera a própria equipe
+ * ainda está trabalhando, e o diretor só recebe o retorno quando ele fecha.
+ * Antes disso nenhuma subtarefa ficava "aguardando", então nada muda para as equipes.
+ */
+const ABERTOS = `('fila', 'trabalhando', 'esperando', 'aguardando')`;
+/** A equipe dos diretores (EQUIPE_DIRETORIA em equipe.ts). */
+const DIRETORIA = 'diretoria';
 
 function log(...partes) {
 	const h = new Date().toLocaleString('pt-BR', { hour12: false });
@@ -140,6 +150,27 @@ function acharClaude() {
 		}
 	} catch {}
 	return maisNovo(candidatos);
+}
+
+/**
+ * A VERT SYS para o preâmbulo (11/11/2026): as pastas de cima e o título do
+ * CLAUDE.md de cada uma. Lida a cada sessão (pasta nova aparece sozinha); falhou
+ * a leitura de uma pasta, ela entra sem título; falhou tudo, a lista sai vazia.
+ */
+function baseDoPreambulo() {
+	let nomes = [];
+	try {
+		nomes = pastasDaBase(readdirSync(BASE, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name));
+	} catch {}
+	const pastas = nomes.map((pasta) => {
+		let titulo = null;
+		try {
+			const arquivo = join(BASE, pasta, 'CLAUDE.md');
+			if (existsSync(arquivo)) titulo = tituloDoClaudeMd(readFileSync(arquivo, 'utf8').slice(0, 4000)) ?? 'leia o CLAUDE.md de lá';
+		} catch {}
+		return { pasta, titulo };
+	});
+	return { caminho: BASE, pastas };
 }
 
 function versaoDoClaude(caminho) {
@@ -315,7 +346,8 @@ class Sessao {
 			sessao: this.sessao,
 			retomar,
 			nome: nomeDaSessao(this.agente, this.tarefa),
-			preambulo: preambulo(this.agente, this.tarefa, await this.contextoDaEquipe())
+			preambulo: preambulo(this.agente, this.tarefa, await this.contextoDaEquipe(), baseDoPreambulo()),
+			base: BASE
 		});
 		this.proc = spawn(claude, args, {
 			cwd,
@@ -367,12 +399,21 @@ class Sessao {
 			let pai = null;
 			if (this.tarefa.pai_id) {
 				const [p] = await q(
-					`select p.titulo, a.nome from public.dgathe_tarefas p join public.dgathe_agentes a on a.id = p.agente_id where p.id = $1`,
+					`select p.titulo, a.nome, a.equipe from public.dgathe_tarefas p join public.dgathe_agentes a on a.id = p.agente_id where p.id = $1`,
 					[this.tarefa.pai_id]
 				);
-				if (p) pai = { titulo: p.titulo, lider: p.nome };
+				if (p) pai = { titulo: p.titulo, lider: p.nome, diretor: p.equipe === DIRETORIA };
 			}
-			return { membros, pai };
+			// O diretor passa trabalho aos gerentes das equipes
+			const gerentes =
+				this.agente.equipe === DIRETORIA
+					? await q(
+							`select id, nome, cargo, equipe from public.dgathe_agentes
+							where lider and ativo and equipe is not null and equipe <> $1 order by ordem, nome`,
+							[DIRETORIA]
+						)
+					: undefined;
+			return { membros, pai, gerentes };
 		} catch (e) {
 			log(`tarefa ${this.curto}: não li a equipe (${e.message}); segue sem a lista`);
 			return undefined;

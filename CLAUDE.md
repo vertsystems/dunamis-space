@@ -49,6 +49,12 @@ ponte cria o fechamento semanal de cada líder. O contrato técnico é
 [docs/dgathe/contrato-equipes.md](docs/dgathe/contrato-equipes.md) e os cargos do departamento de
 Desenvolvimento & IA estão em [docs/dgathe/cargos-dev-ia.md](docs/dgathe/cargos-dev-ia.md).
 
+**Diretoria e VERT SYS (desde 11/11/2026):** todo Bandolete enxerga a pasta VERT SYS inteira
+(`--add-dir`), sem mudar a pasta de trabalho dele. A equipe `diretoria` (Sun, Pep e Henry, em
+`agentes/diretoria/`) fica logo abaixo dos CEOs, não tem líder e passa trabalho aos gerentes, que
+redistribuem para a equipe (dois níveis no máximo). A memória deles mora no Contex OS, em
+`dunamiscompany/diretoria/`. Detalhes na seção 10 do contrato das equipes.
+
 ## Como trabalhar
 
 - `npm run dev` sobe local na porta 5173. Todas as rotas pedem login

@@ -54,6 +54,11 @@ const ESFORCOS = ['low', 'medium', 'high', 'xhigh', 'max'];
 const VERDADE = ['sim', 'true'];
 const MENTIRA = ['não', 'nao', 'false'];
 const LIMITE_INSTRUCOES = 20000;
+/**
+ * A equipe dos diretores (11/11/2026, igual a EQUIPE_DIRETORIA em equipe.ts):
+ * não tem líder, e cada diretor passa trabalho aos gerentes das outras equipes.
+ */
+const DIRETORIA = 'diretoria';
 
 /** A ordem em que `diferencas` devolve os campos (e a do `is distinct from` do agentes.mjs). */
 const CAMPOS_COMPARADOS: (keyof DefinicaoAgente)[] = [
@@ -257,9 +262,10 @@ export function lerDefinicao(
 }
 
 /**
- * O que só aparece olhando todos os arquivos juntos. Erro: id repetido e dois
- * líderes ativos na mesma equipe (o banco tem um índice único que recusaria).
- * Aviso: equipe sem líder ativo e líder ativo com autonomia "perguntar".
+ * O que só aparece olhando todos os arquivos juntos. Erro: id repetido, dois
+ * líderes ativos na mesma equipe (o banco tem um índice único que recusaria) e
+ * líder na diretoria. Aviso: equipe sem líder ativo (menos a diretoria, que
+ * não tem) e líder ativo com autonomia "perguntar".
  */
 export function conferirConjunto(lista: { arquivo: string; definicao: DefinicaoAgente }[]): Problema[] {
 	const problemas: Problema[] = [];
@@ -278,6 +284,7 @@ export function conferirConjunto(lista: { arquivo: string; definicao: DefinicaoA
 		if (d.lider && d.ativo) equipes.get(d.equipe)!.lideres.push({ id: d.id, arquivo });
 	}
 	for (const [equipe, { pasta, lideres }] of equipes) {
+		if (equipe === DIRETORIA) continue;
 		if (lideres.length === 0)
 			problemas.push({ arquivo: pasta, linha: null, mensagem: `a equipe "${equipe}" não tem líder ativo: ninguém delega nela`, aviso: true });
 		for (const outro of lideres.slice(1))
@@ -290,6 +297,9 @@ export function conferirConjunto(lista: { arquivo: string; definicao: DefinicaoA
 	}
 
 	for (const { arquivo, definicao: d } of lista) {
+		// O banco também recusa (dgathe_agentes_diretoria_check, migration 0110)
+		if (d.equipe === DIRETORIA && d.lider)
+			problemas.push({ arquivo, linha: null, mensagem: `${d.id} está na diretoria com "lider: sim": a diretoria não tem líder`, aviso: false });
 		if (d.lider && d.ativo && d.autonomia === 'perguntar')
 			problemas.push({
 				arquivo,

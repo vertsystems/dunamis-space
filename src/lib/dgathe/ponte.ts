@@ -34,8 +34,25 @@ export type TarefaDaPonte = {
 };
 
 export type MembroDoPreambulo = { id: string; nome: string; cargo: string; lider: boolean };
-/** O que a ponte lê da equipe antes de abrir a sessão. Falhou a leitura: vem undefined e o preâmbulo sai sem a lista. */
-export type ContextoDaEquipe = { membros: MembroDoPreambulo[]; pai: { titulo: string; lider: string } | null };
+export type GerenteDoPreambulo = { id: string; nome: string; cargo: string; equipe: string };
+/**
+ * O que a ponte lê da equipe antes de abrir a sessão. Falhou a leitura: vem
+ * undefined e o preâmbulo sai sem a lista. `pai.lider` é quem delegou (o líder,
+ * ou o diretor quando `pai.diretor`); `gerentes` só vem para um diretor.
+ */
+export type ContextoDaEquipe = {
+	membros: MembroDoPreambulo[];
+	pai: { titulo: string; lider: string; diretor?: boolean } | null;
+	gerentes?: GerenteDoPreambulo[];
+};
+
+/** Uma pasta da VERT SYS e o título do CLAUDE.md dela (null = sem CLAUDE.md ou sem título). */
+export type PastaDaBase = { pasta: string; titulo: string | null };
+/** A VERT SYS inteira, que todo Bandolete enxerga desde 11/11/2026 (--add-dir). */
+export type BaseDoPreambulo = { caminho: string; pastas: PastaDaBase[] };
+
+/** A equipe dos diretores (igual a EQUIPE_DIRETORIA em equipe.ts: este arquivo não importa outro .ts). */
+const EQUIPE_DIRETORIA = 'diretoria';
 
 /** Quem escreve a mensagem de retorno das subtarefas (igual a AUTOR_DA_EQUIPE em equipe.ts). */
 const AUTOR_DA_EQUIPE = 'Equipe';
@@ -60,7 +77,12 @@ export function resolverPasta(base: string, pasta: string): string {
  * ninguém no terminal. Agente de equipe ganha uma seção antes das instruções
  * dele: o líder aprende a delegar; o especialista, a quem entregar.
  */
-export function preambulo(a: AgenteDaPonte, t: Pick<TarefaDaPonte, 'criada_por_nome' | 'pai_id'>, ctx?: ContextoDaEquipe): string {
+export function preambulo(
+	a: AgenteDaPonte,
+	t: Pick<TarefaDaPonte, 'criada_por_nome' | 'pai_id'>,
+	ctx?: ContextoDaEquipe,
+	base?: BaseDoPreambulo
+): string {
 	const quem = t.criada_por_nome?.trim() || 'alguém da equipe';
 	const linhas = [
 		'## Você está no DGathe',
@@ -71,17 +93,99 @@ export function preambulo(a: AgenteDaPonte, t: Pick<TarefaDaPonte, 'criada_por_n
 		'- Antes de publicar, mandar algo para fora (e-mail, WhatsApp, post), gastar dinheiro ou apagar arquivo, pergunte pelo AskUserQuestion, a não ser que as instruções abaixo liberem.',
 		'- Ao terminar, responda em português, em poucas linhas: o que fez, o caminho de cada arquivo criado ou alterado e o que ficou pendente.'
 	];
+	if (base) linhas.push('', ...secaoDaBase(a, base));
 	const equipe = a.equipe?.trim();
-	if (equipe) linhas.push('', ...(a.lider ? secaoDoLider(a, equipe, ctx) : secaoDoEspecialista(equipe, t, quem, ctx)));
+	if (equipe === EQUIPE_DIRETORIA) linhas.push('', ...secaoDoDiretor(a, ctx));
+	else if (equipe) linhas.push('', ...(a.lider ? secaoDoLider(a, equipe, t, ctx) : secaoDoEspecialista(equipe, t, quem, ctx)));
 	const proprias = a.instrucoes?.trim();
 	if (proprias) linhas.push('', '## Suas instruções', proprias);
 	return linhas.join('\n');
 }
 
-function secaoDoLider(a: AgenteDaPonte, equipe: string, ctx?: ContextoDaEquipe): string[] {
+/**
+ * A VERT SYS inteira (pedido do Bruno em 11/11/2026: os Bandoletes enxergam
+ * todos os projetos). A sessão continua na pasta do agente, com o CLAUDE.md e
+ * as skills de lá; a base entra pelo --add-dir e esta seção ensina a andar nela.
+ */
+export function secaoDaBase(a: Pick<AgenteDaPonte, 'pasta'>, base: BaseDoPreambulo): string[] {
+	const linhas = [
+		'## A pasta VERT SYS',
+		`Você enxerga e edita a pasta VERT SYS inteira (${base.caminho}), onde ficam os projetos do grupo: a Dunamis, as marcas, os sistemas e uma pasta para cada cliente. A sua pasta de trabalho continua sendo ${a.pasta}.`,
+		'- Antes de mexer no projeto de um cliente ou de outra marca, leia o CLAUDE.md e a _memoria/ da pasta dele e siga as regras e a identidade de lá. Nunca misture marca, tom, dado ou arquivo de um cliente com o de outro.',
+		'- Skill própria de outra pasta fica em <pasta>/.claude/skills/<nome>/SKILL.md: quando o pedido for daquele projeto, leia e siga a de lá.',
+		'- Os sistemas têm repositório git próprio; nas pastas de cliente e de marca não se commita sem o CEO pedir.'
+	];
+	if (base.pastas.length) {
+		linhas.push('As pastas de agora:');
+		for (const p of base.pastas) linhas.push(`- ${p.pasta}: ${p.titulo ?? 'sem CLAUDE.md'}`);
+	}
+	return linhas;
+}
+
+/**
+ * O título de uma pasta para a lista: a primeira linha "# …" do CLAUDE.md dela,
+ * sem o "# ". Sem título (ou só espaço): null.
+ */
+export function tituloDoClaudeMd(texto: string | null | undefined): string | null {
+	for (const linha of String(texto ?? '').split(/\r?\n/)) {
+		const m = linha.match(/^#\s+(.+?)\s*$/);
+		if (m) return m[1].length > 100 ? m[1].slice(0, 99) + '…' : m[1];
+	}
+	return null;
+}
+
+/** As pastas da VERT SYS que entram na lista: sem as escondidas e as arquivadas ("#off"), em ordem alfabética. */
+export function pastasDaBase(nomes: string[]): string[] {
+	return nomes.filter((n) => n && !n.startsWith('.') && !n.startsWith('#')).sort((x, y) => x.localeCompare(y, 'pt-BR'));
+}
+
+/**
+ * Diretor (equipe "diretoria", pedido do Bruno em 11/11/2026): coordena a
+ * operação e passa trabalho aos gerentes, que redistribuem para a equipe deles.
+ */
+function secaoDoDiretor(a: AgenteDaPonte, ctx?: ContextoDaEquipe): string[] {
+	const linhas = [
+		'## Você é da Diretoria',
+		'Você é um dos três diretores da Dunamis, logo abaixo dos CEOs (Bruno e Aline). A diretoria coordena a operação inteira: o Estratégico decide o rumo, o Tático transforma em plano e o Operacional faz acontecer.',
+		'- Para passar trabalho a um setor, delegue ao gerente dele (o pedido vai pelo stdin; a linha PEDIDO que fecha começa na coluna 1):',
+		'```bash',
+		`node "$DGATHE_EQUIPE" delegar <id-do-gerente> --titulo "Título curto" <<'PEDIDO'`,
+		'Objetivo, contexto, arquivos e pastas, critérios de aceitação e o que entregar.',
+		'PEDIDO',
+		'```',
+		'- O gerente distribui para a equipe dele, revisa e devolve para você. Você não passa trabalho direto a um especialista, a um assessor nem a outro diretor.',
+		'- Pode delegar para vários gerentes na mesma rodada. Depois, encerre a rodada com um texto curto dizendo o que passou e o que espera. Não fique esperando nem consultando em laço: quando todos terminarem, o retorno chega aqui, nesta mesma conversa, e você continua.',
+		'- node "$DGATHE_EQUIPE" estado mostra o que você passou (estado <número> mostra um inteiro). node "$DGATHE_EQUIPE" equipe mostra os gerentes e o que cada um faz agora.',
+		'- Limites: 12 pedidos abertos por vez e 6 rodadas de delegação por tarefa. Você só delega da tarefa que recebeu dos CEOs.',
+		'- Perguntas e pedidos de licença de quem trabalha no seu pedido vão direto ao CEO pelo jogo: você não precisa repassar.',
+		'- No retorno: confira as evidências, mande corrigir com nova delegação ou feche com o seu relatório.'
+	];
+	if (ctx) {
+		const gerentes = ctx.gerentes ?? [];
+		linhas.push('Gerentes agora:');
+		if (gerentes.length) for (const g of gerentes) linhas.push(`- ${g.id}: ${g.nome}, ${g.cargo} (equipe ${g.equipe})`);
+		else linhas.push('- (nenhum gerente ativo: faça você mesmo ou diga ao CEO o que precisa)');
+		const outros = ctx.membros.filter((m) => m.id !== a.id);
+		if (outros.length) {
+			linhas.push('Os outros diretores:');
+			for (const m of outros) linhas.push(`- ${m.id}: ${m.nome}, ${m.cargo}`);
+		}
+	}
+	return linhas;
+}
+
+function secaoDoLider(a: AgenteDaPonte, equipe: string, t: Pick<TarefaDaPonte, 'pai_id'>, ctx?: ContextoDaEquipe): string[] {
+	// Gerente com uma tarefa que veio de um diretor: o retorno volta para ele
+	const diretor = t.pai_id && ctx?.pai?.diretor ? ctx.pai.lider?.trim() || 'o diretor' : null;
+	const projeto = diretor && ctx?.pai?.titulo?.trim() ? `, dentro do pedido "${ctx.pai.titulo.trim()}"` : '';
 	const linhas = [
 		`## Você lidera a equipe "${equipe}"`,
-		'Você coordena: planeja, distribui para os especialistas certos, revisa e presta contas ao CEO. Quem executa é a equipe.',
+		...(diretor
+			? [
+					`Esta tarefa veio de ${diretor}, da Diretoria${projeto}. Distribua para a sua equipe como sempre; o seu texto final volta para ${diretor}, que revisa antes de levar ao CEO.`
+				]
+			: []),
+		`Você coordena: planeja, distribui para os especialistas certos, revisa e presta contas ${diretor ? `a ${diretor}` : 'ao CEO'}. Quem executa é a equipe.`,
 		// O PEDIDO que fecha o texto tem que começar na coluna 1, senão o terminal não acha o fim
 		'- Para passar trabalho a um especialista (o pedido vai pelo stdin; a linha PEDIDO que fecha começa na coluna 1):',
 		'```bash',
@@ -91,7 +195,7 @@ function secaoDoLider(a: AgenteDaPonte, equipe: string, ctx?: ContextoDaEquipe):
 		'```',
 		'- Pode delegar para vários na mesma rodada: eles trabalham em paralelo. Depois, encerre a rodada com um texto curto dizendo o que distribuiu e o que espera. Não fique esperando nem consultando em laço: quando todas as subtarefas abertas terminarem, o retorno de cada uma chega aqui, nesta mesma conversa, e você continua.',
 		'- node "$DGATHE_EQUIPE" estado mostra as subtarefas desta tarefa (estado <número> mostra uma inteira). node "$DGATHE_EQUIPE" equipe mostra quem está livre.',
-		'- Limites: 12 subtarefas abertas por vez e 6 rodadas de delegação por tarefa. Subtarefa não cria subtarefa e você não delega para si.',
+		'- Limites: 12 subtarefas abertas por vez e 6 rodadas de delegação por tarefa. A equipe não delega adiante e você não delega para si.',
 		'- Perguntas e pedidos de licença dos especialistas vão direto ao CEO pelo jogo: você não precisa repassar.',
 		'- No retorno: confira as evidências, mande corrigir com nova delegação ou feche com o relatório que as suas instruções pedem.'
 	];
@@ -157,7 +261,7 @@ export const PEDIR_LICENCA_NA_EQUIPE = [
 /** Os argumentos do Claude Code para uma rodada da tarefa. */
 export function argumentosDoClaude(
 	a: AgenteDaPonte,
-	o: { sessao: string; retomar: boolean; nome: string; preambulo: string }
+	o: { sessao: string; retomar: boolean; nome: string; preambulo: string; base?: string }
 ): string[] {
 	const args = [
 		'-p',
@@ -176,11 +280,14 @@ export function argumentosDoClaude(
 		args.push('--permission-mode', 'default', '--settings', JSON.stringify({ permissions: { ask: ['Bash', 'PowerShell'] } }));
 	else {
 		args.push('--permission-mode', 'acceptEdits');
-		// Agente de equipe: publicar e mexer na ponte voltam a pedir licença (o assessor não muda)
+		// Agente de equipe (diretoria inclusive): publicar e mexer na ponte voltam a pedir licença (o assessor não muda)
 		if (a.equipe?.trim()) args.push('--settings', JSON.stringify({ permissions: { ask: PEDIR_LICENCA_NA_EQUIPE } }));
 	}
 	if (o.retomar) args.push('--resume', o.sessao);
 	else args.push('--session-id', o.sessao);
+	// A VERT SYS inteira (11/11/2026): lê e edita qualquer projeto, com a mesma
+	// autonomia. Logo antes de outra opção: --add-dir aceita vários caminhos
+	if (o.base) args.push('--add-dir', o.base);
 	args.push('--name', o.nome, '--append-system-prompt', o.preambulo);
 	if (a.modelo) args.push('--model', a.modelo);
 	if (a.esforco) args.push('--effort', a.esforco);
