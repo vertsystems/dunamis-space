@@ -254,3 +254,30 @@ export function maisNovo(caminhos: string[]): string | null {
 	}
 	return melhor;
 }
+
+/**
+ * Tokens em contexto numa chamada ao modelo (o `usage` de cada mensagem do
+ * assistente no stream-json): a entrada nova, a lida do cache, a escrita no
+ * cache e a saída. É o número que o Claude Code mostra ao lado de cada agente,
+ * e o mapa dos Bandoletes mostra o mesmo (migration 0109). Sem `usage` ou tudo
+ * zero (mensagem sintética): null, para não apagar o último valor bom.
+ */
+export function tokensDoContexto(usage: unknown): number | null {
+	if (!usage || typeof usage !== 'object') return null;
+	const u = usage as Record<string, unknown>;
+	const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0);
+	const total = n(u.input_tokens) + n(u.cache_read_input_tokens) + n(u.cache_creation_input_tokens) + n(u.output_tokens);
+	return total > 0 ? Math.min(Math.round(total), 2_000_000_000) : null;
+}
+
+/**
+ * O modelo que a sessão usou: o `model` do aviso de início (system/init) ou de
+ * uma mensagem do assistente. "<synthetic>" é mensagem que o próprio Claude
+ * Code escreve, sem modelo nenhum.
+ */
+export function modeloDaSessao(valor: unknown): string | null {
+	if (typeof valor !== 'string') return null;
+	const m = valor.trim();
+	if (!m || m.startsWith('<') || !/^[A-Za-z0-9.:_\[\]/-]{2,60}$/.test(m)) return null;
+	return m;
+}

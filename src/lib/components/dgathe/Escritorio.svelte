@@ -14,6 +14,7 @@
 	import { Agentes, COR_DO_ESTADO, lugaresDosAgentes, NOME_DO_ESTADO, PREFIXO_AGENTE, type Agente, type LeituraAgentes } from '$lib/dgathe/agentes';
 	import PainelAgente from './PainelAgente.svelte';
 	import Consumo from './Consumo.svelte';
+	import MapaBandoletes from './MapaBandoletes.svelte';
 	import { NOME_DA_ATIVIDADE, type Destino } from '$lib/dgathe/rotina';
 	import {
 		Crown,
@@ -44,7 +45,8 @@
 		MousePointerClick,
 		Hand,
 		Briefcase,
-		SquareDashed
+		SquareDashed,
+		Network
 	} from '@lucide/svelte';
 
 	let {
@@ -141,6 +143,8 @@
 	let destino = $state<string | null>(null);
 	let aviso = $state<string | null>(null);
 	let ajuda = $state(false);
+	/** O mapa dos Bandoletes (MapaBandoletes.svelte): o fluxo de quem está trabalhando em quê. */
+	let mapaAberto = $state(false);
 	let cheia = $state(false);
 	let falhou = $state(false);
 	/** Painel recolhido: só o cabeçalho, para sobrar mapa (no celular, principalmente). */
@@ -478,6 +482,20 @@
 		</div>
 		<div class="dg-acoes">
 			{#if supabase}<Consumo {supabase} />{/if}
+			{#if supabase && leitura && leitura.pode !== 'nenhum'}
+				<button
+					type="button"
+					class="dg-mapa-btn"
+					class:precisa={precisam.length > 0}
+					onclick={() => (mapaAberto = !mapaAberto)}
+					aria-expanded={mapaAberto}
+					title={trabalhando.length ? `Mapa dos Bandoletes: ${trabalhando.length} em andamento` : 'Mapa dos Bandoletes'}
+					aria-label="Mapa dos Bandoletes"
+				>
+					<Network size={16} />
+					{#if trabalhando.length}<i aria-hidden="true">{trabalhando.length}</i>{/if}
+				</button>
+			{/if}
 			<span class="dg-local" title="Onde você está"><Navigation size={13} />{nomeLocal}</span>
 			<button type="button" onclick={() => (jogo?.centralizar(), tela.focus())} title="Voltar a câmera para você (Espaço)" aria-label="Centralizar no avatar"><Crosshair size={16} /></button>
 			<button type="button" onclick={() => jogo?.zoomEm(1 / 1.2)} title="Afastar (-)" aria-label="Afastar"><Minus size={16} /></button>
@@ -699,11 +717,22 @@
 		<canvas bind:this={mini} aria-label="Minimapa: clique para levar a câmera, botão direito para andar"></canvas>
 	</div>
 
+	{#if mapaAberto && supabase && leitura}
+		<MapaBandoletes
+			{supabase}
+			agentes={listaDeAgentes}
+			ponteLigada={leitura.ponte.ligada}
+			{sinal}
+			aoVerAgente={verAgente}
+			aoFechar={() => (mapaAberto = false)}
+		/>
+	{/if}
+
 	{#if ajuda}
 		<div class="dg-ajuda" role="dialog" aria-modal="true" aria-label="Controles do DGathe">
 			<div class="dg-ajuda-caixa">
 				<h3>Bem-vindo ao DGathe</h3>
-				<p>O escritório da Dunamis em forma de jogo. Quem estiver logado no dspace aparece aqui com você (com alguns segundos de atraso); quem saiu fica sentado na recepção. Os Bandoletes, nossos agentes de IA (crachá roxo), trabalham sentados na mesa deles e passam as pausas pela copa: clique num deles para passar tarefa, acompanhar o que está fazendo e responder quando ele vier até você de mão levantada. O gerente de um setor distribui o trabalho para a equipe: enquanto ela trabalha, ele espera sentado na mesa dele, e o painel dele mostra quem está fazendo o quê.</p>
+				<p>O escritório da Dunamis em forma de jogo. Quem estiver logado no dspace aparece aqui com você (com alguns segundos de atraso); quem saiu fica sentado na recepção. Os Bandoletes, nossos agentes de IA (crachá roxo), trabalham sentados na mesa deles e passam as pausas pela copa: clique num deles para passar tarefa, acompanhar o que está fazendo e responder quando ele vier até você de mão levantada. O gerente de um setor distribui o trabalho para a equipe: enquanto ela trabalha, ele espera sentado na mesa dele, e o painel dele mostra quem está fazendo o quê. O botão de rede no topo abre o mapa dos Bandoletes: cada pedido com quem recebeu, a equipe que ele chamou, o tempo e os tokens de cada um.</p>
 				<ul>
 					<li><kbd>Botão direito</kbd><span>anda até o ponto</span></li>
 					<li><kbd>Botão esquerdo</kbd><span>seleciona sala, objeto ou pessoa</span></li>
@@ -917,6 +946,30 @@
 	}
 	.dg-acoes button:hover {
 		background: rgba(255, 255, 255, 0.12);
+	}
+	.dg-acoes .dg-mapa-btn {
+		position: relative;
+		color: #c4b5fd;
+	}
+	.dg-mapa-btn i {
+		position: absolute;
+		top: -4px;
+		right: -4px;
+		min-width: 16px;
+		height: 16px;
+		padding: 0 4px;
+		border-radius: 999px;
+		background: #34d399;
+		color: #062016;
+		font-size: 10px;
+		font-style: normal;
+		font-weight: 800;
+		line-height: 16px;
+		text-align: center;
+	}
+	.dg-mapa-btn.precisa i {
+		background: #f5a524;
+		color: #2a1a02;
 	}
 	.dg-acoes button:focus-visible,
 	.dg-painel button:focus-visible,

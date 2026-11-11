@@ -60,10 +60,12 @@ import {
 	argumentosDoClaude,
 	maisNovo,
 	mensagemParaOAgente,
+	modeloDaSessao,
 	nomeDaSessao,
 	preambulo,
 	resolverPasta,
-	respostaParaOClaude
+	respostaParaOClaude,
+	tokensDoContexto
 } from '../src/lib/dgathe/ponte.ts';
 import { cortar, passoDaFerramenta, resumoDoPedido } from '../src/lib/dgathe/passos.ts';
 import {
@@ -78,7 +80,7 @@ import {
 } from '../src/lib/dgathe/equipe.ts';
 import { lerUsoDoClaude } from './uso.mjs';
 
-const VERSAO = '1.3';
+const VERSAO = '1.4';
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const ARQUIVO_ENV = join(homedir(), '.config/dunamisspace/ponte.env');
 
@@ -266,6 +268,13 @@ class Sessao {
 		this.desligada = false;
 		this.saiu = false;
 		this.fimTimer = null;
+		/**
+		 * Mapa dos Bandoletes (migration 0109): tokens em contexto na última
+		 * chamada ao modelo e o modelo da sessão. Vão para o banco junto das
+		 * gravações que já acontecem (passo, texto, fim), sem escrita a mais.
+		 */
+		this.tokens = null;
+		this.modelo = null;
 	}
 
 	/** Gravações em ordem (passo, texto, pedido), sem travar a leitura da sessão. */
@@ -378,8 +387,16 @@ class Sessao {
 			return;
 		}
 		switch (d.type) {
+			case 'system':
+				if (d.subtype === 'init') this.modelo = modeloDaSessao(d.model) ?? this.modelo;
+				break;
 			case 'assistant': {
 				clearTimeout(this.fimTimer);
+				// Só a conversa principal: subagente do Claude Code (Task) tem contexto próprio
+				if (!d.parent_tool_use_id) {
+					this.tokens = tokensDoContexto(d.message?.usage) ?? this.tokens;
+					if (!this.modelo) this.modelo = modeloDaSessao(d.message?.model);
+				}
 				for (const c of d.message?.content ?? []) {
 					if (c.type === 'tool_use') this.registrarPasso(c.name, c.input);
 					else if (c.type === 'text' && c.text?.trim()) this.registrarTexto(c.text);
@@ -406,14 +423,20 @@ class Sessao {
 				p.rotulo,
 				{ ferramenta, icone: p.icone }
 			]);
-			await q(`update public.dgathe_tarefas set atividade = $2, passos = passos + 1, atualizada_em = now() where id = $1`, [this.id, p.rotulo]);
+			await q(
+				`update public.dgathe_tarefas set atividade = $2, passos = passos + 1, tokens = coalesce($3::int, tokens), modelo = coalesce($4, modelo), atualizada_em = now() where id = $1`,
+				[this.id, p.rotulo, this.tokens, this.modelo]
+			);
 		});
 	}
 
 	registrarTexto(texto) {
 		this.escrever(async () => {
 			await q(`insert into public.dgathe_mensagens (tarefa_id, tipo, conteudo) values ($1, 'texto', $2)`, [this.id, texto.slice(0, 40000)]);
-			await q(`update public.dgathe_tarefas set atividade = 'Escrevendo', atualizada_em = now() where id = $1`, [this.id]);
+			await q(
+				`update public.dgathe_tarefas set atividade = 'Escrevendo', tokens = coalesce($2::int, tokens), modelo = coalesce($3, modelo), atualizada_em = now() where id = $1`,
+				[this.id, this.tokens, this.modelo]
+			);
 		});
 	}
 
@@ -644,9 +667,10 @@ class Sessao {
 					c,
 					`update public.dgathe_tarefas
 					set status = $2, erro = $3, atividade = $4, cancelar = false,
-						terminada_em = case when $5::boolean then now() else null end, atualizada_em = now()
+						terminada_em = case when $5::boolean then now() else null end,
+						tokens = coalesce($6::int, tokens), modelo = coalesce($7, modelo), atualizada_em = now()
 					where id = $1`,
-					[this.id, f.status, erro, f.atividade, f.terminada]
+					[this.id, f.status, erro, f.atividade, f.terminada, this.tokens, this.modelo]
 				);
 				return { ...f, abertas: x.abertas };
 			},

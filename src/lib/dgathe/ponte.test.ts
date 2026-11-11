@@ -3,11 +3,13 @@ import {
 	argumentosDoClaude,
 	maisNovo,
 	mensagemParaOAgente,
+	modeloDaSessao,
 	nomeDaSessao,
 	PEDIR_LICENCA_NA_EQUIPE,
 	preambulo,
 	resolverPasta,
 	respostaParaOClaude,
+	tokensDoContexto,
 	type AgenteDaPonte
 } from './ponte';
 import { passoDaFerramenta, resumoDoPedido } from './passos';
@@ -258,5 +260,28 @@ describe('passoDaFerramenta', () => {
 		expect(resumoDoPedido('Bash', { command: 'git push' })).toBe('git push');
 		expect(resumoDoPedido('Write', { file_path: 'a.md', content: 'oi' })).toBe('a.md\n\noi');
 		expect(resumoDoPedido('Bash', { command: 'y'.repeat(5000) }).length).toBeLessThanOrEqual(1200);
+	});
+});
+
+describe('tokens e modelo da sessão (mapa dos Bandoletes)', () => {
+	it('soma entrada, cache e saída como o Claude Code', () => {
+		expect(
+			tokensDoContexto({ input_tokens: 12, cache_read_input_tokens: 180_000, cache_creation_input_tokens: 1_200, output_tokens: 340 })
+		).toBe(181_552);
+	});
+	it('sem usage, campo estranho ou tudo zero não apaga o último valor', () => {
+		expect(tokensDoContexto(undefined)).toBeNull();
+		expect(tokensDoContexto('x')).toBeNull();
+		expect(tokensDoContexto({ input_tokens: 0, output_tokens: 0 })).toBeNull();
+		expect(tokensDoContexto({ input_tokens: -5, output_tokens: 'muito' })).toBeNull();
+		expect(tokensDoContexto({ input_tokens: 10 })).toBe(10);
+	});
+	it('o modelo vem do início da sessão; mensagem sintética fica de fora', () => {
+		expect(modeloDaSessao('claude-opus-5-5')).toBe('claude-opus-5-5');
+		expect(modeloDaSessao('claude-opus-5-5[1m]')).toBe('claude-opus-5-5[1m]');
+		expect(modeloDaSessao('<synthetic>')).toBeNull();
+		expect(modeloDaSessao('')).toBeNull();
+		expect(modeloDaSessao(42)).toBeNull();
+		expect(modeloDaSessao('a'.repeat(80))).toBeNull();
 	});
 });
