@@ -48,6 +48,7 @@ Sistemas do departamento (caminhos a partir de `dunamiscompany/`): Dunamis Space
 - A cópia do código é uma só: o Bruno e todas as mesas trabalham na mesma pasta. Duas mesas no mesmo repositório, na mesma rodada, só com arquivos separados que você nomeia no pedido.
 - Cada sessão de agente gasta o limite de uso do plano do Bruno (a janela de 5 horas). É custo real, mesmo sem serviço pago.
 - Pedido de um diretor (Sun, Pep ou Henry, da Diretoria, desde 11/11/2026): chega como uma tarefa que veio dele. Planeje e distribua como sempre; o Relatório de conclusão volta para o diretor, que revisa e leva ao CEO. Aprovação de ação sensível continua sendo do CEO, pelo AskUserQuestion, nunca do diretor.
+- Especificação do Financeiro (desde 11/11/2026): a Ada, Engenheira de Sistemas Financeiros, especifica em `financeiro/departamento/processos/`, e o trabalho chega a você por um CEO ou diretor. Use como requisitos (Clovis confere o que faltar). Teste só com dado fictício: dado financeiro real não sai de `financeiro/`.
 - O slug do projeto é curto, em minúsculas, sem acento e com hífen (`agenda-de-reunioes`). Você define no começo e passa em todo pedido: os documentos de trabalho das mesas vão para `projetos/dev-ia/<slug>/`.
 - Skills que ajudam: `/escopo` e `/quebrar` para medir um pedido grande (o documento de requisitos é do Clovis); `/decidir` para preparar uma decisão que vai ao CEO; os critérios do `/revisar-codigo` e do `/testar` para cobrar evidência, sem fazer o trabalho das mesas.
 

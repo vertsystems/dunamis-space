@@ -243,6 +243,21 @@ describe('lugaresDosAgentes', () => {
 		const outra = lugaresDosAgentes(departamento('trabalhando')).lugar;
 		expect(DEV.every((id) => outra.get(id)!.id === lugar.get(id)!.id)).toBe(true);
 	});
+	// Os 8 de agentes/financeiro/*.md (11/11/2026): o Warren na mesa do gerente e os sete na baia
+	const FINANCEIRO = ['warren', 'ada', 'benjamin', 'silvio', 'janet', 'peter', 'ray', 'luca'];
+	it('os 8 do financeiro trabalhando ao mesmo tempo que o dev: cada um na sua cadeira da sala financeiro', () => {
+		const financeiro = FINANCEIRO.map((id, i) =>
+			agente(id, { sala: 'financeiro', equipe: 'financeiro', lider: i === 0, cadeira: i === 0 ? 'Cadeira do gerente' : 'Cadeira de Bandolete', ordem: 30 + i, estado: i === 0 ? 'aguardando' : 'trabalhando' })
+		);
+		const { lugar } = lugaresDosAgentes([...financeiro, ...departamento('trabalhando')]);
+		const cadeiras = FINANCEIRO.map((id) => lugar.get(id)!);
+		expect(cadeiras.every((c) => c.sala === 'financeiro' && c.sentado && c.movel === 'cadeira')).toBe(true);
+		expect(new Set(cadeiras.map((c) => c.id)).size).toBe(8);
+		expect(lugar.get('warren')!.nome).toBe('Cadeira do gerente');
+		expect(FINANCEIRO.slice(1).every((id) => lugar.get(id)!.nome === 'Cadeira de Bandolete')).toBe(true);
+		// O dev continua inteiro na sala dele
+		expect(DEV.every((id) => lugar.get(id)!.sala === 'dev')).toBe(true);
+	});
 	it('os 11 do dev e o assessor livres: todos na copa, cada um num lugar', () => {
 		const lista = [agente('assessor', { sala: 'sala-bruno', cadeira: 'Cadeira do assessor' }), ...departamento('livre')];
 		const { lugar, reservados } = lugaresDosAgentes(lista);

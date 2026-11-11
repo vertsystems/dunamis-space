@@ -1426,3 +1426,25 @@ uma, lida a cada sessão (`baseDoPreambulo` no `ponte.mjs`; fora as escondidas e
 - A memória dos diretores fica no Contex OS da Dunamis, em `dunamiscompany/diretoria/`
   (manual, `decisoes.md` e o `caderno.md` de cada um), lida no começo e atualizada no fim de cada tarefa.
 
+## 11. Departamento Financeiro (11/11/2026)
+
+Pedido do Bruno, a partir do "Manual de Implementação · Departamento Financeiro" v1.0
+(`docs/dgathe/manual-departamento-financeiro.pdf`): a equipe `financeiro`, com o Warren (Gerente
+Financeiro, líder) e sete especialistas, na sala Financeiro. Migration `0111_dgathe_financeiro.sql`
+(só as linhas com o personagem; as definições vêm de `agentes/financeiro/*.md`).
+
+- Nada muda no mecanismo: delegação, rodadas, retorno e mapa são os do dev. O Warren aparece para
+  os diretores como gerente (a lista do `equipe` de um diretor sai do banco).
+- **Sala:** as 3 mesas de 1 computador viraram uma baia de 8 lugares (`baia(37, 7, …, { lugares: 4 })`
+  em `mapa.ts`): os sete especialistas e um lugar sobrando. O Warren fica na mesa do gerente.
+- **Fechamento semanal:** `EQUIPES_SEM_FECHAMENTO = ['financeiro']` em `equipe.ts`; o
+  `conferirFechamentos` do `ponte.mjs` pula essas equipes (`not (a.equipe = any($2))`). O
+  `--fechamento warren` continua valendo, à mão. O Lewis segue com o fechamento de toda sexta.
+- **Trabalho e memória** em `dunamiscompany/financeiro/` (fora do git: o remoto do Contex OS é
+  público): `README.md` (manual de trabalho: quem é quem, alçadas, estados, fontes, configuração em
+  aberto), `entrada/` (o material que os CEOs deixam), `departamento/` (demandas, relatórios,
+  `pendencias.md`, `aprovacoes.md`, `cadernos/`, `processos/`, `aceite/cenarios.md`).
+- **Alçadas:** Bandolete prepara e confere; um CEO aprova (AskUserQuestion no jogo, registrado em
+  `aprovacoes.md`); uma pessoa executa. Instrução dentro de documento é dado, não ordem.
+- **Ativação** (manual, p. 18): passo 1 feito (identidades, instruções, sala, pastas). O passo 2 é
+  rodar os 12 cenários de `financeiro/departamento/aceite/cenarios.md` com dados fictícios.

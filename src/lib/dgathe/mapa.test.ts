@@ -124,7 +124,7 @@ describe('mapa do escritório', () => {
 		expect(aline.filter((i) => i.nome === 'Cadeira da assessora')).toHaveLength(1);
 	});
 
-	it('mesas de cada sala: Tráfego 2 e Design 3 de 2 lugares; Conteúdo 4 e Financeiro 3 de 1 computador', () => {
+	it('mesas de cada sala: Tráfego 2 e Design 3 de 2 lugares; Conteúdo 4 de 1 computador; Financeiro uma baia de 8', () => {
 		const contar = (sala: string) => {
 			const itens = ITENS.filter((i) => i.sala === sala && i.nome !== 'Mesa do gerente' && i.nome !== 'Cadeira do gerente');
 			const gerente = ITENS.find((i) => i.sala === sala && i.nome === 'Mesa do gerente')!;
@@ -139,7 +139,10 @@ describe('mapa do escritório', () => {
 		expect(contar('design')).toEqual({ mesas: 3, cadeiras: 6, computadores: 6 });
 		// Marketing: as 4 do conteúdo, a mesa de edição do estúdio e a cadeira do diretor
 		expect(contar('marketing')).toEqual({ mesas: 5, cadeiras: 6, computadores: 5 });
-		expect(contar('financeiro')).toEqual({ mesas: 3, cadeiras: 3, computadores: 3 });
+		// Financeiro (11/11/2026): a baia dos sete especialistas, com um lugar sobrando
+		expect(contar('financeiro')).toEqual({ mesas: 1, cadeiras: 8, computadores: 8 });
+		const cadeirasDoFinanceiro = ITENS.filter((i) => i.sala === 'financeiro' && i.tipo === 'cadeira' && i.nome !== 'Cadeira do gerente');
+		expect(cadeirasDoFinanceiro.every((i) => i.nome === 'Cadeira de Bandolete')).toBe(true);
 	});
 
 	it('o prédio cresceu para a esquerda: sala do Bruno, sala da Aline e 3 vazias (10/11/2026)', () => {

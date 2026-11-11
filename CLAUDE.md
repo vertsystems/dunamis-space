@@ -55,6 +55,12 @@ Desenvolvimento & IA estão em [docs/dgathe/cargos-dev-ia.md](docs/dgathe/cargos
 redistribuem para a equipe (dois níveis no máximo). A memória deles mora no Contex OS, em
 `dunamiscompany/diretoria/`. Detalhes na seção 10 do contrato das equipes.
 
+**Departamento Financeiro (desde 11/11/2026):** a equipe `financeiro` (Warren, o Gerente Financeiro, e
+sete especialistas, em `agentes/financeiro/`) segue o manual em `docs/dgathe/manual-departamento-financeiro.pdf`.
+Eles preparam e conferem; quem aprova e mexe no dinheiro são os CEOs. O trabalho e a memória moram em
+`dunamiscompany/financeiro/` (fora do git, porque o repositório do Contex OS é público), e o Financeiro
+fica fora do fechamento semanal automático (`EQUIPES_SEM_FECHAMENTO`). Seção 11 do contrato das equipes.
+
 ## Como trabalhar
 
 - `npm run dev` sobe local na porta 5173. Todas as rotas pedem login

@@ -72,6 +72,7 @@ import {
 import { cortar, passoDaFerramenta, resumoDoPedido } from '../src/lib/dgathe/passos.ts';
 import {
 	AUTOR_DA_EQUIPE,
+	EQUIPES_SEM_FECHAMENTO,
 	dataDaSexta,
 	fimDaRodada,
 	mensagemDaEquipe,
@@ -864,7 +865,7 @@ function entregarRetorno(paiId) {
 
 let proximaConferenciaDeFechamento = 0;
 
-/** Uma vez por minuto: na janela de sexta 17h a segunda 17h (Brasília), cria o fechamento de cada líder que ainda não tem. */
+/** Uma vez por minuto: na janela de sexta 17h a segunda 17h (Brasília), cria o fechamento de cada líder que ainda não tem (menos as EQUIPES_SEM_FECHAMENTO). */
 async function conferirFechamentos() {
 	if (!FECHAMENTO || desligando || Date.now() < proximaConferenciaDeFechamento) return;
 	proximaConferenciaDeFechamento = Date.now() + 60_000;
@@ -874,9 +875,10 @@ async function conferirFechamentos() {
 		const lideres = await q(
 			`select a.id, a.nome, a.equipe from public.dgathe_agentes a
 			where a.lider and a.ativo and a.equipe is not null
+				and not (a.equipe = any($2::text[]))
 				and not exists (select 1 from public.dgathe_fechamentos f where f.agente_id = a.id and f.sexta = $1::date)
 			order by a.ordem, a.id`,
-			[periodo.sexta]
+			[periodo.sexta, [...EQUIPES_SEM_FECHAMENTO]]
 		);
 		for (const l of lideres) {
 			const r = await criarFechamento(l, periodo);

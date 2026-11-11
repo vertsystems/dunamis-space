@@ -11,6 +11,7 @@ import {
 	NOME_PARA_O_LIDER,
 	normalizarTitulo,
 	pedidoDoFechamento,
+	temFechamentoAutomatico,
 	periodoDaSexta,
 	periodoDoFechamento,
 	proximoFechamento,
@@ -549,6 +550,15 @@ describe('periodoDaSexta', () => {
 		for (const x of ['2026-11-12', '2026-02-30', '13/11/2026', '2026-11-6', '']) {
 			expect(() => periodoDaSexta(x)).toThrow('--sexta precisa ser uma sexta-feira no formato AAAA-MM-DD.');
 		}
+	});
+});
+
+describe('temFechamentoAutomatico (11/11/2026)', () => {
+	it('o dev fecha toda sexta; o financeiro só quando um CEO pede', () => {
+		expect(temFechamentoAutomatico('dev')).toBe(true);
+		expect(temFechamentoAutomatico('financeiro')).toBe(false);
+		expect(temFechamentoAutomatico(null)).toBe(false);
+		expect(temFechamentoAutomatico('')).toBe(false);
 	});
 });
 

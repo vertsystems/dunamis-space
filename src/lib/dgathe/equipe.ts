@@ -53,6 +53,19 @@ const LIMITE_RETORNO = 38000;
 /** Cada entrega no retorno: o resto o líder lê com `estado <id>`. */
 const LIMITE_POR_ENTREGA = 8000;
 const LIMITE_ITENS_DO_FECHAMENTO = 60;
+
+/**
+ * Equipes fora do fechamento semanal automático de sexta (decisão do Bruno em
+ * 11/11/2026): o Financeiro fecha a semana só quando um CEO pede, para não abrir
+ * sessão sem pedido. O `node ponte/ponte.mjs --fechamento <agente>` continua
+ * valendo para elas.
+ */
+export const EQUIPES_SEM_FECHAMENTO: readonly string[] = ['financeiro'];
+
+/** Se o líder desta equipe recebe o fechamento semanal automático. */
+export function temFechamentoAutomatico(equipe: string | null | undefined): boolean {
+	return !!equipe && !EQUIPES_SEM_FECHAMENTO.includes(equipe);
+}
 const LIMITE_SUBS_POR_ITEM = 40;
 
 // ------------------------------------------------------------ pequenas contas

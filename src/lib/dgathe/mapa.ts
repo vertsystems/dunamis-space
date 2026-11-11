@@ -167,7 +167,7 @@ export const SALAS: Sala[] = [
 		id: 'financeiro',
 		nome: 'Financeiro',
 		setor: 'Financeiro',
-		descricao: 'Caixa, cobranças, pagamentos e as contas da empresa e dos clientes.',
+		descricao: 'O Departamento Financeiro: o Gerente Financeiro e sete especialistas Bandoletes cuidando de pagamentos, recebimentos, caixa, custos, planejamento e documentos. Eles preparam e conferem; quem aprova e movimenta o dinheiro são os CEOs.',
 		cor: '#3f9a6a',
 		piso: 'piso',
 		corPiso: '#d3e2cd',
@@ -176,7 +176,7 @@ export const SALAS: Sala[] = [
 		x1: 41,
 		y1: 12,
 		portas: portaNorte(38),
-		especialidades: ['Projeção de caixa', 'Obrigações fiscais', 'Conciliação bancária']
+		especialidades: ['Contas a pagar e a receber', 'Caixa e conciliação', 'Custos e DRE gerencial', 'Orçamento e cenários', 'Documentos para a contabilidade']
 	},
 	{
 		id: 'comercial',
@@ -666,11 +666,11 @@ function montarItens(): Item[] {
 	planta(35, 4);
 	planta(35, 12);
 
-	// Financeiro: o gerente no fundo, 3 mesas de 1 computador
+	// Financeiro: o gerente no fundo e, desde 11/11/2026, uma baia de 8 lugares
+	// para os sete especialistas do Departamento Financeiro (eram 3 mesas de 1
+	// computador). As linhas 6 e 10 ficam livres para chegar às cadeiras
 	mesaGerente(37, 4, 'planilha');
-	estacao(37, 7, 'planilha');
-	estacao(39, 7, 'grafico');
-	estacao(38, 10, 'texto');
+	baia(37, 7, ['planilha', 'grafico', 'planilha', 'texto'], { cor: '#e9efe4', cadeira: '#2f4a3a', lugares: 4 });
 	add({ tipo: 'cofre', x: 40.4, y: 4.15, w: 0.75, d: 0.7, h: 0.85, frente: 'y' });
 	add({ tipo: 'arquivo', x: 36.1, y: 10, w: 0.55, d: 0.7, h: 1.05, frente: 'x' });
 	add({ tipo: 'arquivo', x: 36.1, y: 11, w: 0.55, d: 0.7, h: 1.05, frente: 'x' });
