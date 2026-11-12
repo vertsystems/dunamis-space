@@ -12,7 +12,9 @@
 // Em 10/11/2026 o prédio cresceu 16 casas para a esquerda (pedido do Bruno):
 // o corredor continua até a parede oeste, com a sala do Bruno e a da Aline do
 // lado de cima e 3 salas vazias do lado de baixo, esperando ele decidir o que
-// vão ser. Tudo o que já existia andou junto (x + 16).
+// vão ser. Tudo o que já existia andou junto (x + 16). Em 11/11/2026 o Design &
+// Criação acabou (a criação foi para o Marketing & Criação) e a sala dele virou a
+// Sala 4, vazia também.
 
 import { sorteio } from './iso';
 
@@ -227,9 +229,9 @@ export const SALAS: Sala[] = [
 		// Conteúdo & Social Media e Estúdio viraram uma sala só (pedido do Bruno,
 		// 10/11/2026), sem a parede do meio. O lado do estúdio mantém o chão escuro
 		id: 'marketing',
-		nome: 'Marketing',
-		setor: 'Marketing',
-		descricao: 'Conteúdo, redes sociais e audiovisual: pautas, calendário, posts de todos os clientes, reels, spots e fotos de produto.',
+		nome: 'Marketing & Criação',
+		setor: 'Marketing & Criação',
+		descricao: 'Marketing e criação num departamento só (desde 11/11/2026): conteúdo, redes sociais, artes, identidades visuais e audiovisual de todos os clientes, com o estúdio no canto.',
 		cor: '#e05a7a',
 		piso: 'piso',
 		corPiso: '#f1d0c8',
@@ -238,8 +240,9 @@ export const SALAS: Sala[] = [
 		x1: 32,
 		y1: 24,
 		portas: [...portaSul(23), ...portaSul(29)],
-		especialidades: ['Calendário editorial', 'Carrosséis e legendas', 'Roteiros de vídeo', 'Spots e fotos de produto'],
-		areas: [{ x0: 27, y0: 15, x1: 32, y1: 24, piso: 'estudio', corPiso: '#3a3a42' }]
+		especialidades: ['Calendário editorial', 'Artes e identidade visual', 'Carrosséis e legendas', 'Roteiros de vídeo', 'Spots e fotos de produto'],
+		// O chão escuro do estúdio ficou só no canto de baixo (a reforma de 11/11/2026)
+		areas: [{ x0: 27, y0: 20, x1: 32, y1: 24, piso: 'estudio', corPiso: '#3a3a42' }]
 	},
 	{
 		id: 'recepcao',
@@ -259,21 +262,6 @@ export const SALAS: Sala[] = [
 			...[35, 36, 37].map((x): Aresta => ({ linha: 'h', x, y: 25 }))
 		],
 		especialidades: ['Atendimento', 'Onboarding de cliente', 'Contratos']
-	},
-	{
-		id: 'design',
-		nome: 'Design & Criação',
-		setor: 'Criação',
-		descricao: 'Marcas, identidades visuais, artes e peças para impressão.',
-		cor: '#7c5cd6',
-		piso: 'piso',
-		corPiso: '#e3daf1',
-		x0: 40,
-		y0: 15,
-		x1: 45,
-		y1: 24,
-		portas: portaSul(42),
-		especialidades: ['Identidade visual', 'Artes e campanhas', 'Revisão de design']
 	},
 	{
 		id: 'trafego',
@@ -305,10 +293,12 @@ export const SALAS: Sala[] = [
 		portas: portaSul(55),
 		especialidades: ['Pausa', 'Bandoletes livres']
 	},
-	// As 3 vazias de baixo, entre a parede oeste e o Conteúdo
+	// As 3 vazias de baixo, entre a parede oeste e o Marketing & Criação
 	salaVazia(1, 4, 8, 5),
 	salaVazia(2, 9, 13, 10),
-	salaVazia(3, 14, 19, 16)
+	salaVazia(3, 14, 19, 16),
+	// A Sala 4 era o Design & Criação, entre a Recepção e o Tráfego (11/11/2026)
+	salaVazia(4, 40, 45, 42)
 ];
 
 export const SALA_POR_ID = new Map(SALAS.map((s) => [s.id, s]));
@@ -704,28 +694,32 @@ function montarItens(): Item[] {
 	planta(4, 13, true);
 	planta(59, 13, true);
 
-	// Marketing, lado do conteúdo (era Conteúdo & Social Media)
-	// 4 mesas de 1 computador em 2 fileiras e o gerente no fundo
-	estacao(21, 17, 'social');
-	estacao(24, 17, 'social');
-	estacao(21, 20, 'social');
-	estacao(24, 20, 'texto');
-	mesaGerente(22, 23, 'social');
+	// Marketing & Criação (reforma de 11/11/2026, pedido do Bruno): o Design &
+	// Criação acabou e a sala ganhou lugar para 17 Bandoletes novos. Duas baias de 8
+	// e uma de 4 (20 lugares, com folga) e a mesa do gerente. As linhas 15, 19 e 23
+	// ficam livres, e as colunas 20 e 25 também: é por onde se chega às cadeiras
+	baia(21, 16, ['social', 'design', 'social', 'texto'], { cor: '#f7e6e1', cadeira: '#8a3a52', lugares: 4 });
+	baia(26, 16, ['design', 'social', 'design', 'grafico'], { cor: '#f7e6e1', cadeira: '#8a3a52', lugares: 4 });
+	baia(21, 20, ['texto', 'design'], { cor: '#f7e6e1', cadeira: '#8a3a52', lugares: 2 });
+	mesaGerente(24, 23, 'social');
+	// O canto da criação, que veio do Design: moodboard e prancheta
+	add({ tipo: 'quadro', x: 30.3, y: 16.2, w: 0.28, d: 1.8, h: 1.55, frente: 'x', variante: 'moodboard', nome: 'Moodboard' });
+	add({ tipo: 'prancheta', x: 31.45, y: 16.4, w: 0.85, d: 1.1, h: 1.05, frente: '-x' });
 	add({ tipo: 'luzAnel', x: 26.2, y: 21.2, w: 0.6, d: 0.6, h: 1.7 });
-	add({ tipo: 'pufe', x: 20.1, y: 22.1, w: 0.8, d: 0.8, h: 0.5, cor: '#f2b33d', bloqueia: true });
-	add({ tipo: 'pufe', x: 25.1, y: 23.1, w: 0.8, d: 0.8, h: 0.5, cor: '#4fb6a8', bloqueia: true });
-	// As plantas trocaram de quina (pedido do Bruno, 10/11/2026): as de baixo subiram
+	add({ tipo: 'pufe', x: 20.1, y: 24.1, w: 0.8, d: 0.8, h: 0.5, cor: '#f2b33d', bloqueia: true });
+	add({ tipo: 'pufe', x: 22.1, y: 24.1, w: 0.8, d: 0.8, h: 0.5, cor: '#4fb6a8', bloqueia: true });
+	// As plantas nas quinas de cima (pedido do Bruno, 10/11/2026)
 	planta(20, 15, true);
 	planta(26, 15);
 
-	// Marketing, lado do estúdio (era o Estúdio)
-	add({ tipo: 'fundo', x: 27.06, y: 17.6, w: 0.24, d: 3.2, h: 2.2, frente: 'x', nome: 'Fundo infinito' });
-	add({ tipo: 'camera', x: 30.9, y: 18.9, w: 0.5, d: 0.5, h: 1.35, frente: '-x' });
-	add({ tipo: 'softbox', x: 29.2, y: 16.4, w: 0.6, d: 0.6, h: 1.8 });
-	add({ tipo: 'softbox', x: 29.2, y: 22.2, w: 0.6, d: 0.6, h: 1.8 });
-	add({ tipo: 'cadeira', x: 31.3, y: 22.4, w: 0.5, d: 0.5, h: 1.0, frente: '-x', cor: '#2b2b2b', variante: 'diretor', nome: 'Cadeira do diretor' });
-	// O Marketing tem um gerente só (a mesa do lado do conteúdo); a do estúdio é a de edição
-	mesaDeFrente(28, 23, { tela: 'texto', mesa: 'Mesa de edição', cadeira: 'Cadeira de edição', executiva: true });
+	// O estúdio, compacto no canto de baixo (era a metade da sala até 11/11/2026)
+	add({ tipo: 'fundo', x: 27.06, y: 20.4, w: 0.24, d: 3.2, h: 2.2, frente: 'x', nome: 'Fundo infinito' });
+	add({ tipo: 'softbox', x: 28.7, y: 20.1, w: 0.6, d: 0.6, h: 1.8 });
+	add({ tipo: 'softbox', x: 28.7, y: 23.3, w: 0.6, d: 0.6, h: 1.8 });
+	add({ tipo: 'camera', x: 30.4, y: 21.6, w: 0.5, d: 0.5, h: 1.35, frente: '-x' });
+	add({ tipo: 'cadeira', x: 31.3, y: 20.3, w: 0.5, d: 0.5, h: 1.0, frente: '-x', cor: '#2b2b2b', variante: 'diretor', nome: 'Cadeira do diretor' });
+	// O departamento tem um gerente só (a mesa de cima); a do estúdio é a de edição
+	mesaDeFrente(31, 23, { tela: 'texto', mesa: 'Mesa de edição', cadeira: 'Cadeira de edição', executiva: true });
 
 	// Recepção
 	add({ tipo: 'balcao', x: 35, y: 18.15, w: 3, d: 0.75, h: 0.98, frente: 'y' });
@@ -736,19 +730,6 @@ function montarItens(): Item[] {
 	planta(33, 16, true);
 	planta(33, 24, true);
 	planta(39, 24, true);
-
-	// Design & Criação
-	// 3 mesas de 2 lugares à esquerda, corredor no meio; prancheta, moodboard e gerente à direita.
-	// O gerente fica embaixo: em cima, o painel alto do Tráfego (do outro lado da parede) o cobriria
-	mesaDupla(40, 16, ['design', 'design']);
-	mesaDupla(40, 19, ['design', 'social']);
-	mesaDupla(40, 22, ['design', 'design']);
-	add({ tipo: 'prancheta', x: 44.95, y: 16.2, w: 0.85, d: 1.1, h: 1.05, frente: '-x' });
-	add({ tipo: 'quadro', x: 44.1, y: 19.1, w: 0.28, d: 1.8, h: 1.55, frente: 'x', variante: 'moodboard', nome: 'Moodboard' });
-	mesaGerente(44, 22, 'design');
-	// A planta grande vai para o outro canto: na frente do gerente, ela o cobria
-	planta(45, 24);
-	planta(40, 24, true);
 
 	// Tráfego Pago
 	add({ tipo: 'tvPainel', x: 46.12, y: 17, w: 0.3, d: 2, h: 1.7, frente: 'x', variante: 'dashboard' });
@@ -828,7 +809,7 @@ function montarItens(): Item[] {
 	planta(27, 12);
 	planta(27, 9);
 
-	// Salas 1, 2 e 3: vazias, como o Bruno pediu
+	// Salas 1, 2, 3 e 4: vazias, como o Bruno pediu
 
 	// ------------------------------------------------------------- lado de fora
 	const arvores: [number, number][] = [

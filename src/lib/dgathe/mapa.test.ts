@@ -111,7 +111,7 @@ describe('mapa do escritório', () => {
 	});
 
 	it('cada departamento tem uma mesa de gerente; a sala do Bruno, a do assessor; a da Aline, a da assessora', () => {
-		for (const sala of ['financeiro', 'comercial', 'dev', 'marketing', 'design', 'trafego']) {
+		for (const sala of ['financeiro', 'comercial', 'dev', 'marketing', 'trafego']) {
 			const itens = ITENS.filter((i) => i.sala === sala);
 			expect(itens.filter((i) => i.nome === 'Mesa do gerente'), sala).toHaveLength(1);
 			expect(itens.filter((i) => i.nome === 'Cadeira do gerente'), sala).toHaveLength(1);
@@ -136,9 +136,11 @@ describe('mapa do escritório', () => {
 			};
 		};
 		expect(contar('trafego')).toEqual({ mesas: 2, cadeiras: 4, computadores: 4 });
-		expect(contar('design')).toEqual({ mesas: 3, cadeiras: 6, computadores: 6 });
-		// Marketing: as 4 do conteúdo, a mesa de edição do estúdio e a cadeira do diretor
-		expect(contar('marketing')).toEqual({ mesas: 5, cadeiras: 6, computadores: 5 });
+		// Marketing & Criação (11/11/2026): 3 baias (20 lugares para os Bandoletes), a mesa de edição
+		// do estúdio e a cadeira do diretor
+		expect(contar('marketing')).toEqual({ mesas: 4, cadeiras: 22, computadores: 21 });
+		const bandoletes = ITENS.filter((i) => i.sala === 'marketing' && i.nome === 'Cadeira de Bandolete');
+		expect(bandoletes.length).toBeGreaterThanOrEqual(17);
 		// Financeiro (11/11/2026): a baia dos sete especialistas, com um lugar sobrando
 		expect(contar('financeiro')).toEqual({ mesas: 1, cadeiras: 8, computadores: 8 });
 		const cadeirasDoFinanceiro = ITENS.filter((i) => i.sala === 'financeiro' && i.tipo === 'cadeira' && i.nome !== 'Cadeira do gerente');
@@ -157,16 +159,18 @@ describe('mapa do escritório', () => {
 		expect(bruno.x1).toBeLessThan(aline.x0);
 		expect(aline.x1).toBeLessThan(SALA_POR_ID.get('diretoria')!.x0);
 		for (const id of ['sala-1', 'sala-2', 'sala-3']) expect(SALA_POR_ID.get(id)!.x1, id).toBeLessThan(SALA_POR_ID.get('marketing')!.x0);
-		// A Sala 4 (a Diretoria esvaziada no dia 10) voltou a ser a Diretoria em 11/11/2026
-		expect(SALA_POR_ID.has('sala-4')).toBe(false);
-		for (const id of ['sala-1', 'sala-2', 'sala-3']) {
+		// A Sala 4 de agora (11/11/2026) é o antigo Design & Criação, entre a Recepção e o Tráfego
+		expect(SALA_POR_ID.has('design')).toBe(false);
+		const sala4 = SALA_POR_ID.get('sala-4')!;
+		expect([sala4.x0, sala4.x1, sala4.y0, sala4.y1]).toEqual([40, 45, 15, 24]);
+		for (const id of ['sala-1', 'sala-2', 'sala-3', 'sala-4']) {
 			expect(SALA_POR_ID.get(id)!.setor, id).toBe('A definir');
 			expect(ITENS.filter((i) => i.sala === id), `${id} vazia`).toHaveLength(0);
 		}
 		// O corredor vai de parede a parede, e cada sala nova abre para ele
 		const corredor = SALA_POR_ID.get('corredor')!;
 		expect(corredor.x0).toBe(4);
-		for (const id of ['sala-bruno', 'sala-aline', 'sala-1', 'sala-2', 'sala-3', 'diretoria']) {
+		for (const id of ['sala-bruno', 'sala-aline', 'sala-1', 'sala-2', 'sala-3', 'sala-4', 'diretoria']) {
 			for (const p of SALA_POR_ID.get(id)!.portas) expect(p.y === corredor.y0 || p.y === corredor.y1 + 1, id).toBe(true);
 		}
 	});

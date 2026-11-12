@@ -24,7 +24,6 @@
 		Cpu,
 		Megaphone,
 		DoorOpen,
-		Palette,
 		TrendingUp,
 		Coffee,
 		Footprints,
@@ -84,6 +83,7 @@
 		'sala-1': SquareDashed,
 		'sala-2': SquareDashed,
 		'sala-3': SquareDashed,
+		'sala-4': SquareDashed,
 		diretoria: Crown,
 		reuniao: Presentation,
 		financeiro: Wallet,
@@ -91,7 +91,6 @@
 		dev: Cpu,
 		marketing: Megaphone,
 		recepcao: DoorOpen,
-		design: Palette,
 		trafego: TrendingUp,
 		copa: Coffee,
 		corredor: Footprints

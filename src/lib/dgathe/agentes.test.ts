@@ -32,7 +32,7 @@ const agente = (id: string, extra: Partial<Agente> = {}): Agente => ({
 	cargo: 'Gerente',
 	equipe: null,
 	lider: false,
-	sala: 'design',
+	sala: 'comercial',
 	cadeira: 'Cadeira do gerente',
 	aparencia: APARENCIA_PADRAO,
 	ordem: 0,
@@ -51,7 +51,7 @@ describe('lerAgentes', () => {
 			agentes: [
 				{ id: 'assessor', nome: 'Assessor', cargo: 'Assessor do CEO', sala: 'sala-bruno', cadeira: 'Cadeira do assessor', ordem: 0, na_fila: 0, pedidos: 1, tarefa: { id: 't1', status: 'trabalhando', titulo: 'X', atividade: 'Lendo', desde: 30 } },
 				{ id: 'sem-sala', nome: 'Y', sala: 'nao-existe' },
-				{ id: 'livre', nome: 'Livre', sala: 'design', tarefa: null }
+				{ id: 'livre', nome: 'Livre', sala: 'comercial', tarefa: null }
 			]
 		})!;
 		expect(l.pode).toBe('editar');
@@ -63,7 +63,7 @@ describe('lerAgentes', () => {
 	});
 	it('tarefa começando: trabalhando, com o que ele está fazendo', () => {
 		const ag = (visto: number) =>
-			lerAgentes({ ponte: { visto_ha: visto }, agentes: [{ id: 'x', nome: 'X', sala: 'design', tarefa: { id: 't', status: 'fila', titulo: 'T', atividade: null, desde: 2 } }] })!.agentes[0];
+			lerAgentes({ ponte: { visto_ha: visto }, agentes: [{ id: 'x', nome: 'X', sala: 'comercial', tarefa: { id: 't', status: 'fila', titulo: 'T', atividade: null, desde: 2 } }] })!.agentes[0];
 		expect(ag(5)).toMatchObject({ estado: 'trabalhando', tarefa: { atividade: 'Lendo o pedido' } });
 		expect(ag(500)).toMatchObject({ estado: 'fila', tarefa: { atividade: null } });
 	});
@@ -199,7 +199,7 @@ describe('lugaresDosAgentes', () => {
 			agente('trafego', { sala: 'trafego' })
 		]);
 		expect(lugar.get('design')!.nome).toBe('Cadeira do gerente');
-		expect(lugar.get('design')!.sala).toBe('design');
+		expect(lugar.get('design')!.sala).toBe('comercial');
 		expect(lugar.get('assessor')!.nome).toBe('Cadeira do assessor');
 		expect(lugar.get('trafego')!.sala).toBe('copa');
 		// A cadeira do Tráfego fica reservada mesmo com ele na copa
@@ -216,7 +216,7 @@ describe('lugaresDosAgentes', () => {
 	it('dois agentes na mesma sala não dividem a cadeira', () => {
 		const { lugar } = lugaresDosAgentes([agente('x', { estado: 'trabalhando' }), agente('y', { estado: 'trabalhando' })]);
 		expect(lugar.get('x')!.id).not.toBe(lugar.get('y')!.id);
-		expect(lugar.get('y')!.sala).toBe('design');
+		expect(lugar.get('y')!.sala).toBe('comercial');
 	});
 	it('aguardando: o líder espera a equipe sentado na mesa dele', () => {
 		const { lugar } = lugaresDosAgentes([agente('lewis', { sala: 'dev', estado: 'aguardando' }), agente('clovis', { sala: 'dev', cadeira: 'Cadeira de Bandolete', ordem: 1 })]);

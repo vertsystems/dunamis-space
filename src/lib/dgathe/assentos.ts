@@ -173,7 +173,7 @@ export function lugaresDeQuemSaiu(): Assento[] {
 }
 
 /** Salas que entram no sorteio de quem não é CEO (além da recepção e da copa). */
-const SALAS_DO_SORTEIO = ['reuniao', 'financeiro', 'comercial', 'dev', 'marketing', 'design', 'trafego'];
+const SALAS_DO_SORTEIO = ['reuniao', 'financeiro', 'comercial', 'dev', 'marketing', 'trafego'];
 
 /** Número estável a partir de um texto (semente de sorteio). */
 export function hashTexto(t: string) {

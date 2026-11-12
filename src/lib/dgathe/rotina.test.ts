@@ -50,7 +50,7 @@ describe('lugares de pausa', () => {
 		expect(p[0].dirY + p[1].dirY).toBe(0);
 	});
 	it('passeio: chão livre da própria sala, sem colar nas cadeiras', () => {
-		for (const sala of ['design', 'dev', 'recepcao']) {
+		for (const sala of ['marketing', 'dev', 'recepcao']) {
 			const pontos = pontosDePasseio(sala);
 			expect(pontos.length).toBeGreaterThan(1);
 			for (const p of pontos) {

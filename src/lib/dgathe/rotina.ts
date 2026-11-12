@@ -136,7 +136,7 @@ export function pontasDoPinguePongue(): Assento[] {
 }
 
 /** Salas por onde se passeia (os setores e as áreas comuns). */
-const SALAS_DE_PASSEIO = ['recepcao', 'copa', 'reuniao', 'financeiro', 'comercial', 'dev', 'marketing', 'design', 'trafego'];
+const SALAS_DE_PASSEIO = ['recepcao', 'copa', 'reuniao', 'financeiro', 'comercial', 'dev', 'marketing', 'trafego'];
 
 // ------------------------------------------------------------ onde cada um fica
 
