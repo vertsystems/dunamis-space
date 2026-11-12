@@ -62,6 +62,11 @@ Eles preparam e conferem; quem aprova e mexe no dinheiro são os CEOs. O trabalh
 `dunamiscompany/financeiro/` (fora do git, porque o repositório do Contex OS é público). Seção 11 do
 contrato das equipes.
 
+**Marketing & Criação, Tráfego & Performance e Comercial (desde 11/11/2026):** as equipes `marketing`
+(David e 15), `trafego` (Neil e 5) e `comercial` (Aaron e 5), em `agentes/<equipe>/`, a partir dos manuais
+`docs/dgathe/manual-departamento-*.pdf`. O trabalho e a memória ficam em `dunamiscompany/marketing/`,
+`trafego/` e `comercial/` (fora do git). Seção 13 do contrato das equipes.
+
 ## Como trabalhar
 
 - `npm run dev` sobe local na porta 5173. Todas as rotas pedem login

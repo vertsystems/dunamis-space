@@ -184,7 +184,7 @@ export const SALAS: Sala[] = [
 		id: 'comercial',
 		nome: 'Comercial',
 		setor: 'Vendas',
-		descricao: 'Prospecção, propostas e o funil de vendas da Dunamis.',
+		descricao: 'O Comercial da Dunamis e da Vert Systems: prospecção, diagnóstico, propostas, formalização e o sucesso de quem já é cliente.',
 		cor: '#e0662a',
 		piso: 'carpete',
 		corPiso: '#e8d2ae',
@@ -193,7 +193,7 @@ export const SALAS: Sala[] = [
 		x1: 49,
 		y1: 12,
 		portas: portaNorte(45),
-		especialidades: ['Propostas', 'Prospecção', 'Conversas de venda']
+		especialidades: ['Prospecção e qualificação', 'Diagnóstico e negociação', 'Propostas e contratos', 'CRM comercial', 'Sucesso do cliente']
 	},
 	{
 		id: 'dev',
@@ -265,9 +265,9 @@ export const SALAS: Sala[] = [
 	},
 	{
 		id: 'trafego',
-		nome: 'Tráfego Pago',
-		setor: 'Performance',
-		descricao: 'Campanhas no Google e na Meta: verba, públicos e relatórios.',
+		nome: 'Tráfego & Performance',
+		setor: 'Tráfego & Performance',
+		descricao: 'Mídia paga da Dunamis e dos clientes no Meta, no Google e no YouTube: planejamento, operação por canal e conferência independente antes de gastar.',
 		cor: '#2f7fd8',
 		piso: 'piso',
 		corPiso: '#cde2ee',
@@ -276,7 +276,7 @@ export const SALAS: Sala[] = [
 		x1: 51,
 		y1: 24,
 		portas: portaSul(48),
-		especialidades: ['Anúncios Google', 'Anúncios Meta', 'Relatórios de resultado']
+		especialidades: ['Plano de mídia', 'Meta Ads', 'Google Ads', 'YouTube Ads', 'Conferência de campanhas']
 	},
 	{
 		id: 'copa',
@@ -731,11 +731,12 @@ function montarItens(): Item[] {
 	planta(33, 24, true);
 	planta(39, 24, true);
 
-	// Tráfego Pago
+	// Tráfego & Performance
 	add({ tipo: 'tvPainel', x: 46.12, y: 17, w: 0.3, d: 2, h: 1.7, frente: 'x', variante: 'dashboard' });
-	// 2 mesas de 2 lugares no meio e o gerente no fundo
-	mesaDupla(48, 17, ['grafico', 'grafico']);
-	mesaDupla(48, 20, ['grafico', 'crm']);
+	// Tráfego & Performance (11/11/2026): uma baia de 6 lugares para os cinco
+	// especialistas (eram 2 mesas de 2 lugares) e o gerente no fundo. As linhas
+	// 16 e 20 ficam livres para chegar às cadeiras
+	baia(48, 17, ['grafico', 'crm', 'grafico'], { cor: '#e3edf6', cadeira: '#24486e', lugares: 3 });
 	mesaGerente(48, 23, 'grafico');
 	planta(51, 24, true);
 	planta(46, 24);

@@ -1483,3 +1483,19 @@ necessário ou alguma dúvida" e "commit e push tá liberado". Vale para todo Ba
   continuam, e o Smith publica assim que o QA passa. O Financeiro continua sem mexer em dinheiro.
 - A `_memoria/` do Contex OS: o que um CEO disse ou confirmou entra direto; dedução vai numa pergunta
   só, no fim.
+
+## 13. Marketing & Criação, Tráfego & Performance e Comercial (11/11/2026)
+
+Pedido do Bruno, com os três manuais de implementação (`docs/dgathe/manual-departamento-*.pdf`):
+28 Bandoletes em três equipes, `marketing` (David e 15), `trafego` (Neil e 5) e `comercial` (Aaron
+e 5). Migration `0112_dgathe_marketing_trafego_comercial.sql` (só as linhas com o personagem).
+
+- Nada muda no mecanismo: delegação, rodadas, retorno e mapa são os mesmos. Os três gerentes
+  aparecem para a Diretoria, que agora coordena o trabalho que cruza departamentos.
+- **Salas:** Marketing & Criação com três baias (20 lugares) e o estúdio compacto (commit 0fe21e2);
+  Tráfego & Performance com uma baia de 6 lugares no lugar das 2 mesas de 2; o Comercial já tinha 4
+  mesas de 2 lugares (as cadeiras sem nome, que a distribuição pega pelo móvel).
+- **Escrita:** 18 agentes escreveram os Bandoletes (um por gerente, os especialistas em duplas de
+  cargos vizinhos) a partir de um modelo comum por departamento; 3 revisores, um por departamento,
+  conferiram as seções fixas, os caminhos e a autonomia, e escreveram os cenários de aceite.
+- **Fora do git:** `marketing/`, `trafego/`, `comercial/` e `vendas/` (dados de cliente e de lead).

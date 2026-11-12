@@ -124,7 +124,7 @@ describe('mapa do escritório', () => {
 		expect(aline.filter((i) => i.nome === 'Cadeira da assessora')).toHaveLength(1);
 	});
 
-	it('mesas de cada sala: Tráfego 2 e Design 3 de 2 lugares; Conteúdo 4 de 1 computador; Financeiro uma baia de 8', () => {
+	it('mesas de cada sala: baias no Tráfego (6), no Marketing (20) e no Financeiro (8); o Comercial com 4 mesas de 2 lugares', () => {
 		const contar = (sala: string) => {
 			const itens = ITENS.filter((i) => i.sala === sala && i.nome !== 'Mesa do gerente' && i.nome !== 'Cadeira do gerente');
 			const gerente = ITENS.find((i) => i.sala === sala && i.nome === 'Mesa do gerente')!;
@@ -135,7 +135,8 @@ describe('mapa do escritório', () => {
 				computadores: itens.filter((i) => i.tipo === 'monitor' && !doGerente(i)).length
 			};
 		};
-		expect(contar('trafego')).toEqual({ mesas: 2, cadeiras: 4, computadores: 4 });
+		// Tráfego & Performance (11/11/2026): uma baia de 6 lugares para os cinco especialistas
+		expect(contar('trafego')).toEqual({ mesas: 1, cadeiras: 6, computadores: 6 });
 		// Marketing & Criação (11/11/2026): 3 baias (20 lugares para os Bandoletes), a mesa de edição
 		// do estúdio e a cadeira do diretor
 		expect(contar('marketing')).toEqual({ mesas: 4, cadeiras: 22, computadores: 21 });

@@ -258,6 +258,26 @@ describe('lugaresDosAgentes', () => {
 		// O dev continua inteiro na sala dele
 		expect(DEV.every((id) => lugar.get(id)!.sala === 'dev')).toBe(true);
 	});
+	// Os departamentos de 11/11/2026: Marketing & Criação (16), Tráfego & Performance (6) e Comercial (6)
+	const NOVOS: Record<string, string[]> = {
+		marketing: ['david', 'clayton', 'philip', 'paula', 'washington', 'massimo', 'saul', 'gary', 'rand', 'seth', 'sean', 'avinash', 'abilio', 'anitta', 'walt', 'deming'],
+		trafego: ['neil', 'byron', 'sheryl', 'larry', 'susan', 'grace'],
+		comercial: ['aaron', 'jeb', 'chris', 'ruth', 'marc', 'tony']
+	};
+	it('os 28 dos departamentos novos trabalhando: cada um numa cadeira da sala dele, o gerente na do gerente', () => {
+		const lista = Object.entries(NOVOS).flatMap(([sala, ids], d) =>
+			ids.map((id, i) =>
+				agente(id, { sala, equipe: sala, lider: i === 0, cadeira: i === 0 ? 'Cadeira do gerente' : 'Cadeira de Bandolete', ordem: 40 + d * 20 + i, estado: i === 0 ? 'aguardando' : 'trabalhando' })
+			)
+		);
+		const { lugar } = lugaresDosAgentes([...lista, ...departamento('trabalhando')]);
+		for (const [sala, ids] of Object.entries(NOVOS)) {
+			const cadeiras = ids.map((id) => lugar.get(id)!);
+			expect(cadeiras.every((c) => c.sala === sala && c.sentado && c.movel === 'cadeira'), sala).toBe(true);
+			expect(new Set(cadeiras.map((c) => c.id)).size, sala).toBe(ids.length);
+			expect(lugar.get(ids[0])!.nome, sala).toBe('Cadeira do gerente');
+		}
+	});
 	it('os 11 do dev e o assessor livres: todos na copa, cada um num lugar', () => {
 		const lista = [agente('assessor', { sala: 'sala-bruno', cadeira: 'Cadeira do assessor' }), ...departamento('livre')];
 		const { lugar, reservados } = lugaresDosAgentes(lista);

@@ -102,6 +102,27 @@ mude nas sete e no `financeiro/README.md`.
 
 A aparência de cada um veio na migration 0111 e se troca no jogo.
 
+## Marketing & Criação, Tráfego & Performance e Comercial (desde 11/11/2026)
+
+Três equipes a partir dos manuais de implementação (`docs/dgathe/manual-departamento-marketing-criacao.pdf`,
+`manual-departamento-trafego-performance.pdf` e `manual-departamento-comercial.pdf`):
+
+| Equipe | Gerente | Especialistas | Sala | Pasta de trabalho |
+|---|---|---|---|---|
+| `marketing` | David | 15 (Clayton, Philip, Paula, Washington, Massimo, Saul, Gary, Rand, Seth, Sean, Avinash, Abílio, Anitta, Walt, Deming) | Marketing & Criação | `dunamiscompany/marketing/` |
+| `trafego` | Neil | 5 (Byron, Sheryl, Larry, Susan, Grace) | Tráfego & Performance | `dunamiscompany/trafego/` |
+| `comercial` | Aaron | 5 (Jeb, Chris, Ruth, Marc, Tony) | Comercial | `dunamiscompany/comercial/` |
+
+- A cadeira de tráfego do manual de Marketing (MKT-MID) foi para o Tráfego & Performance, como os
+  manuais de Tráfego e Comercial registram: Marketing & Criação tem 16 Bandoletes, não 17.
+- Cada pasta de trabalho tem o manual do departamento (`README.md`), demandas, relatórios, cadernos,
+  `aprovacoes.md`, `pendencias.md` e `aceite/cenarios.md`; ficam fora do git (`.git/info/exclude` da
+  dunamiscompany, junto com `vendas/`). O cadastro de contas é `marketing/contas.md`.
+- Os especialistas de cada equipe repetem, palavra por palavra, as seções "Regras de <departamento>",
+  "Como trabalhar aqui", "Como você aprende", "Autonomia" e o formato da "Entrega". Mudou uma regra
+  comum: mude em todos da equipe e no `README.md` da pasta de trabalho.
+- A aparência de cada um veio na migration 0112 e se troca no jogo.
+
 ## Sincronizar
 
 ```sh
