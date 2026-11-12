@@ -1,7 +1,7 @@
 // GERADO AUTOMATICAMENTE — não edite à mão.
 // Regenerar:  PGPASSWORD='<senha-postgres>' node scripts/gen-types.mjs
 //
-// Reflete o schema public do Supabase (2026-10-20).
+// Reflete o schema public do Supabase (2026-11-12).
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -410,7 +410,6 @@ export type Database = {
 					local: string | null
 					avatar_url: string | null
 					cor_tema: string | null
-					dgathe_avatar: Json | null
 					idioma: string
 					funcoes: string[]
 					super_admin: boolean
@@ -431,7 +430,6 @@ export type Database = {
 					local?: string | null
 					avatar_url?: string | null
 					cor_tema?: string | null
-					dgathe_avatar?: Json | null
 					idioma?: string
 					funcoes?: string[]
 					super_admin?: boolean
@@ -452,7 +450,6 @@ export type Database = {
 					local?: string | null
 					avatar_url?: string | null
 					cor_tema?: string | null
-					dgathe_avatar?: Json | null
 					idioma?: string
 					funcoes?: string[]
 					super_admin?: boolean
@@ -986,6 +983,24 @@ export type Database = {
 				}
 				Relationships: []
 			}
+			dmetric_metas: {
+				Row: {
+					site_id: string
+					valor: string
+					criado_em: string
+				}
+				Insert: {
+					site_id: string
+					valor: string
+					criado_em?: string
+				}
+				Update: {
+					site_id?: string
+					valor?: string
+					criado_em?: string
+				}
+				Relationships: []
+			}
 			dmetric_paginas: {
 				Row: {
 					site_id: string
@@ -1007,6 +1022,60 @@ export type Database = {
 				}
 				Relationships: []
 			}
+			dmetric_portais: {
+				Row: {
+					id: string
+					site_id: string
+					token: string
+					contato: string | null
+					senha_hash: string | null
+					com_senha: boolean | null
+					periodo: string
+					ativo: boolean
+					whatsapp: string | null
+					relatorio_mensal: boolean
+					falhas: number
+					falhas_desde: string | null
+					acessos: number
+					ultimo_acesso: string | null
+					criado_em: string
+				}
+				Insert: {
+					id?: string
+					site_id: string
+					token: string
+					contato?: string | null
+					senha_hash?: string | null
+					com_senha?: boolean | null
+					periodo?: string
+					ativo?: boolean
+					whatsapp?: string | null
+					relatorio_mensal?: boolean
+					falhas?: number
+					falhas_desde?: string | null
+					acessos?: number
+					ultimo_acesso?: string | null
+					criado_em?: string
+				}
+				Update: {
+					id?: string
+					site_id?: string
+					token?: string
+					contato?: string | null
+					senha_hash?: string | null
+					com_senha?: boolean | null
+					periodo?: string
+					ativo?: boolean
+					whatsapp?: string | null
+					relatorio_mensal?: boolean
+					falhas?: number
+					falhas_desde?: string | null
+					acessos?: number
+					ultimo_acesso?: string | null
+					criado_em?: string
+				}
+				Relationships: []
+			}
 			dmetric_recentes: {
 				Row: {
 					id: number
@@ -1024,6 +1093,8 @@ export type Database = {
 					sistema: string | null
 					valor: string | null
 					segundos: number
+					dia: string
+					chegada: boolean
 				}
 				Insert: {
 					id: number
@@ -1041,6 +1112,8 @@ export type Database = {
 					sistema?: string | null
 					valor?: string | null
 					segundos?: number
+					dia: string
+					chegada?: boolean
 				}
 				Update: {
 					id?: number
@@ -1058,6 +1131,62 @@ export type Database = {
 					sistema?: string | null
 					valor?: string | null
 					segundos?: number
+					dia?: string
+					chegada?: boolean
+				}
+				Relationships: []
+			}
+			dmetric_redes_robo: {
+				Row: {
+					rede: string
+					nome: string
+					fonte: string
+					atualizado_em: string
+				}
+				Insert: {
+					rede: string
+					nome: string
+					fonte: string
+					atualizado_em?: string
+				}
+				Update: {
+					rede?: string
+					nome?: string
+					fonte?: string
+					atualizado_em?: string
+				}
+				Relationships: []
+			}
+			dmetric_relatorios: {
+				Row: {
+					id: string
+					portal_id: string
+					mes: string
+					mensagem: string
+					status: string
+					criado_em: string
+					enviado_em: string | null
+					enviado_por: string | null
+				}
+				Insert: {
+					id?: string
+					portal_id: string
+					mes: string
+					mensagem: string
+					status?: string
+					criado_em?: string
+					enviado_em?: string | null
+					enviado_por?: string | null
+				}
+				Update: {
+					id?: string
+					portal_id?: string
+					mes?: string
+					mensagem?: string
+					status?: string
+					criado_em?: string
+					enviado_em?: string | null
+					enviado_por?: string | null
 				}
 				Relationships: []
 			}
