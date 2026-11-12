@@ -30,10 +30,9 @@ export default defineConfig({
 
 			// Versão nova no ar: a aba aberta descobre sozinha em até 30 s
 			// (lê /_app/version.json, que é pequeno e vem do CDN). Sem isso, quem
-			// estava com o dspace aberto continuava no código velho até apertar F5:
-			// o Bruno reclamou em 10/11/2026, com o DGathe aberto o dia inteiro.
-			// O que acontece depois está no +layout.svelte (próxima navegação
-			// recarrega) e no Escritorio.svelte (o DGathe recarrega sozinho).
+			// estava com o dspace aberto continuava no código velho até apertar F5
+			// (o Bruno reclamou em 10/11/2026). O que acontece depois está no
+			// +layout.svelte: a próxima navegação recarrega.
 			version: { pollInterval: 30_000 }
 		})
 	],

@@ -10,11 +10,9 @@
 	import logo from '$lib/assets/dspace-logo.svg';
 	import { beforeNavigate, goto, invalidate } from '$app/navigation';
 	import { page, updated } from '$app/state';
-	import { onMount, untrack } from 'svelte';
-	import { env } from '$env/dynamic/public';
+	import { onMount } from 'svelte';
 	import { DTOOLS_FERRAMENTAS } from '$lib/dtools';
-	import { podeAcessarRota, podeEditar, podeVer, type Permissoes } from '$lib/permissoes';
-	import { manterSinal } from '$lib/dgathe/presenca';
+	import { podeAcessarRota, podeEditar, type Permissoes } from '$lib/permissoes';
 	import { temaCss } from '$lib/tema';
 	import Icon from '$lib/components/Icon.svelte';
 	import CargoBadge from '$lib/components/CargoBadge.svelte';
@@ -76,10 +74,10 @@
 		areas: Area[];
 	};
 
-	// Organyze, Pag's Up, DMetric e DGathe também moram na sidebar da Home, logo abaixo de Meu Dia:
+	// Organyze, Pag's Up e DMetric também moram na sidebar da Home, logo abaixo de Meu Dia:
 	// são ferramentas do dia a dia de qualquer pessoa, e não um departamento à
 	// parte. A fonte continua sendo DTOOLS_FERRAMENTAS — a ordem aqui é a do menu.
-	const FERRAMENTAS_NA_HOME = ['/dtools/organyze', '/dtools/pagsup', '/dtools/dmetric', '/dtools/dgathe'];
+	const FERRAMENTAS_NA_HOME = ['/dtools/organyze', '/dtools/pagsup', '/dtools/dmetric'];
 	const areasFerramentas: Area[] = FERRAMENTAS_NA_HOME.flatMap((href) => {
 		const f = DTOOLS_FERRAMENTAS.find((x) => x.href === href);
 		return f ? [{ href: f.href, label: f.label, icon: f.icon, subitens: f.subitens }] : [];
@@ -158,26 +156,6 @@
 	// Menu filtrado por permissão: esconde áreas sem acesso (rotas pessoais sempre
 	// visíveis) e departamentos que ficaram sem nenhuma área.
 	const perms = $derived((data.permissoes ?? {}) as Permissoes);
-
-	// DGathe: logado no dspace = no escritório, em qualquer tela ou aba. O sinal
-	// de vida sai daqui (presenca.ts); fechar a última aba ou sair do sistema
-	// leva a pessoa para a recepção.
-	const usuarioId = $derived(session?.user?.id ?? null);
-	const temDGathe = $derived(podeVer(perms, 'dgathe'));
-	// 15 min sem mexer: CEO vai para a Diretoria; os outros, para a recepção, a
-	// copa ou uma sala sorteada (assentos.ts)
-	const colaboradorId = $derived((data.perfil as { id?: string } | null)?.id ?? null);
-	const ehCeo = $derived.by(() => {
-		const p = data.perfil as { funcao?: string; funcoes?: string[] } | null;
-		return p?.funcao === 'ceo' || !!p?.funcoes?.includes('ceo');
-	});
-	$effect(() => {
-		if (!usuarioId || !temDGathe) return;
-		const quem = { id: colaboradorId, ceo: ehCeo };
-		return untrack(() =>
-			manterSinal(supabase, { url: env.PUBLIC_SUPABASE_URL ?? '', chave: env.PUBLIC_SUPABASE_ANON_KEY ?? '' }, quem)
-		);
-	});
 	const departamentosVisiveis = $derived(
 		departamentos
 			.map((d) => ({ ...d, areas: d.areas.filter((a) => !a.href || podeAcessarRota(perms, a.href)) }))
@@ -197,10 +175,6 @@
 	});
 
 	const areas = $derived(departamentosVisiveis.find((d) => d.id === deptAtivo)?.areas ?? []);
-
-	// O DGathe é um jogo: precisa de tela. Ali a sidebar fica só com ícones e o
-	// conteúdo sobe até a linha do topo dela.
-	const telaDeJogo = $derived(page.url.pathname === '/dtools/dgathe' || page.url.pathname.startsWith('/dtools/dgathe/'));
 
 	const deptHref = (d: Departamento) => d.href ?? d.areas[0]?.href ?? '/';
 
@@ -250,8 +224,6 @@
 	);
 
 	async function signOut() {
-		// Saiu do sistema: no DGathe, vai para a recepção na hora
-		if (temDGathe) await supabase.rpc('dgathe_saiu');
 		await supabase.auth.signOut();
 		// Navega para /login e re-roda todos os loads (limpa conteúdo protegido da tela).
 		await goto('/login', { invalidateAll: true });
@@ -332,9 +304,9 @@
 			</div>
 		</header>
 
-		<div class="app-body" class:tela-de-jogo={telaDeJogo}>
+		<div class="app-body">
 			{#if areas.length}
-				<aside class="app-sidebar" class:so-icones={telaDeJogo}>
+				<aside class="app-sidebar">
 					<div class="sidebar-title">
 						{departamentosVisiveis.find((d) => d.id === deptAtivo)?.label}
 					</div>
@@ -374,7 +346,7 @@
 					</nav>
 				</aside>
 			{/if}
-			<main id="conteudo" tabindex="-1" class="app-content" class:is-full={!areas.length} class:tela-de-jogo={telaDeJogo}>
+			<main id="conteudo" tabindex="-1" class="app-content" class:is-full={!areas.length}>
 				{@render children()}
 			</main>
 		</div>
@@ -387,7 +359,6 @@
 	{#if podeEditar(perms, 'sos')}
 		<SosWidget
 			{supabase}
-			aEsquerda={telaDeJogo}
 			autorNome={perfil?.nome ?? null}
 			autorEmail={session?.user?.email ?? null}
 		/>

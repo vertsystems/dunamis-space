@@ -60,12 +60,6 @@ export const MODULOS: Modulo[] = [
 	{ id: 'pagsup', label: "Pag's Up", grupo: 'dtools', rotas: ['/dtools/pagsup'] },
 	// Sem seed: nasce 'nenhum' e só ceo/admin enxergam, até liberarem na tela.
 	{ id: 'dmetric', label: 'DMetric', grupo: 'dtools', rotas: ['/dtools/dmetric'] },
-	// Protótipo: sem seed, então só ceo/admin enxergam até alguém liberar na tela.
-	{ id: 'dgathe', label: 'DGathe', grupo: 'dtools', rotas: ['/dtools/dgathe'] },
-	// Módulo SEM rotas, dentro do DGathe (migration 0101): ver = acompanha o que
-	// cada agente está fazendo; editar = passa tarefa, manda mensagem, responde e
-	// para. Sem seed: só ceo/admin até alguém liberar na tela de Permissões.
-	{ id: 'dgathe_agentes', label: 'DGathe: Bandoletes', grupo: 'dtools', rotas: [] },
 	// Módulo SEM rotas: não governa telas, e sim os valores em R$ dentro delas
 	// (cliente, plano, contrato). Quem não tem 'ver' enxerga a máscara ***** e
 	// nem recebe os números do servidor. ceo/admin ganham acesso pelo
